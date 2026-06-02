@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "render-build": "prisma migrate deploy && prisma generate && next build",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "prisma:validate": "prisma validate",
