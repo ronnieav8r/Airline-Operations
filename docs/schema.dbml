@@ -1,0 +1,399 @@
+// AeroOps Center database schema
+// Source of truth for visual ERD work in dbdiagram.io.
+// Generated from the live Render Postgres schema on 2026-06-03.
+
+Project AeroOps_Render_DB {
+  database_type: "PostgreSQL"
+  Note: "Generated from Render Postgres information_schema and Prisma schema metadata."
+}
+
+Enum SeatRole {
+  CPT
+  FO
+  FA
+  CA
+}
+
+Enum FlightStatus {
+  SCHEDULED
+  ENROUTE
+  COMPLETE
+  CANCELLED
+  DELAYED
+}
+
+Enum AircraftType {
+  CL_65
+  EMB_135_145
+}
+
+Enum AircraftStatus {
+  AVAILABLE
+  IN_MAINTENANCE
+  RESERVED
+  IN_FLIGHT
+  OUT_OF_SERVICE
+}
+
+Enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+Enum DutyStatus {
+  ON_DUTY
+  RESERVE
+  OFF_DUTY
+  VACATION
+  SICK
+  TRAINING
+  DEADHEADING
+}
+
+Enum AlertType {
+  CREW_SHORTAGE
+  MAINTENANCE
+  WEATHER
+  SCHEDULE_CONFLICT
+  DUTY_VIOLATION
+  GENERAL
+}
+
+Enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+Enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+Enum TimeOffRequestType {
+  VACATION
+  SICK
+  PERSONAL
+  TRAINING
+  OTHER
+}
+
+Enum TimeOffRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  CANCELLED
+}
+
+Enum IdDocumentType {
+  PASSPORT
+  DRIVERS_LICENSE
+  STATE_ID
+  MILITARY_ID
+  OTHER
+}
+
+Enum UserRole {
+  ADMIN
+  OPS
+  CREW
+}
+
+Table "User" {
+  "id" text [pk]
+  "email" text [not null, unique]
+  "role" UserRole [not null]
+  "isActive" boolean [not null, default: true]
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+}
+
+Table "UserProfile" {
+  "id" text [pk]
+  "userId" text [not null, unique]
+  "firstName" text [not null]
+  "lastName" text [not null]
+  "phone" text
+  "dateOfBirth" timestamp
+  "idDocumentType" IdDocumentType
+  "idDocumentNumber" text
+  "emergencyContactName" text
+  "emergencyContactPhone" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+}
+
+Table "Station" {
+  "id" text [pk]
+  "code" text [not null, unique]
+  "name" text [not null]
+  "city" text [not null]
+  "state" text
+  "country" text [not null, default: 'USA']
+  "timezone" text [not null]
+  "isActive" boolean [not null, default: true]
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+}
+
+Table "Aircraft" {
+  "id" text [pk]
+  "tailNumber" text [not null, unique]
+  "name" text
+  "type" AircraftType [not null]
+  "status" AircraftStatus [not null, default: 'AVAILABLE']
+  "homeStationId" text
+  "seats" int
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    "status"
+    "type"
+    "homeStationId"
+  }
+}
+
+Table "Flight" {
+  "id" text [pk]
+  "flightNumber" text [not null]
+  "aircraftId" text [not null]
+  "departureStationId" text [not null]
+  "arrivalStationId" text [not null]
+  "scheduledDeparture" timestamp [not null]
+  "scheduledArrival" timestamp [not null]
+  "actualDeparture" timestamp
+  "actualArrival" timestamp
+  "status" FlightStatus [not null, default: 'SCHEDULED']
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("flightNumber", "scheduledDeparture") [unique]
+    "scheduledDeparture"
+    ("status", "scheduledDeparture")
+    ("aircraftId", "scheduledDeparture")
+  }
+}
+
+Table "CrewMember" {
+  "id" text [pk]
+  "userId" text [unique]
+  "employeeNumber" text [not null, unique]
+  "firstName" text [not null]
+  "lastName" text [not null]
+  "baseStationId" text [not null]
+  "employmentStatus" EmploymentStatus [not null, default: 'ACTIVE']
+  "dutyStatus" DutyStatus [not null, default: 'OFF_DUTY']
+  "hireDate" timestamp
+  "phone" text
+  "email" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    "baseStationId"
+    "employmentStatus"
+    "dutyStatus"
+  }
+}
+
+Table "CrewQualification" {
+  "id" text [pk]
+  "crewMemberId" text [not null]
+  "aircraftType" AircraftType [not null]
+  "seatRole" SeatRole [not null]
+  "issuedAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "expiresAt" timestamp
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("crewMemberId", "aircraftType", "seatRole") [unique]
+    ("crewMemberId", "expiresAt")
+    ("aircraftType", "seatRole")
+  }
+}
+
+Table "AircraftCrewAssignment" {
+  "id" text [pk]
+  "aircraftId" text [not null]
+  "crewMemberId" text [not null]
+  "seatRole" SeatRole [not null]
+  "startsAt" timestamp [not null]
+  "endsAt" timestamp
+  "isActive" boolean [not null, default: true]
+  "assignedById" text
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("aircraftId", "crewMemberId", "seatRole", "startsAt") [unique]
+    ("aircraftId", "startsAt", "endsAt")
+    ("aircraftId", "seatRole", "startsAt")
+    ("crewMemberId", "startsAt")
+    "isActive"
+  }
+}
+
+Table "CrewSchedule" {
+  "id" text [pk]
+  "crewMemberId" text [not null]
+  "stationId" text
+  "date" timestamp [not null]
+  "dutyStatus" DutyStatus [not null]
+  "startsAt" timestamp
+  "endsAt" timestamp
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("crewMemberId", "date")
+    "date"
+  }
+}
+
+Table "CrewFlightLog" {
+  "id" text [pk]
+  "crewMemberId" text [not null]
+  "flightId" text [not null]
+  "seatRole" SeatRole [not null]
+  "reportTime" timestamp
+  "releaseTime" timestamp
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("crewMemberId", "flightId", "seatRole") [unique]
+    "flightId"
+  }
+}
+
+Table "Passenger" {
+  "id" text [pk]
+  "firstName" text [not null]
+  "lastName" text [not null]
+  "dateOfBirth" timestamp
+  "email" text
+  "phone" text
+  "idDocumentType" IdDocumentType
+  "idDocumentNumber" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("lastName", "firstName")
+  }
+}
+
+Table "FlightPassenger" {
+  "id" text [pk]
+  "flightId" text [not null]
+  "passengerId" text [not null]
+  "seatNumber" text
+  "checkedInAt" timestamp
+  "boardedAt" timestamp
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("flightId", "passengerId") [unique]
+    ("flightId", "seatNumber")
+  }
+}
+
+Table "TimeOffRequest" {
+  "id" text [pk]
+  "crewMemberId" text [not null]
+  "requestType" TimeOffRequestType [not null]
+  "status" TimeOffRequestStatus [not null, default: 'PENDING']
+  "startDate" timestamp [not null]
+  "endDate" timestamp [not null]
+  "reason" text
+  "requestedById" text
+  "reviewedById" text
+  "reviewedAt" timestamp
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("crewMemberId", "startDate")
+    ("status", "createdAt")
+  }
+}
+
+Table "Alert" {
+  "id" text [pk]
+  "type" AlertType [not null]
+  "severity" AlertSeverity [not null, default: 'MEDIUM']
+  "status" AlertStatus [not null, default: 'ACTIVE']
+  "title" text [not null]
+  "message" text [not null]
+  "flightId" text
+  "aircraftId" text
+  "crewMemberId" text
+  "createdById" text
+  "acknowledgedById" text
+  "resolvedById" text
+  "acknowledgedAt" timestamp
+  "resolvedAt" timestamp
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("status", "type", "createdAt")
+    "createdAt"
+  }
+}
+
+Table "DutyRule" {
+  "id" text [pk]
+  "name" text [not null, unique]
+  "description" text
+  "maxDutyHours" int
+  "minRestHours" int
+  "maxFlightHoursPerDay" int
+  "maxConsecutiveDays" int
+  "isActive" boolean [not null, default: true]
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    "isActive"
+  }
+}
+
+Ref: "UserProfile"."userId" > "User"."id"
+Ref: "Aircraft"."homeStationId" > "Station"."id"
+Ref: "Flight"."aircraftId" > "Aircraft"."id"
+Ref: "Flight"."departureStationId" > "Station"."id"
+Ref: "Flight"."arrivalStationId" > "Station"."id"
+Ref: "CrewMember"."userId" > "User"."id"
+Ref: "CrewMember"."baseStationId" > "Station"."id"
+Ref: "CrewQualification"."crewMemberId" > "CrewMember"."id"
+Ref: "AircraftCrewAssignment"."aircraftId" > "Aircraft"."id"
+Ref: "AircraftCrewAssignment"."crewMemberId" > "CrewMember"."id"
+Ref: "AircraftCrewAssignment"."assignedById" > "User"."id"
+Ref: "CrewSchedule"."crewMemberId" > "CrewMember"."id"
+Ref: "CrewSchedule"."stationId" > "Station"."id"
+Ref: "CrewFlightLog"."crewMemberId" > "CrewMember"."id"
+Ref: "CrewFlightLog"."flightId" > "Flight"."id"
+Ref: "FlightPassenger"."flightId" > "Flight"."id"
+Ref: "FlightPassenger"."passengerId" > "Passenger"."id"
+Ref: "TimeOffRequest"."crewMemberId" > "CrewMember"."id"
+Ref: "TimeOffRequest"."requestedById" > "User"."id"
+Ref: "TimeOffRequest"."reviewedById" > "User"."id"
+Ref: "Alert"."flightId" > "Flight"."id"
+Ref: "Alert"."aircraftId" > "Aircraft"."id"
+Ref: "Alert"."crewMemberId" > "CrewMember"."id"
+Ref: "Alert"."createdById" > "User"."id"
+Ref: "Alert"."acknowledgedById" > "User"."id"
+Ref: "Alert"."resolvedById" > "User"."id"
