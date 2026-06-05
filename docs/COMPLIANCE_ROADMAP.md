@@ -142,21 +142,22 @@ Likely future tables:
 
 ## Updated Build Sequence
 
-The existing first slices were intentionally narrow:
+The completed first slices were intentionally narrow:
 
 1. Foundation and schema
 2. Crew-resolution API
 3. Read-only operations dashboard
 4. App shell navigation
+5. Authority and operational-control foundation
+6. Read-only operational pages for flights, operations control, aircraft, crew, and scheduling
 
 The next major schema-oriented slices should be:
 
-1. Authority and operational-control foundation
-2. Flight-leg framing and trip/mission container
-3. Manifest, flight locating, and release package
-4. Maintenance discrepancy and airworthiness signals
-5. Crew training, checks, recency, duty, and rest
-6. Safety/SMS intake and corrective-action loop
+1. Flight-leg framing and trip/mission container
+2. Manifest, flight locating, and release package
+3. Maintenance discrepancy and airworthiness signals
+4. Crew training, checks, recency, duty, and rest
+5. Safety/SMS intake and corrective-action loop
 
 Each slice should remain small and reviewable.
 

@@ -14,6 +14,7 @@ This repository is intentionally starting from planning docs instead of generate
 - Deferred: advanced reports, TV mode, uploads, rich analytics
 - Compliance roadmap: [docs/COMPLIANCE_ROADMAP.md](docs/COMPLIANCE_ROADMAP.md)
 - Local development: [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
+- Current project status: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
 
 The current implementation is a small v1 operations slice. It should not be treated as the final regulatory data model. Future schema work should move toward a flight-leg-centered, authority-aware operating model that can support Part 91, Part 91K, and Part 135 workflows without splitting into separate mini-systems.
 
@@ -47,5 +48,6 @@ Use one builder prompt at a time. Completed prompts are preserved for audit cont
 3. [docs/builder-prompts/03-operations-dashboard-readonly.md](docs/builder-prompts/03-operations-dashboard-readonly.md)
 4. [docs/builder-prompts/04-app-shell-navigation.md](docs/builder-prompts/04-app-shell-navigation.md)
 5. [docs/builder-prompts/05-authority-operational-control-foundation.md](docs/builder-prompts/05-authority-operational-control-foundation.md)
+6. [docs/builder-prompts/06-readonly-operational-pages.md](docs/builder-prompts/06-readonly-operational-pages.md)
 
 Future prompts should build on completed code and should stay limited to one app slice.
