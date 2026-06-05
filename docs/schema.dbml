@@ -103,6 +103,135 @@ Enum UserRole {
   CREW
 }
 
+Enum OperatingPart {
+  PART_91
+  PART_91K
+  PART_135
+}
+
+Enum AuthorityStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  RETIRED
+}
+
+Enum ReleaseStatus {
+  PLANNED
+  RELEASED
+  CANCELLED
+  VOIDED
+}
+
+Table "Operator" {
+  "id" text [pk]
+  "name" text [not null]
+  "code" text [not null, unique]
+  "isActive" boolean [not null, default: true]
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+}
+
+Table "OperatingAuthority" {
+  "id" text [pk]
+  "operatorId" text [not null]
+  "operatingPart" OperatingPart [not null]
+  "displayName" text [not null]
+  "status" AuthorityStatus [not null, default: 'DRAFT']
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("operatorId", "operatingPart") [unique]
+    "operatorId"
+    ("operatorId", "status")
+  }
+}
+
+Table "AuthorityRevision" {
+  "id" text [pk]
+  "operatingAuthorityId" text [not null]
+  "revisionLabel" text [not null]
+  "effectiveStart" timestamp [not null]
+  "effectiveEnd" timestamp
+  "status" AuthorityStatus [not null, default: 'DRAFT']
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("operatingAuthorityId", "revisionLabel") [unique]
+    ("operatingAuthorityId", "status")
+  }
+}
+
+Table "Manual" {
+  "id" text [pk]
+  "operatingAuthorityId" text [not null]
+  "name" text [not null]
+  "documentIdentifier" text
+  "publishedAt" timestamp
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("operatingAuthorityId", "name") [unique]
+  }
+}
+
+Table "ManualRevision" {
+  "id" text [pk]
+  "manualId" text [not null]
+  "revisionLabel" text [not null]
+  "revisionDate" timestamp [not null]
+  "effectiveStart" timestamp
+  "effectiveEnd" timestamp
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("manualId", "revisionLabel") [unique]
+    ("manualId", "effectiveStart")
+  }
+}
+
+Table "OperationalControlRecord" {
+  "id" text [pk]
+  "flightId" text [unique]
+  "operatorId" text [not null]
+  "operatingAuthorityId" text [not null]
+  "authorityRevisionId" text [not null]
+  "controllingEntity" text [not null]
+  "controlNotes" text
+  "createdById" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    "flightId" [unique]
+    "operatorId"
+    "operatingAuthorityId"
+    "authorityRevisionId"
+  }
+}
+
+Table "FlightRelease" {
+  "id" text [pk]
+  "operationalControlRecordId" text [not null, unique]
+  "status" ReleaseStatus [not null, default: 'PLANNED']
+  "releasedById" text
+  "releasedAt" timestamp
+  "releaseNotes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    "operationalControlRecordId" [unique]
+    "status"
+  }
+}
+
 Table "User" {
   "id" text [pk]
   "email" text [not null, unique]
@@ -397,3 +526,14 @@ Ref: "Alert"."crewMemberId" > "CrewMember"."id"
 Ref: "Alert"."createdById" > "User"."id"
 Ref: "Alert"."acknowledgedById" > "User"."id"
 Ref: "Alert"."resolvedById" > "User"."id"
+Ref: "OperatingAuthority"."operatorId" > "Operator"."id"
+Ref: "AuthorityRevision"."operatingAuthorityId" > "OperatingAuthority"."id"
+Ref: "Manual"."operatingAuthorityId" > "OperatingAuthority"."id"
+Ref: "ManualRevision"."manualId" > "Manual"."id"
+Ref: "OperationalControlRecord"."flightId" > "Flight"."id"
+Ref: "OperationalControlRecord"."operatorId" > "Operator"."id"
+Ref: "OperationalControlRecord"."operatingAuthorityId" > "OperatingAuthority"."id"
+Ref: "OperationalControlRecord"."authorityRevisionId" > "AuthorityRevision"."id"
+Ref: "OperationalControlRecord"."createdById" > "User"."id"
+Ref: "FlightRelease"."operationalControlRecordId" > "OperationalControlRecord"."id"
+Ref: "FlightRelease"."releasedById" > "User"."id"

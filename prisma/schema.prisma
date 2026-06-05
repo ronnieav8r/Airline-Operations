@@ -103,6 +103,135 @@ enum UserRole {
   CREW
 }
 
+enum OperatingPart {
+  PART_91
+  PART_91K
+  PART_135
+}
+
+enum AuthorityStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  RETIRED
+}
+
+enum ReleaseStatus {
+  PLANNED
+  RELEASED
+  CANCELLED
+  VOIDED
+}
+
+model Operator {
+  id                     String                  @id @default(cuid())
+  name                   String
+  code                   String                  @unique
+  isActive               Boolean                 @default(true)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  operatingAuthorities   OperatingAuthority[]
+  controlRecords         OperationalControlRecord[]
+}
+
+model OperatingAuthority {
+  id                     String                  @id @default(cuid())
+  operatorId             String
+  operatingPart          OperatingPart
+  displayName            String
+  status                 AuthorityStatus         @default(DRAFT)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  operator               Operator                @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  revisions              AuthorityRevision[]
+  manuals                Manual[]
+  controlRecords         OperationalControlRecord[]
+
+  @@unique([operatorId, operatingPart])
+  @@index([operatorId, status])
+}
+
+model AuthorityRevision {
+  id                     String                  @id @default(cuid())
+  operatingAuthorityId   String
+  revisionLabel          String
+  effectiveStart         DateTime
+  effectiveEnd           DateTime?
+  status                 AuthorityStatus         @default(DRAFT)
+  notes                  String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  operatingAuthority     OperatingAuthority      @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
+  controlRecords         OperationalControlRecord[]
+
+  @@unique([operatingAuthorityId, revisionLabel])
+  @@index([operatingAuthorityId, status])
+}
+
+model Manual {
+  id                     String                  @id @default(cuid())
+  operatingAuthorityId   String
+  name                   String
+  documentIdentifier     String?
+  publishedAt            DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  operatingAuthority     OperatingAuthority      @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
+  revisions              ManualRevision[]
+
+  @@unique([operatingAuthorityId, name])
+}
+
+model ManualRevision {
+  id                     String                  @id @default(cuid())
+  manualId               String
+  revisionLabel          String
+  revisionDate           DateTime
+  effectiveStart         DateTime?
+  effectiveEnd           DateTime?
+  notes                  String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  manual                 Manual                  @relation(fields: [manualId], references: [id], onDelete: Cascade)
+
+  @@unique([manualId, revisionLabel])
+  @@index([manualId, effectiveStart])
+}
+
+model OperationalControlRecord {
+  id                     String                  @id @default(cuid())
+  flightId               String?                 @unique
+  operatorId             String
+  operatingAuthorityId   String
+  authorityRevisionId    String
+  controllingEntity      String
+  controlNotes           String?
+  createdById            String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  flight                 Flight?                 @relation(fields: [flightId], references: [id], onDelete: SetNull)
+  operator               Operator                @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  operatingAuthority     OperatingAuthority      @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
+  authorityRevision      AuthorityRevision       @relation(fields: [authorityRevisionId], references: [id], onDelete: Restrict)
+  createdBy              User?                   @relation("OperationalControlRecordCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  release                FlightRelease?
+}
+
+model FlightRelease {
+  id                      String                 @id @default(cuid())
+  operationalControlRecordId String               @unique
+  status                  ReleaseStatus          @default(PLANNED)
+  releasedById            String?
+  releasedAt              DateTime?
+  releaseNotes            String?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  operationalControlRecord OperationalControlRecord @relation(fields: [operationalControlRecordId], references: [id], onDelete: Restrict)
+  releasedBy              User?                  @relation("FlightReleaseReleasedBy", fields: [releasedById], references: [id], onDelete: SetNull)
+
+  @@index([operationalControlRecordId])
+}
+
 model User {
   id                        String                  @id @default(cuid())
   email                     String                  @unique
@@ -118,6 +247,8 @@ model User {
   alertsCreated             Alert[]                 @relation("AlertCreatedBy")
   alertsAcknowledged        Alert[]                 @relation("AlertAcknowledgedBy")
   alertsResolved            Alert[]                 @relation("AlertResolvedBy")
+  operationalControlRecords OperationalControlRecord[] @relation("OperationalControlRecordCreatedBy")
+  flightReleases            FlightRelease[]         @relation("FlightReleaseReleasedBy")
 }
 
 model UserProfile {
@@ -194,6 +325,7 @@ model Flight {
   crewLogs           CrewFlightLog[]
   flightPassengers   FlightPassenger[]
   alerts             Alert[]
+  operationalControlRecord OperationalControlRecord?
 
   @@unique([flightNumber, scheduledDeparture])
   @@index([scheduledDeparture])

@@ -6,9 +6,12 @@ import {
   AircraftType,
   DutyStatus,
   EmploymentStatus,
+  AuthorityStatus,
   FlightStatus,
   IdDocumentType,
+  OperatingPart,
   PrismaClient,
+  ReleaseStatus,
   SeatRole,
   TimeOffRequestStatus,
   TimeOffRequestType,
@@ -29,6 +32,12 @@ function addHours(date: Date, hours: number): Date {
   return next;
 }
 
+function addMonths(date: Date, months: number): Date {
+  const next = new Date(date);
+  next.setUTCMonth(next.getUTCMonth() + months);
+  return next;
+}
+
 async function main() {
   const now = new Date();
   const anchor = new Date(
@@ -39,6 +48,13 @@ async function main() {
   const today = anchor;
   const tomorrow = addDays(anchor, 1);
 
+  await prisma.flightRelease.deleteMany();
+  await prisma.operationalControlRecord.deleteMany();
+  await prisma.manualRevision.deleteMany();
+  await prisma.manual.deleteMany();
+  await prisma.authorityRevision.deleteMany();
+  await prisma.operatingAuthority.deleteMany();
+  await prisma.operator.deleteMany();
   await prisma.flightPassenger.deleteMany();
   await prisma.passenger.deleteMany();
   await prisma.crewFlightLog.deleteMany();
@@ -347,6 +363,272 @@ async function main() {
       },
     }),
   ]);
+
+  const operator = await prisma.operator.upsert({
+    where: { code: "AO" },
+    update: {
+      name: "AeroOps Charter",
+      isActive: true,
+    },
+    create: {
+      name: "AeroOps Charter",
+      code: "AO",
+      isActive: true,
+    },
+  });
+
+  const [authority91, authority135] = await Promise.all([
+    prisma.operatingAuthority.upsert({
+      where: {
+        operatorId_operatingPart: {
+          operatorId: operator.id,
+          operatingPart: OperatingPart.PART_91,
+        },
+      },
+      update: {
+        status: AuthorityStatus.ACTIVE,
+        displayName: "Part 91 - Corporate Operations",
+      },
+      create: {
+        operatorId: operator.id,
+        operatingPart: OperatingPart.PART_91,
+        displayName: "Part 91 - Corporate Operations",
+        status: AuthorityStatus.ACTIVE,
+      },
+    }),
+    prisma.operatingAuthority.upsert({
+      where: {
+        operatorId_operatingPart: {
+          operatorId: operator.id,
+          operatingPart: OperatingPart.PART_135,
+        },
+      },
+      update: {
+        status: AuthorityStatus.ACTIVE,
+        displayName: "Part 135 - Charter Operations",
+      },
+      create: {
+        operatorId: operator.id,
+        operatingPart: OperatingPart.PART_135,
+        displayName: "Part 135 - Charter Operations",
+        status: AuthorityStatus.ACTIVE,
+      },
+    }),
+  ]);
+
+  const [revision91, revision135] = await Promise.all([
+    prisma.authorityRevision.upsert({
+      where: {
+        operatingAuthorityId_revisionLabel: {
+          operatingAuthorityId: authority91.id,
+          revisionLabel: "P91-2026-Q2",
+        },
+      },
+      update: {
+        status: AuthorityStatus.ACTIVE,
+        effectiveStart: addMonths(anchor, -6),
+        effectiveEnd: null,
+      },
+      create: {
+        operatingAuthorityId: authority91.id,
+        revisionLabel: "P91-2026-Q2",
+        effectiveStart: addMonths(anchor, -6),
+        status: AuthorityStatus.ACTIVE,
+        notes: "Initial part-91 operational compliance baseline.",
+      },
+    }),
+    prisma.authorityRevision.upsert({
+      where: {
+        operatingAuthorityId_revisionLabel: {
+          operatingAuthorityId: authority135.id,
+          revisionLabel: "P135-2026-Q2",
+        },
+      },
+      update: {
+        status: AuthorityStatus.ACTIVE,
+        effectiveStart: addMonths(anchor, -6),
+        effectiveEnd: null,
+      },
+      create: {
+        operatingAuthorityId: authority135.id,
+        revisionLabel: "P135-2026-Q2",
+        effectiveStart: addMonths(anchor, -6),
+        status: AuthorityStatus.ACTIVE,
+        notes: "Initial part-135 operational compliance baseline.",
+      },
+    }),
+  ]);
+
+  const [manual91, manual135] = await Promise.all([
+    prisma.manual.upsert({
+      where: {
+        operatingAuthorityId_name: {
+          operatingAuthorityId: authority91.id,
+          name: "AeroOps Operations Manual",
+        },
+      },
+      update: {
+        documentIdentifier: "AO-MAN-91",
+        publishedAt: addMonths(anchor, 1),
+      },
+      create: {
+        operatingAuthorityId: authority91.id,
+        name: "AeroOps Operations Manual",
+        documentIdentifier: "AO-MAN-91",
+        publishedAt: addMonths(anchor, 1),
+      },
+    }),
+    prisma.manual.upsert({
+      where: {
+        operatingAuthorityId_name: {
+          operatingAuthorityId: authority135.id,
+          name: "AeroOps Operations Manual",
+        },
+      },
+      update: {
+        documentIdentifier: "AO-MAN-135",
+        publishedAt: addMonths(anchor, 1),
+      },
+      create: {
+        operatingAuthorityId: authority135.id,
+        name: "AeroOps Operations Manual",
+        documentIdentifier: "AO-MAN-135",
+        publishedAt: addMonths(anchor, 1),
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    prisma.manualRevision.upsert({
+      where: {
+        manualId_revisionLabel: {
+          manualId: manual91.id,
+          revisionLabel: "1.0",
+        },
+      },
+      update: {
+        revisionDate: addMonths(anchor, -6),
+        effectiveStart: addMonths(anchor, -6),
+        effectiveEnd: null,
+        notes: "Baseline manual revision for part 91 startup.",
+      },
+      create: {
+        manualId: manual91.id,
+        revisionLabel: "1.0",
+        revisionDate: addMonths(anchor, -6),
+        effectiveStart: addMonths(anchor, -6),
+        effectiveEnd: null,
+        notes: "Baseline manual revision for part 91 startup.",
+      },
+    }),
+    prisma.manualRevision.upsert({
+      where: {
+        manualId_revisionLabel: {
+          manualId: manual135.id,
+          revisionLabel: "1.0",
+        },
+      },
+      update: {
+        revisionDate: addMonths(anchor, -6),
+        effectiveStart: addMonths(anchor, -6),
+        effectiveEnd: null,
+        notes: "Baseline manual revision for part 135 startup.",
+      },
+      create: {
+        manualId: manual135.id,
+        revisionLabel: "1.0",
+        revisionDate: addMonths(anchor, -6),
+        effectiveStart: addMonths(anchor, -6),
+        effectiveEnd: null,
+        notes: "Baseline manual revision for part 135 startup.",
+      },
+    }),
+  ]);
+
+  const flightControlBlueprints = [
+    {
+      flightId: flights[0].id,
+      authority: authority91,
+      revision: revision91,
+      controllingEntity: "AeroOps Flight Ops - AO Dispatch",
+      controlNotes: "Corporate part 91 release policy path.",
+      releaseStatus: ReleaseStatus.RELEASED,
+    },
+    {
+      flightId: flights[1].id,
+      authority: authority135,
+      revision: revision135,
+      controllingEntity: "AeroOps Dispatch - Part 135 Desk",
+      controlNotes: "Charter flight under Part 135 authority.",
+      releaseStatus: ReleaseStatus.RELEASED,
+    },
+    {
+      flightId: flights[2].id,
+      authority: authority91,
+      revision: revision91,
+      controllingEntity: "AeroOps Dispatch - AO Ops Desk",
+      controlNotes: "Part 91 operation with known scheduling risk.",
+      releaseStatus: ReleaseStatus.PLANNED,
+    },
+    {
+      flightId: flights[3].id,
+      authority: authority135,
+      revision: revision135,
+      controllingEntity: "AeroOps Dispatch - Part 135 Desk",
+      controlNotes: "Future charter slot with planned release.",
+      releaseStatus: ReleaseStatus.PLANNED,
+    },
+    {
+      flightId: flights[4].id,
+      authority: authority91,
+      revision: revision91,
+      controllingEntity: "AeroOps Dispatch - AO Ops Desk",
+      controlNotes: "Corporate route with planned release.",
+      releaseStatus: ReleaseStatus.PLANNED,
+    },
+  ];
+
+  for (const control of flightControlBlueprints) {
+    const controlRecord = await prisma.operationalControlRecord.upsert({
+      where: { flightId: control.flightId },
+      create: {
+        flightId: control.flightId,
+        operatorId: operator.id,
+        operatingAuthorityId: control.authority.id,
+        authorityRevisionId: control.revision.id,
+        controllingEntity: control.controllingEntity,
+        controlNotes: control.controlNotes,
+        createdById: opsUser.id,
+      },
+      update: {
+        operatorId: operator.id,
+        operatingAuthorityId: control.authority.id,
+        authorityRevisionId: control.revision.id,
+        controllingEntity: control.controllingEntity,
+        controlNotes: control.controlNotes,
+        createdById: opsUser.id,
+      },
+    });
+
+    await prisma.flightRelease.upsert({
+      where: { operationalControlRecordId: controlRecord.id },
+      create: {
+        operationalControlRecordId: controlRecord.id,
+        status: control.releaseStatus,
+        releasedById: opsUser.id,
+        releasedAt:
+          control.releaseStatus === ReleaseStatus.RELEASED ? addHours(anchor, -1) : null,
+        releaseNotes: `Auto-seeded ${control.releaseStatus.toLowerCase()} status for ${control.flightId}.`,
+      },
+      update: {
+        status: control.releaseStatus,
+        releasedById: opsUser.id,
+        releasedAt:
+          control.releaseStatus === ReleaseStatus.RELEASED ? addHours(anchor, -1) : null,
+        releaseNotes: `Auto-seeded ${control.releaseStatus.toLowerCase()} status for ${control.flightId}.`,
+      },
+    });
+  }
 
   await prisma.crewSchedule.createMany({
     data: [

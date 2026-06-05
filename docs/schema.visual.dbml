@@ -209,6 +209,83 @@ Table "DutyRule" {
   "updatedAt" timestamp
 }
 
+Table "Operator" {
+  "id" text [pk]
+  "name" text
+  "code" text
+  "isActive" boolean
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "OperatingAuthority" {
+  "id" text [pk]
+  "operatorId" text
+  "operatingPart" text
+  "displayName" text
+  "status" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "AuthorityRevision" {
+  "id" text [pk]
+  "operatingAuthorityId" text
+  "revisionLabel" text
+  "effectiveStart" timestamp
+  "effectiveEnd" timestamp
+  "status" text
+  "notes" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "Manual" {
+  "id" text [pk]
+  "operatingAuthorityId" text
+  "name" text
+  "documentIdentifier" text
+  "publishedAt" timestamp
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "ManualRevision" {
+  "id" text [pk]
+  "manualId" text
+  "revisionLabel" text
+  "revisionDate" timestamp
+  "effectiveStart" timestamp
+  "effectiveEnd" timestamp
+  "notes" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "OperationalControlRecord" {
+  "id" text [pk]
+  "flightId" text
+  "operatorId" text
+  "operatingAuthorityId" text
+  "authorityRevisionId" text
+  "controllingEntity" text
+  "controlNotes" text
+  "createdById" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "FlightRelease" {
+  "id" text [pk]
+  "operationalControlRecordId" text
+  "status" text
+  "releasedById" text
+  "releasedAt" timestamp
+  "releaseNotes" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
 Ref: "UserProfile"."userId" > "User"."id"
 Ref: "Aircraft"."homeStationId" > "Station"."id"
 Ref: "Flight"."aircraftId" > "Aircraft"."id"
@@ -235,3 +312,14 @@ Ref: "Alert"."crewMemberId" > "CrewMember"."id"
 Ref: "Alert"."createdById" > "User"."id"
 Ref: "Alert"."acknowledgedById" > "User"."id"
 Ref: "Alert"."resolvedById" > "User"."id"
+Ref: "OperatingAuthority"."operatorId" > "Operator"."id"
+Ref: "AuthorityRevision"."operatingAuthorityId" > "OperatingAuthority"."id"
+Ref: "Manual"."operatingAuthorityId" > "OperatingAuthority"."id"
+Ref: "ManualRevision"."manualId" > "Manual"."id"
+Ref: "OperationalControlRecord"."flightId" > "Flight"."id"
+Ref: "OperationalControlRecord"."operatorId" > "Operator"."id"
+Ref: "OperationalControlRecord"."operatingAuthorityId" > "OperatingAuthority"."id"
+Ref: "OperationalControlRecord"."authorityRevisionId" > "AuthorityRevision"."id"
+Ref: "OperationalControlRecord"."createdById" > "User"."id"
+Ref: "FlightRelease"."operationalControlRecordId" > "OperationalControlRecord"."id"
+Ref: "FlightRelease"."releasedById" > "User"."id"
