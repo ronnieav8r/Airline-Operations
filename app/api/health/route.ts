@@ -12,6 +12,10 @@ export async function GET() {
       flightCount,
       aircraftCrewAssignmentCount,
       activeAlertCount,
+      operatorCount,
+      operatingAuthorityCount,
+      operationalControlRecordCount,
+      flightReleaseCount,
     ] = await Promise.all([
       prisma.station.count(),
       prisma.aircraft.count(),
@@ -19,6 +23,10 @@ export async function GET() {
       prisma.flight.count(),
       prisma.aircraftCrewAssignment.count(),
       prisma.alert.count({ where: { status: "ACTIVE" } }),
+      prisma.operator.count(),
+      prisma.operatingAuthority.count(),
+      prisma.operationalControlRecord.count(),
+      prisma.flightRelease.count(),
     ]);
 
     return NextResponse.json({
@@ -31,6 +39,10 @@ export async function GET() {
         flights: flightCount,
         aircraftCrewAssignments: aircraftCrewAssignmentCount,
         activeAlerts: activeAlertCount,
+        operators: operatorCount,
+        operatingAuthorities: operatingAuthorityCount,
+        operationalControlRecords: operationalControlRecordCount,
+        flightReleases: flightReleaseCount,
       },
     });
   } catch (error) {
