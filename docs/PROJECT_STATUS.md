@@ -54,6 +54,10 @@ rows by `FlightLeg.legacyFlightId`. `/`, `/operations-control`, and `/flights`
 now pilot FlightLeg reads with legacy `Flight` fallback; aircraft, crew,
 scheduling, and existing APIs still read from current `Flight` paths.
 
+Render has been backfilled with FlightLeg foundation records. The
+`RUN_FLIGHTLEG_BACKFILL` flag should remain `0` unless intentionally rerunning
+the gated idempotent backfill.
+
 New additive foundation tables:
 
 - `TripOrMission`
@@ -157,7 +161,7 @@ Use the hidden parity diagnostic before adding write flows.
 Preferred next slice:
 
 ```text
-Release evidence schema planning
+Prompt 12: Release evidence schema planning
 ```
 
 Scope:
