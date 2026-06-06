@@ -1,16 +1,11 @@
 import { OperatingPart, ReleaseStatus } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
+import {
+  getFlightLegOperationsControlData,
+  OperationsControlRecordRead,
+} from "@/lib/flightleg-operations-control-queries";
 
 export const dynamic = "force-dynamic";
-
-type ControlRecord = Awaited<ReturnType<typeof getOperationsControlData>>["records"][number];
-
-const OPERATING_PARTS = [
-  OperatingPart.PART_91,
-  OperatingPart.PART_91K,
-  OperatingPart.PART_135,
-];
 
 function toDateTimeLabel(value: Date): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -43,101 +38,32 @@ function releaseBadgeClasses(status: ReleaseStatus | null): string {
   return "border-amber-200 bg-amber-50 text-amber-800";
 }
 
-function buildAuthorityMix(records: Array<{ operatingAuthority: { operatingPart: OperatingPart } }>) {
-  return OPERATING_PARTS.map((part) => ({
-    part,
-    count: records.filter((record) => record.operatingAuthority.operatingPart === part).length,
-  }));
+function sourceLabel(record: OperationsControlRecordRead): string {
+  if (record.readSource === "FLIGHT_LEG") {
+    return "FlightLeg read";
+  }
+
+  if (record.readSource === "LEG_MISSING_FALLBACK_FLIGHT") {
+    return "Fallback Flight read";
+  }
+
+  return "Unassigned";
 }
 
-async function getOperationsControlData() {
-  const records = await prisma.operationalControlRecord.findMany({
-    select: {
-      id: true,
-      controllingEntity: true,
-      controlNotes: true,
-      createdAt: true,
-      operator: {
-        select: {
-          name: true,
-          code: true,
-        },
-      },
-      operatingAuthority: {
-        select: {
-          displayName: true,
-          operatingPart: true,
-          status: true,
-        },
-      },
-      authorityRevision: {
-        select: {
-          revisionLabel: true,
-          effectiveStart: true,
-          effectiveEnd: true,
-          status: true,
-        },
-      },
-      release: {
-        select: {
-          status: true,
-          releasedAt: true,
-        },
-      },
-      flight: {
-        select: {
-          flightNumber: true,
-          scheduledDeparture: true,
-          status: true,
-          departureStation: {
-            select: {
-              code: true,
-            },
-          },
-          arrivalStation: {
-            select: {
-              code: true,
-            },
-          },
-          aircraft: {
-            select: {
-              tailNumber: true,
-              type: true,
-            },
-          },
-        },
-      },
-    },
-    orderBy: [
-      {
-        flight: {
-          scheduledDeparture: "asc",
-        },
-      },
-      {
-        createdAt: "asc",
-      },
-    ],
-  });
+function sourceClasses(record: OperationsControlRecordRead): string {
+  if (record.readSource === "FLIGHT_LEG") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
 
-  const released = records.filter((record) => record.release?.status === ReleaseStatus.RELEASED).length;
-  const planned = records.filter((record) => record.release?.status === ReleaseStatus.PLANNED).length;
-  const otherReleaseStates = records.length - released - planned;
+  if (record.readSource === "LEG_MISSING_FALLBACK_FLIGHT") {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
 
-  return {
-    records,
-    summary: {
-      totalControlRecords: records.length,
-      released,
-      planned,
-      otherReleaseStates,
-      authorityMix: buildAuthorityMix(records),
-    },
-  };
+  return "border-zinc-200 bg-zinc-50 text-zinc-500";
 }
 
-function FlightCell({ record }: { record: ControlRecord }) {
-  if (!record.flight) {
+function FlightCell({ record }: { record: OperationsControlRecordRead }) {
+  if (!record.leg) {
     return (
       <div>
         <p className="font-medium text-zinc-900">Unassigned</p>
@@ -148,14 +74,21 @@ function FlightCell({ record }: { record: ControlRecord }) {
 
   return (
     <div>
-      <p className="font-medium text-zinc-900">{record.flight.flightNumber}</p>
-      <p className="text-xs text-zinc-500">{record.flight.status}</p>
+      <p className="font-medium text-zinc-900">{record.leg.flightNumber}</p>
+      <p className="text-xs text-zinc-500">{record.leg.status}</p>
+      <span
+        className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceClasses(
+          record,
+        )}`}
+      >
+        {sourceLabel(record)}
+      </span>
     </div>
   );
 }
 
 export default async function OperationsControlPage() {
-  const data = await getOperationsControlData();
+  const data = await getFlightLegOperationsControlData();
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -196,6 +129,18 @@ export default async function OperationsControlPage() {
             <p className="text-sm text-zinc-500">Other release states</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {data.summary.otherReleaseStates}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">FlightLeg reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {data.summary.flightLegReads}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Fallback reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {data.summary.fallbackFlightReads}
             </p>
           </article>
         </section>
@@ -302,24 +247,24 @@ export default async function OperationsControlPage() {
                         ) : null}
                       </td>
                       <td className="px-3 py-2.5 text-zinc-700">
-                        {record.flight ? (
+                        {record.leg?.departureStation && record.leg.arrivalStation ? (
                           <>
-                            {record.flight.departureStation.code}
+                            {record.leg.departureStation.code}
                             {" -> "}
-                            {record.flight.arrivalStation.code}
+                            {record.leg.arrivalStation.code}
                           </>
                         ) : (
                           <span className="text-zinc-400">Not assigned</span>
                         )}
                       </td>
                       <td className="px-3 py-2.5">
-                        {record.flight ? (
+                        {record.leg?.aircraft ? (
                           <>
                             <p className="font-mono text-zinc-800">
-                              {record.flight.aircraft.tailNumber}
+                              {record.leg.aircraft.tailNumber}
                             </p>
                             <p className="text-xs text-zinc-500">
-                              {record.flight.aircraft.type}
+                              {record.leg.aircraft.type}
                             </p>
                           </>
                         ) : (
@@ -327,8 +272,8 @@ export default async function OperationsControlPage() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-zinc-700">
-                        {record.flight ? (
-                          toDateTimeLabel(record.flight.scheduledDeparture)
+                        {record.leg?.scheduledDeparture ? (
+                          toDateTimeLabel(record.leg.scheduledDeparture)
                         ) : (
                           <span className="text-zinc-400">Not scheduled</span>
                         )}
