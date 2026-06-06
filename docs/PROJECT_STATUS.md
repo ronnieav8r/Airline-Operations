@@ -43,6 +43,11 @@ It has:
 The current `Flight` model is still the v1 stand-in for a future `FlightLeg`.
 Do not rename it or split it without an approved schema-planning slice.
 
+Use these DBML files for schema discussions:
+
+- `docs/schema.current.dbml`: clean current-state DBML matching the implemented Prisma schema.
+- `docs/schema.planning.flightleg.dbml`: planning-only target DBML using `FlightLeg` as the operational anchor.
+
 Crew coverage uses aircraft-block assignment:
 
 ```text
@@ -124,7 +129,8 @@ Then verify the changed routes and `/api/health`.
 
 ## Recommended Next Step
 
-Do a schema-planning slice before adding write flows.
+Do a schema-planning slice before adding write flows. The planning direction is
+to use `FlightLeg` as the long-term operational anchor.
 
 Preferred next slice:
 

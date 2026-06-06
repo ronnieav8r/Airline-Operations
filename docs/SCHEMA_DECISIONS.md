@@ -32,6 +32,11 @@ FlightLeg -> ReleasePackage
 
 The current `Flight` table should be treated as the v1 stand-in for `FlightLeg`.
 
+DBML references:
+
+- `docs/schema.current.dbml` is the clean current-state DBML for the implemented schema.
+- `docs/schema.planning.flightleg.dbml` is the planning DBML for the future `FlightLeg`-anchored product model.
+
 Before the product grows into a broad scheduling or dispatch surface, add authority and operational-control concepts so every operational leg can identify the governing rule set, controlling entity, release decision, and authority/manual revision in effect.
 
 ## Crew Assignment Model

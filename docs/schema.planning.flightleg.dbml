@@ -1,0 +1,879 @@
+// AeroOps Center planning DBML
+// Last updated: 2026-06-06
+// Scope: target data model direction, not yet implemented.
+// This file intentionally uses FlightLeg as the operational anchor.
+
+Project AeroOps_Planning_FlightLeg {
+  database_type: "PostgreSQL"
+  Note: "Planning model for the final product direction. Do not treat as a migration-ready schema without a follow-up implementation plan."
+}
+
+Enum UserRole {
+  ADMIN
+  OPS
+  DISPATCH
+  MAINTENANCE
+  CREW
+  SAFETY
+  VIEWER
+}
+
+Enum OperatingPart {
+  PART_91
+  PART_91K
+  PART_135
+}
+
+Enum AuthorityStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  RETIRED
+}
+
+Enum FlightLegStatus {
+  DRAFT
+  SCHEDULED
+  READY_FOR_RELEASE
+  RELEASED
+  ENROUTE
+  COMPLETE
+  CANCELLED
+  DELAYED
+}
+
+Enum AssignmentStatus {
+  PLANNED
+  ACTIVE
+  RELIEVED
+  CANCELLED
+}
+
+Enum ReleaseStatus {
+  PLANNED
+  READY
+  RELEASED
+  AMENDED
+  CANCELLED
+  VOIDED
+}
+
+Enum ManifestStatus {
+  DRAFT
+  READY
+  LOCKED
+  AMENDED
+  VOIDED
+}
+
+Enum FlightLocatingStatus {
+  NOT_STARTED
+  FILED
+  ACTIVE
+  CLOSED
+  OVERDUE
+}
+
+Enum AircraftStatus {
+  AVAILABLE
+  RESERVED
+  IN_FLIGHT
+  IN_MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+Enum MaintenanceRecordStatus {
+  OPEN
+  DEFERRED
+  CLEARED
+  CLOSED
+}
+
+Enum CrewEmploymentStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+Enum CrewDutyStatus {
+  ON_DUTY
+  RESERVE
+  OFF_DUTY
+  VACATION
+  SICK
+  TRAINING
+  DEADHEADING
+}
+
+Enum SeatRole {
+  CPT
+  FO
+  FA
+  CA
+}
+
+Enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+Enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+Enum SafetyReportStatus {
+  SUBMITTED
+  TRIAGED
+  INVESTIGATING
+  MITIGATING
+  CLOSED
+}
+
+// Core people, organization, and authority.
+
+Table User {
+  id varchar [pk]
+  email varchar [not null, unique]
+  role UserRole [not null]
+  isActive boolean [not null, default: true]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table UserProfile {
+  id varchar [pk]
+  userId varchar [not null, unique]
+  firstName varchar [not null]
+  lastName varchar [not null]
+  phone varchar
+  dateOfBirth timestamp
+  emergencyContactName varchar
+  emergencyContactPhone varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table Operator {
+  id varchar [pk]
+  name varchar [not null]
+  code varchar [not null, unique]
+  certificateNumber varchar
+  isActive boolean [not null, default: true]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table OperatingAuthority {
+  id varchar [pk]
+  operatorId varchar [not null]
+  operatingPart OperatingPart [not null]
+  displayName varchar [not null]
+  status AuthorityStatus [not null]
+  effectiveStart timestamp
+  effectiveEnd timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (operatorId, operatingPart)
+    (operatorId, status)
+  }
+}
+
+Table AuthorityRevision {
+  id varchar [pk]
+  operatingAuthorityId varchar [not null]
+  revisionLabel varchar [not null]
+  effectiveStart timestamp [not null]
+  effectiveEnd timestamp
+  status AuthorityStatus [not null]
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (operatingAuthorityId, revisionLabel) [unique]
+    (operatingAuthorityId, status)
+  }
+}
+
+Table Manual {
+  id varchar [pk]
+  operatingAuthorityId varchar [not null]
+  name varchar [not null]
+  documentIdentifier varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table ManualRevision {
+  id varchar [pk]
+  manualId varchar [not null]
+  revisionLabel varchar [not null]
+  revisionDate timestamp [not null]
+  effectiveStart timestamp
+  effectiveEnd timestamp
+  storageObjectKey varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+// Geography and fleet.
+
+Table Station {
+  id varchar [pk]
+  code varchar [not null, unique]
+  name varchar [not null]
+  city varchar [not null]
+  state varchar
+  country varchar [not null]
+  timezone varchar [not null]
+  isActive boolean [not null, default: true]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table AircraftType {
+  id varchar [pk]
+  code varchar [not null, unique]
+  manufacturer varchar
+  model varchar [not null]
+  typeDesignator varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table Aircraft {
+  id varchar [pk]
+  aircraftTypeId varchar [not null]
+  tailNumber varchar [not null, unique]
+  serialNumber varchar
+  name varchar
+  status AircraftStatus [not null]
+  homeStationId varchar
+  defaultSeatCount int
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table AircraftConfiguration {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  name varchar [not null]
+  passengerSeatCount int
+  maxRampWeight decimal
+  maxTakeoffWeight decimal
+  maxLandingWeight decimal
+  effectiveStart timestamp [not null]
+  effectiveEnd timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table AircraftCapability {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  capabilityCode varchar [not null]
+  description text
+  effectiveStart timestamp [not null]
+  effectiveEnd timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (aircraftId, capabilityCode)
+  }
+}
+
+// Trip and leg anchor.
+
+Table TripOrMission {
+  id varchar [pk]
+  operatorId varchar [not null]
+  tripNumber varchar [not null]
+  customerName varchar
+  missionType varchar
+  requestedStart timestamp
+  requestedEnd timestamp
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (operatorId, tripNumber) [unique]
+  }
+}
+
+Table FlightLeg {
+  id varchar [pk]
+  tripOrMissionId varchar
+  operatorId varchar [not null]
+  operatingAuthorityId varchar [not null]
+  authorityRevisionId varchar [not null]
+  legNumber int
+  flightNumber varchar
+  departureStationId varchar [not null]
+  arrivalStationId varchar [not null]
+  scheduledDeparture timestamp [not null]
+  scheduledArrival timestamp [not null]
+  actualDeparture timestamp
+  actualArrival timestamp
+  status FlightLegStatus [not null]
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (operatorId, flightNumber, scheduledDeparture)
+    (status, scheduledDeparture)
+    (departureStationId, scheduledDeparture)
+    (arrivalStationId, scheduledArrival)
+  }
+}
+
+Table TurnaroundLink {
+  id varchar [pk]
+  inboundFlightLegId varchar [not null]
+  outboundFlightLegId varchar [not null]
+  minimumTurnMinutes int
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (inboundFlightLegId, outboundFlightLegId) [unique]
+  }
+}
+
+Table AircraftAssignment {
+  id varchar [pk]
+  flightLegId varchar [not null]
+  aircraftId varchar [not null]
+  configurationId varchar
+  status AssignmentStatus [not null]
+  assignedAt timestamp [not null]
+  releasedAt timestamp
+  assignedById varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (flightLegId, aircraftId) [unique]
+    (aircraftId, assignedAt)
+  }
+}
+
+// Crew, assignment, duty, and qualification.
+
+Table CrewMember {
+  id varchar [pk]
+  userId varchar [unique]
+  employeeNumber varchar [not null, unique]
+  firstName varchar [not null]
+  lastName varchar [not null]
+  baseStationId varchar [not null]
+  employmentStatus CrewEmploymentStatus [not null]
+  dutyStatus CrewDutyStatus [not null]
+  hireDate timestamp
+  phone varchar
+  email varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table CrewLegAssignment {
+  id varchar [pk]
+  flightLegId varchar [not null]
+  crewMemberId varchar [not null]
+  seatRole SeatRole [not null]
+  status AssignmentStatus [not null]
+  reportTime timestamp
+  releaseTime timestamp
+  assignedById varchar
+  sourceAircraftAssignmentId varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (flightLegId, seatRole)
+    (crewMemberId, reportTime)
+  }
+}
+
+Table CrewAircraftBlockAssignment {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  crewMemberId varchar [not null]
+  seatRole SeatRole [not null]
+  startsAt timestamp [not null]
+  endsAt timestamp
+  isActive boolean [not null, default: true]
+  assignedById varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table CertificateRating {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  certificateType varchar [not null]
+  ratingCode varchar [not null]
+  issuedAt timestamp
+  expiresAt timestamp
+  documentStorageKey varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table MedicalCertificate {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  classCode varchar [not null]
+  issuedAt timestamp [not null]
+  expiresAt timestamp [not null]
+  restrictions text
+  documentStorageKey varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table TrainingEvent {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  aircraftTypeId varchar
+  operatingAuthorityId varchar
+  eventType varchar [not null]
+  completedAt timestamp [not null]
+  expiresAt timestamp
+  instructorOrEvaluator varchar
+  result varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table CheckEvent {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  aircraftTypeId varchar
+  operatingAuthorityId varchar
+  checkType varchar [not null]
+  completedAt timestamp [not null]
+  expiresAt timestamp
+  evaluator varchar
+  result varchar [not null]
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table RecencyEvent {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  aircraftTypeId varchar
+  eventCode varchar [not null]
+  eventAt timestamp [not null]
+  countValue int
+  sourceFlightLegId varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table DutyPeriod {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  startsAt timestamp [not null]
+  endsAt timestamp
+  dutyStatus CrewDutyStatus [not null]
+  source varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table RestPeriod {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  startsAt timestamp [not null]
+  endsAt timestamp [not null]
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+// Operational control, release, and dispatch package.
+
+Table OperationalControlRecord {
+  id varchar [pk]
+  flightLegId varchar [not null, unique]
+  operatorId varchar [not null]
+  operatingAuthorityId varchar [not null]
+  authorityRevisionId varchar [not null]
+  controllingEntity varchar [not null]
+  operationalControlPersonId varchar
+  controlNotes text
+  createdById varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table ReleasePackage {
+  id varchar [pk]
+  flightLegId varchar [not null, unique]
+  operationalControlRecordId varchar [not null, unique]
+  status ReleaseStatus [not null]
+  releasedById varchar
+  releasedAt timestamp
+  amendedAt timestamp
+  releaseNotes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table DispatchPackage {
+  id varchar [pk]
+  flightLegId varchar [not null, unique]
+  releasePackageId varchar
+  weatherBriefingId varchar
+  notamSnapshotId varchar
+  flightPlanReferenceId varchar
+  performanceData jsonb
+  createdById varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table WeatherBriefingSnapshot {
+  id varchar [pk]
+  provider varchar
+  briefingAt timestamp [not null]
+  routeSummary text
+  rawSnapshot jsonb
+  createdAt timestamp [not null]
+}
+
+Table NotamSnapshot {
+  id varchar [pk]
+  capturedAt timestamp [not null]
+  affectedStationCodes text
+  rawSnapshot jsonb
+  createdAt timestamp [not null]
+}
+
+Table FlightPlanReference {
+  id varchar [pk]
+  flightLegId varchar [not null]
+  provider varchar
+  externalReference varchar
+  filedAt timestamp
+  status varchar
+  routeText text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+// Manifest, weight and balance, and locating.
+
+Table Passenger {
+  id varchar [pk]
+  firstName varchar [not null]
+  lastName varchar [not null]
+  dateOfBirth timestamp
+  email varchar
+  phone varchar
+  idDocumentNumber varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table Manifest {
+  id varchar [pk]
+  flightLegId varchar [not null, unique]
+  status ManifestStatus [not null]
+  lockedAt timestamp
+  lockedById varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table ManifestItem {
+  id varchar [pk]
+  manifestId varchar [not null]
+  passengerId varchar
+  personName varchar
+  seatNumber varchar
+  weight decimal
+  baggageWeight decimal
+  checkedInAt timestamp
+  boardedAt timestamp
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table WeightBalanceRun {
+  id varchar [pk]
+  flightLegId varchar [not null]
+  manifestId varchar
+  aircraftConfigurationId varchar
+  status varchar [not null]
+  takeoffWeight decimal
+  landingWeight decimal
+  centerOfGravity varchar
+  calculatedById varchar
+  calculatedAt timestamp
+  approvedById varchar
+  approvedAt timestamp
+  calculationSnapshot jsonb
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table FlightLocatingRecord {
+  id varchar [pk]
+  flightLegId varchar [not null, unique]
+  status FlightLocatingStatus [not null]
+  responsibleParty varchar
+  plannedRoute text
+  lastKnownPosition varchar
+  activatedAt timestamp
+  closedAt timestamp
+  overdueAt timestamp
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table PositionReport {
+  id varchar [pk]
+  flightLocatingRecordId varchar [not null]
+  reportedAt timestamp [not null]
+  latitude decimal
+  longitude decimal
+  altitude int
+  source varchar
+  notes text
+  createdAt timestamp [not null]
+}
+
+// Maintenance and airworthiness.
+
+Table Discrepancy {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  reportedById varchar
+  flightLegId varchar
+  title varchar [not null]
+  description text [not null]
+  status MaintenanceRecordStatus [not null]
+  reportedAt timestamp [not null]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table Deferral {
+  id varchar [pk]
+  discrepancyId varchar [not null]
+  deferralCode varchar
+  authorityReference varchar
+  deferredAt timestamp [not null]
+  expiresAt timestamp
+  clearedAt timestamp
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table MaintenanceEvent {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  discrepancyId varchar
+  providerName varchar
+  workPerformed text
+  performedBy varchar
+  performedAt timestamp
+  approvedById varchar
+  returnToServiceAt timestamp
+  status MaintenanceRecordStatus [not null]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table AirworthinessRelease {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  maintenanceEventId varchar
+  releasedById varchar
+  releasedAt timestamp [not null]
+  releaseNotes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+// Alerts and safety.
+
+Table Alert {
+  id varchar [pk]
+  type varchar [not null]
+  severity AlertSeverity [not null]
+  status AlertStatus [not null]
+  title varchar [not null]
+  message text [not null]
+  flightLegId varchar
+  aircraftId varchar
+  crewMemberId varchar
+  createdById varchar
+  acknowledgedById varchar
+  resolvedById varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table SafetyReport {
+  id varchar [pk]
+  reporterId varchar
+  flightLegId varchar
+  aircraftId varchar
+  category varchar [not null]
+  status SafetyReportStatus [not null]
+  title varchar [not null]
+  narrative text [not null]
+  submittedAt timestamp [not null]
+  closedAt timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table Hazard {
+  id varchar [pk]
+  safetyReportId varchar
+  title varchar [not null]
+  description text
+  severity varchar
+  likelihood varchar
+  riskLevel varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table CorrectiveAction {
+  id varchar [pk]
+  safetyReportId varchar
+  hazardId varchar
+  ownerId varchar
+  title varchar [not null]
+  dueAt timestamp
+  completedAt timestamp
+  status varchar [not null]
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+// Core refs.
+
+Ref: UserProfile.userId > User.id
+Ref: OperatingAuthority.operatorId > Operator.id
+Ref: AuthorityRevision.operatingAuthorityId > OperatingAuthority.id
+Ref: Manual.operatingAuthorityId > OperatingAuthority.id
+Ref: ManualRevision.manualId > Manual.id
+Ref: Aircraft.aircraftTypeId > AircraftType.id
+Ref: Aircraft.homeStationId > Station.id
+Ref: AircraftConfiguration.aircraftId > Aircraft.id
+Ref: AircraftCapability.aircraftId > Aircraft.id
+Ref: TripOrMission.operatorId > Operator.id
+Ref: FlightLeg.tripOrMissionId > TripOrMission.id
+Ref: FlightLeg.operatorId > Operator.id
+Ref: FlightLeg.operatingAuthorityId > OperatingAuthority.id
+Ref: FlightLeg.authorityRevisionId > AuthorityRevision.id
+Ref: FlightLeg.departureStationId > Station.id
+Ref: FlightLeg.arrivalStationId > Station.id
+Ref: TurnaroundLink.inboundFlightLegId > FlightLeg.id
+Ref: TurnaroundLink.outboundFlightLegId > FlightLeg.id
+Ref: AircraftAssignment.flightLegId > FlightLeg.id
+Ref: AircraftAssignment.aircraftId > Aircraft.id
+Ref: AircraftAssignment.configurationId > AircraftConfiguration.id
+Ref: AircraftAssignment.assignedById > User.id
+Ref: CrewMember.userId > User.id
+Ref: CrewMember.baseStationId > Station.id
+Ref: CrewLegAssignment.flightLegId > FlightLeg.id
+Ref: CrewLegAssignment.crewMemberId > CrewMember.id
+Ref: CrewLegAssignment.assignedById > User.id
+Ref: CrewLegAssignment.sourceAircraftAssignmentId > CrewAircraftBlockAssignment.id
+Ref: CrewAircraftBlockAssignment.aircraftId > Aircraft.id
+Ref: CrewAircraftBlockAssignment.crewMemberId > CrewMember.id
+Ref: CrewAircraftBlockAssignment.assignedById > User.id
+Ref: CertificateRating.crewMemberId > CrewMember.id
+Ref: MedicalCertificate.crewMemberId > CrewMember.id
+Ref: TrainingEvent.crewMemberId > CrewMember.id
+Ref: TrainingEvent.aircraftTypeId > AircraftType.id
+Ref: TrainingEvent.operatingAuthorityId > OperatingAuthority.id
+Ref: CheckEvent.crewMemberId > CrewMember.id
+Ref: CheckEvent.aircraftTypeId > AircraftType.id
+Ref: CheckEvent.operatingAuthorityId > OperatingAuthority.id
+Ref: RecencyEvent.crewMemberId > CrewMember.id
+Ref: RecencyEvent.aircraftTypeId > AircraftType.id
+Ref: RecencyEvent.sourceFlightLegId > FlightLeg.id
+Ref: DutyPeriod.crewMemberId > CrewMember.id
+Ref: RestPeriod.crewMemberId > CrewMember.id
+Ref: OperationalControlRecord.flightLegId > FlightLeg.id
+Ref: OperationalControlRecord.operatorId > Operator.id
+Ref: OperationalControlRecord.operatingAuthorityId > OperatingAuthority.id
+Ref: OperationalControlRecord.authorityRevisionId > AuthorityRevision.id
+Ref: OperationalControlRecord.operationalControlPersonId > User.id
+Ref: OperationalControlRecord.createdById > User.id
+Ref: ReleasePackage.flightLegId > FlightLeg.id
+Ref: ReleasePackage.operationalControlRecordId > OperationalControlRecord.id
+Ref: ReleasePackage.releasedById > User.id
+Ref: DispatchPackage.flightLegId > FlightLeg.id
+Ref: DispatchPackage.releasePackageId > ReleasePackage.id
+Ref: DispatchPackage.weatherBriefingId > WeatherBriefingSnapshot.id
+Ref: DispatchPackage.notamSnapshotId > NotamSnapshot.id
+Ref: DispatchPackage.flightPlanReferenceId > FlightPlanReference.id
+Ref: DispatchPackage.createdById > User.id
+Ref: FlightPlanReference.flightLegId > FlightLeg.id
+Ref: Manifest.flightLegId > FlightLeg.id
+Ref: Manifest.lockedById > User.id
+Ref: ManifestItem.manifestId > Manifest.id
+Ref: ManifestItem.passengerId > Passenger.id
+Ref: WeightBalanceRun.flightLegId > FlightLeg.id
+Ref: WeightBalanceRun.manifestId > Manifest.id
+Ref: WeightBalanceRun.aircraftConfigurationId > AircraftConfiguration.id
+Ref: WeightBalanceRun.calculatedById > User.id
+Ref: WeightBalanceRun.approvedById > User.id
+Ref: FlightLocatingRecord.flightLegId > FlightLeg.id
+Ref: PositionReport.flightLocatingRecordId > FlightLocatingRecord.id
+Ref: Discrepancy.aircraftId > Aircraft.id
+Ref: Discrepancy.reportedById > User.id
+Ref: Discrepancy.flightLegId > FlightLeg.id
+Ref: Deferral.discrepancyId > Discrepancy.id
+Ref: MaintenanceEvent.aircraftId > Aircraft.id
+Ref: MaintenanceEvent.discrepancyId > Discrepancy.id
+Ref: MaintenanceEvent.approvedById > User.id
+Ref: AirworthinessRelease.aircraftId > Aircraft.id
+Ref: AirworthinessRelease.maintenanceEventId > MaintenanceEvent.id
+Ref: AirworthinessRelease.releasedById > User.id
+Ref: Alert.flightLegId > FlightLeg.id
+Ref: Alert.aircraftId > Aircraft.id
+Ref: Alert.crewMemberId > CrewMember.id
+Ref: Alert.createdById > User.id
+Ref: Alert.acknowledgedById > User.id
+Ref: Alert.resolvedById > User.id
+Ref: SafetyReport.reporterId > User.id
+Ref: SafetyReport.flightLegId > FlightLeg.id
+Ref: SafetyReport.aircraftId > Aircraft.id
+Ref: Hazard.safetyReportId > SafetyReport.id
+Ref: CorrectiveAction.safetyReportId > SafetyReport.id
+Ref: CorrectiveAction.hazardId > Hazard.id
+Ref: CorrectiveAction.ownerId > User.id

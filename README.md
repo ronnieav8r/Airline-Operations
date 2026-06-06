@@ -15,6 +15,8 @@ This repository is intentionally starting from planning docs instead of generate
 - Compliance roadmap: [docs/COMPLIANCE_ROADMAP.md](docs/COMPLIANCE_ROADMAP.md)
 - Local development: [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
 - Current project status: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
+- Current-state DBML: [docs/schema.current.dbml](docs/schema.current.dbml)
+- FlightLeg planning DBML: [docs/schema.planning.flightleg.dbml](docs/schema.planning.flightleg.dbml)
 
 The current implementation is a small v1 operations slice. It should not be treated as the final regulatory data model. Future schema work should move toward a flight-leg-centered, authority-aware operating model that can support Part 91, Part 91K, and Part 135 workflows without splitting into separate mini-systems.
 

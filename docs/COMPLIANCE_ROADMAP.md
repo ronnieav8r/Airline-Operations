@@ -4,6 +4,11 @@ This roadmap updates the AeroOps Center gameplan after reviewing Part 91, Part 9
 
 The current schema remains useful as a small v1 operations foundation. It should now be treated as the starting point for a compliance-ready operations system, not as the final model.
 
+Schema reference files:
+
+- `docs/schema.current.dbml` captures the implemented current-state schema.
+- `docs/schema.planning.flightleg.dbml` captures the planning model using `FlightLeg` as the future operational anchor.
+
 ## Product Direction
 
 AeroOps Center should grow toward a shared canonical schema for small operators that may fly under different operating contexts:
