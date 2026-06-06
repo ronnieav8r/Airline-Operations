@@ -1,7 +1,7 @@
-import { FlightStatus, ReleaseStatus, SeatRole } from "@prisma/client";
+import { FlightLegStatus, FlightStatus, ReleaseStatus, SeatRole } from "@prisma/client";
 
 import { FlightCoverage } from "@/lib/crew-resolution";
-import { FlightListItem, getFlightList } from "@/lib/flight-queries";
+import { FlightListItem, getFlightListData } from "@/lib/flight-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -35,9 +35,12 @@ function formatAircraftType(value: string): string {
   return value.replaceAll("_", "-");
 }
 
-function statusBadgeClasses(status: FlightStatus): string {
+function statusBadgeClasses(status: FlightListItem["status"]): string {
   if (status === FlightStatus.ENROUTE) {
     return "border-blue-200 bg-blue-50 text-blue-700";
+  }
+  if (status === FlightLegStatus.RELEASED || status === FlightLegStatus.READY_FOR_RELEASE) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (status === FlightStatus.DELAYED) {
     return "border-rose-200 bg-rose-50 text-rose-700";
@@ -49,6 +52,22 @@ function statusBadgeClasses(status: FlightStatus): string {
     return "border-slate-200 bg-slate-50 text-slate-600";
   }
   return "border-emerald-200 bg-emerald-50 text-emerald-700";
+}
+
+function sourceBadgeClasses(readSource: FlightListItem["readSource"]): string {
+  if (readSource === "FLIGHT_LEG") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
+function sourceLabel(readSource: FlightListItem["readSource"]): string {
+  if (readSource === "FLIGHT_LEG") {
+    return "FlightLeg read";
+  }
+
+  return "Fallback Flight read";
 }
 
 function coverageBadgeClasses(coverage: FlightCoverage | null): string {
@@ -147,7 +166,7 @@ function getSummary(flights: FlightListItem[]) {
 }
 
 export default async function FlightsPage() {
-  const flights = await getFlightList();
+  const { flights, readSummary } = await getFlightListData();
   const summary = getSummary(flights);
 
   return (
@@ -170,7 +189,7 @@ export default async function FlightsPage() {
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-8">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Flights</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.total}</p>
@@ -194,6 +213,18 @@ export default async function FlightsPage() {
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Released</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.released}</p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">FlightLeg reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {readSummary.flightLegReads}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Fallback reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {readSummary.fallbackFlightReads}
+            </p>
           </article>
         </section>
 
@@ -227,7 +258,19 @@ export default async function FlightsPage() {
                       <tr className="border-b border-zinc-100 align-top" key={flight.id}>
                         <td className="whitespace-nowrap px-3 py-3">
                           <div className="font-semibold text-zinc-950">{flight.flightNumber}</div>
-                          <div className="text-xs text-zinc-500">{flight.id.slice(0, 8)}</div>
+                          <div className="text-xs text-zinc-500">
+                            Flight {flight.legacyFlightId.slice(0, 8)}
+                          </div>
+                          <div className="text-xs text-zinc-500">
+                            Leg {flight.flightLegId ? flight.flightLegId.slice(0, 8) : "missing"}
+                          </div>
+                          <span
+                            className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceBadgeClasses(
+                              flight.readSource,
+                            )}`}
+                          >
+                            {sourceLabel(flight.readSource)}
+                          </span>
                         </td>
                         <td className="px-3 py-3">
                           <div className="font-medium text-zinc-900">
