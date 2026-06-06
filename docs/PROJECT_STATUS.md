@@ -20,6 +20,7 @@ It has:
 - Crew at `/crew`
 - Scheduling at `/scheduling`
 - Health endpoint at `/api/health`
+- Hidden FlightLeg parity diagnostic at `/internal/flightleg-parity`
 - Local Docker Postgres development setup
 - Render deployment connected to `main`
 
@@ -38,6 +39,7 @@ It has:
 11. Read-only Crew page.
 12. Read-only Scheduling page.
 13. Additive FlightLeg transition foundation.
+14. Hidden Flight-to-FlightLeg parity diagnostic.
 
 ## Current Data Model Boundaries
 
@@ -145,19 +147,18 @@ Then verify the changed routes and `/api/health`.
 
 ## Recommended Next Step
 
-Do a read-migration preparation slice before adding write flows.
+Use the hidden parity diagnostic before adding write flows.
 
 Preferred next slice:
 
 ```text
-Flight-to-FlightLeg read comparison
+FlightLeg read migration pilot
 ```
 
 Scope:
 
-- Add read-only query helpers or an internal diagnostic surface that compares
-  current `Flight` rows to their `FlightLeg` bridge records.
-- Verify flight, authority, aircraft, crew, and turnaround parity.
-- Do not rewire production pages until comparison output is clean.
+- Choose one low-risk read-only surface to pilot `FlightLeg` reads.
+- Keep current `Flight` reads available as fallback/comparison.
+- Do not add CRUD or mutations yet.
 
 Avoid adding CRUD screens until this decision is made.

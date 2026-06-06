@@ -182,6 +182,6 @@ When the next schema-oriented slice is approved, prefer this order:
 6. `CertificateRating`, `MedicalCertificate`, `TrainingEvent`, `CheckEvent`, `RouteCheck`, `RecencyEvent`, `DutyPeriod`, `RestPeriod`
 7. `SafetyReport`, `Hazard`, `RiskAssessment`, `Mitigation`, `CorrectiveAction`
 
-Items 1 through 3 are now implemented as additive foundations. The next
-schema/data step should compare `Flight` and `FlightLeg` reads before any UI
-or API is rewired to the new leg anchor.
+Items 1 through 3 are now implemented as additive foundations. A hidden parity
+diagnostic now compares `Flight` and `FlightLeg` reads before any UI or API is
+rewired to the new leg anchor.
