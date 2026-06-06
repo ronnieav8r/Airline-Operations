@@ -43,6 +43,7 @@ It has:
 15. Operations Control FlightLeg read pilot.
 16. Flights page FlightLeg read pilot.
 17. Dashboard FlightLeg read pilot.
+18. Release evidence schema planning.
 
 ## Current Data Model Boundaries
 
@@ -70,6 +71,13 @@ Use these DBML files for schema discussions:
 
 - `docs/schema.current.dbml`: clean current-state DBML matching the implemented Prisma schema.
 - `docs/schema.planning.flightleg.dbml`: planning-only target DBML using `FlightLeg` as the operational anchor.
+
+Release evidence is planned but not yet implemented. Use
+`docs/RELEASE_EVIDENCE_SCHEMA_DECISIONS.md` for the Prompt 13 boundary:
+`Manifest`, `ManifestItem`, `WeightBalanceRun`, `FlightLocatingRecord`,
+`DispatchPackage`, `WeatherBriefingSnapshot`, `NotamSnapshot`, and
+`FlightPlanReference` attach to `FlightLeg`. `ReleasePackage` and
+`PositionReport` remain deferred.
 
 Crew coverage uses aircraft-block assignment:
 
@@ -161,13 +169,14 @@ Use the hidden parity diagnostic before adding write flows.
 Preferred next slice:
 
 ```text
-Prompt 12: Release evidence schema planning
+Prompt 13: Release evidence schema foundation
 ```
 
 Scope:
 
-- Decide the minimum release-evidence schema slice after the FlightLeg read pilots.
-- Keep current read fallback patterns intact.
-- Do not add CRUD or mutations yet.
+- Add the first release-evidence Prisma models and enums additively.
+- Add local seed and gated Render-safe demo backfill behavior.
+- Add health counts and update DBML/docs.
+- Keep current read fallback patterns intact and do not add CRUD or mutations.
 
-Avoid adding CRUD screens until this decision is made.
+Avoid adding CRUD screens until this schema foundation exists and is validated.

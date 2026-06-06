@@ -1,0 +1,147 @@
+# Release Evidence Schema Decisions
+
+Last updated: 2026-06-06
+
+This document defines the next additive schema slice after the `FlightLeg` read
+pilots. It is the source of truth for Builder Prompt 13.
+
+## Current Boundary
+
+`FlightLeg` is now the future operational anchor. Dashboard, Flights, and
+Operations Control read through FlightLeg-backed helpers with legacy `Flight`
+fallbacks. Existing release records remain in `FlightRelease`, attached to
+`OperationalControlRecord`.
+
+Do not replace `FlightRelease` yet. A new `ReleasePackage` should wait until the
+release workflow transition is planned separately.
+
+## Prompt 13 First Additive Slice
+
+Implement these tables in the first release-evidence migration:
+
+- `Manifest`
+- `ManifestItem`
+- `WeightBalanceRun`
+- `FlightLocatingRecord`
+- `DispatchPackage`
+- `WeatherBriefingSnapshot`
+- `NotamSnapshot`
+- `FlightPlanReference`
+
+Add these enums:
+
+- `ManifestStatus`: `DRAFT`, `READY`, `LOCKED`, `AMENDED`, `VOIDED`
+- `WeightBalanceStatus`: `DRAFT`, `CALCULATED`, `APPROVED`, `VOIDED`
+- `FlightLocatingStatus`: `NOT_STARTED`, `FILED`, `ACTIVE`, `CLOSED`, `OVERDUE`
+
+Keep `FlightPlanReference.status` as a string in the first slice because
+provider status vocabularies are likely to vary.
+
+## Relationship Decisions
+
+Attach all new operational evidence records to `FlightLeg`, not legacy `Flight`.
+
+Use these cardinalities:
+
+- `Manifest`: one-to-one with `FlightLeg`.
+- `ManifestItem`: many-to-one with `Manifest`, optionally linked to current `Passenger`.
+- `WeightBalanceRun`: many-to-one with `FlightLeg`, optionally linked to `Manifest`.
+- `FlightLocatingRecord`: one-to-one with `FlightLeg`.
+- `FlightPlanReference`: many-to-one with `FlightLeg`.
+- `DispatchPackage`: one-to-one with `FlightLeg`.
+- `WeatherBriefingSnapshot`: independent snapshot, optionally referenced by `DispatchPackage`.
+- `NotamSnapshot`: independent snapshot, optionally referenced by `DispatchPackage`.
+
+For Prompt 13, do not add `aircraftConfigurationId` to `WeightBalanceRun`
+because `AircraftConfiguration` is part of the later airworthiness/configuration
+slice. `WeightBalanceRun.calculationSnapshot` can hold demo calculation details
+until the configuration model exists.
+
+## Deferred From Prompt 13
+
+Do not include these in the first implementation:
+
+- `ReleasePackage`
+- `PositionReport`
+- Passenger identity redesign
+- Aircraft configuration and capability tables
+- Weather, NOTAM, or flight-plan provider integrations
+- Release CRUD, dispatch CRUD, manifest CRUD, or UI mutation flows
+- Current page rewiring beyond health/count visibility
+
+`PositionReport` belongs in a later locating-specific slice after the app needs
+position history, overdue checks, or actual flight-following workflows.
+
+## DBML Delta Notes
+
+The planning DBML already includes the broader target direction. Prompt 13
+should implement only the release-evidence subset above and update current-state
+DBML after the migration exists.
+
+Implementation DBML updates should:
+
+- Add the eight Prompt 13 tables to `docs/schema.current.dbml`.
+- Keep `ReleasePackage` and `PositionReport` in planning-only DBML.
+- Keep `DispatchPackage.releasePackageId` out of the implemented schema until
+  `ReleasePackage` exists.
+- Keep `WeightBalanceRun.aircraftConfigurationId` out of the implemented schema
+  until `AircraftConfiguration` exists.
+
+## Seed And Backfill Decisions
+
+Update local demo seed to create minimal release-evidence records after
+FlightLeg foundation rows exist.
+
+Create a gated production/demo backfill script:
+
+```text
+scripts/backfill-release-evidence-demo.ts
+```
+
+Gate the script with:
+
+```text
+RUN_RELEASE_EVIDENCE_BACKFILL=1
+```
+
+Default behavior must skip. Do not run broad seed against Render.
+
+Backfill behavior:
+
+- Create one `Manifest` per `FlightLeg`.
+- Create `ManifestItem` rows from existing `FlightPassenger` rows when the
+  FlightLeg has a legacy flight bridge.
+- Create one `FlightLocatingRecord` per `FlightLeg`.
+- Create one demo `WeatherBriefingSnapshot` and `NotamSnapshot` per `FlightLeg`.
+- Create at least one `FlightPlanReference` per `FlightLeg`.
+- Create one `DispatchPackage` per `FlightLeg` linking the snapshots and current
+  flight-plan reference.
+- Create one `WeightBalanceRun` per `FlightLeg` when enough demo data exists;
+  use `DRAFT` or `CALCULATED` status and store assumptions in
+  `calculationSnapshot`.
+
+Backfill must be idempotent.
+
+## Health Counts
+
+Prompt 13 should add `/api/health` counts for:
+
+- `manifests`
+- `manifestItems`
+- `weightBalanceRuns`
+- `flightLocatingRecords`
+- `dispatchPackages`
+- `weatherBriefingSnapshots`
+- `notamSnapshots`
+- `flightPlanReferences`
+
+## Validation Criteria
+
+Prompt 13 is ready only when:
+
+- The Prisma migration is additive only.
+- No existing model is dropped, renamed, or made newly required.
+- Current pages still render.
+- The hidden FlightLeg parity diagnostic stays green.
+- Local seed/backfill produces nonzero health counts for the new tables.
+- Render backfill can be run only through the gated environment flag.
