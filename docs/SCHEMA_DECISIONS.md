@@ -185,7 +185,7 @@ When the next schema-oriented slice is approved, prefer this order:
 Items 1 through 3 are now implemented as additive foundations. A hidden parity
 diagnostic now compares `Flight` and `FlightLeg` reads before any UI or API is
 rewired to the new leg anchor. `/operations-control` now pilots read-only
-FlightLeg reads with legacy `Flight` fallback. `/flights` now uses the same
-fallback pattern while preserving legacy `Flight` IDs for crew coverage APIs.
+FlightLeg reads with legacy `Flight` fallback. `/flights` and `/` now use the
+same fallback pattern while preserving legacy `Flight` IDs for crew coverage.
 Broader page/API migrations should follow this pattern until the transition is
 complete.

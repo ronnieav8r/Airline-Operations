@@ -1,58 +1,13 @@
 import {
   AlertSeverity,
-  AlertStatus,
-  AircraftStatus,
+  FlightLegStatus,
   FlightStatus,
   SeatRole,
 } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
-import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
-
-type DashboardFlight = {
-  id: string;
-  flightNumber: string;
-  scheduledDeparture: Date;
-  status: FlightStatus;
-  departureCode: string;
-  arrivalCode: string;
-  tailNumber: string;
-  coverage: FlightCoverage | null;
-};
-
-type AlertRow = {
-  id: string;
-  type: string;
-  severity: AlertSeverity;
-  title: string;
-  message: string;
-  flightNumber: string | null;
-  aircraftTail: string | null;
-};
+import { DashboardFlight, getDashboardData } from "@/lib/dashboard-queries";
 
 export const dynamic = "force-dynamic";
-
-function getTodayRange(now: Date) {
-  const start = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    0,
-    0,
-    0,
-    0,
-  );
-  const end = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() + 1,
-    0,
-    0,
-    0,
-    0,
-  );
-  return { start, end };
-}
 
 function toTime(value: Date): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -62,21 +17,16 @@ function toTime(value: Date): string {
   }).format(value);
 }
 
-function toDateLabel(value: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(value);
-}
-
 function formatRoleLabel(role: SeatRole): string {
   return role === SeatRole.CPT ? "CPT" : role;
 }
 
-function statusBadgeClasses(status: FlightStatus): string {
+function statusBadgeClasses(status: DashboardFlight["status"]): string {
   if (status === FlightStatus.ENROUTE) {
     return "border-blue-200 bg-blue-50 text-blue-700";
+  }
+  if (status === FlightLegStatus.RELEASED || status === FlightLegStatus.READY_FOR_RELEASE) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (status === FlightStatus.DELAYED) {
     return "border-rose-200 bg-rose-50 text-rose-700";
@@ -85,6 +35,22 @@ function statusBadgeClasses(status: FlightStatus): string {
     return "border-zinc-200 bg-zinc-50 text-zinc-500";
   }
   return "border-emerald-200 bg-emerald-50 text-emerald-700";
+}
+
+function sourceBadgeClasses(readSource: DashboardFlight["readSource"]): string {
+  if (readSource === "FLIGHT_LEG") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
+function sourceLabel(readSource: DashboardFlight["readSource"]): string {
+  if (readSource === "FLIGHT_LEG") {
+    return "FlightLeg read";
+  }
+
+  return "Fallback Flight read";
 }
 
 function severityBadgeClasses(severity: AlertSeverity): string {
@@ -98,157 +64,6 @@ function severityBadgeClasses(severity: AlertSeverity): string {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
   return "border-sky-200 bg-sky-50 text-sky-700";
-}
-
-function buildFleetSnapshot(statusCounts: Array<{ status: AircraftStatus; count: number }>) {
-  const order = [
-    AircraftStatus.AVAILABLE,
-    AircraftStatus.IN_FLIGHT,
-    AircraftStatus.RESERVED,
-    AircraftStatus.IN_MAINTENANCE,
-    AircraftStatus.OUT_OF_SERVICE,
-  ];
-
-  const map = Object.fromEntries(
-    Object.values(AircraftStatus).map((status) => [status, 0]),
-  ) as Record<AircraftStatus, number>;
-
-  for (const item of statusCounts) {
-    map[item.status] = item.count;
-  }
-
-  return order.map((status) => ({ status, count: map[status] ?? 0 }));
-}
-
-async function getDashboardData() {
-  const now = new Date();
-  const { start, end } = getTodayRange(now);
-
-  const [aircraftCount, crewCount, todayFlights, alerts, fleetStatusGroups] =
-    await Promise.all([
-      prisma.aircraft.count(),
-      prisma.crewMember.count(),
-      prisma.flight.findMany({
-        where: {
-          scheduledDeparture: {
-            gte: start,
-            lt: end,
-          },
-        },
-        select: {
-          id: true,
-          flightNumber: true,
-          scheduledDeparture: true,
-          status: true,
-          departureStation: {
-            select: { code: true },
-          },
-          arrivalStation: {
-            select: { code: true },
-          },
-          aircraft: {
-            select: { tailNumber: true },
-          },
-        },
-        orderBy: { scheduledDeparture: "asc" },
-      }),
-      prisma.alert.findMany({
-        where: {
-          status: AlertStatus.ACTIVE,
-        },
-        select: {
-          id: true,
-          type: true,
-          severity: true,
-          title: true,
-          message: true,
-          flight: {
-            select: {
-              flightNumber: true,
-            },
-          },
-          aircraft: {
-            select: {
-              tailNumber: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.aircraft.groupBy({
-        by: ["status"],
-        _count: { _all: true },
-      }),
-    ]);
-
-  const aircraftWithCoverage: DashboardFlight[] = await Promise.all(
-    todayFlights.map(async (flight) => {
-      const coverage = await resolveFlightCoverage(flight.id);
-
-      return {
-        id: flight.id,
-        flightNumber: flight.flightNumber,
-        scheduledDeparture: flight.scheduledDeparture,
-        status: flight.status,
-        departureCode: flight.departureStation.code,
-        arrivalCode: flight.arrivalStation.code,
-        tailNumber: flight.aircraft.tailNumber,
-        coverage,
-      };
-    }),
-  );
-
-  const statusSummary = {
-    totalFlights: aircraftWithCoverage.length,
-    enroute: aircraftWithCoverage.filter((flight) => flight.status === FlightStatus.ENROUTE).length,
-    delayed: aircraftWithCoverage.filter((flight) => flight.status === FlightStatus.DELAYED).length,
-    activeAlerts: alerts.length,
-    aircraftCount,
-    crewCount,
-  };
-
-  const alertsWithContext: AlertRow[] = alerts.map((alert) => ({
-    id: alert.id,
-    type: alert.type,
-    severity: alert.severity,
-    title: alert.title,
-    message: alert.message,
-    flightNumber: alert.flight?.flightNumber ?? null,
-    aircraftTail: alert.aircraft?.tailNumber ?? null,
-  }));
-
-  const coverageGaps = aircraftWithCoverage
-    .map((flight) => {
-      if (!flight.coverage) {
-        return null;
-      }
-
-      if (flight.coverage.isCovered) {
-        return null;
-      }
-
-      return {
-        ...flight,
-        missingRoles: flight.coverage.missingRoles,
-      };
-    })
-    .filter((item): item is DashboardFlight & { missingRoles: SeatRole[] } => Boolean(item));
-
-  const fleetSnapshot = buildFleetSnapshot(
-    fleetStatusGroups.map((group) => ({
-      status: group.status,
-      count: group._count._all,
-    })),
-  );
-
-  return {
-    dateLabel: toDateLabel(now),
-    statusSummary,
-    flights: aircraftWithCoverage,
-    coverageGaps,
-    alerts: alertsWithContext,
-    fleetSnapshot,
-  };
 }
 
 export default async function Home() {
@@ -269,7 +84,7 @@ export default async function Home() {
           </p>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-8">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Total flights today</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
@@ -304,6 +119,18 @@ export default async function Home() {
             <p className="text-sm text-zinc-500">Crew count</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {dashboard.statusSummary.crewCount}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">FlightLeg reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {dashboard.statusSummary.flightLegReads}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Fallback reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {dashboard.statusSummary.fallbackFlightReads}
             </p>
           </article>
         </section>
@@ -350,7 +177,14 @@ export default async function Home() {
                             {toTime(flight.scheduledDeparture)}
                           </td>
                           <td className="px-3 py-2.5 font-medium text-zinc-900">
-                            {flight.flightNumber}
+                            <div>{flight.flightNumber}</div>
+                            <span
+                              className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceBadgeClasses(
+                                flight.readSource,
+                              )}`}
+                            >
+                              {sourceLabel(flight.readSource)}
+                            </span>
                           </td>
                           <td className="px-3 py-2.5 text-zinc-700">
                             {flight.departureCode}

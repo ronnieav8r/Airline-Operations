@@ -42,6 +42,7 @@ It has:
 14. Hidden Flight-to-FlightLeg parity diagnostic.
 15. Operations Control FlightLeg read pilot.
 16. Flights page FlightLeg read pilot.
+17. Dashboard FlightLeg read pilot.
 
 ## Current Data Model Boundaries
 
@@ -49,8 +50,8 @@ The current `Flight` model is still the v1 table read by the UI and APIs.
 Do not rename it or split it without an approved read-migration slice.
 
 `FlightLeg` now exists as an additive foundation table. It is bridged to current
-rows by `FlightLeg.legacyFlightId`. `/operations-control` and `/flights` now
-pilot FlightLeg reads with legacy `Flight` fallback; dashboard, aircraft, crew,
+rows by `FlightLeg.legacyFlightId`. `/`, `/operations-control`, and `/flights`
+now pilot FlightLeg reads with legacy `Flight` fallback; aircraft, crew,
 scheduling, and existing APIs still read from current `Flight` paths.
 
 New additive foundation tables:
@@ -156,13 +157,13 @@ Use the hidden parity diagnostic before adding write flows.
 Preferred next slice:
 
 ```text
-Dashboard FlightLeg read migration pilot
+Release evidence schema planning
 ```
 
 Scope:
 
-- Migrate dashboard flight summary reads through `FlightLeg` with legacy `Flight` fallback.
-- Keep current `Flight` reads available as fallback/comparison.
+- Decide the minimum release-evidence schema slice after the FlightLeg read pilots.
+- Keep current read fallback patterns intact.
 - Do not add CRUD or mutations yet.
 
 Avoid adding CRUD screens until this decision is made.
