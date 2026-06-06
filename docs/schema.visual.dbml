@@ -1,6 +1,7 @@
 // AeroOps Center visual ERD
 // Paste this file into dbdiagram.io when you want the diagram view.
 // Keep docs/schema.dbml as the fuller maintained schema reference.
+// Updated locally for the additive FlightLeg foundation on 2026-06-06.
 
 Project AeroOps_Render_DB {
   database_type: "PostgreSQL"
@@ -265,12 +266,85 @@ Table "ManualRevision" {
 Table "OperationalControlRecord" {
   "id" text [pk]
   "flightId" text
+  "flightLegId" text
   "operatorId" text
   "operatingAuthorityId" text
   "authorityRevisionId" text
   "controllingEntity" text
   "controlNotes" text
   "createdById" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "TripOrMission" {
+  "id" text [pk]
+  "operatorId" text
+  "tripNumber" text
+  "customerName" text
+  "missionType" text
+  "requestedStart" timestamp
+  "requestedEnd" timestamp
+  "notes" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "FlightLeg" {
+  "id" text [pk]
+  "legacyFlightId" text
+  "tripOrMissionId" text
+  "operatorId" text
+  "operatingAuthorityId" text
+  "authorityRevisionId" text
+  "legNumber" int
+  "flightNumber" text
+  "departureStationId" text
+  "arrivalStationId" text
+  "scheduledDeparture" timestamp
+  "scheduledArrival" timestamp
+  "actualDeparture" timestamp
+  "actualArrival" timestamp
+  "status" text
+  "notes" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "AircraftAssignment" {
+  "id" text [pk]
+  "flightLegId" text
+  "aircraftId" text
+  "status" text
+  "assignedAt" timestamp
+  "releasedAt" timestamp
+  "assignedById" text
+  "notes" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "CrewLegAssignment" {
+  "id" text [pk]
+  "flightLegId" text
+  "crewMemberId" text
+  "seatRole" text
+  "status" text
+  "reportTime" timestamp
+  "releaseTime" timestamp
+  "assignedById" text
+  "sourceAircraftCrewAssignmentId" text
+  "notes" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "TurnaroundLink" {
+  "id" text [pk]
+  "inboundFlightLegId" text
+  "outboundFlightLegId" text
+  "minimumTurnMinutes" int
+  "notes" text
   "createdAt" timestamp
   "updatedAt" timestamp
 }
@@ -317,9 +391,27 @@ Ref: "AuthorityRevision"."operatingAuthorityId" > "OperatingAuthority"."id"
 Ref: "Manual"."operatingAuthorityId" > "OperatingAuthority"."id"
 Ref: "ManualRevision"."manualId" > "Manual"."id"
 Ref: "OperationalControlRecord"."flightId" > "Flight"."id"
+Ref: "OperationalControlRecord"."flightLegId" > "FlightLeg"."id"
 Ref: "OperationalControlRecord"."operatorId" > "Operator"."id"
 Ref: "OperationalControlRecord"."operatingAuthorityId" > "OperatingAuthority"."id"
 Ref: "OperationalControlRecord"."authorityRevisionId" > "AuthorityRevision"."id"
 Ref: "OperationalControlRecord"."createdById" > "User"."id"
 Ref: "FlightRelease"."operationalControlRecordId" > "OperationalControlRecord"."id"
 Ref: "FlightRelease"."releasedById" > "User"."id"
+Ref: "TripOrMission"."operatorId" > "Operator"."id"
+Ref: "FlightLeg"."legacyFlightId" > "Flight"."id"
+Ref: "FlightLeg"."tripOrMissionId" > "TripOrMission"."id"
+Ref: "FlightLeg"."operatorId" > "Operator"."id"
+Ref: "FlightLeg"."operatingAuthorityId" > "OperatingAuthority"."id"
+Ref: "FlightLeg"."authorityRevisionId" > "AuthorityRevision"."id"
+Ref: "FlightLeg"."departureStationId" > "Station"."id"
+Ref: "FlightLeg"."arrivalStationId" > "Station"."id"
+Ref: "AircraftAssignment"."flightLegId" > "FlightLeg"."id"
+Ref: "AircraftAssignment"."aircraftId" > "Aircraft"."id"
+Ref: "AircraftAssignment"."assignedById" > "User"."id"
+Ref: "CrewLegAssignment"."flightLegId" > "FlightLeg"."id"
+Ref: "CrewLegAssignment"."crewMemberId" > "CrewMember"."id"
+Ref: "CrewLegAssignment"."assignedById" > "User"."id"
+Ref: "CrewLegAssignment"."sourceAircraftCrewAssignmentId" > "AircraftCrewAssignment"."id"
+Ref: "TurnaroundLink"."inboundFlightLegId" > "FlightLeg"."id"
+Ref: "TurnaroundLink"."outboundFlightLegId" > "FlightLeg"."id"

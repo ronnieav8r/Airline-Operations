@@ -30,14 +30,20 @@ FlightLeg -> FlightLocatingRecord
 FlightLeg -> ReleasePackage
 ```
 
-The current `Flight` table should be treated as the v1 stand-in for `FlightLeg`.
+The current `Flight` table remains the active UI/API read model. `FlightLeg`
+now exists additively as the future operational anchor, bridged by
+`FlightLeg.legacyFlightId`.
 
 DBML references:
 
 - `docs/schema.current.dbml` is the clean current-state DBML for the implemented schema.
 - `docs/schema.planning.flightleg.dbml` is the planning DBML for the future `FlightLeg`-anchored product model.
 
-Before the product grows into a broad scheduling or dispatch surface, add authority and operational-control concepts so every operational leg can identify the governing rule set, controlling entity, release decision, and authority/manual revision in effect.
+Before the product grows into a broad scheduling or dispatch surface, every
+operational leg should identify the governing rule set, controlling entity,
+release decision, and authority/manual revision in effect. The additive
+foundation for this now exists through `OperationalControlRecord.flightLegId`,
+but current reads still preserve the legacy `flightId` link.
 
 ## Crew Assignment Model
 
@@ -53,6 +59,14 @@ This matches the expected operation:
 - If a flight changes aircraft, crew display follows the new aircraft.
 
 This remains valid for the first operational slice. Longer term, aircraft-block crew assignment should feed a leg-level release/readiness model rather than being the whole operating model.
+
+Current transition state:
+
+- `AircraftCrewAssignment` still drives current crew coverage reads.
+- `CrewLegAssignment` now snapshots the resolved aircraft-block crew onto
+  `FlightLeg` during seed/backfill.
+- Do not treat `CrewLegAssignment` as the source of truth for current pages
+  until a later read-migration slice validates parity.
 
 ## Preferred V1 Tables
 
@@ -162,8 +176,12 @@ When the next schema-oriented slice is approved, prefer this order:
 
 1. `Operator`, `OperatingAuthority`, `AuthorityRevision`, `Manual`, `ManualRevision`
 2. `OperationalControlRecord`, `FlightRelease`
-3. `TripOrMission`, `FlightLeg`, `AircraftAssignment`, `TurnaroundLink`
+3. `TripOrMission`, `FlightLeg`, `AircraftAssignment`, `CrewLegAssignment`, `TurnaroundLink`
 4. `Manifest`, `ManifestItem`, `WeightBalanceRun`, `FlightLocatingRecord`, `DispatchPackage`
 5. `Discrepancy`, `Deferral`, `MaintenanceEvent`, `AirworthinessRelease`
 6. `CertificateRating`, `MedicalCertificate`, `TrainingEvent`, `CheckEvent`, `RouteCheck`, `RecencyEvent`, `DutyPeriod`, `RestPeriod`
 7. `SafetyReport`, `Hazard`, `RiskAssessment`, `Mitigation`, `CorrectiveAction`
+
+Items 1 through 3 are now implemented as additive foundations. The next
+schema/data step should compare `Flight` and `FlightLeg` reads before any UI
+or API is rewired to the new leg anchor.

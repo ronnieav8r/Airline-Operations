@@ -1,7 +1,8 @@
 // AeroOps Center planning DBML
 // Last updated: 2026-06-06
-// Scope: target data model direction, not yet implemented.
-// This file intentionally uses FlightLeg as the operational anchor.
+// Scope: target data model direction. The initial FlightLeg foundation is now
+// implemented additively, while release evidence, airworthiness, crew
+// compliance, and safety tables remain planning-only.
 
 Project AeroOps_Planning_FlightLeg {
   database_type: "PostgreSQL"
@@ -312,6 +313,7 @@ Table TripOrMission {
 
 Table FlightLeg {
   id varchar [pk]
+  legacyFlightId varchar [unique, note: "Temporary bridge to current Flight rows during read migration."]
   tripOrMissionId varchar
   operatorId varchar [not null]
   operatingAuthorityId varchar [not null]
@@ -397,7 +399,7 @@ Table CrewLegAssignment {
   reportTime timestamp
   releaseTime timestamp
   assignedById varchar
-  sourceAircraftAssignmentId varchar
+  sourceAircraftCrewAssignmentId varchar
   notes text
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
@@ -810,7 +812,7 @@ Ref: CrewMember.baseStationId > Station.id
 Ref: CrewLegAssignment.flightLegId > FlightLeg.id
 Ref: CrewLegAssignment.crewMemberId > CrewMember.id
 Ref: CrewLegAssignment.assignedById > User.id
-Ref: CrewLegAssignment.sourceAircraftAssignmentId > CrewAircraftBlockAssignment.id
+Ref: CrewLegAssignment.sourceAircraftCrewAssignmentId > CrewAircraftBlockAssignment.id
 Ref: CrewAircraftBlockAssignment.aircraftId > Aircraft.id
 Ref: CrewAircraftBlockAssignment.crewMemberId > CrewMember.id
 Ref: CrewAircraftBlockAssignment.assignedById > User.id

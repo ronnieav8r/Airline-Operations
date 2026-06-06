@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-06-05
+Last updated: 2026-06-06
 
 This document is the quick onboarding note for planner and builder chats. Read it
 before starting a new AeroOps slice.
@@ -37,11 +37,23 @@ It has:
 10. Read-only Aircraft page.
 11. Read-only Crew page.
 12. Read-only Scheduling page.
+13. Additive FlightLeg transition foundation.
 
 ## Current Data Model Boundaries
 
-The current `Flight` model is still the v1 stand-in for a future `FlightLeg`.
-Do not rename it or split it without an approved schema-planning slice.
+The current `Flight` model is still the v1 table read by the UI and APIs.
+Do not rename it or split it without an approved read-migration slice.
+
+`FlightLeg` now exists as an additive foundation table. It is bridged to current
+rows by `FlightLeg.legacyFlightId`, but current pages still read from `Flight`.
+
+New additive foundation tables:
+
+- `TripOrMission`
+- `FlightLeg`
+- `AircraftAssignment`
+- `CrewLegAssignment`
+- `TurnaroundLink`
 
 Use these DBML files for schema discussions:
 
@@ -66,6 +78,9 @@ Authority/control data exists now:
 - `ManualRevision`
 - `OperationalControlRecord`
 - `FlightRelease`
+
+`OperationalControlRecord.flightLegId` is nullable and additive. It preserves
+the existing `flightId` link for current UI/API behavior.
 
 ## Local Development
 
@@ -104,8 +119,9 @@ Build: npm install && npm run render-build
 Start: npm run start
 ```
 
-`render-build` runs migrations, generates Prisma, runs the gated authority
-backfill script, then builds Next.js.
+`render-build` runs migrations, generates Prisma, runs the gated authority and
+FlightLeg backfill scripts, then builds Next.js. Both backfill scripts skip by
+default unless their explicit environment flags are set.
 
 Do not run broad seed scripts against Render unless explicitly approved.
 
@@ -129,21 +145,19 @@ Then verify the changed routes and `/api/health`.
 
 ## Recommended Next Step
 
-Do a schema-planning slice before adding write flows. The planning direction is
-to use `FlightLeg` as the long-term operational anchor.
+Do a read-migration preparation slice before adding write flows.
 
 Preferred next slice:
 
 ```text
-Flight-leg and trip/mission design doc
+Flight-to-FlightLeg read comparison
 ```
 
 Scope:
 
-- Decide how `Flight` evolves toward `FlightLeg`.
-- Decide whether `TripOrMission` is added before write workflows.
-- Decide how aircraft assignment, crew assignment, operational control,
-  releases, manifests, locating, and alerts attach to the leg.
-- Produce a migration plan, but do not implement migrations yet.
+- Add read-only query helpers or an internal diagnostic surface that compares
+  current `Flight` rows to their `FlightLeg` bridge records.
+- Verify flight, authority, aircraft, crew, and turnaround parity.
+- Do not rewire production pages until comparison output is clean.
 
 Avoid adding CRUD screens until this decision is made.

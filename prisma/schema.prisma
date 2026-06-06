@@ -22,6 +22,24 @@ enum FlightStatus {
   DELAYED
 }
 
+enum FlightLegStatus {
+  DRAFT
+  SCHEDULED
+  READY_FOR_RELEASE
+  RELEASED
+  ENROUTE
+  COMPLETE
+  CANCELLED
+  DELAYED
+}
+
+enum AssignmentStatus {
+  PLANNED
+  ACTIVE
+  RELIEVED
+  CANCELLED
+}
+
 enum AircraftType {
   CL_65
   EMB_135_145
@@ -132,6 +150,8 @@ model Operator {
   updatedAt              DateTime                @updatedAt
   operatingAuthorities   OperatingAuthority[]
   controlRecords         OperationalControlRecord[]
+  tripOrMissions         TripOrMission[]
+  flightLegs             FlightLeg[]
 }
 
 model OperatingAuthority {
@@ -146,6 +166,7 @@ model OperatingAuthority {
   revisions              AuthorityRevision[]
   manuals                Manual[]
   controlRecords         OperationalControlRecord[]
+  flightLegs             FlightLeg[]
 
   @@unique([operatorId, operatingPart])
   @@index([operatorId, status])
@@ -163,6 +184,7 @@ model AuthorityRevision {
   updatedAt              DateTime                @updatedAt
   operatingAuthority     OperatingAuthority      @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
   controlRecords         OperationalControlRecord[]
+  flightLegs             FlightLeg[]
 
   @@unique([operatingAuthorityId, revisionLabel])
   @@index([operatingAuthorityId, status])
@@ -201,6 +223,7 @@ model ManualRevision {
 model OperationalControlRecord {
   id                     String                  @id @default(cuid())
   flightId               String?                 @unique
+  flightLegId            String?                 @unique
   operatorId             String
   operatingAuthorityId   String
   authorityRevisionId    String
@@ -210,6 +233,7 @@ model OperationalControlRecord {
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   flight                 Flight?                 @relation(fields: [flightId], references: [id], onDelete: SetNull)
+  flightLeg              FlightLeg?              @relation(fields: [flightLegId], references: [id], onDelete: SetNull)
   operator               Operator                @relation(fields: [operatorId], references: [id], onDelete: Restrict)
   operatingAuthority     OperatingAuthority      @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
   authorityRevision      AuthorityRevision       @relation(fields: [authorityRevisionId], references: [id], onDelete: Restrict)
@@ -249,6 +273,8 @@ model User {
   alertsResolved            Alert[]                 @relation("AlertResolvedBy")
   operationalControlRecords OperationalControlRecord[] @relation("OperationalControlRecordCreatedBy")
   flightReleases            FlightRelease[]         @relation("FlightReleaseReleasedBy")
+  assignedAircraftAssignments AircraftAssignment[]   @relation("AircraftAssignmentAssignedBy")
+  assignedCrewLegAssignments  CrewLegAssignment[]    @relation("CrewLegAssignmentAssignedBy")
 }
 
 model UserProfile {
@@ -282,6 +308,8 @@ model Station {
   crewMembers   CrewMember[]
   departures    Flight[]       @relation("FlightDepartureStation")
   arrivals      Flight[]       @relation("FlightArrivalStation")
+  flightLegDepartures FlightLeg[] @relation("FlightLegDepartureStation")
+  flightLegArrivals   FlightLeg[] @relation("FlightLegArrivalStation")
   crewSchedules CrewSchedule[]
 }
 
@@ -298,6 +326,7 @@ model Aircraft {
   homeStation    Station?                @relation(fields: [homeStationId], references: [id], onDelete: SetNull)
   flights        Flight[]
   crewAssignments AircraftCrewAssignment[]
+  aircraftAssignments AircraftAssignment[]
   alerts         Alert[]
 
   @@index([status])
@@ -326,6 +355,7 @@ model Flight {
   flightPassengers   FlightPassenger[]
   alerts             Alert[]
   operationalControlRecord OperationalControlRecord?
+  flightLeg          FlightLeg?
 
   @@unique([flightNumber, scheduledDeparture])
   @@index([scheduledDeparture])
@@ -353,6 +383,7 @@ model CrewMember {
   assignments      AircraftCrewAssignment[]
   schedules        CrewSchedule[]
   flightLogs       CrewFlightLog[]
+  legAssignments    CrewLegAssignment[]
   timeOffRequests  TimeOffRequest[]
   alerts           Alert[]
 
@@ -393,12 +424,131 @@ model AircraftCrewAssignment {
   aircraft     Aircraft    @relation(fields: [aircraftId], references: [id], onDelete: Restrict)
   crewMember   CrewMember  @relation(fields: [crewMemberId], references: [id], onDelete: Restrict)
   assignedBy   User?       @relation("AssignmentAuthor", fields: [assignedById], references: [id], onDelete: SetNull)
+  crewLegAssignments CrewLegAssignment[]
 
   @@unique([aircraftId, crewMemberId, seatRole, startsAt])
   @@index([aircraftId, startsAt, endsAt])
   @@index([aircraftId, seatRole, startsAt])
   @@index([crewMemberId, startsAt])
   @@index([isActive])
+}
+
+model TripOrMission {
+  id             String      @id @default(cuid())
+  operatorId     String
+  tripNumber     String
+  customerName   String?
+  missionType    String?
+  requestedStart DateTime?
+  requestedEnd   DateTime?
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  operator       Operator    @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  flightLegs     FlightLeg[]
+
+  @@unique([operatorId, tripNumber])
+  @@index([operatorId, requestedStart])
+}
+
+model FlightLeg {
+  id                         String                    @id @default(cuid())
+  legacyFlightId             String?                   @unique
+  tripOrMissionId            String?
+  operatorId                 String
+  operatingAuthorityId       String
+  authorityRevisionId        String
+  legNumber                  Int?
+  flightNumber               String?
+  departureStationId         String
+  arrivalStationId           String
+  scheduledDeparture         DateTime
+  scheduledArrival           DateTime
+  actualDeparture            DateTime?
+  actualArrival              DateTime?
+  status                     FlightLegStatus           @default(SCHEDULED)
+  notes                      String?
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+  legacyFlight               Flight?                   @relation(fields: [legacyFlightId], references: [id], onDelete: SetNull)
+  tripOrMission              TripOrMission?            @relation(fields: [tripOrMissionId], references: [id], onDelete: SetNull)
+  operator                   Operator                  @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  operatingAuthority         OperatingAuthority        @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
+  authorityRevision          AuthorityRevision         @relation(fields: [authorityRevisionId], references: [id], onDelete: Restrict)
+  departureStation           Station                   @relation("FlightLegDepartureStation", fields: [departureStationId], references: [id], onDelete: Restrict)
+  arrivalStation             Station                   @relation("FlightLegArrivalStation", fields: [arrivalStationId], references: [id], onDelete: Restrict)
+  aircraftAssignments        AircraftAssignment[]
+  crewAssignments            CrewLegAssignment[]
+  operationalControlRecord   OperationalControlRecord?
+  inboundTurnaroundLinks     TurnaroundLink[]          @relation("TurnaroundInboundLeg")
+  outboundTurnaroundLinks    TurnaroundLink[]          @relation("TurnaroundOutboundLeg")
+
+  @@index([scheduledDeparture])
+  @@index([status, scheduledDeparture])
+  @@index([operatorId, scheduledDeparture])
+  @@index([operatingAuthorityId, scheduledDeparture])
+  @@index([departureStationId, scheduledDeparture])
+  @@index([arrivalStationId, scheduledArrival])
+}
+
+model AircraftAssignment {
+  id              String           @id @default(cuid())
+  flightLegId     String
+  aircraftId      String
+  status          AssignmentStatus @default(PLANNED)
+  assignedAt      DateTime         @default(now())
+  releasedAt      DateTime?
+  assignedById    String?
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  flightLeg       FlightLeg        @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  aircraft        Aircraft         @relation(fields: [aircraftId], references: [id], onDelete: Restrict)
+  assignedBy      User?            @relation("AircraftAssignmentAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@unique([flightLegId, aircraftId])
+  @@index([aircraftId, assignedAt])
+  @@index([status])
+}
+
+model CrewLegAssignment {
+  id                             String                  @id @default(cuid())
+  flightLegId                    String
+  crewMemberId                   String
+  seatRole                       SeatRole
+  status                         AssignmentStatus        @default(PLANNED)
+  reportTime                     DateTime?
+  releaseTime                    DateTime?
+  assignedById                   String?
+  sourceAircraftCrewAssignmentId String?
+  notes                          String?
+  createdAt                      DateTime                @default(now())
+  updatedAt                      DateTime                @updatedAt
+  flightLeg                      FlightLeg               @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  crewMember                     CrewMember              @relation(fields: [crewMemberId], references: [id], onDelete: Restrict)
+  assignedBy                     User?                   @relation("CrewLegAssignmentAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+  sourceAircraftCrewAssignment   AircraftCrewAssignment? @relation(fields: [sourceAircraftCrewAssignmentId], references: [id], onDelete: SetNull)
+
+  @@unique([flightLegId, crewMemberId, seatRole])
+  @@index([flightLegId, seatRole])
+  @@index([crewMemberId, reportTime])
+  @@index([sourceAircraftCrewAssignmentId])
+  @@index([status])
+}
+
+model TurnaroundLink {
+  id                  String    @id @default(cuid())
+  inboundFlightLegId  String
+  outboundFlightLegId String
+  minimumTurnMinutes  Int?
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  inboundFlightLeg    FlightLeg @relation("TurnaroundInboundLeg", fields: [inboundFlightLegId], references: [id], onDelete: Cascade)
+  outboundFlightLeg   FlightLeg @relation("TurnaroundOutboundLeg", fields: [outboundFlightLegId], references: [id], onDelete: Cascade)
+
+  @@unique([inboundFlightLegId, outboundFlightLegId])
+  @@index([outboundFlightLegId])
 }
 
 model CrewSchedule {

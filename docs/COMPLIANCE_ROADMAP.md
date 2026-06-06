@@ -30,7 +30,9 @@ Future schema work should orient around these anchors:
 - `CrewMember`
 - `CrewQualification`
 
-The current `Flight` table is the v1 stand-in for `FlightLeg`. Keep that in mind when naming routes, dashboard sections, and future schema changes.
+The current `Flight` table remains the active UI/API read model. `FlightLeg`
+now exists as an additive foundation bridged by `FlightLeg.legacyFlightId`, so
+future schema work should move carefully from comparison to read migration.
 
 ## Highest-Priority Schema Direction
 
@@ -60,12 +62,16 @@ Each operational leg should eventually identify:
 
 The current `Flight` model is acceptable for v1, but the long-term model should separate the customer-facing trip from the operational leg.
 
-Likely future tables:
+Foundation tables now added:
 
 - `TripOrMission`
 - `FlightLeg`
 - `AircraftAssignment`
+- `CrewLegAssignment`
 - `TurnaroundLink`
+
+Likely later tables:
+
 - `DelayEvent`
 - `Irregularity`
 
@@ -155,10 +161,11 @@ The completed first slices were intentionally narrow:
 4. App shell navigation
 5. Authority and operational-control foundation
 6. Read-only operational pages for flights, operations control, aircraft, crew, and scheduling
+7. Additive FlightLeg transition foundation
 
 The next major schema-oriented slices should be:
 
-1. Flight-leg framing and trip/mission container
+1. Flight-to-FlightLeg read comparison and parity checks
 2. Manifest, flight locating, and release package
 3. Maintenance discrepancy and airworthiness signals
 4. Crew training, checks, recency, duty, and rest

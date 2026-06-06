@@ -1,6 +1,7 @@
 // AeroOps Center database schema
 // Source of truth for visual ERD work in dbdiagram.io.
 // Generated from the live Render Postgres schema on 2026-06-03.
+// Updated locally for the additive FlightLeg foundation on 2026-06-06.
 
 Project AeroOps_Render_DB {
   database_type: "PostgreSQL"
@@ -20,6 +21,24 @@ Enum FlightStatus {
   COMPLETE
   CANCELLED
   DELAYED
+}
+
+Enum FlightLegStatus {
+  DRAFT
+  SCHEDULED
+  READY_FOR_RELEASE
+  RELEASED
+  ENROUTE
+  COMPLETE
+  CANCELLED
+  DELAYED
+}
+
+Enum AssignmentStatus {
+  PLANNED
+  ACTIVE
+  RELIEVED
+  CANCELLED
 }
 
 Enum AircraftType {
@@ -199,6 +218,7 @@ Table "ManualRevision" {
 Table "OperationalControlRecord" {
   "id" text [pk]
   "flightId" text [unique]
+  "flightLegId" text [unique]
   "operatorId" text [not null]
   "operatingAuthorityId" text [not null]
   "authorityRevisionId" text [not null]
@@ -210,9 +230,116 @@ Table "OperationalControlRecord" {
 
   Indexes {
     "flightId" [unique]
+    "flightLegId" [unique]
     "operatorId"
     "operatingAuthorityId"
     "authorityRevisionId"
+  }
+}
+
+Table "TripOrMission" {
+  "id" text [pk]
+  "operatorId" text [not null]
+  "tripNumber" text [not null]
+  "customerName" text
+  "missionType" text
+  "requestedStart" timestamp
+  "requestedEnd" timestamp
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("operatorId", "tripNumber") [unique]
+    ("operatorId", "requestedStart")
+  }
+}
+
+Table "FlightLeg" {
+  "id" text [pk]
+  "legacyFlightId" text [unique]
+  "tripOrMissionId" text
+  "operatorId" text [not null]
+  "operatingAuthorityId" text [not null]
+  "authorityRevisionId" text [not null]
+  "legNumber" int
+  "flightNumber" text
+  "departureStationId" text [not null]
+  "arrivalStationId" text [not null]
+  "scheduledDeparture" timestamp [not null]
+  "scheduledArrival" timestamp [not null]
+  "actualDeparture" timestamp
+  "actualArrival" timestamp
+  "status" FlightLegStatus [not null, default: 'SCHEDULED']
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    "legacyFlightId" [unique]
+    "scheduledDeparture"
+    ("status", "scheduledDeparture")
+    ("operatorId", "scheduledDeparture")
+    ("operatingAuthorityId", "scheduledDeparture")
+    ("departureStationId", "scheduledDeparture")
+    ("arrivalStationId", "scheduledArrival")
+  }
+}
+
+Table "AircraftAssignment" {
+  "id" text [pk]
+  "flightLegId" text [not null]
+  "aircraftId" text [not null]
+  "status" AssignmentStatus [not null, default: 'PLANNED']
+  "assignedAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "releasedAt" timestamp
+  "assignedById" text
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("flightLegId", "aircraftId") [unique]
+    ("aircraftId", "assignedAt")
+    "status"
+  }
+}
+
+Table "CrewLegAssignment" {
+  "id" text [pk]
+  "flightLegId" text [not null]
+  "crewMemberId" text [not null]
+  "seatRole" SeatRole [not null]
+  "status" AssignmentStatus [not null, default: 'PLANNED']
+  "reportTime" timestamp
+  "releaseTime" timestamp
+  "assignedById" text
+  "sourceAircraftCrewAssignmentId" text
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("flightLegId", "crewMemberId", "seatRole") [unique]
+    ("flightLegId", "seatRole")
+    ("crewMemberId", "reportTime")
+    "sourceAircraftCrewAssignmentId"
+    "status"
+  }
+}
+
+Table "TurnaroundLink" {
+  "id" text [pk]
+  "inboundFlightLegId" text [not null]
+  "outboundFlightLegId" text [not null]
+  "minimumTurnMinutes" int
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("inboundFlightLegId", "outboundFlightLegId") [unique]
+    "outboundFlightLegId"
   }
 }
 
@@ -531,9 +658,27 @@ Ref: "AuthorityRevision"."operatingAuthorityId" > "OperatingAuthority"."id"
 Ref: "Manual"."operatingAuthorityId" > "OperatingAuthority"."id"
 Ref: "ManualRevision"."manualId" > "Manual"."id"
 Ref: "OperationalControlRecord"."flightId" > "Flight"."id"
+Ref: "OperationalControlRecord"."flightLegId" > "FlightLeg"."id"
 Ref: "OperationalControlRecord"."operatorId" > "Operator"."id"
 Ref: "OperationalControlRecord"."operatingAuthorityId" > "OperatingAuthority"."id"
 Ref: "OperationalControlRecord"."authorityRevisionId" > "AuthorityRevision"."id"
 Ref: "OperationalControlRecord"."createdById" > "User"."id"
 Ref: "FlightRelease"."operationalControlRecordId" > "OperationalControlRecord"."id"
 Ref: "FlightRelease"."releasedById" > "User"."id"
+Ref: "TripOrMission"."operatorId" > "Operator"."id"
+Ref: "FlightLeg"."legacyFlightId" > "Flight"."id"
+Ref: "FlightLeg"."tripOrMissionId" > "TripOrMission"."id"
+Ref: "FlightLeg"."operatorId" > "Operator"."id"
+Ref: "FlightLeg"."operatingAuthorityId" > "OperatingAuthority"."id"
+Ref: "FlightLeg"."authorityRevisionId" > "AuthorityRevision"."id"
+Ref: "FlightLeg"."departureStationId" > "Station"."id"
+Ref: "FlightLeg"."arrivalStationId" > "Station"."id"
+Ref: "AircraftAssignment"."flightLegId" > "FlightLeg"."id"
+Ref: "AircraftAssignment"."aircraftId" > "Aircraft"."id"
+Ref: "AircraftAssignment"."assignedById" > "User"."id"
+Ref: "CrewLegAssignment"."flightLegId" > "FlightLeg"."id"
+Ref: "CrewLegAssignment"."crewMemberId" > "CrewMember"."id"
+Ref: "CrewLegAssignment"."assignedById" > "User"."id"
+Ref: "CrewLegAssignment"."sourceAircraftCrewAssignmentId" > "AircraftCrewAssignment"."id"
+Ref: "TurnaroundLink"."inboundFlightLegId" > "FlightLeg"."id"
+Ref: "TurnaroundLink"."outboundFlightLegId" > "FlightLeg"."id"

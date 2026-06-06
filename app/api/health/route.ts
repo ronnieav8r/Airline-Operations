@@ -16,6 +16,11 @@ export async function GET() {
       operatingAuthorityCount,
       operationalControlRecordCount,
       flightReleaseCount,
+      tripOrMissionCount,
+      flightLegCount,
+      aircraftAssignmentCount,
+      crewLegAssignmentCount,
+      turnaroundLinkCount,
     ] = await Promise.all([
       prisma.station.count(),
       prisma.aircraft.count(),
@@ -27,6 +32,11 @@ export async function GET() {
       prisma.operatingAuthority.count(),
       prisma.operationalControlRecord.count(),
       prisma.flightRelease.count(),
+      prisma.tripOrMission.count(),
+      prisma.flightLeg.count(),
+      prisma.aircraftAssignment.count(),
+      prisma.crewLegAssignment.count(),
+      prisma.turnaroundLink.count(),
     ]);
 
     return NextResponse.json({
@@ -43,6 +53,11 @@ export async function GET() {
         operatingAuthorities: operatingAuthorityCount,
         operationalControlRecords: operationalControlRecordCount,
         flightReleases: flightReleaseCount,
+        tripOrMissions: tripOrMissionCount,
+        flightLegs: flightLegCount,
+        aircraftAssignments: aircraftAssignmentCount,
+        crewLegAssignments: crewLegAssignmentCount,
+        turnaroundLinks: turnaroundLinkCount,
       },
     });
   } catch (error) {

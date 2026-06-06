@@ -1,8 +1,9 @@
 // AeroOps Center current-state DBML
 // Last updated: 2026-06-06
 // Scope: mirrors the Prisma schema currently implemented in this repo.
-// Important: Flight is the implemented v1 table and is the current stand-in
-// for the future FlightLeg anchor shown in schema.planning.flightleg.dbml.
+// Important: Flight remains the table read by the current UI/API. FlightLeg is
+// now implemented as an additive future operational anchor bridged by
+// FlightLeg.legacyFlightId.
 
 Project AeroOps_Current_State {
   database_type: "PostgreSQL"
@@ -22,6 +23,24 @@ Enum FlightStatus {
   COMPLETE
   CANCELLED
   DELAYED
+}
+
+Enum FlightLegStatus {
+  DRAFT
+  SCHEDULED
+  READY_FOR_RELEASE
+  RELEASED
+  ENROUTE
+  COMPLETE
+  CANCELLED
+  DELAYED
+}
+
+Enum AssignmentStatus {
+  PLANNED
+  ACTIVE
+  RELIEVED
+  CANCELLED
 }
 
 Enum AircraftType {
@@ -200,6 +219,7 @@ Table ManualRevision {
 Table OperationalControlRecord {
   id varchar [pk]
   flightId varchar [unique]
+  flightLegId varchar [unique]
   operatorId varchar [not null]
   operatingAuthorityId varchar [not null]
   authorityRevisionId varchar [not null]
@@ -300,6 +320,111 @@ Table Flight {
     scheduledDeparture
     (status, scheduledDeparture)
     (aircraftId, scheduledDeparture)
+  }
+}
+
+Table TripOrMission {
+  id varchar [pk]
+  operatorId varchar [not null]
+  tripNumber varchar [not null]
+  customerName varchar
+  missionType varchar
+  requestedStart timestamp
+  requestedEnd timestamp
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (operatorId, tripNumber) [unique]
+    (operatorId, requestedStart)
+  }
+}
+
+Table FlightLeg {
+  id varchar [pk]
+  legacyFlightId varchar [unique]
+  tripOrMissionId varchar
+  operatorId varchar [not null]
+  operatingAuthorityId varchar [not null]
+  authorityRevisionId varchar [not null]
+  legNumber int
+  flightNumber varchar
+  departureStationId varchar [not null]
+  arrivalStationId varchar [not null]
+  scheduledDeparture timestamp [not null]
+  scheduledArrival timestamp [not null]
+  actualDeparture timestamp
+  actualArrival timestamp
+  status FlightLegStatus [not null, default: "SCHEDULED"]
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    scheduledDeparture
+    (status, scheduledDeparture)
+    (operatorId, scheduledDeparture)
+    (operatingAuthorityId, scheduledDeparture)
+    (departureStationId, scheduledDeparture)
+    (arrivalStationId, scheduledArrival)
+  }
+}
+
+Table AircraftAssignment {
+  id varchar [pk]
+  flightLegId varchar [not null]
+  aircraftId varchar [not null]
+  status AssignmentStatus [not null, default: "PLANNED"]
+  assignedAt timestamp [not null]
+  releasedAt timestamp
+  assignedById varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (flightLegId, aircraftId) [unique]
+    (aircraftId, assignedAt)
+    status
+  }
+}
+
+Table CrewLegAssignment {
+  id varchar [pk]
+  flightLegId varchar [not null]
+  crewMemberId varchar [not null]
+  seatRole SeatRole [not null]
+  status AssignmentStatus [not null, default: "PLANNED"]
+  reportTime timestamp
+  releaseTime timestamp
+  assignedById varchar
+  sourceAircraftCrewAssignmentId varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (flightLegId, crewMemberId, seatRole) [unique]
+    (flightLegId, seatRole)
+    (crewMemberId, reportTime)
+    sourceAircraftCrewAssignmentId
+    status
+  }
+}
+
+Table TurnaroundLink {
+  id varchar [pk]
+  inboundFlightLegId varchar [not null]
+  outboundFlightLegId varchar [not null]
+  minimumTurnMinutes int
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (inboundFlightLegId, outboundFlightLegId) [unique]
+    outboundFlightLegId
   }
 }
 
@@ -498,6 +623,7 @@ Ref: AuthorityRevision.operatingAuthorityId > OperatingAuthority.id
 Ref: Manual.operatingAuthorityId > OperatingAuthority.id
 Ref: ManualRevision.manualId > Manual.id
 Ref: OperationalControlRecord.flightId > Flight.id
+Ref: OperationalControlRecord.flightLegId > FlightLeg.id
 Ref: OperationalControlRecord.operatorId > Operator.id
 Ref: OperationalControlRecord.operatingAuthorityId > OperatingAuthority.id
 Ref: OperationalControlRecord.authorityRevisionId > AuthorityRevision.id
@@ -509,12 +635,29 @@ Ref: Aircraft.homeStationId > Station.id
 Ref: Flight.aircraftId > Aircraft.id
 Ref: Flight.departureStationId > Station.id
 Ref: Flight.arrivalStationId > Station.id
+Ref: TripOrMission.operatorId > Operator.id
+Ref: FlightLeg.legacyFlightId > Flight.id
+Ref: FlightLeg.tripOrMissionId > TripOrMission.id
+Ref: FlightLeg.operatorId > Operator.id
+Ref: FlightLeg.operatingAuthorityId > OperatingAuthority.id
+Ref: FlightLeg.authorityRevisionId > AuthorityRevision.id
+Ref: FlightLeg.departureStationId > Station.id
+Ref: FlightLeg.arrivalStationId > Station.id
+Ref: AircraftAssignment.flightLegId > FlightLeg.id
+Ref: AircraftAssignment.aircraftId > Aircraft.id
+Ref: AircraftAssignment.assignedById > User.id
 Ref: CrewMember.userId > User.id
 Ref: CrewMember.baseStationId > Station.id
 Ref: CrewQualification.crewMemberId > CrewMember.id
 Ref: AircraftCrewAssignment.aircraftId > Aircraft.id
 Ref: AircraftCrewAssignment.crewMemberId > CrewMember.id
 Ref: AircraftCrewAssignment.assignedById > User.id
+Ref: CrewLegAssignment.flightLegId > FlightLeg.id
+Ref: CrewLegAssignment.crewMemberId > CrewMember.id
+Ref: CrewLegAssignment.assignedById > User.id
+Ref: CrewLegAssignment.sourceAircraftCrewAssignmentId > AircraftCrewAssignment.id
+Ref: TurnaroundLink.inboundFlightLegId > FlightLeg.id
+Ref: TurnaroundLink.outboundFlightLegId > FlightLeg.id
 Ref: CrewSchedule.crewMemberId > CrewMember.id
 Ref: CrewSchedule.stationId > Station.id
 Ref: CrewFlightLog.crewMemberId > CrewMember.id

@@ -2,11 +2,13 @@ import {
   AlertSeverity,
   AlertStatus,
   AlertType,
+  AssignmentStatus,
   AircraftStatus,
   AircraftType,
   DutyStatus,
   EmploymentStatus,
   AuthorityStatus,
+  FlightLegStatus,
   FlightStatus,
   IdDocumentType,
   OperatingPart,
@@ -38,6 +40,267 @@ function addMonths(date: Date, months: number): Date {
   return next;
 }
 
+function formatDateKey(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}${month}${day}`;
+}
+
+function mapLegStatus(flightStatus: FlightStatus, releaseStatus: ReleaseStatus): FlightLegStatus {
+  if (flightStatus === FlightStatus.CANCELLED) {
+    return FlightLegStatus.CANCELLED;
+  }
+
+  if (flightStatus === FlightStatus.COMPLETE) {
+    return FlightLegStatus.COMPLETE;
+  }
+
+  if (flightStatus === FlightStatus.ENROUTE) {
+    return FlightLegStatus.ENROUTE;
+  }
+
+  if (flightStatus === FlightStatus.DELAYED) {
+    return FlightLegStatus.DELAYED;
+  }
+
+  if (releaseStatus === ReleaseStatus.RELEASED) {
+    return FlightLegStatus.RELEASED;
+  }
+
+  return FlightLegStatus.SCHEDULED;
+}
+
+function mapAssignmentStatus(flightStatus: FlightStatus): AssignmentStatus {
+  if (flightStatus === FlightStatus.CANCELLED) {
+    return AssignmentStatus.CANCELLED;
+  }
+
+  if (flightStatus === FlightStatus.COMPLETE) {
+    return AssignmentStatus.RELIEVED;
+  }
+
+  if (flightStatus === FlightStatus.ENROUTE) {
+    return AssignmentStatus.ACTIVE;
+  }
+
+  return AssignmentStatus.PLANNED;
+}
+
+async function seedFlightLegFoundation() {
+  const flights = await prisma.flight.findMany({
+    include: {
+      operationalControlRecord: {
+        include: {
+          release: true,
+        },
+      },
+      aircraft: {
+        select: {
+          crewAssignments: {
+            where: {
+              isActive: true,
+            },
+            select: {
+              id: true,
+              crewMemberId: true,
+              seatRole: true,
+              startsAt: true,
+              endsAt: true,
+              assignedById: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { scheduledDeparture: "asc" },
+  });
+
+  const flightLegsByAircraft = new Map<
+    string,
+    { id: string; scheduledDeparture: Date; scheduledArrival: Date }[]
+  >();
+
+  for (const flight of flights) {
+    const controlRecord = flight.operationalControlRecord;
+
+    if (!controlRecord) {
+      continue;
+    }
+
+    const tripNumber = `TRIP-${flight.flightNumber}-${formatDateKey(flight.scheduledDeparture)}`;
+    const tripOrMission = await prisma.tripOrMission.upsert({
+      where: {
+        operatorId_tripNumber: {
+          operatorId: controlRecord.operatorId,
+          tripNumber,
+        },
+      },
+      create: {
+        operatorId: controlRecord.operatorId,
+        tripNumber,
+        requestedStart: flight.scheduledDeparture,
+        requestedEnd: flight.scheduledArrival,
+        notes: `Seeded from legacy Flight ${flight.flightNumber}.`,
+      },
+      update: {
+        requestedStart: flight.scheduledDeparture,
+        requestedEnd: flight.scheduledArrival,
+        notes: `Seeded from legacy Flight ${flight.flightNumber}.`,
+      },
+    });
+
+    const assignmentStatus = mapAssignmentStatus(flight.status);
+    const flightLeg = await prisma.flightLeg.upsert({
+      where: { legacyFlightId: flight.id },
+      create: {
+        legacyFlightId: flight.id,
+        tripOrMissionId: tripOrMission.id,
+        operatorId: controlRecord.operatorId,
+        operatingAuthorityId: controlRecord.operatingAuthorityId,
+        authorityRevisionId: controlRecord.authorityRevisionId,
+        legNumber: 1,
+        flightNumber: flight.flightNumber,
+        departureStationId: flight.departureStationId,
+        arrivalStationId: flight.arrivalStationId,
+        scheduledDeparture: flight.scheduledDeparture,
+        scheduledArrival: flight.scheduledArrival,
+        actualDeparture: flight.actualDeparture,
+        actualArrival: flight.actualArrival,
+        status: mapLegStatus(flight.status, controlRecord.release?.status ?? ReleaseStatus.PLANNED),
+        notes: flight.notes,
+      },
+      update: {
+        tripOrMissionId: tripOrMission.id,
+        operatorId: controlRecord.operatorId,
+        operatingAuthorityId: controlRecord.operatingAuthorityId,
+        authorityRevisionId: controlRecord.authorityRevisionId,
+        legNumber: 1,
+        flightNumber: flight.flightNumber,
+        departureStationId: flight.departureStationId,
+        arrivalStationId: flight.arrivalStationId,
+        scheduledDeparture: flight.scheduledDeparture,
+        scheduledArrival: flight.scheduledArrival,
+        actualDeparture: flight.actualDeparture,
+        actualArrival: flight.actualArrival,
+        status: mapLegStatus(flight.status, controlRecord.release?.status ?? ReleaseStatus.PLANNED),
+        notes: flight.notes,
+      },
+    });
+
+    await prisma.aircraftAssignment.upsert({
+      where: {
+        flightLegId_aircraftId: {
+          flightLegId: flightLeg.id,
+          aircraftId: flight.aircraftId,
+        },
+      },
+      create: {
+        flightLegId: flightLeg.id,
+        aircraftId: flight.aircraftId,
+        status: assignmentStatus,
+        assignedAt: flight.scheduledDeparture,
+        releasedAt: flight.actualArrival,
+        notes: `Seeded from legacy Flight ${flight.flightNumber}.`,
+      },
+      update: {
+        status: assignmentStatus,
+        assignedAt: flight.scheduledDeparture,
+        releasedAt: flight.actualArrival,
+        notes: `Seeded from legacy Flight ${flight.flightNumber}.`,
+      },
+    });
+
+    await prisma.operationalControlRecord.update({
+      where: { id: controlRecord.id },
+      data: { flightLegId: flightLeg.id },
+    });
+
+    const activeCrew = flight.aircraft.crewAssignments.filter(
+      (assignment) =>
+        assignment.startsAt <= flight.scheduledDeparture &&
+        (assignment.endsAt === null || assignment.endsAt > flight.scheduledDeparture),
+    );
+
+    for (const assignment of activeCrew) {
+      await prisma.crewLegAssignment.upsert({
+        where: {
+          flightLegId_crewMemberId_seatRole: {
+            flightLegId: flightLeg.id,
+            crewMemberId: assignment.crewMemberId,
+            seatRole: assignment.seatRole,
+          },
+        },
+        create: {
+          flightLegId: flightLeg.id,
+          crewMemberId: assignment.crewMemberId,
+          seatRole: assignment.seatRole,
+          status: assignmentStatus,
+          reportTime: flight.scheduledDeparture,
+          releaseTime: flight.actualArrival,
+          assignedById: assignment.assignedById,
+          sourceAircraftCrewAssignmentId: assignment.id,
+          notes: `Seeded from aircraft-block assignment for legacy Flight ${flight.flightNumber}.`,
+        },
+        update: {
+          status: assignmentStatus,
+          reportTime: flight.scheduledDeparture,
+          releaseTime: flight.actualArrival,
+          assignedById: assignment.assignedById,
+          sourceAircraftCrewAssignmentId: assignment.id,
+          notes: `Seeded from aircraft-block assignment for legacy Flight ${flight.flightNumber}.`,
+        },
+      });
+    }
+
+    const aircraftLegs = flightLegsByAircraft.get(flight.aircraftId) ?? [];
+    aircraftLegs.push({
+      id: flightLeg.id,
+      scheduledDeparture: flight.scheduledDeparture,
+      scheduledArrival: flight.scheduledArrival,
+    });
+    flightLegsByAircraft.set(flight.aircraftId, aircraftLegs);
+  }
+
+  for (const aircraftLegs of flightLegsByAircraft.values()) {
+    aircraftLegs.sort(
+      (first, second) => first.scheduledDeparture.getTime() - second.scheduledDeparture.getTime(),
+    );
+
+    for (let index = 0; index < aircraftLegs.length - 1; index += 1) {
+      const inbound = aircraftLegs[index];
+      const outbound = aircraftLegs[index + 1];
+
+      if (outbound.scheduledDeparture < inbound.scheduledArrival) {
+        continue;
+      }
+
+      const minimumTurnMinutes = Math.floor(
+        (outbound.scheduledDeparture.getTime() - inbound.scheduledArrival.getTime()) / 60000,
+      );
+
+      await prisma.turnaroundLink.upsert({
+        where: {
+          inboundFlightLegId_outboundFlightLegId: {
+            inboundFlightLegId: inbound.id,
+            outboundFlightLegId: outbound.id,
+          },
+        },
+        create: {
+          inboundFlightLegId: inbound.id,
+          outboundFlightLegId: outbound.id,
+          minimumTurnMinutes,
+          notes: "Seeded same-aircraft consecutive leg link.",
+        },
+        update: {
+          minimumTurnMinutes,
+          notes: "Seeded same-aircraft consecutive leg link.",
+        },
+      });
+    }
+  }
+}
+
 async function main() {
   const now = new Date();
   const anchor = new Date(
@@ -48,6 +311,11 @@ async function main() {
   const today = anchor;
   const tomorrow = addDays(anchor, 1);
 
+  await prisma.turnaroundLink.deleteMany();
+  await prisma.crewLegAssignment.deleteMany();
+  await prisma.aircraftAssignment.deleteMany();
+  await prisma.flightLeg.deleteMany();
+  await prisma.tripOrMission.deleteMany();
   await prisma.flightRelease.deleteMany();
   await prisma.operationalControlRecord.deleteMany();
   await prisma.manualRevision.deleteMany();
@@ -629,6 +897,8 @@ async function main() {
       },
     });
   }
+
+  await seedFlightLegFoundation();
 
   await prisma.crewSchedule.createMany({
     data: [
