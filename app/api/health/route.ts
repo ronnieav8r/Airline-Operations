@@ -21,6 +21,14 @@ export async function GET() {
       aircraftAssignmentCount,
       crewLegAssignmentCount,
       turnaroundLinkCount,
+      manifestCount,
+      manifestItemCount,
+      weightBalanceRunCount,
+      flightLocatingRecordCount,
+      dispatchPackageCount,
+      weatherBriefingSnapshotCount,
+      notamSnapshotCount,
+      flightPlanReferenceCount,
     ] = await Promise.all([
       prisma.station.count(),
       prisma.aircraft.count(),
@@ -37,6 +45,14 @@ export async function GET() {
       prisma.aircraftAssignment.count(),
       prisma.crewLegAssignment.count(),
       prisma.turnaroundLink.count(),
+      prisma.manifest.count(),
+      prisma.manifestItem.count(),
+      prisma.weightBalanceRun.count(),
+      prisma.flightLocatingRecord.count(),
+      prisma.dispatchPackage.count(),
+      prisma.weatherBriefingSnapshot.count(),
+      prisma.notamSnapshot.count(),
+      prisma.flightPlanReference.count(),
     ]);
 
     return NextResponse.json({
@@ -58,6 +74,14 @@ export async function GET() {
         aircraftAssignments: aircraftAssignmentCount,
         crewLegAssignments: crewLegAssignmentCount,
         turnaroundLinks: turnaroundLinkCount,
+        manifests: manifestCount,
+        manifestItems: manifestItemCount,
+        weightBalanceRuns: weightBalanceRunCount,
+        flightLocatingRecords: flightLocatingRecordCount,
+        dispatchPackages: dispatchPackageCount,
+        weatherBriefingSnapshots: weatherBriefingSnapshotCount,
+        notamSnapshots: notamSnapshotCount,
+        flightPlanReferences: flightPlanReferenceCount,
       },
     });
   } catch (error) {

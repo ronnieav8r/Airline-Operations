@@ -1,7 +1,7 @@
 // AeroOps Center visual ERD
 // Paste this file into dbdiagram.io when you want the diagram view.
 // Keep docs/schema.dbml as the fuller maintained schema reference.
-// Updated locally for the additive FlightLeg foundation on 2026-06-06.
+// Updated locally for the additive FlightLeg and release-evidence foundations on 2026-06-06.
 
 Project AeroOps_Render_DB {
   database_type: "PostgreSQL"
@@ -349,6 +349,107 @@ Table "TurnaroundLink" {
   "updatedAt" timestamp
 }
 
+Table "Manifest" {
+  "id" text [pk]
+  "flightLegId" text
+  "status" text
+  "lockedAt" timestamp
+  "lockedById" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "ManifestItem" {
+  "id" text [pk]
+  "manifestId" text
+  "passengerId" text
+  "personName" text
+  "seatNumber" text
+  "weight" decimal
+  "baggageWeight" decimal
+  "checkedInAt" timestamp
+  "boardedAt" timestamp
+  "notes" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "WeightBalanceRun" {
+  "id" text [pk]
+  "flightLegId" text
+  "manifestId" text
+  "runLabel" text
+  "status" text
+  "takeoffWeight" decimal
+  "landingWeight" decimal
+  "centerOfGravity" text
+  "calculatedById" text
+  "calculatedAt" timestamp
+  "approvedById" text
+  "approvedAt" timestamp
+  "calculationSnapshot" jsonb
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "FlightLocatingRecord" {
+  "id" text [pk]
+  "flightLegId" text
+  "status" text
+  "responsibleParty" text
+  "plannedRoute" text
+  "lastKnownPosition" text
+  "activatedAt" timestamp
+  "closedAt" timestamp
+  "overdueAt" timestamp
+  "notes" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "WeatherBriefingSnapshot" {
+  "id" text [pk]
+  "snapshotKey" text
+  "provider" text
+  "briefingAt" timestamp
+  "routeSummary" text
+  "rawSnapshot" jsonb
+  "createdAt" timestamp
+}
+
+Table "NotamSnapshot" {
+  "id" text [pk]
+  "snapshotKey" text
+  "capturedAt" timestamp
+  "affectedStationCodes" text
+  "rawSnapshot" jsonb
+  "createdAt" timestamp
+}
+
+Table "FlightPlanReference" {
+  "id" text [pk]
+  "flightLegId" text
+  "provider" text
+  "externalReference" text
+  "filedAt" timestamp
+  "status" text
+  "routeText" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "DispatchPackage" {
+  "id" text [pk]
+  "flightLegId" text
+  "weatherBriefingId" text
+  "notamSnapshotId" text
+  "flightPlanReferenceId" text
+  "performanceData" jsonb
+  "createdById" text
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
 Table "FlightRelease" {
   "id" text [pk]
   "operationalControlRecordId" text
@@ -415,3 +516,18 @@ Ref: "CrewLegAssignment"."assignedById" > "User"."id"
 Ref: "CrewLegAssignment"."sourceAircraftCrewAssignmentId" > "AircraftCrewAssignment"."id"
 Ref: "TurnaroundLink"."inboundFlightLegId" > "FlightLeg"."id"
 Ref: "TurnaroundLink"."outboundFlightLegId" > "FlightLeg"."id"
+Ref: "Manifest"."flightLegId" > "FlightLeg"."id"
+Ref: "Manifest"."lockedById" > "User"."id"
+Ref: "ManifestItem"."manifestId" > "Manifest"."id"
+Ref: "ManifestItem"."passengerId" > "Passenger"."id"
+Ref: "WeightBalanceRun"."flightLegId" > "FlightLeg"."id"
+Ref: "WeightBalanceRun"."manifestId" > "Manifest"."id"
+Ref: "WeightBalanceRun"."calculatedById" > "User"."id"
+Ref: "WeightBalanceRun"."approvedById" > "User"."id"
+Ref: "FlightLocatingRecord"."flightLegId" > "FlightLeg"."id"
+Ref: "FlightPlanReference"."flightLegId" > "FlightLeg"."id"
+Ref: "DispatchPackage"."flightLegId" > "FlightLeg"."id"
+Ref: "DispatchPackage"."weatherBriefingId" > "WeatherBriefingSnapshot"."id"
+Ref: "DispatchPackage"."notamSnapshotId" > "NotamSnapshot"."id"
+Ref: "DispatchPackage"."flightPlanReferenceId" > "FlightPlanReference"."id"
+Ref: "DispatchPackage"."createdById" > "User"."id"

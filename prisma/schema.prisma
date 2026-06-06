@@ -141,6 +141,29 @@ enum ReleaseStatus {
   VOIDED
 }
 
+enum ManifestStatus {
+  DRAFT
+  READY
+  LOCKED
+  AMENDED
+  VOIDED
+}
+
+enum WeightBalanceStatus {
+  DRAFT
+  CALCULATED
+  APPROVED
+  VOIDED
+}
+
+enum FlightLocatingStatus {
+  NOT_STARTED
+  FILED
+  ACTIVE
+  CLOSED
+  OVERDUE
+}
+
 model Operator {
   id                     String                  @id @default(cuid())
   name                   String
@@ -275,6 +298,10 @@ model User {
   flightReleases            FlightRelease[]         @relation("FlightReleaseReleasedBy")
   assignedAircraftAssignments AircraftAssignment[]   @relation("AircraftAssignmentAssignedBy")
   assignedCrewLegAssignments  CrewLegAssignment[]    @relation("CrewLegAssignmentAssignedBy")
+  lockedManifests           Manifest[]              @relation("ManifestLockedBy")
+  calculatedWeightBalanceRuns WeightBalanceRun[]     @relation("WeightBalanceCalculatedBy")
+  approvedWeightBalanceRuns WeightBalanceRun[]       @relation("WeightBalanceApprovedBy")
+  dispatchPackagesCreated   DispatchPackage[]       @relation("DispatchPackageCreatedBy")
 }
 
 model UserProfile {
@@ -482,6 +509,11 @@ model FlightLeg {
   operationalControlRecord   OperationalControlRecord?
   inboundTurnaroundLinks     TurnaroundLink[]          @relation("TurnaroundInboundLeg")
   outboundTurnaroundLinks    TurnaroundLink[]          @relation("TurnaroundOutboundLeg")
+  manifest                   Manifest?
+  weightBalanceRuns          WeightBalanceRun[]
+  flightLocatingRecord       FlightLocatingRecord?
+  dispatchPackage            DispatchPackage?
+  flightPlanReferences       FlightPlanReference[]
 
   @@index([scheduledDeparture])
   @@index([status, scheduledDeparture])
@@ -551,6 +583,150 @@ model TurnaroundLink {
   @@index([outboundFlightLegId])
 }
 
+model Manifest {
+  id            String         @id @default(cuid())
+  flightLegId   String         @unique
+  status        ManifestStatus @default(DRAFT)
+  lockedAt      DateTime?
+  lockedById    String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  flightLeg     FlightLeg      @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  lockedBy      User?          @relation("ManifestLockedBy", fields: [lockedById], references: [id], onDelete: SetNull)
+  items         ManifestItem[]
+  weightBalanceRuns WeightBalanceRun[]
+
+  @@index([status])
+  @@index([lockedById])
+}
+
+model ManifestItem {
+  id            String     @id @default(cuid())
+  manifestId    String
+  passengerId   String?
+  personName    String?
+  seatNumber    String?
+  weight        Decimal?   @db.Decimal(8, 2)
+  baggageWeight Decimal?   @db.Decimal(8, 2)
+  checkedInAt   DateTime?
+  boardedAt     DateTime?
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  manifest      Manifest   @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+  passenger     Passenger? @relation(fields: [passengerId], references: [id], onDelete: SetNull)
+
+  @@index([manifestId])
+  @@index([passengerId])
+}
+
+model WeightBalanceRun {
+  id                  String              @id @default(cuid())
+  flightLegId          String
+  manifestId           String?
+  runLabel             String
+  status               WeightBalanceStatus @default(DRAFT)
+  takeoffWeight        Decimal?            @db.Decimal(10, 2)
+  landingWeight        Decimal?            @db.Decimal(10, 2)
+  centerOfGravity      String?
+  calculatedById       String?
+  calculatedAt         DateTime?
+  approvedById         String?
+  approvedAt           DateTime?
+  calculationSnapshot  Json?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  flightLeg            FlightLeg           @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  manifest             Manifest?           @relation(fields: [manifestId], references: [id], onDelete: SetNull)
+  calculatedBy         User?               @relation("WeightBalanceCalculatedBy", fields: [calculatedById], references: [id], onDelete: SetNull)
+  approvedBy           User?               @relation("WeightBalanceApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@unique([flightLegId, runLabel])
+  @@index([flightLegId, status])
+  @@index([manifestId])
+  @@index([calculatedById])
+  @@index([approvedById])
+}
+
+model FlightLocatingRecord {
+  id                 String               @id @default(cuid())
+  flightLegId         String               @unique
+  status             FlightLocatingStatus @default(NOT_STARTED)
+  responsibleParty   String?
+  plannedRoute       String?
+  lastKnownPosition  String?
+  activatedAt        DateTime?
+  closedAt           DateTime?
+  overdueAt          DateTime?
+  notes              String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  flightLeg          FlightLeg            @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model WeatherBriefingSnapshot {
+  id              String            @id @default(cuid())
+  snapshotKey     String            @unique
+  provider        String?
+  briefingAt      DateTime
+  routeSummary    String?
+  rawSnapshot     Json?
+  createdAt       DateTime          @default(now())
+  dispatchPackages DispatchPackage[]
+}
+
+model NotamSnapshot {
+  id                   String            @id @default(cuid())
+  snapshotKey           String            @unique
+  capturedAt            DateTime
+  affectedStationCodes  String?
+  rawSnapshot           Json?
+  createdAt             DateTime          @default(now())
+  dispatchPackages      DispatchPackage[]
+}
+
+model FlightPlanReference {
+  id                  String            @id @default(cuid())
+  flightLegId          String
+  provider            String?
+  externalReference   String?
+  filedAt             DateTime?
+  status              String?
+  routeText           String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  flightLeg           FlightLeg         @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  dispatchPackages    DispatchPackage[]
+
+  @@unique([flightLegId, externalReference])
+  @@index([flightLegId])
+  @@index([status])
+}
+
+model DispatchPackage {
+  id                     String                    @id @default(cuid())
+  flightLegId             String                    @unique
+  weatherBriefingId       String?
+  notamSnapshotId         String?
+  flightPlanReferenceId   String?
+  performanceData         Json?
+  createdById             String?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  flightLeg               FlightLeg                 @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  weatherBriefing         WeatherBriefingSnapshot?  @relation(fields: [weatherBriefingId], references: [id], onDelete: SetNull)
+  notamSnapshot           NotamSnapshot?            @relation(fields: [notamSnapshotId], references: [id], onDelete: SetNull)
+  flightPlanReference     FlightPlanReference?      @relation(fields: [flightPlanReferenceId], references: [id], onDelete: SetNull)
+  createdBy               User?                     @relation("DispatchPackageCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([weatherBriefingId])
+  @@index([notamSnapshotId])
+  @@index([flightPlanReferenceId])
+  @@index([createdById])
+}
+
 model CrewSchedule {
   id           String      @id @default(cuid())
   crewMemberId String
@@ -597,6 +773,7 @@ model Passenger {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   flights          FlightPassenger[]
+  manifestItems    ManifestItem[]
 
   @@index([lastName, firstName])
 }

@@ -2,8 +2,8 @@
 
 Last updated: 2026-06-06
 
-This document defines the next additive schema slice after the `FlightLeg` read
-pilots. It is the source of truth for Builder Prompt 13.
+This document defines the additive release-evidence schema slice added after the
+`FlightLeg` read pilots. It is the source of truth for the Prompt 13 boundary.
 
 ## Current Boundary
 
@@ -17,7 +17,9 @@ release workflow transition is planned separately.
 
 ## Prompt 13 First Additive Slice
 
-Implement these tables in the first release-evidence migration:
+Implementation status: complete as an additive foundation.
+
+The first release-evidence migration includes:
 
 - `Manifest`
 - `ManifestItem`
@@ -28,7 +30,7 @@ Implement these tables in the first release-evidence migration:
 - `NotamSnapshot`
 - `FlightPlanReference`
 
-Add these enums:
+The first release-evidence migration includes:
 
 - `ManifestStatus`: `DRAFT`, `READY`, `LOCKED`, `AMENDED`, `VOIDED`
 - `WeightBalanceStatus`: `DRAFT`, `CALCULATED`, `APPROVED`, `VOIDED`
@@ -52,14 +54,14 @@ Use these cardinalities:
 - `WeatherBriefingSnapshot`: independent snapshot, optionally referenced by `DispatchPackage`.
 - `NotamSnapshot`: independent snapshot, optionally referenced by `DispatchPackage`.
 
-For Prompt 13, do not add `aircraftConfigurationId` to `WeightBalanceRun`
+Prompt 13 did not add `aircraftConfigurationId` to `WeightBalanceRun`
 because `AircraftConfiguration` is part of the later airworthiness/configuration
 slice. `WeightBalanceRun.calculationSnapshot` can hold demo calculation details
 until the configuration model exists.
 
 ## Deferred From Prompt 13
 
-Do not include these in the first implementation:
+These remain deferred:
 
 - `ReleasePackage`
 - `PositionReport`
@@ -75,10 +77,10 @@ position history, overdue checks, or actual flight-following workflows.
 ## DBML Delta Notes
 
 The planning DBML already includes the broader target direction. Prompt 13
-should implement only the release-evidence subset above and update current-state
-DBML after the migration exists.
+implements only the release-evidence subset above and updates current-state
+DBML.
 
-Implementation DBML updates should:
+Implementation DBML updates:
 
 - Add the eight Prompt 13 tables to `docs/schema.current.dbml`.
 - Keep `ReleasePackage` and `PositionReport` in planning-only DBML.
@@ -89,10 +91,10 @@ Implementation DBML updates should:
 
 ## Seed And Backfill Decisions
 
-Update local demo seed to create minimal release-evidence records after
-FlightLeg foundation rows exist.
+Local demo seed creates minimal release-evidence records after FlightLeg
+foundation rows and passenger manifest source rows exist.
 
-Create a gated production/demo backfill script:
+The gated production/demo backfill script is:
 
 ```text
 scripts/backfill-release-evidence-demo.ts
@@ -124,7 +126,7 @@ Backfill must be idempotent.
 
 ## Health Counts
 
-Prompt 13 should add `/api/health` counts for:
+`/api/health` includes counts for:
 
 - `manifests`
 - `manifestItems`
@@ -137,7 +139,7 @@ Prompt 13 should add `/api/health` counts for:
 
 ## Validation Criteria
 
-Prompt 13 is ready only when:
+The foundation remains ready only when:
 
 - The Prisma migration is additive only.
 - No existing model is dropped, renamed, or made newly required.

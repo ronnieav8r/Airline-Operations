@@ -44,6 +44,7 @@ It has:
 16. Flights page FlightLeg read pilot.
 17. Dashboard FlightLeg read pilot.
 18. Release evidence schema planning.
+19. Additive release evidence schema foundation.
 
 ## Current Data Model Boundaries
 
@@ -67,17 +68,24 @@ New additive foundation tables:
 - `CrewLegAssignment`
 - `TurnaroundLink`
 
+Release evidence now exists as an additive FlightLeg-attached foundation:
+
+- `Manifest`
+- `ManifestItem`
+- `WeightBalanceRun`
+- `FlightLocatingRecord`
+- `DispatchPackage`
+- `WeatherBriefingSnapshot`
+- `NotamSnapshot`
+- `FlightPlanReference`
+
 Use these DBML files for schema discussions:
 
 - `docs/schema.current.dbml`: clean current-state DBML matching the implemented Prisma schema.
 - `docs/schema.planning.flightleg.dbml`: planning-only target DBML using `FlightLeg` as the operational anchor.
 
-Release evidence is planned but not yet implemented. Use
-`docs/RELEASE_EVIDENCE_SCHEMA_DECISIONS.md` for the Prompt 13 boundary:
-`Manifest`, `ManifestItem`, `WeightBalanceRun`, `FlightLocatingRecord`,
-`DispatchPackage`, `WeatherBriefingSnapshot`, `NotamSnapshot`, and
-`FlightPlanReference` attach to `FlightLeg`. `ReleasePackage` and
-`PositionReport` remain deferred.
+Use `docs/RELEASE_EVIDENCE_SCHEMA_DECISIONS.md` for the release-evidence
+boundary. `ReleasePackage` and `PositionReport` remain deferred.
 
 Crew coverage uses aircraft-block assignment:
 
@@ -138,9 +146,9 @@ Build: npm install && npm run render-build
 Start: npm run start
 ```
 
-`render-build` runs migrations, generates Prisma, runs the gated authority and
-FlightLeg backfill scripts, then builds Next.js. Both backfill scripts skip by
-default unless their explicit environment flags are set.
+`render-build` runs migrations, generates Prisma, runs the gated authority,
+FlightLeg, and release-evidence backfill scripts, then builds Next.js. Backfill
+scripts skip by default unless their explicit environment flags are set.
 
 Do not run broad seed scripts against Render unless explicitly approved.
 
@@ -169,14 +177,15 @@ Use the hidden parity diagnostic before adding write flows.
 Preferred next slice:
 
 ```text
-Prompt 13: Release evidence schema foundation
+Prompt 14: Release evidence read-only summaries
 ```
 
 Scope:
 
-- Add the first release-evidence Prisma models and enums additively.
-- Add local seed and gated Render-safe demo backfill behavior.
-- Add health counts and update DBML/docs.
-- Keep current read fallback patterns intact and do not add CRUD or mutations.
+- Add read-only release-evidence summaries to existing pages.
+- Keep all evidence data read-only.
+- Start with dashboard or Operations Control summary cards, not CRUD.
+- Keep `FlightRelease` and deferred `ReleasePackage` boundaries intact.
 
-Avoid adding CRUD screens until this schema foundation exists and is validated.
+Avoid adding CRUD screens until the read-only summaries prove the evidence model
+is useful and correctly connected.

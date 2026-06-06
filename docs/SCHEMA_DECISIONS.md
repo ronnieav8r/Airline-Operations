@@ -191,8 +191,8 @@ Broader page/API migrations should follow this pattern until the transition is
 complete.
 
 Release evidence has a separate implementation boundary in
-`docs/RELEASE_EVIDENCE_SCHEMA_DECISIONS.md`. The next additive schema slice
-should implement `Manifest`, `ManifestItem`, `WeightBalanceRun`,
-`FlightLocatingRecord`, `DispatchPackage`, `WeatherBriefingSnapshot`,
-`NotamSnapshot`, and `FlightPlanReference` against `FlightLeg`. `ReleasePackage`
-and `PositionReport` should remain deferred until their workflows are planned.
+`docs/RELEASE_EVIDENCE_SCHEMA_DECISIONS.md`. `Manifest`, `ManifestItem`,
+`WeightBalanceRun`, `FlightLocatingRecord`, `DispatchPackage`,
+`WeatherBriefingSnapshot`, `NotamSnapshot`, and `FlightPlanReference` now exist
+as additive tables against `FlightLeg`. `ReleasePackage` and `PositionReport`
+should remain deferred until their workflows are planned.

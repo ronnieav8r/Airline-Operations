@@ -1,9 +1,10 @@
 // AeroOps Center current-state DBML
 // Last updated: 2026-06-06
 // Scope: mirrors the Prisma schema currently implemented in this repo.
-// Important: Flight remains the table read by the current UI/API. FlightLeg is
-// now implemented as an additive future operational anchor bridged by
-// FlightLeg.legacyFlightId.
+// Important: Flight remains the table read by some current UI/API paths.
+// FlightLeg is now implemented as an additive future operational anchor bridged
+// by FlightLeg.legacyFlightId. Release-evidence foundation tables now attach to
+// FlightLeg.
 
 Project AeroOps_Current_State {
   database_type: "PostgreSQL"
@@ -142,6 +143,29 @@ Enum ReleaseStatus {
   RELEASED
   CANCELLED
   VOIDED
+}
+
+Enum ManifestStatus {
+  DRAFT
+  READY
+  LOCKED
+  AMENDED
+  VOIDED
+}
+
+Enum WeightBalanceStatus {
+  DRAFT
+  CALCULATED
+  APPROVED
+  VOIDED
+}
+
+Enum FlightLocatingStatus {
+  NOT_STARTED
+  FILED
+  ACTIVE
+  CLOSED
+  OVERDUE
 }
 
 Table Operator {
@@ -428,6 +452,142 @@ Table TurnaroundLink {
   }
 }
 
+Table Manifest {
+  id varchar [pk]
+  flightLegId varchar [not null, unique]
+  status ManifestStatus [not null, default: "DRAFT"]
+  lockedAt timestamp
+  lockedById varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    status
+    lockedById
+  }
+}
+
+Table ManifestItem {
+  id varchar [pk]
+  manifestId varchar [not null]
+  passengerId varchar
+  personName varchar
+  seatNumber varchar
+  weight decimal
+  baggageWeight decimal
+  checkedInAt timestamp
+  boardedAt timestamp
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    manifestId
+    passengerId
+  }
+}
+
+Table WeightBalanceRun {
+  id varchar [pk]
+  flightLegId varchar [not null]
+  manifestId varchar
+  runLabel varchar [not null]
+  status WeightBalanceStatus [not null, default: "DRAFT"]
+  takeoffWeight decimal
+  landingWeight decimal
+  centerOfGravity varchar
+  calculatedById varchar
+  calculatedAt timestamp
+  approvedById varchar
+  approvedAt timestamp
+  calculationSnapshot jsonb
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (flightLegId, runLabel) [unique]
+    (flightLegId, status)
+    manifestId
+    calculatedById
+    approvedById
+  }
+}
+
+Table FlightLocatingRecord {
+  id varchar [pk]
+  flightLegId varchar [not null, unique]
+  status FlightLocatingStatus [not null, default: "NOT_STARTED"]
+  responsibleParty varchar
+  plannedRoute text
+  lastKnownPosition varchar
+  activatedAt timestamp
+  closedAt timestamp
+  overdueAt timestamp
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    status
+  }
+}
+
+Table WeatherBriefingSnapshot {
+  id varchar [pk]
+  snapshotKey varchar [not null, unique]
+  provider varchar
+  briefingAt timestamp [not null]
+  routeSummary text
+  rawSnapshot jsonb
+  createdAt timestamp [not null]
+}
+
+Table NotamSnapshot {
+  id varchar [pk]
+  snapshotKey varchar [not null, unique]
+  capturedAt timestamp [not null]
+  affectedStationCodes text
+  rawSnapshot jsonb
+  createdAt timestamp [not null]
+}
+
+Table FlightPlanReference {
+  id varchar [pk]
+  flightLegId varchar [not null]
+  provider varchar
+  externalReference varchar
+  filedAt timestamp
+  status varchar
+  routeText text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (flightLegId, externalReference) [unique]
+    flightLegId
+    status
+  }
+}
+
+Table DispatchPackage {
+  id varchar [pk]
+  flightLegId varchar [not null, unique]
+  weatherBriefingId varchar
+  notamSnapshotId varchar
+  flightPlanReferenceId varchar
+  performanceData jsonb
+  createdById varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    weatherBriefingId
+    notamSnapshotId
+    flightPlanReferenceId
+    createdById
+  }
+}
+
 Table CrewMember {
   id varchar [pk]
   userId varchar [unique]
@@ -658,6 +818,21 @@ Ref: CrewLegAssignment.assignedById > User.id
 Ref: CrewLegAssignment.sourceAircraftCrewAssignmentId > AircraftCrewAssignment.id
 Ref: TurnaroundLink.inboundFlightLegId > FlightLeg.id
 Ref: TurnaroundLink.outboundFlightLegId > FlightLeg.id
+Ref: Manifest.flightLegId > FlightLeg.id
+Ref: Manifest.lockedById > User.id
+Ref: ManifestItem.manifestId > Manifest.id
+Ref: ManifestItem.passengerId > Passenger.id
+Ref: WeightBalanceRun.flightLegId > FlightLeg.id
+Ref: WeightBalanceRun.manifestId > Manifest.id
+Ref: WeightBalanceRun.calculatedById > User.id
+Ref: WeightBalanceRun.approvedById > User.id
+Ref: FlightLocatingRecord.flightLegId > FlightLeg.id
+Ref: FlightPlanReference.flightLegId > FlightLeg.id
+Ref: DispatchPackage.flightLegId > FlightLeg.id
+Ref: DispatchPackage.weatherBriefingId > WeatherBriefingSnapshot.id
+Ref: DispatchPackage.notamSnapshotId > NotamSnapshot.id
+Ref: DispatchPackage.flightPlanReferenceId > FlightPlanReference.id
+Ref: DispatchPackage.createdById > User.id
 Ref: CrewSchedule.crewMemberId > CrewMember.id
 Ref: CrewSchedule.stationId > Station.id
 Ref: CrewFlightLog.crewMemberId > CrewMember.id
