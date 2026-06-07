@@ -130,6 +130,10 @@ The durable mutation plan is:
 docs/AIRWORTHINESS_MUTATION_PLAN.md
 ```
 
+Prompt 38 implementation status: complete. The aircraft-level workflow route
+now supports discrepancy create/edit. Deferrals remain read-only and should be
+implemented separately in Prompt 39.
+
 ## Deferred
 
 Do not include these in the first airworthiness mutation prompts:

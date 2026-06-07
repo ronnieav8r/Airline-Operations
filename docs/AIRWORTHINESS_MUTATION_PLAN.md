@@ -55,6 +55,12 @@ Minimum workflow:
 - Keep deferral creation/editing deferred to Prompt 39.
 - Keep maintenance events and airworthiness releases read-only.
 
+Implementation status: complete.
+
+Prompt 38 added `/aircraft/[aircraftId]/airworthiness`, linked it from
+`/aircraft`, and supports discrepancy create/edit only. Deferrals remain
+read-only.
+
 ## Discrepancy Data Policy
 
 - `discrepancyNumber` is required and unique per aircraft.
@@ -70,7 +76,7 @@ Minimum workflow:
 
 ## Prompt 39 Scope
 
-Recommended follow-up:
+Next implementation slice:
 
 ```text
 Prompt 39: Airworthiness deferral mutation foundation

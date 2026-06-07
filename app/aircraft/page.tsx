@@ -6,6 +6,7 @@ import {
   FlightStatus,
   SeatRole,
 } from "@prisma/client";
+import Link from "next/link";
 
 import { getAircraftBoard } from "@/lib/aircraft-queries";
 
@@ -337,17 +338,25 @@ export default async function AircraftPage() {
                       <h3 className="text-sm font-semibold text-zinc-900">
                         Airworthiness summary
                       </h3>
-                      <span
-                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
-                          item.discrepancies.length === 0 && item.deferrals.length === 0
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-amber-200 bg-amber-50 text-amber-800"
-                        }`}
-                      >
-                        {item.discrepancies.length === 0 && item.deferrals.length === 0
-                          ? "No open A/W warnings"
-                          : "A/W warnings"}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
+                            item.discrepancies.length === 0 && item.deferrals.length === 0
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-amber-200 bg-amber-50 text-amber-800"
+                          }`}
+                        >
+                          {item.discrepancies.length === 0 && item.deferrals.length === 0
+                            ? "No open A/W warnings"
+                            : "A/W warnings"}
+                        </span>
+                        <Link
+                          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                          href={`/aircraft/${item.id}/airworthiness`}
+                        >
+                          Manage airworthiness
+                        </Link>
+                      </div>
                     </div>
                     <div className="mt-3 grid gap-3 xl:grid-cols-2">
                       <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
