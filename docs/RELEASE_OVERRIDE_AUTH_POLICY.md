@@ -134,7 +134,7 @@ Override strictness should vary by authority class:
 
 ## Next Data-Model Questions
 
-Prompt 51 should decide the additive schema shape for:
+Prompt 51 planned the additive schema shape for:
 
 - Policy profiles.
 - Policy rules.
@@ -143,8 +143,13 @@ Prompt 51 should decide the additive schema shape for:
 - Override records.
 - Audit events.
 
-Do not implement schema until Prompt 51 is complete and the next implementation
-slice is approved.
+Durable plan:
+
+```text
+docs/RELEASE_BLOCKING_DATA_MODEL_PLAN.md
+```
+
+Do not implement schema until the next implementation slice is approved.
 
 ## Deferred
 

@@ -123,6 +123,16 @@ Current direction:
 - Keep discrepancy and deferral blocking deferred until severity, due-date,
   category, and MEL/CDL policy exists.
 
+Prompt 51 planned the future release-blocking data model in:
+
+```text
+docs/RELEASE_BLOCKING_DATA_MODEL_PLAN.md
+```
+
+The current schema is sufficient for warning-only preview. Hard blocking should
+wait for additive policy profile, policy rule, readiness snapshot, finding,
+override, and audit-event records.
+
 ## Override Policy
 
 Do not implement overrides yet.

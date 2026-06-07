@@ -236,6 +236,14 @@ Release-blocking preview is implemented on FlightLeg detail. It labels existing
 readiness findings as `Would block release`, `Would warn`, or `No blocker`
 without enforcing blocking or changing schema.
 
+Release-blocking data model planning is complete in
+`docs/RELEASE_BLOCKING_DATA_MODEL_PLAN.md`. The current schema remains
+unchanged and is sufficient for warning-only preview. A future additive schema
+foundation should prefer `ReleasePolicyProfile`, `ReleasePolicyRule`,
+`ReleaseReadinessSnapshot`, `ReleaseReadinessFinding`, `ReleaseOverride`, and
+`ReleaseAuditEvent` before any hard blocking, override workflow, auth/signature
+implementation, or provider-backed verification.
+
 Scheduling now follows the same FlightLeg-backed read pattern as Dashboard,
 Flights, and Operations Control, while preserving legacy `Flight` fallback and
 legacy Flight IDs for crew coverage resolution.

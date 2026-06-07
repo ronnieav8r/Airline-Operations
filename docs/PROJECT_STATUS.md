@@ -94,6 +94,7 @@ It has:
 54. Release blocking preview QA.
 55. Authority-specific release policy planning.
 56. Release override and auth planning.
+57. Release blocking data model planning.
 
 ## Current Data Model Boundaries
 
@@ -292,6 +293,13 @@ context, blocker key, timestamp, and audit capture; selected safety-critical
 findings should be non-overridable in the normal operations-control workflow
 until stronger policy exists.
 
+Release blocking data model planning is complete. Current schema remains
+unchanged and current behavior remains warning-only. The planned future additive
+models are `ReleasePolicyProfile`, `ReleasePolicyRule`,
+`ReleaseReadinessSnapshot`, `ReleaseReadinessFinding`, `ReleaseOverride`, and
+`ReleaseAuditEvent`. These should exist before hard blocking, override
+workflow, auth/signature implementation, or provider-backed verification.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -353,6 +361,9 @@ authority-specific policy engine yet.
 Use `docs/RELEASE_OVERRIDE_AUTH_POLICY.md` for future release override, auth,
 role, signature, and audit policy. This is policy planning only; there is no
 override workflow or auth model yet.
+
+Use `docs/RELEASE_BLOCKING_DATA_MODEL_PLAN.md` for the future release-blocking
+schema plan. Current Prisma schema has not been changed for this plan.
 
 Use `docs/LEGACY_RECORD_IMPORT_PLAN.md` for the deferred old-record import
 lane. The future goal is a safe import method for legacy operational, aircraft,
@@ -456,17 +467,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 51: Release Blocking Data Model Planning
+Prompt 52: Release Blocking Schema Foundation
 ```
 
 Scope:
 
-- Plan the additive data model needed for authority policy profiles, policy
-  rules, readiness snapshots, blocker findings, override records, and audit
-  events.
+- Add the planned release policy, readiness snapshot, finding, override, and
+  audit-event tables additively only.
 - Keep `FlightRelease` as the operational release record.
-- Keep it docs-only. Do not enforce blocking, add schema, add auth/signatures,
-  add provider integrations, or add override workflow.
+- Do not enforce blocking, add auth/signatures, add provider integrations, add
+  file uploads, or change current `FlightRelease` actions.
 
 Deferred follow-up to keep on the roadmap:
 

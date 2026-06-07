@@ -397,3 +397,25 @@ Prompt 51 should plan the additive schema shape for authority policy profiles,
 policy rules, readiness snapshots, blocker findings, override records, and audit
 events. It should remain docs-only unless the next implementation prompt
 explicitly approves schema.
+
+Implementation status: complete.
+
+Prompt 51 planned the release-blocking data model and kept the current Prisma
+schema unchanged.
+
+Durable plan:
+
+```text
+docs/RELEASE_BLOCKING_DATA_MODEL_PLAN.md
+```
+
+Recommended next release policy slice if approved:
+
+```text
+Prompt 52: Release Blocking Schema Foundation
+```
+
+Prompt 52 should add the planned policy/snapshot/override/audit tables
+additively only. It should not enforce blocking, add auth/signatures, add
+provider integrations, add file uploads, or change current `FlightRelease`
+actions.
