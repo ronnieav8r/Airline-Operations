@@ -1,4 +1,5 @@
 import {
+  AssignmentStatus,
   AircraftType,
   DutyStatus,
   EmploymentStatus,
@@ -373,6 +374,9 @@ async function getCrewRosterData() {
                   },
                 },
                 aircraftAssignments: {
+                  where: {
+                    status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+                  },
                   select: {
                     aircraft: {
                       select: {

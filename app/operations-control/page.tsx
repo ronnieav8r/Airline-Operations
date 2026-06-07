@@ -119,12 +119,22 @@ function EvidenceCell({ record }: { record: OperationsControlRecordRead }) {
         </span>
       </div>
       {record.leg?.id ? (
-        <Link
-          className="inline-flex text-xs font-medium text-sky-700 hover:text-sky-900"
-          href={`/operations-control/${record.leg.id}`}
-        >
-          View evidence detail
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            className="inline-flex text-xs font-medium text-sky-700 hover:text-sky-900"
+            href={`/operations-control/${record.leg.id}`}
+          >
+            View evidence detail
+          </Link>
+          {record.readSource === "FLIGHT_LEG" ? (
+            <Link
+              className="inline-flex text-xs font-medium text-zinc-700 hover:text-zinc-950"
+              href={`/operations-control/${record.leg.id}/edit`}
+            >
+              Edit
+            </Link>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
@@ -162,16 +172,26 @@ export default async function OperationsControlPage() {
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
         <header className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Operations Control
-          </p>
-          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight sm:text-3xl">
-            Authority and Release Board
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm text-zinc-600">
-            Read-only control view for the governing authority, controlling entity,
-            release state, aircraft, and scheduled leg timing in effect.
-          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Operations Control
+              </p>
+              <h1 className="mt-1.5 text-2xl font-semibold tracking-tight sm:text-3xl">
+                Authority and Release Board
+              </h1>
+              <p className="mt-2 max-w-3xl text-sm text-zinc-600">
+                Control view for the governing authority, controlling entity, release
+                state, aircraft, and scheduled leg timing in effect.
+              </p>
+            </div>
+            <Link
+              className="inline-flex rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+              href="/operations-control/new"
+            >
+              New FlightLeg
+            </Link>
+          </div>
         </header>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

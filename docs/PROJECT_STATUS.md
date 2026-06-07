@@ -10,11 +10,16 @@ before starting a new AeroOps slice.
 AeroOps Center is a Next.js, TypeScript, Prisma, PostgreSQL, and Render app for
 small airline, charter, or air taxi operations.
 
-The app is currently a read-only operational console backed by live Prisma reads.
+The app is currently an operational console backed by live Prisma reads. Most
+surfaces remain read-focused, and Operations Control now has the first
+controlled FlightLeg create/edit workflow.
+
 It has:
 
 - Dashboard at `/`
 - Operations Control at `/operations-control`
+- FlightLeg create/edit at `/operations-control/new` and
+  `/operations-control/[flightLegId]/edit`
 - Flights at `/flights`
 - Aircraft at `/aircraft`
 - Crew at `/crew`
@@ -50,6 +55,7 @@ It has:
 22. Scheduling FlightLeg read migration.
 23. Aircraft FlightLeg read migration.
 24. Crew FlightLeg read migration.
+25. FlightLeg create/edit workflow foundation.
 
 ## Current Data Model Boundaries
 
@@ -61,6 +67,11 @@ rows by `FlightLeg.legacyFlightId`. `/`, `/operations-control`, `/flights`,
 `/scheduling`, `/aircraft`, and `/crew` now pilot FlightLeg reads with legacy
 `Flight` fallback where needed. Existing coverage APIs still read from current
 `Flight` paths.
+
+Operations Control now has the first controlled FlightLeg write workflow. New
+and edited FlightLeg records also create/update the legacy `Flight` bridge row
+in the same transaction so current coverage APIs, fallback reads, and parity
+diagnostics continue to work during the transition.
 
 Render has been backfilled with FlightLeg foundation records. The
 `RUN_FLIGHTLEG_BACKFILL` flag should remain `0` unless intentionally rerunning
@@ -178,23 +189,20 @@ Then verify the changed routes and `/api/health`.
 
 ## Recommended Next Step
 
-Use the hidden parity diagnostic before adding write flows.
+Use the new FlightLeg create/edit workflow locally before broadening write
+surface area.
 
 Preferred next slice:
 
 ```text
-Prompt 19: FlightLeg create/edit workflow planning
+Prompt 20: FlightLeg write QA and release-readiness guardrails
 ```
 
 Scope:
 
-- Decide the first real write workflow now that main read paths are FlightLeg-backed.
-- Preferred starting workflow: create/edit a FlightLeg with aircraft assignment
-  and operational-control record.
-- Keep release evidence, crew leg assignment, and dispatch workflows deferred
-  unless explicitly included.
-- Because this is still development-only, the workflow can be pragmatic, but it
-  should still protect relational integrity.
-
-The cautious page-by-page read migration phase is effectively complete. The next
-phase should start real controlled workflows against `FlightLeg`.
+- Add small QA helpers or diagnostics for newly created FlightLeg bridge parity.
+- Confirm create/edit behavior across Operations Control, Flights, Scheduling,
+  Aircraft, and Crew coverage APIs.
+- Decide whether the next product workflow should be release-control actions,
+  crew leg assignment promotion, or release-evidence mutation.
+- Keep schema changes deferred unless QA exposes a concrete model gap.

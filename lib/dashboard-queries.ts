@@ -1,6 +1,7 @@
 import {
   AlertSeverity,
   AlertStatus,
+  AssignmentStatus,
   AircraftStatus,
   FlightLegStatus,
   FlightStatus,
@@ -40,6 +41,9 @@ const dashboardFlightSelect = {
         select: { code: true },
       },
       aircraftAssignments: {
+        where: {
+          status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+        },
         select: {
           aircraft: {
             select: { tailNumber: true },

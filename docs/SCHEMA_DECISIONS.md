@@ -34,6 +34,12 @@ The current `Flight` table remains the active UI/API read model. `FlightLeg`
 now exists additively as the future operational anchor, bridged by
 `FlightLeg.legacyFlightId`.
 
+Temporary write policy: the first FlightLeg write workflow maintains both
+records. Creating or editing a FlightLeg through Operations Control also
+creates or updates the legacy `Flight` row in the same transaction. This keeps
+existing crew coverage APIs, fallback reads, and Flight-to-FlightLeg parity
+diagnostics valid until the remaining APIs are migrated off the legacy anchor.
+
 DBML references:
 
 - `docs/schema.current.dbml` is the clean current-state DBML for the implemented schema.
@@ -65,6 +71,10 @@ Current transition state:
 - `AircraftCrewAssignment` still drives current crew coverage reads.
 - `CrewLegAssignment` now snapshots the resolved aircraft-block crew onto
   `FlightLeg` during seed/backfill.
+- FlightLegs created by the first Operations Control write workflow do not
+  create `CrewLegAssignment` rows yet; current crew coverage still resolves
+  through the legacy `Flight` bridge until a later crew workflow promotes
+  leg-level assignments.
 - Do not treat `CrewLegAssignment` as the source of truth for current pages
   until a later read-migration slice validates parity.
 
@@ -217,4 +227,11 @@ warnings, aircraft alerts, and legacy fallback.
 Crew now follows the FlightLeg-backed read pattern for upcoming coverage context,
 while preserving legacy Flight IDs for current coverage resolution and keeping
 aircraft-block assignment as the active crew source. The main read-only surfaces
-are now far enough along to begin planning the first FlightLeg write workflow.
+are now far enough along to support the first FlightLeg write workflow.
+
+Operations Control now owns the first controlled write path for core leg/control
+data. It writes `FlightLeg`, the legacy `Flight` bridge, auto `TripOrMission`,
+planned `AircraftAssignment`, `OperationalControlRecord`, planned
+`FlightRelease`, and adjacent same-aircraft `TurnaroundLink` rows together.
+Release evidence, dispatch package assembly, manifest mutation, weight and
+balance mutation, and crew leg assignment promotion remain deferred.

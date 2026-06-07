@@ -1,4 +1,4 @@
-import { FlightLegStatus, FlightStatus, Prisma } from "@prisma/client";
+import { AssignmentStatus, FlightLegStatus, FlightStatus, Prisma } from "@prisma/client";
 
 import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
 import { prisma } from "@/lib/prisma";
@@ -75,6 +75,9 @@ const flightListSelect = {
         },
       },
       aircraftAssignments: {
+        where: {
+          status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+        },
         select: {
           aircraft: {
             select: {

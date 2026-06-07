@@ -310,9 +310,17 @@ export default async function ReleaseEvidenceDetailPage({ params }: PageProps) {
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
         <header className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
-          <Link className="text-sm font-medium text-sky-700 hover:text-sky-900" href="/operations-control">
-            Back to Operations Control
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link className="text-sm font-medium text-sky-700 hover:text-sky-900" href="/operations-control">
+              Back to Operations Control
+            </Link>
+            <Link
+              className="text-sm font-medium text-zinc-700 hover:text-zinc-950"
+              href={`/operations-control/${detail.id}/edit`}
+            >
+              Edit FlightLeg
+            </Link>
+          </div>
           <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Release Evidence Detail
           </p>

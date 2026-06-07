@@ -1,4 +1,5 @@
 import {
+  AssignmentStatus,
   FlightLocatingStatus,
   ManifestStatus,
   OperatingPart,
@@ -58,6 +59,9 @@ const operationsControlSelect = {
         },
       },
       aircraftAssignments: {
+        where: {
+          status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+        },
         select: {
           aircraft: {
             select: {

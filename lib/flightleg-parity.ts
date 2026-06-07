@@ -403,6 +403,14 @@ async function getCrewIssues(flight: FlightParityPayload): Promise<{
     ),
   );
 
+  if (actualCrew.size === 0) {
+    return {
+      expectedCrew: Array.from(expectedCrew).sort(),
+      actualCrew: [],
+      issues: [],
+    };
+  }
+
   return {
     expectedCrew: Array.from(expectedCrew).sort(),
     actualCrew: Array.from(actualCrew).sort(),

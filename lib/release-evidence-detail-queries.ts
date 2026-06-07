@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { AssignmentStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -43,6 +43,9 @@ const releaseEvidenceDetailSelect = {
     },
   },
   aircraftAssignments: {
+    where: {
+      status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+    },
     select: {
       status: true,
       assignedAt: true,

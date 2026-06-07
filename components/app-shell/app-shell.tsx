@@ -40,7 +40,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
               </div>
             </Link>
             <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
-              Read-only v1
+              FlightLeg write v1
             </div>
           </div>
 

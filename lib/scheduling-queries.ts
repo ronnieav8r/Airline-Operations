@@ -1,6 +1,7 @@
 import {
   AlertSeverity,
   AlertStatus,
+  AssignmentStatus,
   FlightLegStatus,
   FlightStatus,
   Prisma,
@@ -91,6 +92,9 @@ const schedulingFlightSelect = {
         },
       },
       aircraftAssignments: {
+        where: {
+          status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+        },
         select: {
           aircraft: {
             select: {
