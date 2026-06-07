@@ -19,6 +19,9 @@ or mutate release evidence.
 Implementation status: Prompt 55 added explicit preview snapshot capture on
 FlightLeg detail. Automatic snapshots and hard blocking remain deferred.
 
+Prompt 56 validated repeated explicit preview captures and confirmed release
+actions remain unchanged.
+
 ## Snapshot Purpose
 
 Preview snapshots preserve what the release-readiness checklist showed at a

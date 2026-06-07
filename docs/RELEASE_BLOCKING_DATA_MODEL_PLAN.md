@@ -235,7 +235,8 @@ FlightRelease -> ReleaseAuditEvent
 4. Run release-policy diagnostic QA. Complete.
 5. Plan explicit preview snapshot creation. Complete.
 6. Add readiness snapshot creation in preview mode only. Complete.
-7. Add hard blocking only after auth/override decisions are resolved. Deferred.
+7. Run release snapshot QA. Complete.
+8. Add hard blocking only after auth/override decisions are resolved. Deferred.
 
 ## Deferred
 

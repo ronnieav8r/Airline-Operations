@@ -99,6 +99,7 @@ It has:
 59. Release policy diagnostic QA.
 60. Release snapshot planning.
 61. Release snapshot preview foundation.
+62. Release snapshot QA.
 
 ## Current Data Model Boundaries
 
@@ -331,6 +332,13 @@ capture uses the same readiness helper as the live checklist, stores one
 `ReleaseReadinessSnapshot` plus related `ReleaseReadinessFinding` rows, and does
 not change `FlightRelease.status` or block release actions.
 
+Release snapshot QA is complete. Local QA confirmed repeated preview captures
+append historical snapshots with findings, FlightLeg detail still shows live
+Release Readiness and snapshot history, health exposes snapshot/finding counts,
+and mark released, cancel release, and void release remain unchanged.
+Overrides, audit events, hard blocking, auth/signatures, provider integrations,
+file uploads, and `ReleasePackage` remain deferred.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -499,16 +507,15 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 56: Release Snapshot QA
+Prompt 57: Release Snapshot Diagnostic Readiness
 ```
 
 Scope:
 
-- Validate explicit snapshot capture creates expected snapshot/finding rows.
-- Validate repeated captures create historical snapshots.
-- Validate release actions remain available and unchanged.
-- Do not add hard blocking, overrides, auth/signatures, provider integrations,
-  file uploads, or release-action changes.
+- Add or extend an internal diagnostic to compare live readiness with the latest
+  captured snapshot for each FlightLeg.
+- Keep it read-only. Do not add hard blocking, overrides, auth/signatures,
+  provider integrations, file uploads, or release-action changes.
 
 Deferred follow-up to keep on the roadmap:
 

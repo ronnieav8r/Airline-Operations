@@ -500,3 +500,23 @@ Prompt 56: Release Snapshot QA
 
 Prompt 56 should validate snapshot row creation, repeated capture history, live
 readiness display, health counts, and unchanged release behavior.
+
+Implementation status: complete.
+
+Prompt 56 validated explicit preview snapshots and unchanged warning-only
+release behavior.
+
+Durable QA log:
+
+```text
+docs/RELEASE_POLICY_QA_LOG.md
+```
+
+Recommended next release policy slice:
+
+```text
+Prompt 57: Release Snapshot Diagnostic Readiness
+```
+
+Prompt 57 should add or extend a read-only internal diagnostic comparing live
+readiness with latest captured snapshots before any hard blocking work.
