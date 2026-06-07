@@ -34,12 +34,14 @@ const releaseEvidenceDetailSelect = {
   },
   operator: {
     select: {
+      id: true,
       name: true,
       code: true,
     },
   },
   operatingAuthority: {
     select: {
+      id: true,
       displayName: true,
       operatingPart: true,
     },
@@ -163,6 +165,7 @@ const releaseEvidenceDetailSelect = {
       controlNotes: true,
       release: {
         select: {
+          id: true,
           status: true,
           releasedAt: true,
           releaseNotes: true,
@@ -252,6 +255,30 @@ const releaseEvidenceDetailSelect = {
           status: true,
           routeText: true,
         },
+      },
+    },
+  },
+  readinessSnapshots: {
+    orderBy: {
+      evaluatedAt: "desc",
+    },
+    take: 5,
+    select: {
+      id: true,
+      snapshotStatus: true,
+      evaluatedAt: true,
+      authorityClass: true,
+      summary: true,
+      findings: {
+        select: {
+          id: true,
+          severity: true,
+          status: true,
+          ruleKey: true,
+          readinessCategory: true,
+          summary: true,
+        },
+        orderBy: [{ readinessCategory: "asc" }, { ruleKey: "asc" }],
       },
     },
   },

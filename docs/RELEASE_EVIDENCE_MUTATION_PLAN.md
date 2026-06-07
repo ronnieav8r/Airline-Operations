@@ -486,3 +486,17 @@ Prompt 55: Release Snapshot Preview Foundation
 
 Prompt 55 should implement explicit preview snapshot capture on FlightLeg detail
 without changing release actions.
+
+Implementation status: complete.
+
+Prompt 55 implemented explicit preview snapshot capture and recent snapshot
+history on FlightLeg detail. Release actions remain warning-only and unchanged.
+
+Recommended next release policy slice:
+
+```text
+Prompt 56: Release Snapshot QA
+```
+
+Prompt 56 should validate snapshot row creation, repeated capture history, live
+readiness display, health counts, and unchanged release behavior.

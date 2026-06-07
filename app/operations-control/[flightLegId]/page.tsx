@@ -1,15 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import {
-  AirworthinessReleaseStatus,
-  FlightLocatingStatus,
-  ManifestStatus,
-  ReleaseStatus,
-  WeightBalanceStatus,
-} from "@prisma/client";
+import { ReleaseStatus } from "@prisma/client";
 
 import {
   cancelFlightLegReleaseAction,
+  captureReleasePreviewSnapshotAction,
   markFlightLegReleasedAction,
   voidFlightLegReleaseAction,
 } from "@/app/operations-control/actions";
@@ -18,6 +13,10 @@ import {
   getReleaseEvidenceDetail,
   ReleaseEvidenceDetail,
 } from "@/lib/release-evidence-detail-queries";
+import {
+  getReleaseReadinessItems,
+  ReleaseReadinessItem,
+} from "@/lib/release-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +26,8 @@ type PageProps = {
   }>;
   searchParams: Promise<{
     releaseError?: string | string[];
+    snapshotError?: string | string[];
+    snapshotMessage?: string | string[];
   }>;
 };
 
@@ -66,10 +67,6 @@ function statusBadgeClasses(value: string | null | undefined): string {
   }
 
   return "border-zinc-200 bg-zinc-50 text-zinc-600";
-}
-
-function releaseReadinessDate(value: Date | null | undefined): string {
-  return toDateTimeLabel(value ?? null);
 }
 
 function StatusBadge({ value }: { value: string | null | undefined }) {
@@ -148,156 +145,19 @@ function ReleaseControlActions({ detail }: { detail: ReleaseEvidenceDetail }) {
   );
 }
 
-type ReadinessItem = {
-  classification: "READY" | "WOULD_BLOCK" | "WOULD_WARN";
-  href?: string;
-  label: string;
-  message: string;
-  ready: boolean;
-};
+function SnapshotCaptureForm({ flightLegId }: { flightLegId: string }) {
+  const captureSnapshot = captureReleasePreviewSnapshotAction.bind(null, flightLegId);
 
-function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[] {
-  const manifest = detail.manifest;
-  const aircraft = detail.aircraftAssignments[0]?.aircraft ?? null;
-  const currentConfiguration = aircraft?.configurations[0] ?? null;
-  const latestAirworthinessRelease = aircraft?.airworthinessReleases[0] ?? null;
-  const currentAirworthinessRelease =
-    aircraft?.airworthinessReleases.find(
-      (release) => release.status === AirworthinessReleaseStatus.RELEASED,
-    ) ?? null;
-  const currentAirworthinessReleaseExpired =
-    !!currentAirworthinessRelease?.expiresAt &&
-    currentAirworthinessRelease.expiresAt.getTime() <= Date.now();
-  const currentAirworthinessReleaseUsable =
-    !!currentAirworthinessRelease && !currentAirworthinessReleaseExpired;
-  const latestUsableWeightBalanceRun =
-    detail.weightBalanceRuns.find((run) => run.status !== WeightBalanceStatus.VOIDED) ?? null;
-  const locating = detail.flightLocatingRecord;
-  const dispatch = detail.dispatchPackage;
-  const weather = dispatch?.weatherBriefing ?? null;
-  const notam = dispatch?.notamSnapshot ?? null;
-  const flightPlan = dispatch?.flightPlanReference ?? null;
-  const manifestReady =
-    !!manifest &&
-    manifest.items.length > 0 &&
-    (manifest.status === ManifestStatus.READY || manifest.status === ManifestStatus.LOCKED);
-  const weightBalanceReady =
-    !!latestUsableWeightBalanceRun &&
-    (latestUsableWeightBalanceRun.status === WeightBalanceStatus.CALCULATED ||
-      latestUsableWeightBalanceRun.status === WeightBalanceStatus.APPROVED);
-  const locatingReady =
-    !!locating &&
-    (locating.status === FlightLocatingStatus.FILED ||
-      locating.status === FlightLocatingStatus.ACTIVE ||
-      locating.status === FlightLocatingStatus.CLOSED);
-  const dispatchReady = !!dispatch && !!weather && !!notam && !!flightPlan;
-  const weatherReady = !!weather?.routeSummary;
-  const notamReady = !!notam?.affectedStationCodes;
-  const flightPlanReady = !!flightPlan?.externalReference && !!flightPlan.routeText;
-  const airworthinessHasFutureBlocker =
-    !aircraft || !currentConfiguration || !currentAirworthinessReleaseUsable;
-  const airworthinessReady =
-    !!aircraft &&
-    !!currentConfiguration &&
-    currentAirworthinessReleaseUsable &&
-    aircraft.discrepancies.length === 0 &&
-    aircraft.deferrals.length === 0;
-
-  return [
-    {
-      classification: airworthinessReady
-        ? "READY"
-        : airworthinessHasFutureBlocker
-          ? "WOULD_BLOCK"
-          : "WOULD_WARN",
-      label: "Airworthiness",
-      message: airworthinessReady
-        ? `${aircraft.tailNumber} has active configuration and current aircraft airworthiness release ${currentAirworthinessRelease?.releaseNumber ?? "record"}.`
-        : [
-            !aircraft ? "Assigned aircraft is missing." : null,
-            aircraft && !currentConfiguration ? "No active configuration." : null,
-            aircraft && !latestAirworthinessRelease
-              ? "No aircraft airworthiness release record."
-              : null,
-            aircraft && latestAirworthinessRelease && !currentAirworthinessRelease
-              ? `Latest aircraft airworthiness release ${latestAirworthinessRelease.releaseNumber} is ${latestAirworthinessRelease.status}; no current RELEASED record.`
-              : null,
-            aircraft && currentAirworthinessReleaseExpired
-              ? `Current aircraft airworthiness release ${currentAirworthinessRelease.releaseNumber} expired ${releaseReadinessDate(
-                  currentAirworthinessRelease.expiresAt,
-                )}.`
-              : null,
-            aircraft && aircraft.discrepancies.length > 0
-              ? `${aircraft.discrepancies.length} open/deferred discrepancy warning(s).`
-              : null,
-            aircraft && aircraft.deferrals.length > 0
-              ? `${aircraft.deferrals.length} active deferral warning(s).`
-              : null,
-          ]
-            .filter(Boolean)
-            .join(" "),
-      ready: airworthinessReady,
-    },
-    {
-      classification: manifestReady ? "READY" : "WOULD_BLOCK",
-      href: `/operations-control/${detail.id}/manifest`,
-      label: "Manifest",
-      message: manifestReady
-        ? `${manifest.items.length} item(s), status ${manifest.status}.`
-        : "Needs a READY or LOCKED manifest with at least one item.",
-      ready: manifestReady,
-    },
-    {
-      classification: weightBalanceReady ? "READY" : "WOULD_BLOCK",
-      href: `/operations-control/${detail.id}/weight-balance`,
-      label: "Weight and balance",
-      message: weightBalanceReady
-        ? `${latestUsableWeightBalanceRun.runLabel} is ${latestUsableWeightBalanceRun.status}.`
-        : "Needs a latest non-voided W&B run marked CALCULATED or APPROVED.",
-      ready: weightBalanceReady,
-    },
-    {
-      classification: locatingReady ? "READY" : "WOULD_BLOCK",
-      href: `/operations-control/${detail.id}/locating`,
-      label: "Flight locating",
-      message: locatingReady
-        ? `Locating status is ${locating.status}.`
-        : "Needs locating status FILED, ACTIVE, or CLOSED.",
-      ready: locatingReady,
-    },
-    {
-      classification: dispatchReady ? "READY" : "WOULD_BLOCK",
-      href: `/operations-control/${detail.id}/dispatch`,
-      label: "Dispatch package",
-      message: dispatchReady
-        ? "Dispatch package links weather, NOTAM, and flight-plan evidence."
-        : "Needs a dispatch package linked to weather, NOTAM, and flight-plan evidence.",
-      ready: dispatchReady,
-    },
-    {
-      classification: weatherReady ? "READY" : "WOULD_BLOCK",
-      href: `/operations-control/${detail.id}/dispatch`,
-      label: "Weather",
-      message: weatherReady ? "Weather route summary is present." : "Needs a weather route summary.",
-      ready: weatherReady,
-    },
-    {
-      classification: notamReady ? "READY" : "WOULD_BLOCK",
-      href: `/operations-control/${detail.id}/dispatch`,
-      label: "NOTAM",
-      message: notamReady ? "Affected station codes are present." : "Needs affected station codes.",
-      ready: notamReady,
-    },
-    {
-      classification: flightPlanReady ? "READY" : "WOULD_BLOCK",
-      href: `/operations-control/${detail.id}/dispatch`,
-      label: "Flight plan",
-      message: flightPlanReady
-        ? `${flightPlan.externalReference} has route text.`
-        : "Needs an external reference and route text.",
-      ready: flightPlanReady,
-    },
-  ];
+  return (
+    <form action={captureSnapshot}>
+      <button
+        className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+        type="submit"
+      >
+        Capture preview snapshot
+      </button>
+    </form>
+  );
 }
 
 function ReadinessBadge({ ready }: { ready: boolean }) {
@@ -317,7 +177,7 @@ function ReadinessBadge({ ready }: { ready: boolean }) {
 function BlockingPreviewBadge({
   classification,
 }: {
-  classification: ReadinessItem["classification"];
+  classification: ReleaseReadinessItem["classification"];
 }) {
   const classes =
     classification === "WOULD_BLOCK"
@@ -364,6 +224,9 @@ function ReleaseReadinessChecklist({ detail }: { detail: ReleaseEvidenceDetail }
           <p className="text-xs text-zinc-500">
             Preview: {wouldBlockCount} would block, {wouldWarnCount} would warn
           </p>
+          <div className="mt-2">
+            <SnapshotCaptureForm flightLegId={detail.id} />
+          </div>
         </div>
       </div>
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -385,6 +248,74 @@ function ReleaseReadinessChecklist({ detail }: { detail: ReleaseEvidenceDetail }
                 Manage evidence
               </Link>
             ) : null}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function snapshotSummaryValue(summary: unknown, key: string): number {
+  if (!summary || typeof summary !== "object" || Array.isArray(summary)) {
+    return 0;
+  }
+
+  const value = (summary as Record<string, unknown>)[key];
+  return typeof value === "number" ? value : 0;
+}
+
+function RecentReleaseSnapshots({ detail }: { detail: ReleaseEvidenceDetail }) {
+  if (detail.readinessSnapshots.length === 0) {
+    return (
+      <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+        <h2 className="text-lg font-semibold">Preview Snapshots</h2>
+        <p className="mt-2 text-sm text-zinc-600">
+          No preview release-readiness snapshots have been captured yet.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+      <h2 className="text-lg font-semibold">Preview Snapshots</h2>
+      <p className="mt-1 text-sm text-zinc-600">
+        Recent explicit preview captures. These do not block release actions.
+      </p>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {detail.readinessSnapshots.map((snapshot) => (
+          <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={snapshot.id}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="font-medium text-zinc-900">{snapshot.snapshotStatus}</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {snapshot.authorityClass} | {toDateTimeLabel(snapshot.evaluatedAt)}
+                </p>
+              </div>
+              <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-600">
+                {snapshot.findings.length} findings
+              </span>
+            </div>
+            <dl className="mt-3 grid grid-cols-4 gap-2 text-xs">
+              <div>
+                <dt className="text-zinc-500">Pass</dt>
+                <dd className="font-semibold">{snapshotSummaryValue(snapshot.summary, "pass")}</dd>
+              </div>
+              <div>
+                <dt className="text-zinc-500">Fail</dt>
+                <dd className="font-semibold">{snapshotSummaryValue(snapshot.summary, "fail")}</dd>
+              </div>
+              <div>
+                <dt className="text-zinc-500">Warn</dt>
+                <dd className="font-semibold">{snapshotSummaryValue(snapshot.summary, "warning")}</dd>
+              </div>
+              <div>
+                <dt className="text-zinc-500">N/A</dt>
+                <dd className="font-semibold">
+                  {snapshotSummaryValue(snapshot.summary, "notApplicable")}
+                </dd>
+              </div>
+            </dl>
           </article>
         ))}
       </div>
@@ -845,9 +776,23 @@ export default async function ReleaseEvidenceDetailPage({ params, searchParams }
           </div>
         ) : null}
 
+        {firstSearchParam(queryParams.snapshotError) ? (
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            {firstSearchParam(queryParams.snapshotError)}
+          </div>
+        ) : null}
+
+        {firstSearchParam(queryParams.snapshotMessage) ? (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+            {firstSearchParam(queryParams.snapshotMessage)}
+          </div>
+        ) : null}
+
         <SummaryGrid detail={detail} />
 
         <ReleaseReadinessChecklist detail={detail} />
+
+        <RecentReleaseSnapshots detail={detail} />
 
         <ReleaseControlActions detail={detail} />
 

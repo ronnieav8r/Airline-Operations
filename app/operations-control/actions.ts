@@ -5,12 +5,20 @@ import {
   FlightLegStatus,
   FlightStatus,
   Prisma,
+  ReleaseFindingStatus,
+  ReleaseRuleSeverity,
   ReleaseStatus,
+  ReleaseSnapshotStatus,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { getReleaseEvidenceDetail } from "@/lib/release-evidence-detail-queries";
+import {
+  getReleaseReadinessItems,
+  ReleaseReadinessItem,
+} from "@/lib/release-readiness";
 
 class FlightLegFormError extends Error {}
 
@@ -646,6 +654,42 @@ function revalidateFlightLegWorkflowPaths() {
   revalidatePath("/internal/flightleg-parity");
 }
 
+function mapReadinessClassificationToSeverity(
+  classification: ReleaseReadinessItem["classification"],
+): ReleaseRuleSeverity {
+  if (classification === "WOULD_WARN") {
+    return ReleaseRuleSeverity.WARN;
+  }
+
+  if (classification === "READY") {
+    return ReleaseRuleSeverity.INFO;
+  }
+
+  return ReleaseRuleSeverity.BLOCK;
+}
+
+function mapFindingStatus(ready: boolean, severity: ReleaseRuleSeverity): ReleaseFindingStatus {
+  if (ready) {
+    return ReleaseFindingStatus.PASS;
+  }
+
+  return severity === ReleaseRuleSeverity.BLOCK
+    ? ReleaseFindingStatus.FAIL
+    : ReleaseFindingStatus.WARNING;
+}
+
+function getSnapshotStatus(failCount: number, warningCount: number): ReleaseSnapshotStatus {
+  if (failCount > 0) {
+    return ReleaseSnapshotStatus.BLOCKED;
+  }
+
+  if (warningCount > 0) {
+    return ReleaseSnapshotStatus.WARNING_ONLY;
+  }
+
+  return ReleaseSnapshotStatus.PASS;
+}
+
 export async function createFlightLegAction(formData: FormData) {
   let flightLegId: string;
 
@@ -726,4 +770,103 @@ export async function cancelFlightLegReleaseAction(flightLegId: string) {
 
 export async function voidFlightLegReleaseAction(flightLegId: string) {
   await runReleaseAction(flightLegId, ReleaseStatus.VOIDED);
+}
+
+export async function captureReleasePreviewSnapshotAction(flightLegId: string) {
+  try {
+    const detail = await getReleaseEvidenceDetail(flightLegId);
+
+    if (!detail) {
+      throw new FlightLegFormError("FlightLeg was not found.");
+    }
+
+    const flightRelease = detail.operationalControlRecord?.release;
+    if (!flightRelease) {
+      throw new FlightLegFormError("FlightRelease record was not found.");
+    }
+
+    const policyProfile = await prisma.releasePolicyProfile.findFirst({
+      where: {
+        operatingAuthorityId: detail.operatingAuthority.id,
+        isDefault: true,
+        effectiveTo: null,
+      },
+      include: {
+        rules: true,
+      },
+      orderBy: {
+        effectiveFrom: "desc",
+      },
+    });
+
+    if (!policyProfile) {
+      throw new FlightLegFormError(
+        "Default release policy profile was not found for this operating authority.",
+      );
+    }
+
+    const policyRulesByKey = new Map(policyProfile.rules.map((rule) => [rule.ruleKey, rule]));
+    const readinessItems = getReleaseReadinessItems(detail);
+    const findings = readinessItems.map((item) => {
+      const policyRule = policyRulesByKey.get(item.ruleKey) ?? null;
+      const severity = policyRule?.severity ?? mapReadinessClassificationToSeverity(item.classification);
+      const status = mapFindingStatus(item.ready, severity);
+
+      return {
+        item,
+        policyRule,
+        severity,
+        status,
+      };
+    });
+    const passCount = findings.filter((finding) => finding.status === ReleaseFindingStatus.PASS).length;
+    const failCount = findings.filter((finding) => finding.status === ReleaseFindingStatus.FAIL).length;
+    const warningCount = findings.filter(
+      (finding) => finding.status === ReleaseFindingStatus.WARNING,
+    ).length;
+    const notApplicableCount = findings.filter(
+      (finding) => finding.status === ReleaseFindingStatus.NOT_APPLICABLE,
+    ).length;
+    const snapshotStatus = getSnapshotStatus(failCount, warningCount);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.releaseReadinessSnapshot.create({
+        data: {
+          flightLegId: detail.id,
+          flightReleaseId: flightRelease.id,
+          policyProfileId: policyProfile.id,
+          snapshotStatus,
+          authorityClass: policyProfile.authorityClass,
+          summary: {
+            total: findings.length,
+            pass: passCount,
+            fail: failCount,
+            warning: warningCount,
+            notApplicable: notApplicableCount,
+            source: "explicit-preview",
+          },
+          findings: {
+            create: findings.map((finding) => ({
+              ruleId: finding.policyRule?.id ?? null,
+              ruleKey: finding.item.ruleKey,
+              readinessCategory: finding.item.readinessCategory,
+              severity: finding.severity,
+              status: finding.status,
+              isOverridable: finding.policyRule?.isOverridable ?? false,
+              summary: finding.item.message,
+              evidenceRefType: finding.item.evidenceRefType ?? null,
+              evidenceRefId: finding.item.evidenceRefId ?? null,
+              details: finding.item.details ?? {},
+            })),
+          },
+        },
+      });
+    });
+  } catch (error) {
+    redirect(`/operations-control/${flightLegId}?snapshotError=${encodeError(error)}`);
+  }
+
+  revalidatePath(`/operations-control/${flightLegId}`);
+  revalidatePath("/api/health");
+  redirect(`/operations-control/${flightLegId}?snapshotMessage=Preview%20snapshot%20captured.`);
 }

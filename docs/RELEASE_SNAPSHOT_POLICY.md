@@ -16,6 +16,9 @@ or void release.
 Snapshot creation must not change `FlightRelease.status`, block release actions,
 or mutate release evidence.
 
+Implementation status: Prompt 55 added explicit preview snapshot capture on
+FlightLeg detail. Automatic snapshots and hard blocking remain deferred.
+
 ## Snapshot Purpose
 
 Preview snapshots preserve what the release-readiness checklist showed at a

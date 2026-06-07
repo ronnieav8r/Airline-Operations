@@ -98,6 +98,7 @@ It has:
 58. Release blocking schema foundation.
 59. Release policy diagnostic QA.
 60. Release snapshot planning.
+61. Release snapshot preview foundation.
 
 ## Current Data Model Boundaries
 
@@ -324,6 +325,12 @@ should use the same readiness source as the live checklist, create one
 `ReleaseReadinessSnapshot` plus one `ReleaseReadinessFinding` per checklist
 item, and must not block or change `FlightRelease` actions.
 
+Release snapshot preview foundation is implemented. FlightLeg detail now has an
+explicit "Capture preview snapshot" action and recent snapshot history. Snapshot
+capture uses the same readiness helper as the live checklist, stores one
+`ReleaseReadinessSnapshot` plus related `ReleaseReadinessFinding` rows, and does
+not change `FlightRelease.status` or block release actions.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -492,16 +499,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 55: Release Snapshot Preview Foundation
+Prompt 56: Release Snapshot QA
 ```
 
 Scope:
 
-- Refactor FlightLeg detail readiness logic into a reusable helper.
-- Add explicit "Capture preview snapshot" action on FlightLeg detail.
-- Show recent preview snapshots on FlightLeg detail.
-- Do not add automatic snapshots, hard blocking, overrides, auth/signatures,
-  provider integrations, file uploads, or release-action changes.
+- Validate explicit snapshot capture creates expected snapshot/finding rows.
+- Validate repeated captures create historical snapshots.
+- Validate release actions remain available and unchanged.
+- Do not add hard blocking, overrides, auth/signatures, provider integrations,
+  file uploads, or release-action changes.
 
 Deferred follow-up to keep on the roadmap:
 
