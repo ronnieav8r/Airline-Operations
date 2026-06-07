@@ -134,6 +134,11 @@ Prompt 38 implementation status: complete. The aircraft-level workflow route
 now supports discrepancy create/edit. Deferrals remain read-only and should be
 implemented separately in Prompt 39.
 
+Prompt 39 implementation status: complete. The aircraft-level workflow route
+now supports deferral create/edit from existing `OPEN` or `DEFERRED`
+discrepancies. Maintenance-event mutation should be planned before adding
+maintenance-event writes.
+
 ## Deferred
 
 Do not include these in the first airworthiness mutation prompts:

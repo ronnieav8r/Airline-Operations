@@ -1,12 +1,15 @@
-import { DiscrepancyStatus } from "@prisma/client";
+import { DeferralStatus, DiscrepancyStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
+  createDeferralAction,
   createDiscrepancyAction,
+  updateDeferralAction,
   updateDiscrepancyAction,
 } from "@/app/aircraft/[aircraftId]/airworthiness/actions";
 import {
+  editableDeferralStatuses,
   editableDiscrepancyStatuses,
   getAircraftAirworthinessWorkflowData,
   AircraftAirworthinessWorkflowData,
@@ -24,6 +27,7 @@ type PageProps = {
 };
 
 type Discrepancy = AircraftAirworthinessWorkflowData["discrepancies"][number];
+type Deferral = AircraftAirworthinessWorkflowData["deferrals"][number];
 
 function firstSearchParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
@@ -78,6 +82,21 @@ function StatusBadge({ status }: { status: DiscrepancyStatus | null }) {
         status,
       )}`}
     >
+      {status ?? "Missing"}
+    </span>
+  );
+}
+
+function DeferralStatusBadge({ status }: { status: DeferralStatus | null }) {
+  const classes =
+    status === DeferralStatus.ACTIVE
+      ? "border-amber-200 bg-amber-50 text-amber-800"
+      : status === DeferralStatus.CLEARED
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+        : "border-zinc-200 bg-zinc-50 text-zinc-500";
+
+  return (
+    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${classes}`}>
       {status ?? "Missing"}
     </span>
   );
@@ -150,6 +169,45 @@ function StatusSelect({ defaultValue }: { defaultValue?: DiscrepancyStatus }) {
   );
 }
 
+function DeferralStatusSelect({ defaultValue }: { defaultValue?: DeferralStatus }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-zinc-700">Status</span>
+      <select
+        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+        defaultValue={defaultValue ?? DeferralStatus.ACTIVE}
+        name="status"
+      >
+        {editableDeferralStatuses.map((status) => (
+          <option key={status} value={status}>
+            {status}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function DiscrepancySelect({ discrepancies }: { discrepancies: Discrepancy[] }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-zinc-700">Discrepancy</span>
+      <select
+        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+        name="discrepancyId"
+        required
+      >
+        <option value="">Select discrepancy</option>
+        {discrepancies.map((discrepancy) => (
+          <option key={discrepancy.id} value={discrepancy.id}>
+            {discrepancy.discrepancyNumber} | {discrepancy.title}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function DiscrepancyForm({
   action,
   discrepancy,
@@ -186,6 +244,75 @@ function DiscrepancyForm({
       <div className="mt-3 max-w-sm">
         <Field
           defaultValue={toInputDateTime(discrepancy?.clearedAt)}
+          label="Cleared at"
+          name="clearedAt"
+          type="datetime-local"
+        />
+      </div>
+      <div className="mt-3">
+        <button
+          className="rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+          type="submit"
+        >
+          {submitLabel}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function DeferralForm({
+  action,
+  deferral,
+  discrepancies,
+  submitLabel,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  deferral?: Deferral;
+  discrepancies?: Discrepancy[];
+  submitLabel: string;
+}) {
+  return (
+    <form action={action} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+      {discrepancies ? (
+        <div className="mb-3">
+          <DiscrepancySelect discrepancies={discrepancies} />
+        </div>
+      ) : null}
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Field
+          defaultValue={deferral?.deferralNumber ?? ""}
+          label="Deferral number"
+          name="deferralNumber"
+        />
+        <Field defaultValue={deferral?.category ?? ""} label="Category" name="category" />
+        <DeferralStatusSelect defaultValue={deferral?.status} />
+        <Field
+          defaultValue={toInputDateTime(deferral?.dueAt)}
+          label="Due at"
+          name="dueAt"
+          type="datetime-local"
+        />
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <TextArea defaultValue={deferral?.notes} label="Notes" name="notes" />
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">
+            Discrepancy handling when cleared
+          </span>
+          <select
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+            defaultValue="KEEP_DEFERRED"
+            name="discrepancyResolution"
+          >
+            <option value="KEEP_DEFERRED">Keep discrepancy deferred</option>
+            <option value="MARK_CLEARED">Mark discrepancy cleared</option>
+          </select>
+        </label>
+      </div>
+      <div className="mt-3 max-w-sm">
+        <Field
+          defaultValue={toInputDateTime(deferral?.clearedAt)}
           label="Cleared at"
           name="clearedAt"
           type="datetime-local"
@@ -258,24 +385,40 @@ function ContextCards({ aircraft }: { aircraft: AircraftAirworthinessWorkflowDat
 
 function ActiveDeferrals({ aircraft }: { aircraft: AircraftAirworthinessWorkflowData }) {
   if (aircraft.deferrals.length === 0) {
-    return <p className="text-sm text-zinc-600">No active deferrals recorded.</p>;
+    return <p className="text-sm text-zinc-600">No deferrals recorded.</p>;
   }
 
   return (
     <div className="space-y-2">
       {aircraft.deferrals.map((deferral) => (
         <article
-          className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+          className="rounded-md border border-zinc-200 bg-white p-3 text-sm"
           key={deferral.id}
         >
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold">{deferral.deferralNumber}</p>
-            <span>{deferral.category ?? "No category"}</span>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-zinc-950">{deferral.deferralNumber}</p>
+                <DeferralStatusBadge status={deferral.status} />
+                <span className="text-zinc-600">{deferral.category ?? "No category"}</span>
+              </div>
+              <p className="mt-1 text-zinc-700">
+                {deferral.discrepancy.discrepancyNumber}: {deferral.discrepancy.title}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Deferred {toDateTimeLabel(deferral.deferredAt)} | Due{" "}
+                {toDateTimeLabel(deferral.dueAt)} | Cleared{" "}
+                {toDateTimeLabel(deferral.clearedAt)}
+              </p>
+            </div>
           </div>
-          <p className="mt-1">
-            {deferral.discrepancy.discrepancyNumber}: {deferral.discrepancy.title}
-          </p>
-          <p className="mt-1 text-xs">Due {toDateTimeLabel(deferral.dueAt)}</p>
+          <div className="mt-3">
+            <DeferralForm
+              action={updateDeferralAction.bind(null, aircraft.id, deferral.id)}
+              deferral={deferral}
+              submitLabel="Save deferral"
+            />
+          </div>
         </article>
       ))}
     </div>
@@ -355,6 +498,9 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
       discrepancy.status === DiscrepancyStatus.OPEN ||
       discrepancy.status === DiscrepancyStatus.DEFERRED,
   );
+  const activeDeferrals = aircraft.deferrals.filter(
+    (deferral) => deferral.status === DeferralStatus.ACTIVE,
+  );
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -405,7 +551,7 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
           <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-zinc-500">Active deferrals</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {aircraft.deferrals.length}
+              {activeDeferrals.length}
             </p>
           </article>
           <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
@@ -437,9 +583,31 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
         </section>
 
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold">Active deferrals</h2>
+          <h2 className="text-lg font-semibold">Create deferral</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Deferral mutation is intentionally deferred to Prompt 39.
+            Create deferrals from existing OPEN or DEFERRED discrepancies. Hard
+            release blocking remains deferred.
+          </p>
+          <div className="mt-4">
+            {activeDiscrepancies.length === 0 ? (
+              <p className="text-sm text-zinc-600">
+                No OPEN or DEFERRED discrepancies are available for deferral.
+              </p>
+            ) : (
+              <DeferralForm
+                action={createDeferralAction.bind(null, aircraft.id)}
+                discrepancies={activeDiscrepancies}
+                submitLabel="Create deferral"
+              />
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Deferrals</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Deferral workflow is aircraft-level. Maintenance events and release
+            signing remain deferred.
           </p>
           <div className="mt-4">
             <ActiveDeferrals aircraft={aircraft} />

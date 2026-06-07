@@ -79,21 +79,23 @@ const aircraftAirworthinessWorkflowSelect = {
     },
   },
   deferrals: {
-    where: {
-      status: DeferralStatus.ACTIVE,
-    },
-    orderBy: [{ dueAt: "asc" }],
+    orderBy: [{ deferredAt: "desc" }],
     select: {
       id: true,
+      discrepancyId: true,
       deferralNumber: true,
       status: true,
       category: true,
+      deferredAt: true,
       dueAt: true,
+      clearedAt: true,
       notes: true,
       discrepancy: {
         select: {
+          id: true,
           discrepancyNumber: true,
           title: true,
+          status: true,
         },
       },
     },
@@ -150,4 +152,11 @@ export const editableDiscrepancyStatuses = [
   DiscrepancyStatus.DEFERRED,
   DiscrepancyStatus.CLEARED,
   DiscrepancyStatus.CANCELLED,
+];
+
+export const editableDeferralStatuses = [
+  DeferralStatus.ACTIVE,
+  DeferralStatus.CLEARED,
+  DeferralStatus.EXPIRED,
+  DeferralStatus.CANCELLED,
 ];

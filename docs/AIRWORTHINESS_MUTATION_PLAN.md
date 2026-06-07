@@ -76,7 +76,7 @@ read-only.
 
 ## Prompt 39 Scope
 
-Next implementation slice:
+Implementation slice:
 
 ```text
 Prompt 39: Airworthiness deferral mutation foundation
@@ -92,6 +92,29 @@ Minimum workflow:
 - Clearing a deferral should allow the related discrepancy to remain
   `DEFERRED` or move to `CLEARED` only through an explicit form choice.
 - `authorizedById` remains null until auth/user attribution exists.
+
+Implementation status: complete.
+
+Prompt 39 added deferral create/edit under
+`/aircraft/[aircraftId]/airworthiness`. Active deferral creation marks the
+related discrepancy `DEFERRED`; clearing a deferral can keep the discrepancy
+deferred or explicitly mark it cleared.
+
+## Prompt 40 Scope
+
+Next planning slice:
+
+```text
+Prompt 40: Maintenance event mutation planning
+```
+
+Minimum planning questions:
+
+- Which maintenance events can be created without a discrepancy.
+- Whether maintenance events can clear discrepancies and deferrals.
+- Which fields are required for a return-to-service event.
+- Whether a maintenance event should create or update an airworthiness release.
+- Which user/signature fields remain null until auth exists.
 
 ## Readiness Policy
 

@@ -82,6 +82,7 @@ It has:
 42. Airworthiness read-only summaries.
 43. Airworthiness mutation planning.
 44. Airworthiness discrepancy mutation foundation.
+45. Airworthiness deferral mutation foundation.
 
 ## Current Data Model Boundaries
 
@@ -192,6 +193,13 @@ Airworthiness discrepancy mutation foundation is implemented. Aircraft cards
 link to `/aircraft/[aircraftId]/airworthiness`, where users can create and edit
 aircraft-level discrepancies. Deferrals, maintenance events, airworthiness
 release signing, auth/signatures, and hard release blocking remain deferred.
+
+Airworthiness deferral mutation foundation is implemented. The aircraft-level
+airworthiness workflow can create/edit deferrals from existing `OPEN` or
+`DEFERRED` discrepancies. Active deferrals mark the related discrepancy
+`DEFERRED`; clearing a deferral can either keep the discrepancy deferred or
+explicitly mark it cleared. Maintenance events, airworthiness release signing,
+auth/signatures, and hard release blocking remain deferred.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -335,14 +343,14 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 39: Airworthiness deferral mutation foundation
+Prompt 40: Maintenance event mutation planning
 ```
 
 Scope:
 
-- Create/edit aircraft-level deferrals from existing `OPEN` or `DEFERRED`
-  discrepancies.
-- Mark the related discrepancy `DEFERRED` when an active deferral is created.
-- Keep maintenance events, airworthiness release signing, auth/signatures, and
+- Plan how maintenance events relate to discrepancies and deferrals.
+- Decide which fields are required for return-to-service.
+- Decide whether maintenance events can clear discrepancy/deferral records.
+- Keep implementation, airworthiness release signing, auth/signatures, and
   release blocking deferred.
 - Do not add hard release blocking until product policy is explicitly approved.
