@@ -311,6 +311,91 @@ async function rebuildTurnaroundLinks(
   }
 }
 
+async function syncCrewLegAssignments(
+  tx: Prisma.TransactionClient,
+  flightLegId: string,
+  legacyFlightId: string,
+) {
+  const flight = await tx.flight.findUnique({
+    where: { id: legacyFlightId },
+    select: {
+      aircraftId: true,
+      scheduledDeparture: true,
+    },
+  });
+
+  if (!flight) {
+    throw new FlightLegFormError("Legacy Flight was not found for crew snapshot sync.");
+  }
+
+  const sourceAssignments = await tx.aircraftCrewAssignment.findMany({
+    where: {
+      aircraftId: flight.aircraftId,
+      isActive: true,
+      startsAt: { lte: flight.scheduledDeparture },
+      OR: [{ endsAt: null }, { endsAt: { gt: flight.scheduledDeparture } }],
+    },
+    orderBy: [{ seatRole: "asc" }, { startsAt: "asc" }],
+    select: {
+      id: true,
+      crewMemberId: true,
+      seatRole: true,
+    },
+  });
+
+  const expectedKeys = new Set(
+    sourceAssignments.map((assignment) => `${assignment.crewMemberId}:${assignment.seatRole}`),
+  );
+  const existingSnapshots = await tx.crewLegAssignment.findMany({
+    where: { flightLegId },
+    select: {
+      id: true,
+      crewMemberId: true,
+      seatRole: true,
+    },
+  });
+
+  for (const snapshot of existingSnapshots) {
+    const key = `${snapshot.crewMemberId}:${snapshot.seatRole}`;
+
+    if (!expectedKeys.has(key)) {
+      await tx.crewLegAssignment.update({
+        where: { id: snapshot.id },
+        data: {
+          status: AssignmentStatus.RELIEVED,
+          releaseTime: new Date(),
+        },
+      });
+    }
+  }
+
+  for (const assignment of sourceAssignments) {
+    await tx.crewLegAssignment.upsert({
+      where: {
+        flightLegId_crewMemberId_seatRole: {
+          flightLegId,
+          crewMemberId: assignment.crewMemberId,
+          seatRole: assignment.seatRole,
+        },
+      },
+      update: {
+        status: AssignmentStatus.PLANNED,
+        reportTime: flight.scheduledDeparture,
+        releaseTime: null,
+        sourceAircraftCrewAssignmentId: assignment.id,
+      },
+      create: {
+        flightLegId,
+        crewMemberId: assignment.crewMemberId,
+        seatRole: assignment.seatRole,
+        status: AssignmentStatus.PLANNED,
+        reportTime: flight.scheduledDeparture,
+        sourceAircraftCrewAssignmentId: assignment.id,
+      },
+    });
+  }
+}
+
 async function createFlightLeg(input: FlightLegFormInput): Promise<string> {
   return prisma.$transaction(async (tx) => {
     await validateReferences(tx, input);
@@ -375,6 +460,8 @@ async function createFlightLeg(input: FlightLegFormInput): Promise<string> {
         status: ReleaseStatus.PLANNED,
       },
     });
+
+    await syncCrewLegAssignments(tx, flightLeg.id, legacyFlight.id);
 
     await rebuildTurnaroundLinks(
       tx,
@@ -533,6 +620,8 @@ async function updateFlightLeg(flightLegId: string, input: FlightLegFormInput): 
         },
       });
     }
+
+    await syncCrewLegAssignments(tx, flightLegId, legacyFlight.id);
 
     await rebuildTurnaroundLinks(
       tx,

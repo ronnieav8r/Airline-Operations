@@ -1,4 +1,5 @@
 import {
+  AssignmentStatus,
   FlightLegStatus,
   FlightStatus,
   Prisma,
@@ -80,6 +81,7 @@ const flightParitySelect = {
         select: {
           crewMemberId: true,
           seatRole: true,
+          status: true,
           sourceAircraftCrewAssignmentId: true,
         },
         orderBy: [
@@ -394,13 +396,19 @@ async function getCrewIssues(flight: FlightParityPayload): Promise<{
     ),
   );
   const actualCrew = new Set(
-    flight.flightLeg.crewAssignments.map((assignment) =>
-      formatCrewKey({
-        crewMemberId: assignment.crewMemberId,
-        seatRole: assignment.seatRole,
-        sourceAircraftCrewAssignmentId: assignment.sourceAircraftCrewAssignmentId,
-      }),
-    ),
+    flight.flightLeg.crewAssignments
+      .filter(
+        (assignment) =>
+          assignment.status === AssignmentStatus.PLANNED ||
+          assignment.status === AssignmentStatus.ACTIVE,
+      )
+      .map((assignment) =>
+        formatCrewKey({
+          crewMemberId: assignment.crewMemberId,
+          seatRole: assignment.seatRole,
+          sourceAircraftCrewAssignmentId: assignment.sourceAircraftCrewAssignmentId,
+        }),
+      ),
   );
 
   if (actualCrew.size === 0) {

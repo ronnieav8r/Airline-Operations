@@ -71,10 +71,10 @@ Current transition state:
 - `AircraftCrewAssignment` still drives current crew coverage reads.
 - `CrewLegAssignment` now snapshots the resolved aircraft-block crew onto
   `FlightLeg` during seed/backfill.
-- FlightLegs created by the first Operations Control write workflow do not
-  create `CrewLegAssignment` rows yet; current crew coverage still resolves
-  through the legacy `Flight` bridge until a later crew workflow promotes
-  leg-level assignments.
+- FlightLegs created or edited by Operations Control snapshot resolved
+  aircraft-block crew onto `CrewLegAssignment`; current crew coverage still
+  resolves through the legacy `Flight` bridge until a later crew workflow
+  promotes leg-level crew operations.
 - Do not treat `CrewLegAssignment` as the source of truth for current pages
   until a later read-migration slice validates parity.
 

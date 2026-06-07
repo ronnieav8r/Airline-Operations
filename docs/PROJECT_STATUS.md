@@ -60,6 +60,7 @@ It has:
 25. FlightLeg create/edit workflow foundation.
 26. FlightLeg write QA guardrails.
 27. FlightLeg coverage API bridge.
+28. CrewLegAssignment snapshot sync on FlightLeg create/edit.
 
 ## Current Data Model Boundaries
 
@@ -75,6 +76,11 @@ Operations Control now has the first controlled FlightLeg write workflow. New
 and edited FlightLeg records also create/update the legacy `Flight` bridge row
 in the same transaction so current coverage APIs, fallback reads, and parity
 diagnostics continue to work during the transition.
+
+FlightLeg create/edit now snapshots resolved aircraft-block crew onto
+`CrewLegAssignment`. These rows are leg-level evidence, not the active source of
+truth. Aircraft-block assignment remains the source used by coverage APIs and
+current crew displays.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -211,12 +217,11 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 22: CrewLegAssignment snapshot sync on FlightLeg create/edit
+Prompt 23: Release-control actions foundation
 ```
 
 Scope:
 
-- Snapshot resolved aircraft-block crew onto `CrewLegAssignment` during
-  FlightLeg create/edit.
-- Preserve current aircraft-block coverage as the active source of truth.
-- Keep crew release/assignment override workflows deferred.
+- Add minimal Operations Control actions for release status transitions.
+- Keep release evidence mutation and dispatch-package assembly deferred.
+- Preserve the existing FlightLeg write and crew snapshot behavior.
