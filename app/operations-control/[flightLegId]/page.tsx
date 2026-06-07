@@ -149,6 +149,7 @@ function ReleaseControlActions({ detail }: { detail: ReleaseEvidenceDetail }) {
 }
 
 type ReadinessItem = {
+  classification: "READY" | "WOULD_BLOCK" | "WOULD_WARN";
   href?: string;
   label: string;
   message: string;
@@ -193,6 +194,8 @@ function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[
   const weatherReady = !!weather?.routeSummary;
   const notamReady = !!notam?.affectedStationCodes;
   const flightPlanReady = !!flightPlan?.externalReference && !!flightPlan.routeText;
+  const airworthinessHasFutureBlocker =
+    !aircraft || !currentConfiguration || !currentAirworthinessReleaseUsable;
   const airworthinessReady =
     !!aircraft &&
     !!currentConfiguration &&
@@ -202,6 +205,11 @@ function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[
 
   return [
     {
+      classification: airworthinessReady
+        ? "READY"
+        : airworthinessHasFutureBlocker
+          ? "WOULD_BLOCK"
+          : "WOULD_WARN",
       label: "Airworthiness",
       message: airworthinessReady
         ? `${aircraft.tailNumber} has active configuration and current aircraft airworthiness release ${currentAirworthinessRelease?.releaseNumber ?? "record"}.`
@@ -231,6 +239,7 @@ function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[
       ready: airworthinessReady,
     },
     {
+      classification: manifestReady ? "READY" : "WOULD_BLOCK",
       href: `/operations-control/${detail.id}/manifest`,
       label: "Manifest",
       message: manifestReady
@@ -239,6 +248,7 @@ function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[
       ready: manifestReady,
     },
     {
+      classification: weightBalanceReady ? "READY" : "WOULD_BLOCK",
       href: `/operations-control/${detail.id}/weight-balance`,
       label: "Weight and balance",
       message: weightBalanceReady
@@ -247,6 +257,7 @@ function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[
       ready: weightBalanceReady,
     },
     {
+      classification: locatingReady ? "READY" : "WOULD_BLOCK",
       href: `/operations-control/${detail.id}/locating`,
       label: "Flight locating",
       message: locatingReady
@@ -255,6 +266,7 @@ function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[
       ready: locatingReady,
     },
     {
+      classification: dispatchReady ? "READY" : "WOULD_BLOCK",
       href: `/operations-control/${detail.id}/dispatch`,
       label: "Dispatch package",
       message: dispatchReady
@@ -263,18 +275,21 @@ function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[
       ready: dispatchReady,
     },
     {
+      classification: weatherReady ? "READY" : "WOULD_BLOCK",
       href: `/operations-control/${detail.id}/dispatch`,
       label: "Weather",
       message: weatherReady ? "Weather route summary is present." : "Needs a weather route summary.",
       ready: weatherReady,
     },
     {
+      classification: notamReady ? "READY" : "WOULD_BLOCK",
       href: `/operations-control/${detail.id}/dispatch`,
       label: "NOTAM",
       message: notamReady ? "Affected station codes are present." : "Needs affected station codes.",
       ready: notamReady,
     },
     {
+      classification: flightPlanReady ? "READY" : "WOULD_BLOCK",
       href: `/operations-control/${detail.id}/dispatch`,
       label: "Flight plan",
       message: flightPlanReady
@@ -299,9 +314,36 @@ function ReadinessBadge({ ready }: { ready: boolean }) {
   );
 }
 
+function BlockingPreviewBadge({
+  classification,
+}: {
+  classification: ReadinessItem["classification"];
+}) {
+  const classes =
+    classification === "WOULD_BLOCK"
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : classification === "WOULD_WARN"
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : "border-emerald-200 bg-emerald-50 text-emerald-700";
+  const label =
+    classification === "WOULD_BLOCK"
+      ? "Would block release"
+      : classification === "WOULD_WARN"
+        ? "Would warn"
+        : "No blocker";
+
+  return (
+    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${classes}`}>
+      {label}
+    </span>
+  );
+}
+
 function ReleaseReadinessChecklist({ detail }: { detail: ReleaseEvidenceDetail }) {
   const items = getReleaseReadinessItems(detail);
   const readyCount = items.filter((item) => item.ready).length;
+  const wouldBlockCount = items.filter((item) => item.classification === "WOULD_BLOCK").length;
+  const wouldWarnCount = items.filter((item) => item.classification === "WOULD_WARN").length;
   const overallReady = readyCount === items.length;
 
   return (
@@ -310,13 +352,17 @@ function ReleaseReadinessChecklist({ detail }: { detail: ReleaseEvidenceDetail }
         <div>
           <h2 className="text-lg font-semibold">Release Readiness</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Warning-only evidence checklist. Release actions remain available.
+            Warning-only evidence checklist with a non-enforcing blocking preview.
+            Release actions remain available.
           </p>
         </div>
         <div className="flex flex-col items-start gap-1 sm:items-end">
           <ReadinessBadge ready={overallReady} />
           <p className="text-xs text-zinc-500">
             {readyCount} of {items.length} ready
+          </p>
+          <p className="text-xs text-zinc-500">
+            Preview: {wouldBlockCount} would block, {wouldWarnCount} would warn
           </p>
         </div>
       </div>
@@ -325,7 +371,10 @@ function ReleaseReadinessChecklist({ detail }: { detail: ReleaseEvidenceDetail }
           <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={item.label}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="font-medium text-zinc-900">{item.label}</p>
-              <ReadinessBadge ready={item.ready} />
+              <div className="flex flex-wrap items-center gap-2">
+                <ReadinessBadge ready={item.ready} />
+                <BlockingPreviewBadge classification={item.classification} />
+              </div>
             </div>
             <p className="mt-2 text-sm text-zinc-600">{item.message}</p>
             {item.href ? (

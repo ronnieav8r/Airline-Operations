@@ -318,3 +318,18 @@ Prompt 47 should add non-enforcing `Would block release` and `Would warn`
 classification labels to the existing FlightLeg readiness checklist. It should
 keep release action buttons available and must not mutate evidence, add schema,
 add auth/signatures, add overrides, or enforce blocking.
+
+Implementation status: complete.
+
+Prompt 47 added non-enforcing readiness policy preview labels and preview
+totals to FlightLeg detail. Release action buttons remain available.
+
+Recommended next release-readiness slice:
+
+```text
+Prompt 48: Release Blocking Preview QA
+```
+
+Prompt 48 should verify the preview labels and confirm that no hard blocking,
+schema, auth/signature, override, provider, file-upload, or evidence mutation
+scope slipped in.

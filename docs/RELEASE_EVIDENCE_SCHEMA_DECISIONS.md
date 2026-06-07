@@ -127,6 +127,10 @@ readiness checklist without enforcing blocking. Actual hard blocking,
 overrides, auth/signatures, `ReleasePackage`, and authority-specific policy
 engines remain deferred.
 
+Updated transition note: release-blocking preview is implemented on FlightLeg
+detail. The preview is UI-only and non-enforcing. It does not add schema, does
+not mutate evidence, and does not change `FlightRelease` actions.
+
 `PositionReport` belongs in a later locating-specific slice after the app needs
 position history, overdue checks, or actual flight-following workflows.
 

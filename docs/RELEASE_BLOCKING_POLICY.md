@@ -112,14 +112,16 @@ Override behavior should wait until user identity, roles, and signature policy
 exist. Without auth, the app cannot responsibly capture who accepted a release
 risk.
 
-## Prompt 47 Recommendation
+## Prompt 47 Status
 
-Prompt 47 should implement a read-only release-blocking preview.
+Prompt 47 implemented a read-only release-blocking preview.
 
-Expected behavior:
+Implemented behavior:
 
 - Add `Would block release` or `Would warn` labels to FlightLeg readiness
   findings.
+- Add `No blocker` labels for currently ready items.
+- Show preview totals for would-block and would-warn findings.
 - Keep release action buttons available.
 - Do not prevent `FlightRelease` mutations.
 - Do not mutate evidence.
@@ -127,7 +129,8 @@ Expected behavior:
 - Do not add overrides.
 
 This lets the operator validate the policy visually before the app starts
-enforcing it.
+enforcing it. Prompt 48 should run focused QA on this preview before any
+authority-specific policy planning or hard-blocking implementation.
 
 ## Deferred
 

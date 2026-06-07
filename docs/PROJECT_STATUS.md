@@ -90,6 +90,7 @@ It has:
 50. Airworthiness release readiness refresh.
 51. Airworthiness workflow QA and deploy readiness.
 52. Release blocking policy planning.
+53. Release blocking preview foundation.
 
 ## Current Data Model Boundaries
 
@@ -259,6 +260,12 @@ future `WOULD_BLOCK` and `WOULD_WARN` release-readiness findings. The next
 implementation should preview those classifications on FlightLeg detail without
 blocking `FlightRelease` actions, adding schema, or adding auth/signatures.
 
+Release blocking preview foundation is implemented. FlightLeg detail now shows
+non-enforcing `Would block release`, `Would warn`, or `No blocker` policy
+preview labels on each readiness checklist item, plus preview totals. Release
+action buttons remain available, and no schema, auth/signature, override,
+provider, file-upload, or actual blocking behavior was added.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -412,28 +419,20 @@ Then verify the changed routes and `/api/health`.
 
 ## Recommended Next Step
 
-Use the new FlightLeg create/edit workflow locally before broadening write
-surface area.
-
 Preferred next slice:
 
 ```text
-Prompt 43: Airworthiness release foundation
+Prompt 48: Release Blocking Preview QA
 ```
 
 Scope:
 
-- Add aircraft-level `AirworthinessRelease` create/edit under
-  `/aircraft/[aircraftId]/airworthiness`.
-- Support `DRAFT`, `RELEASED`, `VOIDED`, and `SUPERSEDED`.
-- Auto-generate `releaseNumber` when blank.
-- When a record becomes `RELEASED`, set `releasedAt` if blank and supersede
-  prior current released records for that aircraft.
-- Keep `AirworthinessRelease.flightLegId`, `releasedById`, auth/signatures,
-  `FlightRelease` mutation, and release blocking deferred.
-- Do not add hard release blocking until product policy is explicitly approved.
-- Prompt 46 policy planning is complete; Prompt 47 should preview blocker vs
-  warning classifications before any enforcement.
+- Run focused local QA on the FlightLeg detail release-readiness preview.
+- Confirm `Would block release`, `Would warn`, and `No blocker` labels render
+  as expected across representative FlightLegs.
+- Confirm Release Control buttons remain visible and usable.
+- Confirm no schema, auth/signature, override, provider, file-upload, or hard
+  blocking behavior was added.
 
 Deferred follow-up to keep on the roadmap:
 

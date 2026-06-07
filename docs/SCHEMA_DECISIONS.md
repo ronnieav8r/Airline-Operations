@@ -232,6 +232,10 @@ warning-only. The next safe implementation should preview blocker vs warning
 classifications before any hard enforcement, override workflow, auth/signature
 policy, authority-specific engine, or `ReleasePackage` transition.
 
+Release-blocking preview is implemented on FlightLeg detail. It labels existing
+readiness findings as `Would block release`, `Would warn`, or `No blocker`
+without enforcing blocking or changing schema.
+
 Scheduling now follows the same FlightLeg-backed read pattern as Dashboard,
 Flights, and Operations Control, while preserving legacy `Flight` fallback and
 legacy Flight IDs for crew coverage resolution.
