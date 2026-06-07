@@ -670,3 +670,60 @@ export async function updateFlightLegAction(flightLegId: string, formData: FormD
   revalidatePath(`/operations-control/${flightLegId}`);
   redirect(`/operations-control/${flightLegId}`);
 }
+
+async function setFlightLegReleaseStatus(flightLegId: string, status: ReleaseStatus) {
+  await prisma.$transaction(async (tx) => {
+    const controlRecord = await tx.operationalControlRecord.findUnique({
+      where: { flightLegId },
+      select: { id: true },
+    });
+
+    if (!controlRecord) {
+      throw new FlightLegFormError("Operational-control record was not found.");
+    }
+
+    await tx.flightRelease.upsert({
+      where: { operationalControlRecordId: controlRecord.id },
+      update: {
+        status,
+        releasedAt: status === ReleaseStatus.RELEASED ? new Date() : null,
+      },
+      create: {
+        operationalControlRecordId: controlRecord.id,
+        status,
+        releasedAt: status === ReleaseStatus.RELEASED ? new Date() : null,
+      },
+    });
+
+    await tx.flightLeg.update({
+      where: { id: flightLegId },
+      data: {
+        status: status === ReleaseStatus.RELEASED ? FlightLegStatus.RELEASED : FlightLegStatus.SCHEDULED,
+      },
+    });
+  });
+}
+
+async function runReleaseAction(flightLegId: string, status: ReleaseStatus) {
+  try {
+    await setFlightLegReleaseStatus(flightLegId, status);
+  } catch (error) {
+    redirect(`/operations-control/${flightLegId}?releaseError=${encodeError(error)}`);
+  }
+
+  revalidateFlightLegWorkflowPaths();
+  revalidatePath(`/operations-control/${flightLegId}`);
+  redirect(`/operations-control/${flightLegId}`);
+}
+
+export async function markFlightLegReleasedAction(flightLegId: string) {
+  await runReleaseAction(flightLegId, ReleaseStatus.RELEASED);
+}
+
+export async function cancelFlightLegReleaseAction(flightLegId: string) {
+  await runReleaseAction(flightLegId, ReleaseStatus.CANCELLED);
+}
+
+export async function voidFlightLegReleaseAction(flightLegId: string) {
+  await runReleaseAction(flightLegId, ReleaseStatus.VOIDED);
+}

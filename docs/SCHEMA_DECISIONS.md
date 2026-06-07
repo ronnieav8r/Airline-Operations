@@ -221,6 +221,11 @@ FlightLeg evidence packet. It is intentionally a drilldown, not a workflow
 surface. Evidence mutation, dispatch-package assembly, and release-package
 transition work remain deferred.
 
+Release status controls now exist on the FlightLeg detail page. They mutate
+`FlightRelease.status` and keep `FlightLeg.status` aligned for parity, but they
+do not mutate manifests, weight and balance, locating records, weather/NOTAM
+snapshots, flight-plan references, or dispatch packages.
+
 Scheduling now follows the same FlightLeg-backed read pattern as Dashboard,
 Flights, and Operations Control, while preserving legacy `Flight` fallback and
 legacy Flight IDs for crew coverage resolution.

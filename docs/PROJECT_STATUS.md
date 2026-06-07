@@ -61,6 +61,7 @@ It has:
 26. FlightLeg write QA guardrails.
 27. FlightLeg coverage API bridge.
 28. CrewLegAssignment snapshot sync on FlightLeg create/edit.
+29. Release-control actions foundation.
 
 ## Current Data Model Boundaries
 
@@ -81,6 +82,10 @@ FlightLeg create/edit now snapshots resolved aircraft-block crew onto
 `CrewLegAssignment`. These rows are leg-level evidence, not the active source of
 truth. Aircraft-block assignment remains the source used by coverage APIs and
 current crew displays.
+
+FlightLeg detail now has minimal release controls for `FlightRelease` status:
+mark released, cancel release, and void release. These actions do not mutate
+release evidence or assemble dispatch packages.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -217,11 +222,13 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 23: Release-control actions foundation
+Prompt 24: Release evidence mutation planning
 ```
 
 Scope:
 
-- Add minimal Operations Control actions for release status transitions.
-- Keep release evidence mutation and dispatch-package assembly deferred.
-- Preserve the existing FlightLeg write and crew snapshot behavior.
+- Decide the first safe mutation path for manifest, locating, dispatch package,
+  weather/NOTAM snapshots, or flight-plan references.
+- Keep provider integrations deferred unless explicitly scoped.
+- Preserve release-control actions as status-only until evidence workflows are
+  planned.
