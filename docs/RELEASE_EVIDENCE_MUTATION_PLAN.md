@@ -7,34 +7,32 @@ create/edit and release-control slices.
 
 ## Decision
 
-Build release-evidence mutation in controlled phases. Manifest, locating, and
-manual weight-and-balance mutation are complete. Manual dispatch-package
-mutation planning is complete. The next implementation slice is manual
-dispatch-package mutation.
+Build release-evidence mutation in controlled phases. Manifest, locating,
+manual weight-and-balance, and manual dispatch-package mutation are complete.
+The next planning slice is release readiness guardrails.
 
-Chosen next implementation slice:
+Chosen next planning slice:
 
 ```text
-Prompt 30: Manual dispatch-package mutation foundation
+Prompt 31: Release readiness guardrails planning
 ```
 
-Prompt 29 planning status: complete.
+Prompt 30 implementation status: complete.
 
 Rationale:
 
-- The dispatch-package tables already exist and can be mutated without schema
-  changes.
-- Weather, NOTAM, and flight-plan provider integrations remain deferred.
-- Release-readiness guardrails should wait until manual dispatch evidence can
-  be edited.
+- The main manual evidence workflows now exist.
+- Release controls still do not explain evidence readiness clearly enough.
+- Guardrails can be warning-only and should not block release until policy is
+  explicitly approved.
 
 ## Phase Order
 
 1. Manifest mutation foundation. Complete.
 2. Flight locating mutation. Complete.
 3. Weight-and-balance run mutation. Complete.
-4. Manual dispatch-package evidence mutation. Planning complete; implementation next.
-5. Release gating against required evidence.
+4. Manual dispatch-package evidence mutation. Complete.
+5. Release readiness guardrails. Next planning target.
 6. Provider integrations for weather, NOTAM, and flight plan data.
 
 ## Prompt 25 Boundary
@@ -213,3 +211,22 @@ Minimum workflow:
 - Store manual package notes in `DispatchPackage.performanceData`.
 - Keep provider integrations, release-package modeling, and release gating
   deferred.
+
+Implementation status: complete.
+
+## Next Slice: Prompt 31
+
+The next planning slice should be:
+
+```text
+Prompt 31: Release readiness guardrails planning
+```
+
+Minimum planning questions:
+
+- Which evidence records should appear in the readiness checklist.
+- Whether guardrails are warning-only or release-blocking.
+- How to treat `DRAFT`, `READY`, `CALCULATED`, `FILED`, `ACTIVE`, and missing
+  dispatch evidence.
+- Where the readiness checklist should appear on the FlightLeg detail page.
+- Whether any schema changes are needed before guardrails are implemented.

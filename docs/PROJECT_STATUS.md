@@ -24,6 +24,7 @@ It has:
 - Flight locating management at `/operations-control/[flightLegId]/locating`
 - Weight-and-balance management at
   `/operations-control/[flightLegId]/weight-balance`
+- Dispatch package management at `/operations-control/[flightLegId]/dispatch`
 - Flights at `/flights`
 - Aircraft at `/aircraft`
 - Crew at `/crew`
@@ -72,6 +73,7 @@ It has:
 33. Weight-and-balance mutation planning.
 34. Weight-and-balance mutation foundation.
 35. Manual dispatch-package mutation planning.
+36. Manual dispatch-package mutation foundation.
 
 ## Current Data Model Boundaries
 
@@ -126,6 +128,13 @@ workflow should save weather, NOTAM, flight-plan, and package notes in one
 manual form using existing schema only. Provider integrations, `ReleasePackage`,
 file uploads, aircraft performance calculations, and release gating remain
 deferred.
+
+FlightLeg detail now links to manual dispatch-package management. The dispatch
+workflow can save manual weather briefing evidence, NOTAM evidence, a
+flight-plan reference, and package/performance notes in one form, then link
+those records to the FlightLeg `DispatchPackage`. Provider integrations,
+`ReleasePackage`, file uploads, aircraft performance calculations, and release
+gating remain deferred.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -265,12 +274,12 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 30: Manual dispatch-package mutation foundation
+Prompt 31: Release readiness guardrails planning
 ```
 
 Scope:
 
-- Add manual dispatch evidence under `/operations-control/[flightLegId]`.
-- Upsert weather, NOTAM, flight-plan, and dispatch package rows using existing
-  schema only.
-- Keep provider integrations, `ReleasePackage`, and release gating deferred.
+- Decide warning-only release readiness guardrails for the FlightLeg detail
+  page.
+- Use existing manifest, W&B, locating, and dispatch evidence only.
+- Stop before implementation if release blocking policy becomes ambiguous.

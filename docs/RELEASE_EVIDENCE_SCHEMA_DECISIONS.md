@@ -104,6 +104,12 @@ one manual NOTAM snapshot, one manual flight-plan reference, and the linked
 `ReleasePackage`, file uploads, aircraft performance calculations, and release
 gating remain deferred.
 
+Updated transition note: manual dispatch-package CRUD is no longer generally
+deferred. Manual weather, NOTAM, flight-plan, and dispatch package writes are
+implemented through existing schema. Provider integrations, `ReleasePackage`,
+file uploads, aircraft performance calculations, and release gating remain
+deferred.
+
 `PositionReport` belongs in a later locating-specific slice after the app needs
 position history, overdue checks, or actual flight-following workflows.
 
