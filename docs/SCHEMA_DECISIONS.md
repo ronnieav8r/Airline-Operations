@@ -200,3 +200,8 @@ should remain deferred until their workflows are planned.
 The first UI exposure for release evidence is read-only summary data on
 Dashboard and Operations Control. Do not add evidence CRUD or provider-backed
 fetches until the read-only summaries and a future detail view are validated.
+
+The first detail exposure is `/operations-control/[flightLegId]`, a read-only
+FlightLeg evidence packet. It is intentionally a drilldown, not a workflow
+surface. Evidence mutation, dispatch-package assembly, and release-package
+transition work remain deferred.

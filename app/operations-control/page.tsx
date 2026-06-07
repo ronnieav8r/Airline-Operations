@@ -1,4 +1,5 @@
 import { OperatingPart, ReleaseStatus } from "@prisma/client";
+import Link from "next/link";
 
 import {
   getFlightLegOperationsControlData,
@@ -117,6 +118,14 @@ function EvidenceCell({ record }: { record: OperationsControlRecordRead }) {
           Dispatch {dispatchReady ? "ready" : "partial"}
         </span>
       </div>
+      {record.leg?.id ? (
+        <Link
+          className="inline-flex text-xs font-medium text-sky-700 hover:text-sky-900"
+          href={`/operations-control/${record.leg.id}`}
+        >
+          View evidence detail
+        </Link>
+      ) : null}
     </div>
   );
 }

@@ -46,6 +46,7 @@ It has:
 18. Release evidence schema planning.
 19. Additive release evidence schema foundation.
 20. Release evidence read-only summaries on Dashboard and Operations Control.
+21. Release evidence read-only FlightLeg detail drilldown.
 
 ## Current Data Model Boundaries
 
@@ -178,16 +179,16 @@ Use the hidden parity diagnostic before adding write flows.
 Preferred next slice:
 
 ```text
-Prompt 15: Release evidence read-only detail drilldown
+Prompt 16: FlightLeg read migration for Scheduling
 ```
 
 Scope:
 
-- Add a read-only FlightLeg evidence detail view or expandable row for one leg.
-- Keep all evidence data read-only and avoid CRUD.
-- Include manifest items, W&B run, locating record, dispatch package, weather,
-  NOTAM, and flight-plan references.
-- Keep `FlightRelease` and deferred `ReleasePackage` boundaries intact.
+- Move `/scheduling` reads to the FlightLeg-backed pattern with legacy `Flight`
+  fallback.
+- Keep Scheduling read-only.
+- Preserve existing crew coverage and release/control display.
+- Keep release evidence detail read-only; do not add CRUD.
 
-Avoid adding CRUD screens until read-only detail views prove the evidence model
-is useful and correctly connected.
+Avoid adding CRUD screens until the remaining read-only pages are on the
+FlightLeg-backed read pattern.
