@@ -233,14 +233,16 @@ FlightRelease -> ReleaseAuditEvent
 2. Seed conservative default policy profiles and rules for demo/local data. Complete.
 3. Add hidden diagnostic showing resolved policy and rule counts. Complete.
 4. Run release-policy diagnostic QA. Complete.
-5. Add readiness snapshot creation in preview mode only. Deferred.
-6. Add hard blocking only after auth/override decisions are resolved. Deferred.
+5. Plan explicit preview snapshot creation. Complete.
+6. Add readiness snapshot creation in preview mode only. Deferred.
+7. Add hard blocking only after auth/override decisions are resolved. Deferred.
 
 ## Deferred
 
 - Hard release blocking.
-- Readiness snapshot creation.
-- Readiness finding creation.
+- Automatic release-attempt snapshot creation.
+- Readiness snapshot creation outside explicit preview action.
+- Readiness finding creation outside explicit preview action.
 - Override workflow.
 - Auth, roles, permissions, and signatures.
 - Provider-backed evidence verification.

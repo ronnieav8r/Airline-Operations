@@ -245,6 +245,12 @@ release behavior remains warning-only. Do not add hard blocking, readiness
 snapshot creation, override workflow, auth/signature implementation, or
 provider-backed verification until a later prompt approves it.
 
+Release snapshot policy planning is complete in
+`docs/RELEASE_SNAPSHOT_POLICY.md`. The first snapshot implementation should be
+explicit preview capture only from FlightLeg detail. It must not create
+snapshots on page load or release actions, and it must not change
+`FlightRelease.status`.
+
 Scheduling now follows the same FlightLeg-backed read pattern as Dashboard,
 Flights, and Operations Control, while preserving legacy `Flight` fallback and
 legacy Flight IDs for crew coverage resolution.

@@ -143,6 +143,15 @@ Prompt 53 validated the release policy defaults and diagnostic route in:
 docs/RELEASE_POLICY_QA_LOG.md
 ```
 
+Prompt 54 planned explicit preview snapshots in:
+
+```text
+docs/RELEASE_SNAPSHOT_POLICY.md
+```
+
+Preview snapshots must be user-triggered from FlightLeg detail and must not
+change release status or enforce blocking.
+
 ## Override Policy
 
 Do not implement overrides yet.
