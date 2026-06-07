@@ -645,3 +645,41 @@ Prompt 64 should decide the next workflow improvement after the action panel.
 Compare manifest locking/amendments, W&B approval, locating position history,
 dispatch package review state, and release-attempt snapshot planning. Keep it
 planning/docs only.
+
+Implementation status: complete.
+
+Prompt 64 selected W&B approval as the next workflow lane.
+
+Chosen approval policy:
+
+- W&B approval is **Calculated only**.
+- A `WeightBalanceRun` must be `CALCULATED` before it can be marked
+  `APPROVED`.
+- Use existing `WeightBalanceRun.status`, `approvedAt`, and `approvedById`.
+- Add no schema change for the first approval workflow.
+- `approvedById` remains `null` until auth exists.
+- Approved runs remain locked from edit and void in the existing workflow.
+- Editing a non-approved run continues to reset it to `DRAFT`.
+- Release readiness continues to treat `CALCULATED` or `APPROVED` as ready
+  until a later release-blocking policy slice decides otherwise.
+
+Deferred:
+
+- Auth/signatures.
+- Legal attestation.
+- W&B approval audit history.
+- Automated calculations.
+- Hard release blocking.
+- Provider integrations.
+- File uploads.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 65: Weight-and-Balance Approval Foundation
+```
+
+Prompt 65 should add an `Approve` action for `CALCULATED` W&B runs under
+`/operations-control/[flightLegId]/weight-balance`, set `APPROVED` plus
+`approvedAt`, reject incomplete or wrong-status runs, and keep existing
+non-approved W&B behavior unchanged.

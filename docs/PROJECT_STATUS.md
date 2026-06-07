@@ -111,6 +111,7 @@ It has:
 67. Release evidence workflow review.
 68. Release evidence action panel.
 69. Release evidence action panel QA.
+70. Weight-and-balance approval planning.
 
 ## Current Data Model Boundaries
 
@@ -389,6 +390,12 @@ renders on all five demo FlightLegs, includes all six evidence areas, represents
 ready/needs-attention/missing states, and links to existing workflows and
 snapshot detail/diagnostic routes. Release behavior remains warning-only.
 
+Weight-and-balance approval planning is complete. The first approval workflow
+should use the existing `WeightBalanceRun` fields with no schema change and
+should allow approval only from `CALCULATED` runs. Approved runs remain locked
+from edit/void, `approvedById` stays null until auth exists, and release
+readiness remains warning-only.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -560,16 +567,18 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 64: Release Evidence Next Workflow Planning
+Prompt 65: Weight-and-Balance Approval Foundation
 ```
 
 Scope:
 
-- Decide the next workflow improvement after the evidence action panel.
-- Compare the safest candidates: manifest locking/amendments, W&B approval,
-  locating position history, dispatch package review state, or release-attempt
-  snapshot planning.
-- Planning/docs only. Do not implement new writes until the next prompt.
+- Add an `Approve` action for `CALCULATED` W&B runs under
+  `/operations-control/[flightLegId]/weight-balance`.
+- Set `APPROVED` and `approvedAt`; keep `approvedById` null until auth exists.
+- Reject approval for DRAFT/VOIDED/APPROVED runs or runs missing takeoff
+  weight, landing weight, or center of gravity.
+- Keep release behavior warning-only. Do not add schema, auth/signatures, hard
+  blocking, provider integrations, file uploads, or release-action changes.
 
 Deferred follow-up to keep on the roadmap:
 
