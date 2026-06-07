@@ -520,3 +520,20 @@ Prompt 57: Release Snapshot Diagnostic Readiness
 
 Prompt 57 should add or extend a read-only internal diagnostic comparing live
 readiness with latest captured snapshots before any hard blocking work.
+
+Implementation status: complete.
+
+Prompt 57 added `/internal/release-snapshot-readiness`, a read-only diagnostic
+that compares current live readiness helper output with each FlightLeg's latest
+explicit preview snapshot. It flags missing snapshots and drifted snapshot
+findings by readiness category and rule key.
+
+Recommended next release policy slice:
+
+```text
+Prompt 58: Release Snapshot Drift QA
+```
+
+Prompt 58 should validate the diagnostic against local no-snapshot and drift
+cases, then confirm capturing a fresh explicit preview snapshot clears drift
+for a stable FlightLeg. Keep the slice QA/docs only unless a defect is found.

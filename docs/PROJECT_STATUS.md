@@ -33,6 +33,8 @@ It has:
 - Hidden FlightLeg parity diagnostic at `/internal/flightleg-parity`
 - Hidden FlightLeg write-readiness diagnostic at
   `/internal/flightleg-write-readiness`
+- Hidden release snapshot-readiness diagnostic at
+  `/internal/release-snapshot-readiness`
 - Local Docker Postgres development setup
 - Render deployment connected to `main`
 
@@ -100,6 +102,7 @@ It has:
 60. Release snapshot planning.
 61. Release snapshot preview foundation.
 62. Release snapshot QA.
+63. Release snapshot diagnostic readiness.
 
 ## Current Data Model Boundaries
 
@@ -339,6 +342,12 @@ and mark released, cancel release, and void release remain unchanged.
 Overrides, audit events, hard blocking, auth/signatures, provider integrations,
 file uploads, and `ReleasePackage` remain deferred.
 
+Release snapshot diagnostic readiness is implemented. The hidden
+`/internal/release-snapshot-readiness` route compares each FlightLeg's current
+live release-readiness checklist with its latest explicit preview snapshot and
+flags missing or drifted snapshots. It is read-only and does not mutate
+snapshots, evidence, policy rules, or `FlightRelease` actions.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -507,13 +516,15 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 57: Release Snapshot Diagnostic Readiness
+Prompt 58: Release Snapshot Drift QA
 ```
 
 Scope:
 
-- Add or extend an internal diagnostic to compare live readiness with the latest
-  captured snapshot for each FlightLeg.
+- Validate `/internal/release-snapshot-readiness` against local snapshot drift
+  and no-snapshot cases.
+- Confirm capturing a fresh preview snapshot clears drift for that FlightLeg
+  when evidence has not changed.
 - Keep it read-only. Do not add hard blocking, overrides, auth/signatures,
   provider integrations, file uploads, or release-action changes.
 

@@ -6,9 +6,7 @@ import {
   FlightStatus,
   Prisma,
   ReleaseFindingStatus,
-  ReleaseRuleSeverity,
   ReleaseStatus,
-  ReleaseSnapshotStatus,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -16,8 +14,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getReleaseEvidenceDetail } from "@/lib/release-evidence-detail-queries";
 import {
+  getReleaseSnapshotStatus,
   getReleaseReadinessItems,
-  ReleaseReadinessItem,
+  mapReadinessClassificationToSeverity,
+  mapReleaseReadinessFindingStatus,
 } from "@/lib/release-readiness";
 
 class FlightLegFormError extends Error {}
@@ -654,42 +654,6 @@ function revalidateFlightLegWorkflowPaths() {
   revalidatePath("/internal/flightleg-parity");
 }
 
-function mapReadinessClassificationToSeverity(
-  classification: ReleaseReadinessItem["classification"],
-): ReleaseRuleSeverity {
-  if (classification === "WOULD_WARN") {
-    return ReleaseRuleSeverity.WARN;
-  }
-
-  if (classification === "READY") {
-    return ReleaseRuleSeverity.INFO;
-  }
-
-  return ReleaseRuleSeverity.BLOCK;
-}
-
-function mapFindingStatus(ready: boolean, severity: ReleaseRuleSeverity): ReleaseFindingStatus {
-  if (ready) {
-    return ReleaseFindingStatus.PASS;
-  }
-
-  return severity === ReleaseRuleSeverity.BLOCK
-    ? ReleaseFindingStatus.FAIL
-    : ReleaseFindingStatus.WARNING;
-}
-
-function getSnapshotStatus(failCount: number, warningCount: number): ReleaseSnapshotStatus {
-  if (failCount > 0) {
-    return ReleaseSnapshotStatus.BLOCKED;
-  }
-
-  if (warningCount > 0) {
-    return ReleaseSnapshotStatus.WARNING_ONLY;
-  }
-
-  return ReleaseSnapshotStatus.PASS;
-}
-
 export async function createFlightLegAction(formData: FormData) {
   let flightLegId: string;
 
@@ -810,7 +774,7 @@ export async function captureReleasePreviewSnapshotAction(flightLegId: string) {
     const findings = readinessItems.map((item) => {
       const policyRule = policyRulesByKey.get(item.ruleKey) ?? null;
       const severity = policyRule?.severity ?? mapReadinessClassificationToSeverity(item.classification);
-      const status = mapFindingStatus(item.ready, severity);
+      const status = mapReleaseReadinessFindingStatus(item.ready, severity);
 
       return {
         item,
@@ -827,7 +791,7 @@ export async function captureReleasePreviewSnapshotAction(flightLegId: string) {
     const notApplicableCount = findings.filter(
       (finding) => finding.status === ReleaseFindingStatus.NOT_APPLICABLE,
     ).length;
-    const snapshotStatus = getSnapshotStatus(failCount, warningCount);
+    const snapshotStatus = getReleaseSnapshotStatus(failCount, warningCount);
 
     await prisma.$transaction(async (tx) => {
       await tx.releaseReadinessSnapshot.create({

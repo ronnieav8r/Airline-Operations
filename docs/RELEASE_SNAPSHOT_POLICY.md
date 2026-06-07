@@ -22,6 +22,11 @@ FlightLeg detail. Automatic snapshots and hard blocking remain deferred.
 Prompt 56 validated repeated explicit preview captures and confirmed release
 actions remain unchanged.
 
+Prompt 57 added `/internal/release-snapshot-readiness`, a read-only diagnostic
+that compares live readiness with each FlightLeg's latest explicit preview
+snapshot and flags missing or drifted snapshots. It does not create snapshots
+or change release behavior.
+
 ## Snapshot Purpose
 
 Preview snapshots preserve what the release-readiness checklist showed at a
@@ -88,6 +93,7 @@ snapshot action should show a readable error and create no records.
 
 - Automatic release-attempt snapshots.
 - Hard release blocking.
+- Snapshot drift enforcement.
 - Override workflow.
 - Auth, roles, permissions, and signatures.
 - Provider-backed verification.

@@ -3,6 +3,9 @@ import {
   FlightLocatingStatus,
   ManifestStatus,
   Prisma,
+  ReleaseFindingStatus,
+  ReleaseRuleSeverity,
+  ReleaseSnapshotStatus,
   WeightBalanceStatus,
 } from "@prisma/client";
 
@@ -22,6 +25,48 @@ export type ReleaseReadinessItem = {
   ready: boolean;
   ruleKey: string;
 };
+
+export function mapReadinessClassificationToSeverity(
+  classification: ReleaseReadinessClassification,
+): ReleaseRuleSeverity {
+  if (classification === "WOULD_WARN") {
+    return ReleaseRuleSeverity.WARN;
+  }
+
+  if (classification === "READY") {
+    return ReleaseRuleSeverity.INFO;
+  }
+
+  return ReleaseRuleSeverity.BLOCK;
+}
+
+export function mapReleaseReadinessFindingStatus(
+  ready: boolean,
+  severity: ReleaseRuleSeverity,
+): ReleaseFindingStatus {
+  if (ready) {
+    return ReleaseFindingStatus.PASS;
+  }
+
+  return severity === ReleaseRuleSeverity.BLOCK
+    ? ReleaseFindingStatus.FAIL
+    : ReleaseFindingStatus.WARNING;
+}
+
+export function getReleaseSnapshotStatus(
+  failCount: number,
+  warningCount: number,
+): ReleaseSnapshotStatus {
+  if (failCount > 0) {
+    return ReleaseSnapshotStatus.BLOCKED;
+  }
+
+  if (warningCount > 0) {
+    return ReleaseSnapshotStatus.WARNING_ONLY;
+  }
+
+  return ReleaseSnapshotStatus.PASS;
+}
 
 function releaseReadinessDate(value: Date | null | undefined): string {
   if (!value) {
