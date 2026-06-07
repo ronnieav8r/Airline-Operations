@@ -245,3 +245,10 @@ planned `AircraftAssignment`, `OperationalControlRecord`, planned
 `FlightRelease`, and adjacent same-aircraft `TurnaroundLink` rows together.
 Release evidence, dispatch package assembly, manifest mutation, weight and
 balance mutation, and crew leg assignment promotion remain deferred.
+
+Airworthiness planning now lives in
+`docs/AIRWORTHINESS_SCHEMA_DECISIONS.md`. The next additive schema foundation
+should add `AircraftConfiguration`, `AircraftCapability`, `Discrepancy`,
+`Deferral`, `MaintenanceEvent`, and `AirworthinessRelease`. `Aircraft.status`
+remains a v1 fleet-board signal. Component maintenance, reliability analytics,
+provider integrations, file uploads, and hard release blocking remain deferred.

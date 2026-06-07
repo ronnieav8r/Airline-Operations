@@ -115,6 +115,12 @@ Likely future tables:
 
 Maintenance records should capture who performed work, who approved return to service, what discrepancy or deferral was affected, and which aircraft or component state changed.
 
+Prompt 34 decision: the first airworthiness implementation should add
+`AircraftConfiguration`, `AircraftCapability`, `Discrepancy`, `Deferral`,
+`MaintenanceEvent`, and `AirworthinessRelease` as an additive foundation.
+Component state, reliability analytics, Service Difficulty Reports, and hard
+release blocking remain deferred until later maintenance-specific slices.
+
 ### 5. Crew, Training, Recency, Duty, and Rest
 
 The current `CrewQualification` table is a useful starting point, but it is too shallow for serious 91K/135 tracking.

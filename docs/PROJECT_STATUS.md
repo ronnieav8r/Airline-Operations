@@ -77,6 +77,7 @@ It has:
 37. Release readiness guardrails planning.
 38. Release readiness guardrails foundation.
 39. Release evidence QA and Operations Control action discoverability.
+40. Airworthiness schema planning.
 
 ## Current Data Model Boundaries
 
@@ -155,6 +156,14 @@ Operations Control now has a clear Actions column for FlightLeg-backed rows.
 The flight number links to detail, and row actions expose Detail, Edit,
 Manifest, W&B, Locating, and Dispatch. This was added after QA showed the prior
 detail/edit links were too easy to miss inside the evidence cell.
+
+Airworthiness schema planning is complete. The next airworthiness foundation
+should add additive models for aircraft configuration, capability,
+discrepancies, deferrals, maintenance events, and airworthiness releases.
+`Aircraft.status` remains a v1 fleet-board signal, not the airworthiness source
+of truth. Component tracking, reliability analytics, hard release blocking,
+file uploads, provider integrations, and maintenance work-order workflow remain
+deferred.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -294,11 +303,11 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 34: Post-deploy release evidence QA or next-domain planning
+Prompt 35: Airworthiness additive schema foundation
 ```
 
 Scope:
 
-- Confirm the Render deploy for Prompt 33 is live.
-- If stable, choose the next domain: release package, airworthiness, or crew
-  compliance planning.
+- Add airworthiness models, migration, seed/backfill, health counts, and DBML.
+- Keep the slice additive and read/write UI-free.
+- Do not add component maintenance, provider integrations, or release blocking.
