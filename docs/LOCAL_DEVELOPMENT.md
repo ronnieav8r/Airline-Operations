@@ -1,6 +1,6 @@
 # Local Development
 
-Last updated: 2026-06-06
+Last updated: 2026-06-07
 
 This repo can run locally on this Windows PC with Docker Desktop and a local
 Postgres database. This avoids using the live Render database for day-to-day
@@ -45,14 +45,27 @@ Load demo data into the local database:
 npm run db:local:seed
 ```
 
-The local seed creates the current `Flight` rows and matching additive
-`FlightLeg` foundation rows. The separate FlightLeg backfill script is gated
-and normally skipped unless intentionally run.
+The local seed creates the current `Flight` rows, matching additive `FlightLeg`
+foundation rows, release-evidence demo rows, and airworthiness demo rows. The
+separate FlightLeg, release-evidence, and airworthiness backfill scripts are
+gated and normally skipped unless intentionally run.
 
 Optional gated FlightLeg backfill:
 
 ```powershell
 $env:RUN_FLIGHTLEG_BACKFILL="1"; npm run backfill:flightleg
+```
+
+Optional gated release-evidence backfill:
+
+```powershell
+$env:RUN_RELEASE_EVIDENCE_BACKFILL="1"; npm run backfill:release-evidence
+```
+
+Optional gated airworthiness backfill:
+
+```powershell
+$env:RUN_AIRWORTHINESS_BACKFILL="1"; npm run backfill:airworthiness
 ```
 
 Start the local app:
@@ -89,5 +102,9 @@ npm run db:local:down
   recreates seed-owned demo rows. Do not run it against production data.
 - `npm run backfill:flightleg` skips unless `RUN_FLIGHTLEG_BACKFILL=1` is set.
   Use it only when intentionally creating bridge records outside the local seed.
+- `npm run backfill:release-evidence` skips unless
+  `RUN_RELEASE_EVIDENCE_BACKFILL=1` is set.
+- `npm run backfill:airworthiness` skips unless
+  `RUN_AIRWORTHINESS_BACKFILL=1` is set.
 - Render still uses `npm run render-build` and `npm run start`; this local setup
   does not change production deployment commands.

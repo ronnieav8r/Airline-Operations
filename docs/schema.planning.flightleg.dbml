@@ -1,8 +1,9 @@
 // AeroOps Center planning DBML
-// Last updated: 2026-06-06
+// Last updated: 2026-06-07
 // Scope: target data model direction. The initial FlightLeg foundation is now
-// implemented additively, while release evidence, airworthiness, crew
-// compliance, and safety tables remain planning-only.
+// implemented additively. Release evidence and first airworthiness foundation
+// tables are now implemented; deeper crew compliance and safety tables remain
+// planning-only.
 
 Project AeroOps_Planning_FlightLeg {
   database_type: "PostgreSQL"
@@ -675,22 +676,28 @@ Table Discrepancy {
   id varchar [pk]
   aircraftId varchar [not null]
   reportedById varchar
-  flightLegId varchar
+  discrepancyNumber varchar [not null]
   title varchar [not null]
-  description text [not null]
-  status MaintenanceRecordStatus [not null]
+  description text
+  status varchar [not null]
+  severity varchar
   reportedAt timestamp [not null]
+  clearedAt timestamp
+  correctiveSummary text
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
 }
 
 Table Deferral {
   id varchar [pk]
+  aircraftId varchar [not null]
   discrepancyId varchar [not null]
-  deferralCode varchar
-  authorityReference varchar
+  authorizedById varchar
+  deferralNumber varchar [not null]
+  status varchar [not null]
+  category varchar
   deferredAt timestamp [not null]
-  expiresAt timestamp
+  dueAt timestamp
   clearedAt timestamp
   notes text
   createdAt timestamp [not null]
@@ -701,13 +708,17 @@ Table MaintenanceEvent {
   id varchar [pk]
   aircraftId varchar [not null]
   discrepancyId varchar
-  providerName varchar
-  workPerformed text
-  performedBy varchar
-  performedAt timestamp
   approvedById varchar
+  maintenanceNumber varchar [not null]
+  eventType varchar [not null]
+  status varchar [not null]
+  scheduledAt timestamp
+  startedAt timestamp
+  completedAt timestamp
+  providerName varchar
+  description text
   returnToServiceAt timestamp
-  status MaintenanceRecordStatus [not null]
+  notes text
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
 }
@@ -715,9 +726,12 @@ Table MaintenanceEvent {
 Table AirworthinessRelease {
   id varchar [pk]
   aircraftId varchar [not null]
-  maintenanceEventId varchar
+  flightLegId varchar
   releasedById varchar
-  releasedAt timestamp [not null]
+  releaseNumber varchar [not null]
+  status varchar [not null]
+  releasedAt timestamp
+  expiresAt timestamp
   releaseNotes text
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
@@ -794,6 +808,17 @@ Ref: Aircraft.aircraftTypeId > AircraftType.id
 Ref: Aircraft.homeStationId > Station.id
 Ref: AircraftConfiguration.aircraftId > Aircraft.id
 Ref: AircraftCapability.aircraftId > Aircraft.id
+Ref: Discrepancy.aircraftId > Aircraft.id
+Ref: Discrepancy.reportedById > User.id
+Ref: Deferral.aircraftId > Aircraft.id
+Ref: Deferral.discrepancyId > Discrepancy.id
+Ref: Deferral.authorizedById > User.id
+Ref: MaintenanceEvent.aircraftId > Aircraft.id
+Ref: MaintenanceEvent.discrepancyId > Discrepancy.id
+Ref: MaintenanceEvent.approvedById > User.id
+Ref: AirworthinessRelease.aircraftId > Aircraft.id
+Ref: AirworthinessRelease.flightLegId > FlightLeg.id
+Ref: AirworthinessRelease.releasedById > User.id
 Ref: TripOrMission.operatorId > Operator.id
 Ref: FlightLeg.tripOrMissionId > TripOrMission.id
 Ref: FlightLeg.operatorId > Operator.id

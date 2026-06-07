@@ -197,7 +197,7 @@ When the next schema-oriented slice is approved, prefer this order:
 6. `CertificateRating`, `MedicalCertificate`, `TrainingEvent`, `CheckEvent`, `RouteCheck`, `RecencyEvent`, `DutyPeriod`, `RestPeriod`
 7. `SafetyReport`, `Hazard`, `RiskAssessment`, `Mitigation`, `CorrectiveAction`
 
-Items 1 through 3 are now implemented as additive foundations. A hidden parity
+Items 1 through 5 are now implemented as additive foundations. A hidden parity
 diagnostic now compares `Flight` and `FlightLeg` reads before any UI or API is
 rewired to the new leg anchor. `/operations-control` now pilots read-only
 FlightLeg reads with legacy `Flight` fallback. `/flights` and `/` now use the
@@ -252,3 +252,8 @@ should add `AircraftConfiguration`, `AircraftCapability`, `Discrepancy`,
 `Deferral`, `MaintenanceEvent`, and `AirworthinessRelease`. `Aircraft.status`
 remains a v1 fleet-board signal. Component maintenance, reliability analytics,
 provider integrations, file uploads, and hard release blocking remain deferred.
+
+Airworthiness additive schema foundation is now implemented. The new
+airworthiness tables have local seed data, a gated demo backfill, health counts,
+and DBML coverage. Do not add airworthiness mutation, component tracking, or
+hard release blocking until a follow-up planning slice approves it.

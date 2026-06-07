@@ -1,10 +1,11 @@
 // AeroOps Center current-state DBML
-// Last updated: 2026-06-06
+// Last updated: 2026-06-07
 // Scope: mirrors the Prisma schema currently implemented in this repo.
 // Important: Flight remains the table read by some current UI/API paths.
 // FlightLeg is now implemented as an additive future operational anchor bridged
 // by FlightLeg.legacyFlightId. Release-evidence foundation tables now attach to
-// FlightLeg.
+// FlightLeg. Airworthiness foundation tables now attach to Aircraft and
+// optionally FlightLeg.
 
 Project AeroOps_Current_State {
   database_type: "PostgreSQL"
@@ -55,6 +56,55 @@ Enum AircraftStatus {
   RESERVED
   IN_FLIGHT
   OUT_OF_SERVICE
+}
+
+Enum AircraftConfigurationStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  RETIRED
+}
+
+Enum AircraftCapabilityStatus {
+  ACTIVE
+  INACTIVE
+}
+
+Enum DiscrepancyStatus {
+  OPEN
+  DEFERRED
+  CLEARED
+  CANCELLED
+}
+
+Enum DeferralStatus {
+  ACTIVE
+  CLEARED
+  EXPIRED
+  CANCELLED
+}
+
+Enum MaintenanceEventType {
+  INSPECTION
+  SCHEDULED_MAINTENANCE
+  UNSCHEDULED_MAINTENANCE
+  REPAIR
+  RETURN_TO_SERVICE
+  OTHER
+}
+
+Enum MaintenanceEventStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+Enum AirworthinessReleaseStatus {
+  DRAFT
+  RELEASED
+  VOIDED
+  SUPERSEDED
 }
 
 Enum EmploymentStatus {
@@ -321,6 +371,145 @@ Table Aircraft {
     status
     type
     homeStationId
+  }
+}
+
+Table AircraftConfiguration {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  configurationLabel varchar [not null]
+  status AircraftConfigurationStatus [not null, default: "ACTIVE"]
+  effectiveStart timestamp [not null]
+  effectiveEnd timestamp
+  passengerSeatCount int
+  emptyWeight decimal
+  emptyWeightCg varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (aircraftId, configurationLabel, effectiveStart) [unique]
+    (aircraftId, status)
+    (effectiveStart, effectiveEnd)
+  }
+}
+
+Table AircraftCapability {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  capabilityCode varchar [not null]
+  status AircraftCapabilityStatus [not null, default: "ACTIVE"]
+  effectiveStart timestamp [not null]
+  effectiveEnd timestamp
+  description text
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (aircraftId, capabilityCode, effectiveStart) [unique]
+    (aircraftId, status)
+    capabilityCode
+  }
+}
+
+Table Discrepancy {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  reportedById varchar
+  discrepancyNumber varchar [not null]
+  title varchar [not null]
+  description text
+  status DiscrepancyStatus [not null, default: "OPEN"]
+  severity varchar
+  reportedAt timestamp [not null]
+  clearedAt timestamp
+  correctiveSummary text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (aircraftId, discrepancyNumber) [unique]
+    (aircraftId, status)
+    reportedAt
+    reportedById
+  }
+}
+
+Table Deferral {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  discrepancyId varchar [not null]
+  authorizedById varchar
+  deferralNumber varchar [not null]
+  status DeferralStatus [not null, default: "ACTIVE"]
+  category varchar
+  deferredAt timestamp [not null]
+  dueAt timestamp
+  clearedAt timestamp
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (aircraftId, deferralNumber) [unique]
+    (aircraftId, status)
+    discrepancyId
+    dueAt
+    authorizedById
+  }
+}
+
+Table MaintenanceEvent {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  discrepancyId varchar
+  approvedById varchar
+  maintenanceNumber varchar [not null]
+  eventType MaintenanceEventType [not null]
+  status MaintenanceEventStatus [not null, default: "PLANNED"]
+  scheduledAt timestamp
+  startedAt timestamp
+  completedAt timestamp
+  providerName varchar
+  description text
+  returnToServiceAt timestamp
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (aircraftId, maintenanceNumber) [unique]
+    (aircraftId, status)
+    eventType
+    scheduledAt
+    completedAt
+    discrepancyId
+    approvedById
+  }
+}
+
+Table AirworthinessRelease {
+  id varchar [pk]
+  aircraftId varchar [not null]
+  flightLegId varchar
+  releasedById varchar
+  releaseNumber varchar [not null]
+  status AirworthinessReleaseStatus [not null, default: "DRAFT"]
+  releasedAt timestamp
+  expiresAt timestamp
+  releaseNotes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (aircraftId, releaseNumber) [unique]
+    (aircraftId, status)
+    flightLegId
+    releasedAt
+    expiresAt
+    releasedById
   }
 }
 
@@ -848,3 +1037,16 @@ Ref: Alert.crewMemberId > CrewMember.id
 Ref: Alert.createdById > User.id
 Ref: Alert.acknowledgedById > User.id
 Ref: Alert.resolvedById > User.id
+Ref: AircraftConfiguration.aircraftId > Aircraft.id
+Ref: AircraftCapability.aircraftId > Aircraft.id
+Ref: Discrepancy.aircraftId > Aircraft.id
+Ref: Discrepancy.reportedById > User.id
+Ref: Deferral.aircraftId > Aircraft.id
+Ref: Deferral.discrepancyId > Discrepancy.id
+Ref: Deferral.authorizedById > User.id
+Ref: MaintenanceEvent.aircraftId > Aircraft.id
+Ref: MaintenanceEvent.discrepancyId > Discrepancy.id
+Ref: MaintenanceEvent.approvedById > User.id
+Ref: AirworthinessRelease.aircraftId > Aircraft.id
+Ref: AirworthinessRelease.flightLegId > FlightLeg.id
+Ref: AirworthinessRelease.releasedById > User.id

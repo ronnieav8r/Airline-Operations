@@ -121,6 +121,10 @@ Prompt 34 decision: the first airworthiness implementation should add
 Component state, reliability analytics, Service Difficulty Reports, and hard
 release blocking remain deferred until later maintenance-specific slices.
 
+Prompt 35 implementation status: complete as an additive schema foundation with
+seed/backfill, health counts, and DBML. Read-only summaries should come before
+any discrepancy/deferral mutation workflow.
+
 ### 5. Crew, Training, Recency, Duty, and Rest
 
 The current `CrewQualification` table is a useful starting point, but it is too shallow for serious 91K/135 tracking.
@@ -173,7 +177,8 @@ The next major schema-oriented slices should be:
 
 1. Flight-to-FlightLeg read comparison and parity checks
 2. Manifest, flight locating, and release package
-3. Maintenance discrepancy and airworthiness signals
+3. Maintenance discrepancy and airworthiness signals. Foundation implemented;
+   read-only summaries and then mutation planning should follow.
 4. Crew training, checks, recency, duty, and rest
 5. Safety/SMS intake and corrective-action loop
 

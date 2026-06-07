@@ -29,6 +29,12 @@ export async function GET() {
       weatherBriefingSnapshotCount,
       notamSnapshotCount,
       flightPlanReferenceCount,
+      aircraftConfigurationCount,
+      aircraftCapabilityCount,
+      discrepancyCount,
+      deferralCount,
+      maintenanceEventCount,
+      airworthinessReleaseCount,
     ] = await Promise.all([
       prisma.station.count(),
       prisma.aircraft.count(),
@@ -53,6 +59,12 @@ export async function GET() {
       prisma.weatherBriefingSnapshot.count(),
       prisma.notamSnapshot.count(),
       prisma.flightPlanReference.count(),
+      prisma.aircraftConfiguration.count(),
+      prisma.aircraftCapability.count(),
+      prisma.discrepancy.count(),
+      prisma.deferral.count(),
+      prisma.maintenanceEvent.count(),
+      prisma.airworthinessRelease.count(),
     ]);
 
     return NextResponse.json({
@@ -82,6 +94,12 @@ export async function GET() {
         weatherBriefingSnapshots: weatherBriefingSnapshotCount,
         notamSnapshots: notamSnapshotCount,
         flightPlanReferences: flightPlanReferenceCount,
+        aircraftConfigurations: aircraftConfigurationCount,
+        aircraftCapabilities: aircraftCapabilityCount,
+        discrepancies: discrepancyCount,
+        deferrals: deferralCount,
+        maintenanceEvents: maintenanceEventCount,
+        airworthinessReleases: airworthinessReleaseCount,
       },
     });
   } catch (error) {

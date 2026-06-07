@@ -78,6 +78,7 @@ It has:
 38. Release readiness guardrails foundation.
 39. Release evidence QA and Operations Control action discoverability.
 40. Airworthiness schema planning.
+41. Airworthiness additive schema foundation.
 
 ## Current Data Model Boundaries
 
@@ -164,6 +165,12 @@ discrepancies, deferrals, maintenance events, and airworthiness releases.
 of truth. Component tracking, reliability analytics, hard release blocking,
 file uploads, provider integrations, and maintenance work-order workflow remain
 deferred.
+
+Airworthiness additive schema foundation is implemented. Current schema now
+includes `AircraftConfiguration`, `AircraftCapability`, `Discrepancy`,
+`Deferral`, `MaintenanceEvent`, and `AirworthinessRelease`, with local demo
+seed data, a gated `RUN_AIRWORTHINESS_BACKFILL` script, health counts, and DBML
+updates. There is no airworthiness CRUD or release blocking yet.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -303,11 +310,11 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 35: Airworthiness additive schema foundation
+Prompt 36: Airworthiness read-only summaries
 ```
 
 Scope:
 
-- Add airworthiness models, migration, seed/backfill, health counts, and DBML.
-- Keep the slice additive and read/write UI-free.
-- Do not add component maintenance, provider integrations, or release blocking.
+- Show read-only aircraft airworthiness summaries.
+- Add warning-only airworthiness context to FlightLeg detail readiness.
+- Do not add airworthiness mutation or release blocking.

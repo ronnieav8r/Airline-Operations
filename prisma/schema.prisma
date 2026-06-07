@@ -53,6 +53,55 @@ enum AircraftStatus {
   OUT_OF_SERVICE
 }
 
+enum AircraftConfigurationStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  RETIRED
+}
+
+enum AircraftCapabilityStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum DiscrepancyStatus {
+  OPEN
+  DEFERRED
+  CLEARED
+  CANCELLED
+}
+
+enum DeferralStatus {
+  ACTIVE
+  CLEARED
+  EXPIRED
+  CANCELLED
+}
+
+enum MaintenanceEventType {
+  INSPECTION
+  SCHEDULED_MAINTENANCE
+  UNSCHEDULED_MAINTENANCE
+  REPAIR
+  RETURN_TO_SERVICE
+  OTHER
+}
+
+enum MaintenanceEventStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AirworthinessReleaseStatus {
+  DRAFT
+  RELEASED
+  VOIDED
+  SUPERSEDED
+}
+
 enum EmploymentStatus {
   ACTIVE
   INACTIVE
@@ -165,148 +214,157 @@ enum FlightLocatingStatus {
 }
 
 model Operator {
-  id                     String                  @id @default(cuid())
-  name                   String
-  code                   String                  @unique
-  isActive               Boolean                 @default(true)
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  operatingAuthorities   OperatingAuthority[]
-  controlRecords         OperationalControlRecord[]
-  tripOrMissions         TripOrMission[]
-  flightLegs             FlightLeg[]
+  id                   String                     @id @default(cuid())
+  name                 String
+  code                 String                     @unique
+  isActive             Boolean                    @default(true)
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  operatingAuthorities OperatingAuthority[]
+  controlRecords       OperationalControlRecord[]
+  tripOrMissions       TripOrMission[]
+  flightLegs           FlightLeg[]
 }
 
 model OperatingAuthority {
-  id                     String                  @id @default(cuid())
-  operatorId             String
-  operatingPart          OperatingPart
-  displayName            String
-  status                 AuthorityStatus         @default(DRAFT)
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  operator               Operator                @relation(fields: [operatorId], references: [id], onDelete: Restrict)
-  revisions              AuthorityRevision[]
-  manuals                Manual[]
-  controlRecords         OperationalControlRecord[]
-  flightLegs             FlightLeg[]
+  id             String                     @id @default(cuid())
+  operatorId     String
+  operatingPart  OperatingPart
+  displayName    String
+  status         AuthorityStatus            @default(DRAFT)
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  operator       Operator                   @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  revisions      AuthorityRevision[]
+  manuals        Manual[]
+  controlRecords OperationalControlRecord[]
+  flightLegs     FlightLeg[]
 
   @@unique([operatorId, operatingPart])
   @@index([operatorId, status])
 }
 
 model AuthorityRevision {
-  id                     String                  @id @default(cuid())
-  operatingAuthorityId   String
-  revisionLabel          String
-  effectiveStart         DateTime
-  effectiveEnd           DateTime?
-  status                 AuthorityStatus         @default(DRAFT)
-  notes                  String?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  operatingAuthority     OperatingAuthority      @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
-  controlRecords         OperationalControlRecord[]
-  flightLegs             FlightLeg[]
+  id                   String                     @id @default(cuid())
+  operatingAuthorityId String
+  revisionLabel        String
+  effectiveStart       DateTime
+  effectiveEnd         DateTime?
+  status               AuthorityStatus            @default(DRAFT)
+  notes                String?
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  operatingAuthority   OperatingAuthority         @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
+  controlRecords       OperationalControlRecord[]
+  flightLegs           FlightLeg[]
 
   @@unique([operatingAuthorityId, revisionLabel])
   @@index([operatingAuthorityId, status])
 }
 
 model Manual {
-  id                     String                  @id @default(cuid())
-  operatingAuthorityId   String
-  name                   String
-  documentIdentifier     String?
-  publishedAt            DateTime?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  operatingAuthority     OperatingAuthority      @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
-  revisions              ManualRevision[]
+  id                   String             @id @default(cuid())
+  operatingAuthorityId String
+  name                 String
+  documentIdentifier   String?
+  publishedAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  operatingAuthority   OperatingAuthority @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
+  revisions            ManualRevision[]
 
   @@unique([operatingAuthorityId, name])
 }
 
 model ManualRevision {
-  id                     String                  @id @default(cuid())
-  manualId               String
-  revisionLabel          String
-  revisionDate           DateTime
-  effectiveStart         DateTime?
-  effectiveEnd           DateTime?
-  notes                  String?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  manual                 Manual                  @relation(fields: [manualId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  manualId       String
+  revisionLabel  String
+  revisionDate   DateTime
+  effectiveStart DateTime?
+  effectiveEnd   DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  manual         Manual    @relation(fields: [manualId], references: [id], onDelete: Cascade)
 
   @@unique([manualId, revisionLabel])
   @@index([manualId, effectiveStart])
 }
 
 model OperationalControlRecord {
-  id                     String                  @id @default(cuid())
-  flightId               String?                 @unique
-  flightLegId            String?                 @unique
-  operatorId             String
-  operatingAuthorityId   String
-  authorityRevisionId    String
-  controllingEntity      String
-  controlNotes           String?
-  createdById            String?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  flight                 Flight?                 @relation(fields: [flightId], references: [id], onDelete: SetNull)
-  flightLeg              FlightLeg?              @relation(fields: [flightLegId], references: [id], onDelete: SetNull)
-  operator               Operator                @relation(fields: [operatorId], references: [id], onDelete: Restrict)
-  operatingAuthority     OperatingAuthority      @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
-  authorityRevision      AuthorityRevision       @relation(fields: [authorityRevisionId], references: [id], onDelete: Restrict)
-  createdBy              User?                   @relation("OperationalControlRecordCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  release                FlightRelease?
+  id                   String             @id @default(cuid())
+  flightId             String?            @unique
+  flightLegId          String?            @unique
+  operatorId           String
+  operatingAuthorityId String
+  authorityRevisionId  String
+  controllingEntity    String
+  controlNotes         String?
+  createdById          String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  flight               Flight?            @relation(fields: [flightId], references: [id], onDelete: SetNull)
+  flightLeg            FlightLeg?         @relation(fields: [flightLegId], references: [id], onDelete: SetNull)
+  operator             Operator           @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  operatingAuthority   OperatingAuthority @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
+  authorityRevision    AuthorityRevision  @relation(fields: [authorityRevisionId], references: [id], onDelete: Restrict)
+  createdBy            User?              @relation("OperationalControlRecordCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  release              FlightRelease?
+
+  @@index([operatorId])
+  @@index([operatingAuthorityId])
+  @@index([authorityRevisionId])
 }
 
 model FlightRelease {
-  id                      String                 @id @default(cuid())
-  operationalControlRecordId String               @unique
-  status                  ReleaseStatus          @default(PLANNED)
-  releasedById            String?
-  releasedAt              DateTime?
-  releaseNotes            String?
-  createdAt               DateTime               @default(now())
-  updatedAt               DateTime               @updatedAt
-  operationalControlRecord OperationalControlRecord @relation(fields: [operationalControlRecordId], references: [id], onDelete: Restrict)
-  releasedBy              User?                  @relation("FlightReleaseReleasedBy", fields: [releasedById], references: [id], onDelete: SetNull)
+  id                         String                   @id @default(cuid())
+  operationalControlRecordId String                   @unique
+  status                     ReleaseStatus            @default(PLANNED)
+  releasedById               String?
+  releasedAt                 DateTime?
+  releaseNotes               String?
+  createdAt                  DateTime                 @default(now())
+  updatedAt                  DateTime                 @updatedAt
+  operationalControlRecord   OperationalControlRecord @relation(fields: [operationalControlRecordId], references: [id], onDelete: Restrict)
+  releasedBy                 User?                    @relation("FlightReleaseReleasedBy", fields: [releasedById], references: [id], onDelete: SetNull)
 
   @@index([operationalControlRecordId])
+  @@index([status])
 }
 
 model User {
-  id                        String                  @id @default(cuid())
-  email                     String                  @unique
-  role                      UserRole
-  isActive                  Boolean                 @default(true)
-  createdAt                 DateTime                @default(now())
-  updatedAt                 DateTime                @updatedAt
-  profile                   UserProfile?
-  crewMember                CrewMember?
-  assignedCrewAssignments   AircraftCrewAssignment[] @relation("AssignmentAuthor")
-  timeOffRequestsSubmitted  TimeOffRequest[]        @relation("TimeOffRequestedBy")
-  timeOffRequestsReviewed   TimeOffRequest[]        @relation("TimeOffReviewedBy")
-  alertsCreated             Alert[]                 @relation("AlertCreatedBy")
-  alertsAcknowledged        Alert[]                 @relation("AlertAcknowledgedBy")
-  alertsResolved            Alert[]                 @relation("AlertResolvedBy")
-  operationalControlRecords OperationalControlRecord[] @relation("OperationalControlRecordCreatedBy")
-  flightReleases            FlightRelease[]         @relation("FlightReleaseReleasedBy")
-  assignedAircraftAssignments AircraftAssignment[]   @relation("AircraftAssignmentAssignedBy")
-  assignedCrewLegAssignments  CrewLegAssignment[]    @relation("CrewLegAssignmentAssignedBy")
-  lockedManifests           Manifest[]              @relation("ManifestLockedBy")
-  calculatedWeightBalanceRuns WeightBalanceRun[]     @relation("WeightBalanceCalculatedBy")
-  approvedWeightBalanceRuns WeightBalanceRun[]       @relation("WeightBalanceApprovedBy")
-  dispatchPackagesCreated   DispatchPackage[]       @relation("DispatchPackageCreatedBy")
+  id                          String                     @id @default(cuid())
+  email                       String                     @unique
+  role                        UserRole
+  isActive                    Boolean                    @default(true)
+  createdAt                   DateTime                   @default(now())
+  updatedAt                   DateTime                   @updatedAt
+  profile                     UserProfile?
+  crewMember                  CrewMember?
+  assignedCrewAssignments     AircraftCrewAssignment[]   @relation("AssignmentAuthor")
+  timeOffRequestsSubmitted    TimeOffRequest[]           @relation("TimeOffRequestedBy")
+  timeOffRequestsReviewed     TimeOffRequest[]           @relation("TimeOffReviewedBy")
+  alertsCreated               Alert[]                    @relation("AlertCreatedBy")
+  alertsAcknowledged          Alert[]                    @relation("AlertAcknowledgedBy")
+  alertsResolved              Alert[]                    @relation("AlertResolvedBy")
+  operationalControlRecords   OperationalControlRecord[] @relation("OperationalControlRecordCreatedBy")
+  flightReleases              FlightRelease[]            @relation("FlightReleaseReleasedBy")
+  assignedAircraftAssignments AircraftAssignment[]       @relation("AircraftAssignmentAssignedBy")
+  assignedCrewLegAssignments  CrewLegAssignment[]        @relation("CrewLegAssignmentAssignedBy")
+  lockedManifests             Manifest[]                 @relation("ManifestLockedBy")
+  calculatedWeightBalanceRuns WeightBalanceRun[]         @relation("WeightBalanceCalculatedBy")
+  approvedWeightBalanceRuns   WeightBalanceRun[]         @relation("WeightBalanceApprovedBy")
+  dispatchPackagesCreated     DispatchPackage[]          @relation("DispatchPackageCreatedBy")
+  reportedDiscrepancies       Discrepancy[]              @relation("DiscrepancyReportedBy")
+  authorizedDeferrals         Deferral[]                 @relation("DeferralAuthorizedBy")
+  approvedMaintenanceEvents   MaintenanceEvent[]         @relation("MaintenanceEventApprovedBy")
+  airworthinessReleases       AirworthinessRelease[]     @relation("AirworthinessReleaseReleasedBy")
 }
 
 model UserProfile {
-  id                    String         @id @default(cuid())
-  userId                String         @unique
+  id                    String          @id @default(cuid())
+  userId                String          @unique
   firstName             String
   lastName              String
   phone                 String?
@@ -315,74 +373,118 @@ model UserProfile {
   idDocumentNumber      String?
   emergencyContactName  String?
   emergencyContactPhone String?
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Station {
-  id            String         @id @default(cuid())
-  code          String         @unique
-  name          String
-  city          String
-  state         String?
-  country       String         @default("USA")
-  timezone      String
-  isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  aircraft      Aircraft[]
-  crewMembers   CrewMember[]
-  departures    Flight[]       @relation("FlightDepartureStation")
-  arrivals      Flight[]       @relation("FlightArrivalStation")
-  flightLegDepartures FlightLeg[] @relation("FlightLegDepartureStation")
-  flightLegArrivals   FlightLeg[] @relation("FlightLegArrivalStation")
-  crewSchedules CrewSchedule[]
+  id                  String         @id @default(cuid())
+  code                String         @unique
+  name                String
+  city                String
+  state               String?
+  country             String         @default("USA")
+  timezone            String
+  isActive            Boolean        @default(true)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  aircraft            Aircraft[]
+  crewMembers         CrewMember[]
+  departures          Flight[]       @relation("FlightDepartureStation")
+  arrivals            Flight[]       @relation("FlightArrivalStation")
+  flightLegDepartures FlightLeg[]    @relation("FlightLegDepartureStation")
+  flightLegArrivals   FlightLeg[]    @relation("FlightLegArrivalStation")
+  crewSchedules       CrewSchedule[]
 }
 
 model Aircraft {
-  id             String                  @id @default(cuid())
-  tailNumber     String                  @unique
-  name           String?
-  type           AircraftType
-  status         AircraftStatus          @default(AVAILABLE)
-  homeStationId  String?
-  seats          Int?
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
-  homeStation    Station?                @relation(fields: [homeStationId], references: [id], onDelete: SetNull)
-  flights        Flight[]
-  crewAssignments AircraftCrewAssignment[]
-  aircraftAssignments AircraftAssignment[]
-  alerts         Alert[]
+  id                    String                   @id @default(cuid())
+  tailNumber            String                   @unique
+  name                  String?
+  type                  AircraftType
+  status                AircraftStatus           @default(AVAILABLE)
+  homeStationId         String?
+  seats                 Int?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  homeStation           Station?                 @relation(fields: [homeStationId], references: [id], onDelete: SetNull)
+  flights               Flight[]
+  crewAssignments       AircraftCrewAssignment[]
+  aircraftAssignments   AircraftAssignment[]
+  alerts                Alert[]
+  configurations        AircraftConfiguration[]
+  capabilities          AircraftCapability[]
+  discrepancies         Discrepancy[]
+  deferrals             Deferral[]
+  maintenanceEvents     MaintenanceEvent[]
+  airworthinessReleases AirworthinessRelease[]
 
   @@index([status])
   @@index([type])
   @@index([homeStationId])
 }
 
-model Flight {
-  id                 String          @id @default(cuid())
-  flightNumber       String
+model AircraftConfiguration {
+  id                 String                      @id @default(cuid())
   aircraftId         String
-  departureStationId String
-  arrivalStationId   String
-  scheduledDeparture DateTime
-  scheduledArrival   DateTime
-  actualDeparture    DateTime?
-  actualArrival      DateTime?
-  status             FlightStatus    @default(SCHEDULED)
+  configurationLabel String
+  status             AircraftConfigurationStatus @default(ACTIVE)
+  effectiveStart     DateTime                    @default(now())
+  effectiveEnd       DateTime?
+  passengerSeatCount Int?
+  emptyWeight        Decimal?                    @db.Decimal(10, 2)
+  emptyWeightCg      String?
   notes              String?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
-  aircraft           Aircraft        @relation(fields: [aircraftId], references: [id], onDelete: Restrict)
-  departureStation   Station         @relation("FlightDepartureStation", fields: [departureStationId], references: [id], onDelete: Restrict)
-  arrivalStation     Station         @relation("FlightArrivalStation", fields: [arrivalStationId], references: [id], onDelete: Restrict)
-  crewLogs           CrewFlightLog[]
-  flightPassengers   FlightPassenger[]
-  alerts             Alert[]
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  aircraft           Aircraft                    @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+
+  @@unique([aircraftId, configurationLabel, effectiveStart])
+  @@index([aircraftId, status])
+  @@index([effectiveStart, effectiveEnd])
+}
+
+model AircraftCapability {
+  id             String                   @id @default(cuid())
+  aircraftId     String
+  capabilityCode String
+  status         AircraftCapabilityStatus @default(ACTIVE)
+  effectiveStart DateTime                 @default(now())
+  effectiveEnd   DateTime?
+  description    String?
+  notes          String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  aircraft       Aircraft                 @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+
+  @@unique([aircraftId, capabilityCode, effectiveStart])
+  @@index([aircraftId, status])
+  @@index([capabilityCode])
+}
+
+model Flight {
+  id                       String                    @id @default(cuid())
+  flightNumber             String
+  aircraftId               String
+  departureStationId       String
+  arrivalStationId         String
+  scheduledDeparture       DateTime
+  scheduledArrival         DateTime
+  actualDeparture          DateTime?
+  actualArrival            DateTime?
+  status                   FlightStatus              @default(SCHEDULED)
+  notes                    String?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  aircraft                 Aircraft                  @relation(fields: [aircraftId], references: [id], onDelete: Restrict)
+  departureStation         Station                   @relation("FlightDepartureStation", fields: [departureStationId], references: [id], onDelete: Restrict)
+  arrivalStation           Station                   @relation("FlightArrivalStation", fields: [arrivalStationId], references: [id], onDelete: Restrict)
+  crewLogs                 CrewFlightLog[]
+  flightPassengers         FlightPassenger[]
+  alerts                   Alert[]
   operationalControlRecord OperationalControlRecord?
-  flightLeg          FlightLeg?
+  flightLeg                FlightLeg?
 
   @@unique([flightNumber, scheduledDeparture])
   @@index([scheduledDeparture])
@@ -391,26 +493,26 @@ model Flight {
 }
 
 model CrewMember {
-  id               String            @id @default(cuid())
-  userId           String?           @unique
-  employeeNumber   String            @unique
+  id               String                   @id @default(cuid())
+  userId           String?                  @unique
+  employeeNumber   String                   @unique
   firstName        String
   lastName         String
   baseStationId    String
-  employmentStatus EmploymentStatus  @default(ACTIVE)
-  dutyStatus       DutyStatus        @default(OFF_DUTY)
+  employmentStatus EmploymentStatus         @default(ACTIVE)
+  dutyStatus       DutyStatus               @default(OFF_DUTY)
   hireDate         DateTime?
   phone            String?
   email            String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  baseStation      Station           @relation(fields: [baseStationId], references: [id], onDelete: Restrict)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  user             User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  baseStation      Station                  @relation(fields: [baseStationId], references: [id], onDelete: Restrict)
   qualifications   CrewQualification[]
   assignments      AircraftCrewAssignment[]
   schedules        CrewSchedule[]
   flightLogs       CrewFlightLog[]
-  legAssignments    CrewLegAssignment[]
+  legAssignments   CrewLegAssignment[]
   timeOffRequests  TimeOffRequest[]
   alerts           Alert[]
 
@@ -437,20 +539,20 @@ model CrewQualification {
 }
 
 model AircraftCrewAssignment {
-  id           String      @id @default(cuid())
-  aircraftId   String
-  crewMemberId String
-  seatRole     SeatRole
-  startsAt     DateTime
-  endsAt       DateTime?
-  isActive     Boolean     @default(true)
-  assignedById String?
-  notes        String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  aircraft     Aircraft    @relation(fields: [aircraftId], references: [id], onDelete: Restrict)
-  crewMember   CrewMember  @relation(fields: [crewMemberId], references: [id], onDelete: Restrict)
-  assignedBy   User?       @relation("AssignmentAuthor", fields: [assignedById], references: [id], onDelete: SetNull)
+  id                 String              @id @default(cuid())
+  aircraftId         String
+  crewMemberId       String
+  seatRole           SeatRole
+  startsAt           DateTime
+  endsAt             DateTime?
+  isActive           Boolean             @default(true)
+  assignedById       String?
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  aircraft           Aircraft            @relation(fields: [aircraftId], references: [id], onDelete: Restrict)
+  crewMember         CrewMember          @relation(fields: [crewMemberId], references: [id], onDelete: Restrict)
+  assignedBy         User?               @relation("AssignmentAuthor", fields: [assignedById], references: [id], onDelete: SetNull)
   crewLegAssignments CrewLegAssignment[]
 
   @@unique([aircraftId, crewMemberId, seatRole, startsAt])
@@ -479,41 +581,42 @@ model TripOrMission {
 }
 
 model FlightLeg {
-  id                         String                    @id @default(cuid())
-  legacyFlightId             String?                   @unique
-  tripOrMissionId            String?
-  operatorId                 String
-  operatingAuthorityId       String
-  authorityRevisionId        String
-  legNumber                  Int?
-  flightNumber               String?
-  departureStationId         String
-  arrivalStationId           String
-  scheduledDeparture         DateTime
-  scheduledArrival           DateTime
-  actualDeparture            DateTime?
-  actualArrival              DateTime?
-  status                     FlightLegStatus           @default(SCHEDULED)
-  notes                      String?
-  createdAt                  DateTime                  @default(now())
-  updatedAt                  DateTime                  @updatedAt
-  legacyFlight               Flight?                   @relation(fields: [legacyFlightId], references: [id], onDelete: SetNull)
-  tripOrMission              TripOrMission?            @relation(fields: [tripOrMissionId], references: [id], onDelete: SetNull)
-  operator                   Operator                  @relation(fields: [operatorId], references: [id], onDelete: Restrict)
-  operatingAuthority         OperatingAuthority        @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
-  authorityRevision          AuthorityRevision         @relation(fields: [authorityRevisionId], references: [id], onDelete: Restrict)
-  departureStation           Station                   @relation("FlightLegDepartureStation", fields: [departureStationId], references: [id], onDelete: Restrict)
-  arrivalStation             Station                   @relation("FlightLegArrivalStation", fields: [arrivalStationId], references: [id], onDelete: Restrict)
-  aircraftAssignments        AircraftAssignment[]
-  crewAssignments            CrewLegAssignment[]
-  operationalControlRecord   OperationalControlRecord?
-  inboundTurnaroundLinks     TurnaroundLink[]          @relation("TurnaroundInboundLeg")
-  outboundTurnaroundLinks    TurnaroundLink[]          @relation("TurnaroundOutboundLeg")
-  manifest                   Manifest?
-  weightBalanceRuns          WeightBalanceRun[]
-  flightLocatingRecord       FlightLocatingRecord?
-  dispatchPackage            DispatchPackage?
-  flightPlanReferences       FlightPlanReference[]
+  id                       String                    @id @default(cuid())
+  legacyFlightId           String?                   @unique
+  tripOrMissionId          String?
+  operatorId               String
+  operatingAuthorityId     String
+  authorityRevisionId      String
+  legNumber                Int?
+  flightNumber             String?
+  departureStationId       String
+  arrivalStationId         String
+  scheduledDeparture       DateTime
+  scheduledArrival         DateTime
+  actualDeparture          DateTime?
+  actualArrival            DateTime?
+  status                   FlightLegStatus           @default(SCHEDULED)
+  notes                    String?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  legacyFlight             Flight?                   @relation(fields: [legacyFlightId], references: [id], onDelete: SetNull)
+  tripOrMission            TripOrMission?            @relation(fields: [tripOrMissionId], references: [id], onDelete: SetNull)
+  operator                 Operator                  @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  operatingAuthority       OperatingAuthority        @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
+  authorityRevision        AuthorityRevision         @relation(fields: [authorityRevisionId], references: [id], onDelete: Restrict)
+  departureStation         Station                   @relation("FlightLegDepartureStation", fields: [departureStationId], references: [id], onDelete: Restrict)
+  arrivalStation           Station                   @relation("FlightLegArrivalStation", fields: [arrivalStationId], references: [id], onDelete: Restrict)
+  aircraftAssignments      AircraftAssignment[]
+  crewAssignments          CrewLegAssignment[]
+  operationalControlRecord OperationalControlRecord?
+  inboundTurnaroundLinks   TurnaroundLink[]          @relation("TurnaroundInboundLeg")
+  outboundTurnaroundLinks  TurnaroundLink[]          @relation("TurnaroundOutboundLeg")
+  manifest                 Manifest?
+  weightBalanceRuns        WeightBalanceRun[]
+  flightLocatingRecord     FlightLocatingRecord?
+  dispatchPackage          DispatchPackage?
+  airworthinessReleases    AirworthinessRelease[]
+  flightPlanReferences     FlightPlanReference[]
 
   @@index([scheduledDeparture])
   @@index([status, scheduledDeparture])
@@ -523,20 +626,124 @@ model FlightLeg {
   @@index([arrivalStationId, scheduledArrival])
 }
 
+model Discrepancy {
+  id                String             @id @default(cuid())
+  aircraftId        String
+  reportedById      String?
+  discrepancyNumber String
+  title             String
+  description       String?
+  status            DiscrepancyStatus  @default(OPEN)
+  severity          String?
+  reportedAt        DateTime           @default(now())
+  clearedAt         DateTime?
+  correctiveSummary String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  aircraft          Aircraft           @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+  reportedBy        User?              @relation("DiscrepancyReportedBy", fields: [reportedById], references: [id], onDelete: SetNull)
+  deferrals         Deferral[]
+  maintenanceEvents MaintenanceEvent[]
+
+  @@unique([aircraftId, discrepancyNumber])
+  @@index([aircraftId, status])
+  @@index([reportedAt])
+  @@index([reportedById])
+}
+
+model Deferral {
+  id             String         @id @default(cuid())
+  aircraftId     String
+  discrepancyId  String
+  authorizedById String?
+  deferralNumber String
+  status         DeferralStatus @default(ACTIVE)
+  category       String?
+  deferredAt     DateTime       @default(now())
+  dueAt          DateTime?
+  clearedAt      DateTime?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  aircraft       Aircraft       @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+  discrepancy    Discrepancy    @relation(fields: [discrepancyId], references: [id], onDelete: Cascade)
+  authorizedBy   User?          @relation("DeferralAuthorizedBy", fields: [authorizedById], references: [id], onDelete: SetNull)
+
+  @@unique([aircraftId, deferralNumber])
+  @@index([aircraftId, status])
+  @@index([discrepancyId])
+  @@index([dueAt])
+  @@index([authorizedById])
+}
+
+model MaintenanceEvent {
+  id                String                 @id @default(cuid())
+  aircraftId        String
+  discrepancyId     String?
+  approvedById      String?
+  maintenanceNumber String
+  eventType         MaintenanceEventType
+  status            MaintenanceEventStatus @default(PLANNED)
+  scheduledAt       DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  providerName      String?
+  description       String?
+  returnToServiceAt DateTime?
+  notes             String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  aircraft          Aircraft               @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+  discrepancy       Discrepancy?           @relation(fields: [discrepancyId], references: [id], onDelete: SetNull)
+  approvedBy        User?                  @relation("MaintenanceEventApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@unique([aircraftId, maintenanceNumber])
+  @@index([aircraftId, status])
+  @@index([eventType])
+  @@index([scheduledAt])
+  @@index([completedAt])
+  @@index([discrepancyId])
+  @@index([approvedById])
+}
+
+model AirworthinessRelease {
+  id            String                     @id @default(cuid())
+  aircraftId    String
+  flightLegId   String?
+  releasedById  String?
+  releaseNumber String
+  status        AirworthinessReleaseStatus @default(DRAFT)
+  releasedAt    DateTime?
+  expiresAt     DateTime?
+  releaseNotes  String?
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  aircraft      Aircraft                   @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+  flightLeg     FlightLeg?                 @relation(fields: [flightLegId], references: [id], onDelete: SetNull)
+  releasedBy    User?                      @relation("AirworthinessReleaseReleasedBy", fields: [releasedById], references: [id], onDelete: SetNull)
+
+  @@unique([aircraftId, releaseNumber])
+  @@index([aircraftId, status])
+  @@index([flightLegId])
+  @@index([releasedAt])
+  @@index([expiresAt])
+  @@index([releasedById])
+}
+
 model AircraftAssignment {
-  id              String           @id @default(cuid())
-  flightLegId     String
-  aircraftId      String
-  status          AssignmentStatus @default(PLANNED)
-  assignedAt      DateTime         @default(now())
-  releasedAt      DateTime?
-  assignedById    String?
-  notes           String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  flightLeg       FlightLeg        @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
-  aircraft        Aircraft         @relation(fields: [aircraftId], references: [id], onDelete: Restrict)
-  assignedBy      User?            @relation("AircraftAssignmentAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+  id           String           @id @default(cuid())
+  flightLegId  String
+  aircraftId   String
+  status       AssignmentStatus @default(PLANNED)
+  assignedAt   DateTime         @default(now())
+  releasedAt   DateTime?
+  assignedById String?
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  flightLeg    FlightLeg        @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  aircraft     Aircraft         @relation(fields: [aircraftId], references: [id], onDelete: Restrict)
+  assignedBy   User?            @relation("AircraftAssignmentAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
 
   @@unique([flightLegId, aircraftId])
   @@index([aircraftId, assignedAt])
@@ -584,16 +791,16 @@ model TurnaroundLink {
 }
 
 model Manifest {
-  id            String         @id @default(cuid())
-  flightLegId   String         @unique
-  status        ManifestStatus @default(DRAFT)
-  lockedAt      DateTime?
-  lockedById    String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  flightLeg     FlightLeg      @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
-  lockedBy      User?          @relation("ManifestLockedBy", fields: [lockedById], references: [id], onDelete: SetNull)
-  items         ManifestItem[]
+  id                String             @id @default(cuid())
+  flightLegId       String             @unique
+  status            ManifestStatus     @default(DRAFT)
+  lockedAt          DateTime?
+  lockedById        String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  flightLeg         FlightLeg          @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  lockedBy          User?              @relation("ManifestLockedBy", fields: [lockedById], references: [id], onDelete: SetNull)
+  items             ManifestItem[]
   weightBalanceRuns WeightBalanceRun[]
 
   @@index([status])
@@ -622,24 +829,24 @@ model ManifestItem {
 
 model WeightBalanceRun {
   id                  String              @id @default(cuid())
-  flightLegId          String
-  manifestId           String?
-  runLabel             String
-  status               WeightBalanceStatus @default(DRAFT)
-  takeoffWeight        Decimal?            @db.Decimal(10, 2)
-  landingWeight        Decimal?            @db.Decimal(10, 2)
-  centerOfGravity      String?
-  calculatedById       String?
-  calculatedAt         DateTime?
-  approvedById         String?
-  approvedAt           DateTime?
-  calculationSnapshot  Json?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  flightLeg            FlightLeg           @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
-  manifest             Manifest?           @relation(fields: [manifestId], references: [id], onDelete: SetNull)
-  calculatedBy         User?               @relation("WeightBalanceCalculatedBy", fields: [calculatedById], references: [id], onDelete: SetNull)
-  approvedBy           User?               @relation("WeightBalanceApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  flightLegId         String
+  manifestId          String?
+  runLabel            String
+  status              WeightBalanceStatus @default(DRAFT)
+  takeoffWeight       Decimal?            @db.Decimal(10, 2)
+  landingWeight       Decimal?            @db.Decimal(10, 2)
+  centerOfGravity     String?
+  calculatedById      String?
+  calculatedAt        DateTime?
+  approvedById        String?
+  approvedAt          DateTime?
+  calculationSnapshot Json?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  flightLeg           FlightLeg           @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  manifest            Manifest?           @relation(fields: [manifestId], references: [id], onDelete: SetNull)
+  calculatedBy        User?               @relation("WeightBalanceCalculatedBy", fields: [calculatedById], references: [id], onDelete: SetNull)
+  approvedBy          User?               @relation("WeightBalanceApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
 
   @@unique([flightLegId, runLabel])
   @@index([flightLegId, status])
@@ -649,56 +856,56 @@ model WeightBalanceRun {
 }
 
 model FlightLocatingRecord {
-  id                 String               @id @default(cuid())
-  flightLegId         String               @unique
-  status             FlightLocatingStatus @default(NOT_STARTED)
-  responsibleParty   String?
-  plannedRoute       String?
-  lastKnownPosition  String?
-  activatedAt        DateTime?
-  closedAt           DateTime?
-  overdueAt          DateTime?
-  notes              String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  flightLeg          FlightLeg            @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  id                String               @id @default(cuid())
+  flightLegId       String               @unique
+  status            FlightLocatingStatus @default(NOT_STARTED)
+  responsibleParty  String?
+  plannedRoute      String?
+  lastKnownPosition String?
+  activatedAt       DateTime?
+  closedAt          DateTime?
+  overdueAt         DateTime?
+  notes             String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  flightLeg         FlightLeg            @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
 
   @@index([status])
 }
 
 model WeatherBriefingSnapshot {
-  id              String            @id @default(cuid())
-  snapshotKey     String            @unique
-  provider        String?
-  briefingAt      DateTime
-  routeSummary    String?
-  rawSnapshot     Json?
-  createdAt       DateTime          @default(now())
+  id               String            @id @default(cuid())
+  snapshotKey      String            @unique
+  provider         String?
+  briefingAt       DateTime
+  routeSummary     String?
+  rawSnapshot      Json?
+  createdAt        DateTime          @default(now())
   dispatchPackages DispatchPackage[]
 }
 
 model NotamSnapshot {
   id                   String            @id @default(cuid())
-  snapshotKey           String            @unique
-  capturedAt            DateTime
-  affectedStationCodes  String?
-  rawSnapshot           Json?
-  createdAt             DateTime          @default(now())
-  dispatchPackages      DispatchPackage[]
+  snapshotKey          String            @unique
+  capturedAt           DateTime
+  affectedStationCodes String?
+  rawSnapshot          Json?
+  createdAt            DateTime          @default(now())
+  dispatchPackages     DispatchPackage[]
 }
 
 model FlightPlanReference {
-  id                  String            @id @default(cuid())
-  flightLegId          String
-  provider            String?
-  externalReference   String?
-  filedAt             DateTime?
-  status              String?
-  routeText           String?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  flightLeg           FlightLeg         @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
-  dispatchPackages    DispatchPackage[]
+  id                String            @id @default(cuid())
+  flightLegId       String
+  provider          String?
+  externalReference String?
+  filedAt           DateTime?
+  status            String?
+  routeText         String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  flightLeg         FlightLeg         @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  dispatchPackages  DispatchPackage[]
 
   @@unique([flightLegId, externalReference])
   @@index([flightLegId])
@@ -706,20 +913,20 @@ model FlightPlanReference {
 }
 
 model DispatchPackage {
-  id                     String                    @id @default(cuid())
-  flightLegId             String                    @unique
-  weatherBriefingId       String?
-  notamSnapshotId         String?
-  flightPlanReferenceId   String?
-  performanceData         Json?
-  createdById             String?
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime                  @updatedAt
-  flightLeg               FlightLeg                 @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
-  weatherBriefing         WeatherBriefingSnapshot?  @relation(fields: [weatherBriefingId], references: [id], onDelete: SetNull)
-  notamSnapshot           NotamSnapshot?            @relation(fields: [notamSnapshotId], references: [id], onDelete: SetNull)
-  flightPlanReference     FlightPlanReference?      @relation(fields: [flightPlanReferenceId], references: [id], onDelete: SetNull)
-  createdBy               User?                     @relation("DispatchPackageCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  id                    String                   @id @default(cuid())
+  flightLegId           String                   @unique
+  weatherBriefingId     String?
+  notamSnapshotId       String?
+  flightPlanReferenceId String?
+  performanceData       Json?
+  createdById           String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  flightLeg             FlightLeg                @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  weatherBriefing       WeatherBriefingSnapshot? @relation(fields: [weatherBriefingId], references: [id], onDelete: SetNull)
+  notamSnapshot         NotamSnapshot?           @relation(fields: [notamSnapshotId], references: [id], onDelete: SetNull)
+  flightPlanReference   FlightPlanReference?     @relation(fields: [flightPlanReferenceId], references: [id], onDelete: SetNull)
+  createdBy             User?                    @relation("DispatchPackageCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([weatherBriefingId])
   @@index([notamSnapshotId])
@@ -728,7 +935,7 @@ model DispatchPackage {
 }
 
 model CrewSchedule {
-  id           String      @id @default(cuid())
+  id           String     @id @default(cuid())
   crewMemberId String
   stationId    String?
   date         DateTime
@@ -736,33 +943,33 @@ model CrewSchedule {
   startsAt     DateTime?
   endsAt       DateTime?
   notes        String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  crewMember   CrewMember  @relation(fields: [crewMemberId], references: [id], onDelete: Cascade)
-  station      Station?    @relation(fields: [stationId], references: [id], onDelete: SetNull)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  crewMember   CrewMember @relation(fields: [crewMemberId], references: [id], onDelete: Cascade)
+  station      Station?   @relation(fields: [stationId], references: [id], onDelete: SetNull)
 
   @@index([crewMemberId, date])
   @@index([date])
 }
 
 model CrewFlightLog {
-  id           String      @id @default(cuid())
+  id           String     @id @default(cuid())
   crewMemberId String
   flightId     String
   seatRole     SeatRole
   reportTime   DateTime?
   releaseTime  DateTime?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  crewMember   CrewMember  @relation(fields: [crewMemberId], references: [id], onDelete: Restrict)
-  flight       Flight      @relation(fields: [flightId], references: [id], onDelete: Restrict)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  crewMember   CrewMember @relation(fields: [crewMemberId], references: [id], onDelete: Restrict)
+  flight       Flight     @relation(fields: [flightId], references: [id], onDelete: Restrict)
 
   @@unique([crewMemberId, flightId, seatRole])
   @@index([flightId])
 }
 
 model Passenger {
-  id               String           @id @default(cuid())
+  id               String            @id @default(cuid())
   firstName        String
   lastName         String
   dateOfBirth      DateTime?
@@ -770,8 +977,8 @@ model Passenger {
   phone            String?
   idDocumentType   IdDocumentType?
   idDocumentNumber String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   flights          FlightPassenger[]
   manifestItems    ManifestItem[]
 
@@ -844,16 +1051,16 @@ model Alert {
 }
 
 model DutyRule {
-  id                    String   @id @default(cuid())
-  name                  String   @unique
-  description           String?
-  maxDutyHours          Int?
-  minRestHours          Int?
-  maxFlightHoursPerDay  Int?
-  maxConsecutiveDays    Int?
-  isActive              Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  name                 String   @unique
+  description          String?
+  maxDutyHours         Int?
+  minRestHours         Int?
+  maxFlightHoursPerDay Int?
+  maxConsecutiveDays   Int?
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@index([isActive])
 }

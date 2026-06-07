@@ -27,6 +27,8 @@ Build the first airworthiness foundation around these additive tables:
 The first implementation should not add CRUD. It should add schema, seed/backfill,
 health counts, DBML, and docs only.
 
+Implementation status: complete as an additive foundation.
+
 ## Relationship Decisions
 
 Use these cardinalities:
@@ -63,6 +65,22 @@ Prompt 35 should add:
 - DBML current/planning updates.
 - Project status and roadmap docs.
 
+Implementation status: complete.
+
+The gated production/demo backfill script is:
+
+```text
+scripts/backfill-airworthiness-demo.ts
+```
+
+Gate the script with:
+
+```text
+RUN_AIRWORTHINESS_BACKFILL=1
+```
+
+Default behavior must skip. Do not run broad seed against Render.
+
 ## Prompt 36 Scope
 
 Prompt 36 should add:
@@ -95,3 +113,14 @@ The foundation remains ready only when:
   render.
 - Local seed/backfill produces nonzero health counts.
 - Render backfill can run only through a gated environment flag.
+
+## Health Counts
+
+`/api/health` includes counts for:
+
+- `aircraftConfigurations`
+- `aircraftCapabilities`
+- `discrepancies`
+- `deferrals`
+- `maintenanceEvents`
+- `airworthinessReleases`
