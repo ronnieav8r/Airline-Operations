@@ -77,6 +77,38 @@ blocking, overrides, auth/signatures, provider integrations, file uploads,
 automatic snapshots, release-action changes, or `ReleasePackage` behavior were
 added.
 
+## Prompt 63: Release Evidence Action Panel QA
+
+Status: complete.
+
+Validated the Release Evidence Action Panel:
+
+- All 5 local FlightLeg detail pages returned 200 and rendered Release Evidence
+  Actions.
+- Each checked FlightLeg rendered cards for Manifest, Weight and balance,
+  Flight locating, Dispatch package, Airworthiness, and Preview snapshots.
+- Panel output included ready, needs-attention, and missing states across the
+  local QA set.
+- Each checked FlightLeg exposed links for Manifest, W&B, Locating, Dispatch,
+  and the snapshot diagnostic.
+- Representative workflow links returned 200:
+  - Manifest.
+  - W&B.
+  - Locating.
+  - Dispatch.
+  - Snapshot diagnostic.
+  - Latest snapshot detail where available.
+- Main local routes returned 200: dashboard, Operations Control, Flights,
+  Aircraft, Crew, Scheduling, release policy diagnostic, and release snapshot
+  diagnostic.
+- `/api/health` remained stable with 6 snapshots, 48 findings, 0 overrides,
+  and 0 audit events.
+
+Release behavior remains warning-only. No code defect was found. No hard
+blocking, overrides, auth/signatures, provider integrations, file uploads,
+automatic snapshots, release-action changes, or `ReleasePackage` behavior were
+added.
+
 ## Prompt 60: Release Snapshot Findings Detail QA
 
 Status: complete.

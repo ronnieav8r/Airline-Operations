@@ -628,3 +628,20 @@ Prompt 63: Release Evidence Action Panel QA
 Prompt 63 should validate the panel across complete, partial, and missing
 evidence states and confirm links route correctly. Keep it QA/docs only unless
 a defect is found.
+
+Implementation status: complete.
+
+Prompt 63 validated the Release Evidence Action Panel across local demo
+FlightLegs. The panel renders, includes all six evidence areas, exposes existing
+workflow/detail links, and release behavior remains warning-only.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 64: Release Evidence Next Workflow Planning
+```
+
+Prompt 64 should decide the next workflow improvement after the action panel.
+Compare manifest locking/amendments, W&B approval, locating position history,
+dispatch package review state, and release-attempt snapshot planning. Keep it
+planning/docs only.

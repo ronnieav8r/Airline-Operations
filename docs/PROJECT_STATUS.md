@@ -110,6 +110,7 @@ It has:
 66. Release snapshot findings detail QA.
 67. Release evidence workflow review.
 68. Release evidence action panel.
+69. Release evidence action panel QA.
 
 ## Current Data Model Boundaries
 
@@ -383,6 +384,11 @@ compact read-only panel near the top with Manifest, W&B, Locating, Dispatch,
 Airworthiness, and Preview Snapshot status/actions. It reuses existing data and
 does not add new mutation actions or change release behavior.
 
+Release evidence action panel QA is complete. Local QA confirmed the panel
+renders on all five demo FlightLegs, includes all six evidence areas, represents
+ready/needs-attention/missing states, and links to existing workflows and
+snapshot detail/diagnostic routes. Release behavior remains warning-only.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -554,15 +560,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 63: Release Evidence Action Panel QA
+Prompt 64: Release Evidence Next Workflow Planning
 ```
 
 Scope:
 
-- Validate the new Release Evidence Action Panel across FlightLegs with
-  complete, partial, and missing evidence states.
-- Confirm links route to existing workflows/detail pages.
-- Keep it QA/docs only unless a defect is found.
+- Decide the next workflow improvement after the evidence action panel.
+- Compare the safest candidates: manifest locking/amendments, W&B approval,
+  locating position history, dispatch package review state, or release-attempt
+  snapshot planning.
+- Planning/docs only. Do not implement new writes until the next prompt.
 
 Deferred follow-up to keep on the roadmap:
 
