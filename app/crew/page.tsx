@@ -2,6 +2,7 @@ import {
   AircraftType,
   DutyStatus,
   EmploymentStatus,
+  FlightLegStatus,
   FlightStatus,
   SeatRole,
 } from "@prisma/client";
@@ -20,9 +21,12 @@ type QualificationRow = CrewMemberRow["qualifications"][number];
 
 type UpcomingFlightRow = {
   id: string;
+  legacyFlightId: string;
+  flightLegId: string | null;
+  readSource: "FLIGHT_LEG" | "LEG_MISSING_FALLBACK_FLIGHT";
   flightNumber: string;
   scheduledDeparture: Date;
-  status: FlightStatus;
+  status: FlightStatus | FlightLegStatus;
   departureCode: string;
   arrivalCode: string;
   tailNumber: string;
@@ -99,7 +103,7 @@ function dutyBadgeClasses(status: DutyStatus): string {
   return "border-zinc-200 bg-zinc-50 text-zinc-600";
 }
 
-function flightBadgeClasses(status: FlightStatus): string {
+function flightBadgeClasses(status: FlightStatus | FlightLegStatus): string {
   if (status === FlightStatus.ENROUTE) {
     return "border-blue-200 bg-blue-50 text-blue-700";
   }
@@ -113,6 +117,22 @@ function flightBadgeClasses(status: FlightStatus): string {
     return "border-slate-200 bg-slate-50 text-slate-600";
   }
   return "border-emerald-200 bg-emerald-50 text-emerald-700";
+}
+
+function sourceBadgeClasses(readSource: UpcomingFlightRow["readSource"]): string {
+  if (readSource === "FLIGHT_LEG") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
+function sourceLabel(readSource: UpcomingFlightRow["readSource"]): string {
+  if (readSource === "FLIGHT_LEG") {
+    return "FlightLeg read";
+  }
+
+  return "Fallback Flight read";
 }
 
 function qualificationBadgeClasses(qualification: QualificationRow, now: Date): string {
@@ -336,6 +356,37 @@ async function getCrewRosterData() {
                 tailNumber: true,
               },
             },
+            flightLeg: {
+              select: {
+                id: true,
+                flightNumber: true,
+                scheduledDeparture: true,
+                status: true,
+                departureStation: {
+                  select: {
+                    code: true,
+                  },
+                },
+                arrivalStation: {
+                  select: {
+                    code: true,
+                  },
+                },
+                aircraftAssignments: {
+                  select: {
+                    aircraft: {
+                      select: {
+                        tailNumber: true,
+                      },
+                    },
+                  },
+                  orderBy: {
+                    assignedAt: "desc",
+                  },
+                  take: 1,
+                },
+              },
+            },
           },
         });
 
@@ -361,12 +412,19 @@ async function getCrewRosterData() {
       return [
         {
           id: flight.id,
-          flightNumber: flight.flightNumber,
-          scheduledDeparture: flight.scheduledDeparture,
-          status: flight.status,
-          departureCode: flight.departureStation.code,
-          arrivalCode: flight.arrivalStation.code,
-          tailNumber: flight.aircraft.tailNumber,
+          legacyFlightId: flight.id,
+          flightLegId: flight.flightLeg?.id ?? null,
+          readSource: flight.flightLeg
+            ? ("FLIGHT_LEG" as const)
+            : ("LEG_MISSING_FALLBACK_FLIGHT" as const),
+          flightNumber: flight.flightLeg?.flightNumber ?? flight.flightNumber,
+          scheduledDeparture: flight.flightLeg?.scheduledDeparture ?? flight.scheduledDeparture,
+          status: flight.flightLeg?.status ?? flight.status,
+          departureCode: flight.flightLeg?.departureStation.code ?? flight.departureStation.code,
+          arrivalCode: flight.flightLeg?.arrivalStation.code ?? flight.arrivalStation.code,
+          tailNumber:
+            flight.flightLeg?.aircraftAssignments[0]?.aircraft.tailNumber ??
+            flight.aircraft.tailNumber,
           seatRoles,
           coverage: flight.coverage,
         },
@@ -393,6 +451,12 @@ export default async function CrewPage() {
   ).length;
   const assignedCrew = roster.crewMembers.filter((crewMember) => crewMember.assignments.length > 0)
     .length;
+  const allUpcomingFlights = Array.from(roster.upcomingFlightsByCrewId.values()).flat();
+  const flightLegReads = allUpcomingFlights.filter((flight) => flight.readSource === "FLIGHT_LEG")
+    .length;
+  const fallbackFlightReads = allUpcomingFlights.filter(
+    (flight) => flight.readSource === "LEG_MISSING_FALLBACK_FLIGHT",
+  ).length;
   const warningCount = roster.crewMembers.reduce((count, crewMember) => {
     const assignmentWarnings = crewMember.assignments.flatMap((assignment) =>
       getMissingAssignmentQualifications(assignment, crewMember.qualifications, roster.now),
@@ -422,7 +486,7 @@ export default async function CrewPage() {
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Crew members</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
@@ -442,6 +506,14 @@ export default async function CrewPage() {
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {assignedCrew} / {warningCount}
             </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">FlightLeg reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">{flightLegReads}</p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Fallback reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">{fallbackFlightReads}</p>
           </article>
         </section>
 
@@ -605,6 +677,13 @@ export default async function CrewPage() {
                                   {flight.tailNumber} |{" "}
                                   {flight.seatRoles.map(formatRoleLabel).join(", ")}
                                 </div>
+                                <span
+                                  className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceBadgeClasses(
+                                    flight.readSource,
+                                  )}`}
+                                >
+                                  {sourceLabel(flight.readSource)}
+                                </span>
                                 <span
                                   className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${coverageBadgeClasses(
                                     flight,

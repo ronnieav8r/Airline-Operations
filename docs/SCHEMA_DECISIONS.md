@@ -213,3 +213,8 @@ legacy Flight IDs for crew coverage resolution.
 Aircraft now follows the FlightLeg-backed read pattern for current/next flight
 context, while preserving aircraft-block crew assignments, qualification
 warnings, aircraft alerts, and legacy fallback.
+
+Crew now follows the FlightLeg-backed read pattern for upcoming coverage context,
+while preserving legacy Flight IDs for current coverage resolution and keeping
+aircraft-block assignment as the active crew source. The main read-only surfaces
+are now far enough along to begin planning the first FlightLeg write workflow.

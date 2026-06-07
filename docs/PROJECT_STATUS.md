@@ -49,6 +49,7 @@ It has:
 21. Release evidence read-only FlightLeg detail drilldown.
 22. Scheduling FlightLeg read migration.
 23. Aircraft FlightLeg read migration.
+24. Crew FlightLeg read migration.
 
 ## Current Data Model Boundaries
 
@@ -57,8 +58,9 @@ Do not rename it or split it without an approved read-migration slice.
 
 `FlightLeg` now exists as an additive foundation table. It is bridged to current
 rows by `FlightLeg.legacyFlightId`. `/`, `/operations-control`, `/flights`,
-`/scheduling`, and `/aircraft` now pilot FlightLeg reads with legacy `Flight`
-fallback; crew and existing APIs still read from current `Flight` paths.
+`/scheduling`, `/aircraft`, and `/crew` now pilot FlightLeg reads with legacy
+`Flight` fallback where needed. Existing coverage APIs still read from current
+`Flight` paths.
 
 Render has been backfilled with FlightLeg foundation records. The
 `RUN_FLIGHTLEG_BACKFILL` flag should remain `0` unless intentionally rerunning
@@ -181,16 +183,18 @@ Use the hidden parity diagnostic before adding write flows.
 Preferred next slice:
 
 ```text
-Prompt 18: FlightLeg read migration for Crew
+Prompt 19: FlightLeg create/edit workflow planning
 ```
 
 Scope:
 
-- Move Crew upcoming coverage/assignment context to the FlightLeg-backed pattern
-  with legacy `Flight` fallback where current APIs require it.
-- Keep Crew read-only.
-- Preserve crew roster, qualifications, duty status, and assignment display.
-- Keep release evidence detail read-only; do not add CRUD.
+- Decide the first real write workflow now that main read paths are FlightLeg-backed.
+- Preferred starting workflow: create/edit a FlightLeg with aircraft assignment
+  and operational-control record.
+- Keep release evidence, crew leg assignment, and dispatch workflows deferred
+  unless explicitly included.
+- Because this is still development-only, the workflow can be pragmatic, but it
+  should still protect relational integrity.
 
-Avoid adding CRUD screens until the remaining read-only pages are on the
-FlightLeg-backed read pattern.
+The cautious page-by-page read migration phase is effectively complete. The next
+phase should start real controlled workflows against `FlightLeg`.
