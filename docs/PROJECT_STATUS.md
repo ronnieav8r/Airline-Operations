@@ -263,6 +263,12 @@ under the aircraft-level airworthiness route.
 Use `docs/MAINTENANCE_EVENT_MUTATION_PLAN.md` for maintenance-event workflow
 planning.
 
+Use `docs/LEGACY_RECORD_IMPORT_PLAN.md` for the deferred old-record import
+lane. The future goal is a safe import method for legacy operational, aircraft,
+maintenance, crew, manifest, dispatch, and release records. Do not implement it
+yet; source formats, staging/dry-run behavior, idempotency keys, and target
+table mappings must be planned first.
+
 Crew coverage uses aircraft-block assignment:
 
 ```text
@@ -375,3 +381,17 @@ Scope:
 - Keep implementation, auth/signatures, and release blocking deferred until the
   policy is explicit.
 - Do not add hard release blocking until product policy is explicitly approved.
+
+Deferred follow-up to keep on the roadmap:
+
+```text
+Legacy record import planning
+```
+
+Scope:
+
+- Plan import formats, staging/dry-run behavior, idempotency keys, source
+  references, and target table mappings for old records.
+- Start with aircraft maintenance history only after the current
+  airworthiness workflows stabilize.
+- Do not build import execution until source data shape is known.
