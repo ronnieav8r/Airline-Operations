@@ -1,4 +1,5 @@
 import {
+  AirworthinessReleaseStatus,
   DeferralStatus,
   DiscrepancyStatus,
   MaintenanceEventStatus,
@@ -8,14 +9,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
+  createAirworthinessReleaseAction,
   createDeferralAction,
   createDiscrepancyAction,
   createMaintenanceEventAction,
+  updateAirworthinessReleaseAction,
   updateDeferralAction,
   updateDiscrepancyAction,
   updateMaintenanceEventAction,
 } from "@/app/aircraft/[aircraftId]/airworthiness/actions";
 import {
+  editableAirworthinessReleaseStatuses,
   editableDeferralStatuses,
   editableDiscrepancyStatuses,
   editableMaintenanceEventStatuses,
@@ -38,6 +42,7 @@ type PageProps = {
 type Discrepancy = AircraftAirworthinessWorkflowData["discrepancies"][number];
 type Deferral = AircraftAirworthinessWorkflowData["deferrals"][number];
 type MaintenanceEvent = AircraftAirworthinessWorkflowData["maintenanceEvents"][number];
+type AirworthinessRelease = AircraftAirworthinessWorkflowData["airworthinessReleases"][number];
 
 function firstSearchParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
@@ -121,6 +126,25 @@ function MaintenanceStatusBadge({ status }: { status: MaintenanceEventStatus | n
         : status === MaintenanceEventStatus.PLANNED
           ? "border-amber-200 bg-amber-50 text-amber-800"
           : "border-zinc-200 bg-zinc-50 text-zinc-500";
+
+  return (
+    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${classes}`}>
+      {status ?? "Missing"}
+    </span>
+  );
+}
+
+function AirworthinessReleaseStatusBadge({
+  status,
+}: {
+  status: AirworthinessReleaseStatus | null;
+}) {
+  const classes =
+    status === AirworthinessReleaseStatus.RELEASED
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : status === AirworthinessReleaseStatus.DRAFT
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : "border-zinc-200 bg-zinc-50 text-zinc-500";
 
   return (
     <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${classes}`}>
@@ -294,6 +318,29 @@ function MaintenanceEventStatusSelect({
         name="status"
       >
         {editableMaintenanceEventStatuses.map((status) => (
+          <option key={status} value={status}>
+            {status}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function AirworthinessReleaseStatusSelect({
+  defaultValue,
+}: {
+  defaultValue?: AirworthinessReleaseStatus;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-zinc-700">Status</span>
+      <select
+        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+        defaultValue={defaultValue ?? AirworthinessReleaseStatus.DRAFT}
+        name="status"
+      >
+        {editableAirworthinessReleaseStatuses.map((status) => (
           <option key={status} value={status}>
             {status}
           </option>
@@ -509,9 +556,66 @@ function MaintenanceEventForm({
   );
 }
 
+function AirworthinessReleaseForm({
+  action,
+  release,
+  submitLabel,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  release?: AirworthinessRelease;
+  submitLabel: string;
+}) {
+  return (
+    <form action={action} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Field
+          defaultValue={release?.releaseNumber ?? ""}
+          label="Release number"
+          name="releaseNumber"
+        />
+        <AirworthinessReleaseStatusSelect defaultValue={release?.status} />
+        <Field
+          defaultValue={toInputDateTime(release?.releasedAt)}
+          label="Released at"
+          name="releasedAt"
+          type="datetime-local"
+        />
+        <Field
+          defaultValue={toInputDateTime(release?.expiresAt)}
+          label="Expires at"
+          name="expiresAt"
+          type="datetime-local"
+        />
+      </div>
+      <div className="mt-3">
+        <TextArea
+          defaultValue={release?.releaseNotes}
+          label="Release notes"
+          name="releaseNotes"
+        />
+      </div>
+      <p className="mt-2 text-xs text-zinc-500">
+        Marking this record RELEASED will supersede prior current RELEASED
+        records for this aircraft. FlightRelease is not changed.
+      </p>
+      <div className="mt-3">
+        <button
+          className="rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+          type="submit"
+        >
+          {submitLabel}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function ContextCards({ aircraft }: { aircraft: AircraftAirworthinessWorkflowData }) {
   const configuration = aircraft.configurations[0] ?? null;
-  const release = aircraft.airworthinessReleases[0] ?? null;
+  const release =
+    aircraft.airworthinessReleases.find(
+      (item) => item.status === AirworthinessReleaseStatus.RELEASED,
+    ) ?? null;
   const latestMaintenance = aircraft.maintenanceEvents[0] ?? null;
   const capabilityCodes = aircraft.capabilities
     .map((capability) => capability.capabilityCode)
@@ -718,6 +822,57 @@ function MaintenanceEventList({
   );
 }
 
+function AirworthinessReleaseList({
+  aircraftId,
+  releases,
+}: {
+  aircraftId: string;
+  releases: AirworthinessRelease[];
+}) {
+  if (releases.length === 0) {
+    return <p className="text-sm text-zinc-600">No airworthiness releases recorded.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {releases.map((release) => (
+        <article className="rounded-md border border-zinc-200 bg-white p-3" key={release.id}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-zinc-950">{release.releaseNumber}</p>
+                <AirworthinessReleaseStatusBadge status={release.status} />
+                {release.flightLegId ? (
+                  <span className="text-xs text-zinc-500">FlightLeg snapshot</span>
+                ) : (
+                  <span className="text-xs text-zinc-500">Aircraft-current scope</span>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-zinc-500">
+                Released {toDateTimeLabel(release.releasedAt)} | Expires{" "}
+                {toDateTimeLabel(release.expiresAt)} | Updated{" "}
+                {toDateTimeLabel(release.updatedAt)}
+              </p>
+            </div>
+          </div>
+          {release.releaseNotes ? (
+            <p className="mt-2 rounded-md border border-zinc-200 bg-zinc-50 p-2 text-sm text-zinc-700">
+              {release.releaseNotes}
+            </p>
+          ) : null}
+          <div className="mt-3">
+            <AirworthinessReleaseForm
+              action={updateAirworthinessReleaseAction.bind(null, aircraftId, release.id)}
+              release={release}
+              submitLabel="Save airworthiness release"
+            />
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 export default async function AircraftAirworthinessPage({ params, searchParams }: PageProps) {
   const [{ aircraftId }, queryParams] = await Promise.all([params, searchParams]);
   const aircraft = await getAircraftAirworthinessWorkflowData(aircraftId);
@@ -735,6 +890,10 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
   const activeDeferrals = aircraft.deferrals.filter(
     (deferral) => deferral.status === DeferralStatus.ACTIVE,
   );
+  const currentRelease =
+    aircraft.airworthinessReleases.find(
+      (release) => release.status === AirworthinessReleaseStatus.RELEASED,
+    ) ?? null;
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -758,8 +917,9 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
             {aircraft.tailNumber}
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-zinc-600">
-            Aircraft-level discrepancy workflow. Deferrals, maintenance events,
-            airworthiness release signing, and release blocking remain deferred.
+            Aircraft-level discrepancy, deferral, maintenance event, and
+            maintenance airworthiness release workflow. Operational FlightRelease
+            actions and hard release blocking remain separate.
           </p>
         </header>
 
@@ -798,6 +958,12 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
             <p className="text-sm text-zinc-500">Maintenance events</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {aircraft.maintenanceEvents.length}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-sm text-zinc-500">Current A/W release</p>
+            <p className="mt-2 text-sm font-semibold text-zinc-900">
+              {currentRelease?.releaseNumber ?? "Missing"}
             </p>
           </article>
         </section>
@@ -876,6 +1042,36 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
               aircraftId={aircraft.id}
               discrepancies={aircraft.discrepancies}
               events={aircraft.maintenanceEvents}
+            />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Create airworthiness release</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            This creates aircraft maintenance airworthiness release state only.
+            Leave release number blank to auto-generate one. FlightRelease is
+            not changed.
+          </p>
+          <div className="mt-4">
+            <AirworthinessReleaseForm
+              action={createAirworthinessReleaseAction.bind(null, aircraft.id)}
+              submitLabel="Create airworthiness release"
+            />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Airworthiness releases</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            RELEASED records represent the current aircraft release. Older
+            current RELEASED records are automatically marked SUPERSEDED when a
+            newer release becomes current.
+          </p>
+          <div className="mt-4">
+            <AirworthinessReleaseList
+              aircraftId={aircraft.id}
+              releases={aircraft.airworthinessReleases}
             />
           </div>
         </section>

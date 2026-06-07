@@ -127,10 +127,7 @@ const aircraftAirworthinessWorkflowSelect = {
     },
   },
   airworthinessReleases: {
-    where: {
-      status: AirworthinessReleaseStatus.RELEASED,
-    },
-    orderBy: [{ releasedAt: "desc" }],
+    orderBy: [{ createdAt: "desc" }],
     select: {
       id: true,
       releaseNumber: true,
@@ -139,8 +136,9 @@ const aircraftAirworthinessWorkflowSelect = {
       expiresAt: true,
       releaseNotes: true,
       flightLegId: true,
+      createdAt: true,
+      updatedAt: true,
     },
-    take: 3,
   },
 } satisfies Prisma.AircraftSelect;
 
@@ -185,4 +183,11 @@ export const editableMaintenanceEventStatuses = [
   MaintenanceEventStatus.IN_PROGRESS,
   MaintenanceEventStatus.COMPLETED,
   MaintenanceEventStatus.CANCELLED,
+];
+
+export const editableAirworthinessReleaseStatuses = [
+  AirworthinessReleaseStatus.DRAFT,
+  AirworthinessReleaseStatus.RELEASED,
+  AirworthinessReleaseStatus.VOIDED,
+  AirworthinessReleaseStatus.SUPERSEDED,
 ];

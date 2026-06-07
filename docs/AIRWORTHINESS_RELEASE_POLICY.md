@@ -65,12 +65,12 @@ Hard release blocking should wait for a later policy slice that defines which
 warnings become blockers, which authority contexts they apply to, and who can
 override them.
 
-## Prompt 43 Target
+## Prompt 43 Status
 
-Prompt 43 should add aircraft-level airworthiness release create/edit under
+Prompt 43 added aircraft-level airworthiness release create/edit under
 `/aircraft/[aircraftId]/airworthiness`.
 
-Minimum behavior:
+Implemented behavior:
 
 - Create/edit `AirworthinessRelease`.
 - Support `DRAFT`, `RELEASED`, `VOIDED`, and `SUPERSEDED`.
@@ -81,6 +81,10 @@ Minimum behavior:
 - Support optional `expiresAt` and `releaseNotes`.
 - Keep `releasedById` null.
 - Do not mutate `FlightRelease`.
+
+Prompt 44 should refresh warning-only readiness display text so expired,
+missing, and current aircraft airworthiness release states are clearer across
+Aircraft and FlightLeg detail views.
 
 ## Deferred
 

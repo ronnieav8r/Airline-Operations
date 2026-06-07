@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  AirworthinessReleaseStatus,
   DeferralStatus,
   DiscrepancyStatus,
   MaintenanceEventStatus,
@@ -48,6 +49,14 @@ type MaintenanceEventInput = {
   returnToServiceAt: Date | null;
   notes: string | null;
   discrepancyResolution: "NO_CHANGE" | "MARK_CLEARED";
+};
+
+type AirworthinessReleaseInput = {
+  releaseNumber: string | null;
+  status: AirworthinessReleaseStatus;
+  releasedAt: Date | null;
+  expiresAt: Date | null;
+  releaseNotes: string | null;
 };
 
 function getOptionalText(formData: FormData, key: string): string | null {
@@ -133,6 +142,21 @@ function parseMaintenanceEventStatus(formData: FormData): MaintenanceEventStatus
   throw new AirworthinessWorkflowError("Maintenance event status is not valid.");
 }
 
+function parseAirworthinessReleaseStatus(formData: FormData): AirworthinessReleaseStatus {
+  const value = getOptionalText(formData, "status") ?? AirworthinessReleaseStatus.DRAFT;
+
+  if (
+    value === AirworthinessReleaseStatus.DRAFT ||
+    value === AirworthinessReleaseStatus.RELEASED ||
+    value === AirworthinessReleaseStatus.VOIDED ||
+    value === AirworthinessReleaseStatus.SUPERSEDED
+  ) {
+    return value;
+  }
+
+  throw new AirworthinessWorkflowError("Airworthiness release status is not valid.");
+}
+
 function parseOptionalDateTime(formData: FormData, key: string, label: string): Date | null {
   const value = getOptionalText(formData, key);
 
@@ -216,6 +240,22 @@ function parseMaintenanceEventInput(formData: FormData): MaintenanceEventInput {
     notes: getOptionalText(formData, "notes"),
     discrepancyResolution:
       resolution === "MARK_CLEARED" ? "MARK_CLEARED" : "NO_CHANGE",
+  };
+}
+
+function parseAirworthinessReleaseInput(formData: FormData): AirworthinessReleaseInput {
+  const status = parseAirworthinessReleaseStatus(formData);
+  const enteredReleasedAt = parseOptionalDateTime(formData, "releasedAt", "Released at");
+
+  return {
+    releaseNumber: getOptionalText(formData, "releaseNumber")?.toUpperCase() ?? null,
+    status,
+    releasedAt:
+      status === AirworthinessReleaseStatus.RELEASED
+        ? enteredReleasedAt ?? new Date()
+        : enteredReleasedAt,
+    expiresAt: parseOptionalDateTime(formData, "expiresAt", "Expires at"),
+    releaseNotes: getOptionalText(formData, "releaseNotes"),
   };
 }
 
@@ -314,6 +354,28 @@ async function ensureMaintenanceEventBelongsToAircraft(
   }
 }
 
+async function ensureAirworthinessReleaseBelongsToAircraft(
+  tx: Prisma.TransactionClient,
+  aircraftId: string,
+  airworthinessReleaseId: string,
+) {
+  const release = await tx.airworthinessRelease.findFirst({
+    where: {
+      id: airworthinessReleaseId,
+      aircraftId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!release) {
+    throw new AirworthinessWorkflowError(
+      "Airworthiness release was not found for this aircraft.",
+    );
+  }
+}
+
 async function generateDiscrepancyNumber(
   tx: Prisma.TransactionClient,
   aircraftId: string,
@@ -396,6 +458,53 @@ async function generateMaintenanceNumber(
   }
 
   throw new AirworthinessWorkflowError("Could not generate a maintenance event number.");
+}
+
+async function generateAirworthinessReleaseNumber(
+  tx: Prisma.TransactionClient,
+  aircraftId: string,
+  tailNumber: string,
+) {
+  const dateKey = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  const prefix = `AWR-${tailNumber.replace(/\s+/g, "").toUpperCase()}-${dateKey}`;
+
+  for (let index = 1; index <= 999; index += 1) {
+    const candidate = `${prefix}-${String(index).padStart(2, "0")}`;
+    const existing = await tx.airworthinessRelease.findFirst({
+      where: {
+        aircraftId,
+        releaseNumber: candidate,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  throw new AirworthinessWorkflowError("Could not generate an airworthiness release number.");
+}
+
+async function supersedePriorReleasedAirworthinessReleases(
+  tx: Prisma.TransactionClient,
+  aircraftId: string,
+  currentReleaseId: string,
+) {
+  await tx.airworthinessRelease.updateMany({
+    where: {
+      aircraftId,
+      status: AirworthinessReleaseStatus.RELEASED,
+      id: {
+        not: currentReleaseId,
+      },
+    },
+    data: {
+      status: AirworthinessReleaseStatus.SUPERSEDED,
+    },
+  });
 }
 
 async function applyMaintenanceDiscrepancyResolution(
@@ -686,6 +795,91 @@ export async function updateMaintenanceEventAction(
       });
 
       await applyMaintenanceDiscrepancyResolution(tx, input);
+    });
+  } catch (error) {
+    redirect(`/aircraft/${aircraftId}/airworthiness?error=${encodeError(error)}`);
+  }
+
+  revalidateAirworthinessPaths(aircraftId);
+  redirect(`/aircraft/${aircraftId}/airworthiness`);
+}
+
+export async function createAirworthinessReleaseAction(
+  aircraftId: string,
+  formData: FormData,
+) {
+  try {
+    const input = parseAirworthinessReleaseInput(formData);
+
+    await prisma.$transaction(async (tx) => {
+      const aircraft = await ensureAircraftExists(tx, aircraftId);
+      const releaseNumber =
+        input.releaseNumber ??
+        (await generateAirworthinessReleaseNumber(tx, aircraft.id, aircraft.tailNumber));
+
+      const release = await tx.airworthinessRelease.create({
+        data: {
+          aircraftId,
+          releaseNumber,
+          status: input.status,
+          releasedAt: input.releasedAt,
+          expiresAt: input.expiresAt,
+          releaseNotes: input.releaseNotes,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (input.status === AirworthinessReleaseStatus.RELEASED) {
+        await supersedePriorReleasedAirworthinessReleases(tx, aircraftId, release.id);
+      }
+    });
+  } catch (error) {
+    redirect(`/aircraft/${aircraftId}/airworthiness?error=${encodeError(error)}`);
+  }
+
+  revalidateAirworthinessPaths(aircraftId);
+  redirect(`/aircraft/${aircraftId}/airworthiness`);
+}
+
+export async function updateAirworthinessReleaseAction(
+  aircraftId: string,
+  airworthinessReleaseId: string,
+  formData: FormData,
+) {
+  try {
+    const input = parseAirworthinessReleaseInput(formData);
+
+    await prisma.$transaction(async (tx) => {
+      const aircraft = await ensureAircraftExists(tx, aircraftId);
+      await ensureAirworthinessReleaseBelongsToAircraft(
+        tx,
+        aircraftId,
+        airworthinessReleaseId,
+      );
+      const releaseNumber =
+        input.releaseNumber ??
+        (await generateAirworthinessReleaseNumber(tx, aircraft.id, aircraft.tailNumber));
+
+      await tx.airworthinessRelease.update({
+        where: { id: airworthinessReleaseId },
+        data: {
+          releaseNumber,
+          status: input.status,
+          releasedAt: input.releasedAt,
+          expiresAt: input.expiresAt,
+          releaseNotes: input.releaseNotes,
+        },
+      });
+
+      if (input.status === AirworthinessReleaseStatus.RELEASED) {
+        await supersedePriorReleasedAirworthinessReleases(
+          tx,
+          aircraftId,
+          airworthinessReleaseId,
+        );
+      }
     });
   } catch (error) {
     redirect(`/aircraft/${aircraftId}/airworthiness?error=${encodeError(error)}`);

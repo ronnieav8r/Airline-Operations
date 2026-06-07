@@ -151,11 +151,18 @@ Decision: `AirworthinessRelease` is a maintenance/aircraft airworthiness
 release, not the full operational FlightLeg release. `FlightRelease` remains
 the operational release for a FlightLeg.
 
-Next implementation: Prompt 43 should add aircraft-level
+Prompt 43 implementation status: complete.
+
+Prompt 43 added aircraft-level
 `AirworthinessRelease` create/edit under
 `/aircraft/[aircraftId]/airworthiness`. New `RELEASED` records should supersede
-prior current `RELEASED` records for the same aircraft. Do not mutate
+prior current `RELEASED` records for the same aircraft. It does not mutate
 `FlightRelease`.
+
+Next implementation: Prompt 44 should refresh warning-only readiness displays
+for aircraft airworthiness release state. It should clarify missing, current,
+expired, voided, and superseded context without adding hard release blocking or
+new release mutations.
 
 ## Readiness Policy
 

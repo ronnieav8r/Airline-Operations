@@ -86,6 +86,7 @@ It has:
 46. Maintenance event mutation planning.
 47. Maintenance event mutation foundation.
 48. Airworthiness release planning.
+49. Airworthiness release foundation.
 
 ## Current Data Model Boundaries
 
@@ -226,6 +227,14 @@ create/edit under `/aircraft/[aircraftId]/airworthiness`; new `RELEASED`
 records should supersede prior current released records for that aircraft.
 `AirworthinessRelease.flightLegId`, auth/signatures, and hard release blocking
 remain deferred.
+
+Airworthiness release foundation is implemented. The aircraft-level
+airworthiness workflow can create/edit maintenance airworthiness releases,
+auto-generate release numbers, mark records `DRAFT`, `RELEASED`, `VOIDED`, or
+`SUPERSEDED`, set `releasedAt` when a record becomes `RELEASED`, and supersede
+older current released aircraft records. This does not mutate operational
+`FlightRelease`; `AirworthinessRelease.flightLegId`, auth/signatures, and hard
+release blocking remain deferred.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,

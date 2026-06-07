@@ -157,6 +157,12 @@ FlightLeg release. The first airworthiness release workflow should be
 aircraft-current, should leave `flightLegId` unused, and should supersede prior
 current released aircraft records when a newer release becomes `RELEASED`.
 
+Prompt 43 implementation status: complete. The aircraft-level workflow route
+now supports `AirworthinessRelease` create/edit with automatic release-number
+generation, `RELEASED` supersede behavior, manual `VOIDED`, and optional
+expiration and notes. `flightLegId`, `releasedById`, operational
+`FlightRelease` mutation, and hard release blocking remain deferred.
+
 ## Deferred
 
 Do not include these in the first airworthiness mutation prompts:
