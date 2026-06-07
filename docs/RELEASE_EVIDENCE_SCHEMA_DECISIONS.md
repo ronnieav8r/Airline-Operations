@@ -81,6 +81,17 @@ manifest item mutation and `DRAFT` to `READY` status are implemented. Manifest
 locking, amendment, passenger identity redesign, and release gating remain
 deferred.
 
+Updated transition note: flight locating CRUD is no longer generally deferred.
+Manual locating details and simple status transitions are implemented. Position
+history, overdue automation, provider integrations, and release gating remain
+deferred.
+
+Updated transition note: weight-and-balance mutation planning is complete. The
+first W&B write workflow should use manual `WeightBalanceRun` entry, link to
+the current manifest when present, store manual context in
+`calculationSnapshot`, and keep approval, automated calculations, aircraft
+configuration/capability schema, and release gating deferred.
+
 `PositionReport` belongs in a later locating-specific slice after the app needs
 position history, overdue checks, or actual flight-following workflows.
 

@@ -67,6 +67,7 @@ It has:
 30. Release evidence mutation planning.
 31. Manifest mutation foundation.
 32. Flight locating mutation foundation.
+33. Weight-and-balance mutation planning.
 
 ## Current Data Model Boundaries
 
@@ -103,6 +104,12 @@ workflow can create a locating record, edit responsible party, planned route,
 last known position, notes, and transition status to `FILED`, `ACTIVE`, or
 `CLOSED`. Position history, overdue automation, release gating, and dispatch
 mutation remain deferred.
+
+Weight-and-balance mutation planning is complete. The next W&B workflow should
+be manual entry only, should use the current `WeightBalanceRun` schema, should
+link to the current manifest when present, and should store human-entered
+context in `calculationSnapshot`. Approval, automated calculations, aircraft
+configuration/capability schema, and release gating remain deferred.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -242,12 +249,13 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 27: Weight-and-balance mutation planning
+Prompt 28: Weight-and-balance mutation foundation
 ```
 
 Scope:
 
-- Decide the first safe mutation path for `WeightBalanceRun`.
-- Use the existing manifest and calculation snapshot fields.
-- Keep aircraft configuration/capability schema, automated calculations, and
-  release gating deferred unless explicitly scoped.
+- Add manual W&B entry under `/operations-control/[flightLegId]`.
+- Create/edit `WeightBalanceRun` rows using existing schema only.
+- Support `DRAFT`, `CALCULATED`, and `VOIDED`.
+- Keep approval, automated calculations, aircraft configuration/capability
+  schema, and release gating deferred.

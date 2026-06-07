@@ -2,35 +2,38 @@
 
 Last updated: 2026-06-07
 
-This document chooses the first release-evidence write path after the
-FlightLeg create/edit and release-control slices.
+This document tracks the first release-evidence write path after the FlightLeg
+create/edit and release-control slices.
 
 ## Decision
 
-Build release-evidence mutation in controlled phases. Start with manifest
-mutation.
+Build release-evidence mutation in controlled phases. Manifest and locating
+mutation are complete. The next implementation slice is manual
+weight-and-balance mutation.
 
-Chosen first implementation slice:
+Chosen next implementation slice:
 
 ```text
-Prompt 25: Manifest mutation foundation
+Prompt 28: Weight-and-balance mutation foundation
 ```
 
-Implementation status: complete.
+Prompt 27 planning status: complete.
 
 Rationale:
 
-- `Manifest` is already attached one-to-one to `FlightLeg`.
-- `ManifestItem` is concrete and easy to validate without provider integrations.
-- Manifest readiness is a prerequisite for useful weight-and-balance work.
-- It provides visible operational value without touching dispatch automation.
-- It does not require a schema migration for the first workflow.
+- `WeightBalanceRun` already exists and can be mutated without a schema change.
+- Manual W&B entry gives Operations Control visible evidence before automated
+  aircraft configuration/capability work exists.
+- The workflow can link to the current manifest without changing the manifest
+  model.
+- Approval, automated calculations, and release gating need clearer policy and
+  should remain deferred.
 
 ## Phase Order
 
 1. Manifest mutation foundation. Complete.
 2. Flight locating mutation. Complete.
-3. Weight-and-balance run mutation. Next planning target.
+3. Weight-and-balance run mutation. Planning complete; implementation next.
 4. Manual dispatch-package evidence mutation.
 5. Release gating against required evidence.
 6. Provider integrations for weather, NOTAM, and flight plan data.
@@ -120,19 +123,35 @@ Minimum workflow:
 
 Implementation status: complete.
 
-## Next Slice: Prompt 27
+## Prompt 27 Decision
 
-The next planning slice should be:
+Prompt 27 answered the weight-and-balance planning questions:
+
+- First workflow is manual entry only.
+- A warning-free run should have a linked manifest, at least one manifest item,
+  takeoff weight, landing weight, and center of gravity.
+- The run should link to the current FlightLeg manifest when one exists.
+- `calculationSnapshot` should store manual-entry context such as method,
+  notes, manifest item count, and entry timestamp.
+- Approval remains deferred because there is no auth/user attribution or
+  release-blocking policy yet.
+
+Implementation status: complete.
+
+## Next Slice: Prompt 28
+
+The next implementation slice should be:
 
 ```text
-Prompt 27: Weight-and-balance mutation planning
+Prompt 28: Weight-and-balance mutation foundation
 ```
 
-Minimum planning questions:
+Minimum workflow:
 
-- Whether the first `WeightBalanceRun` workflow is manual entry only.
-- Which fields are required for a warning-free calculated run.
-- How it should reference the current manifest.
-- How to use `calculationSnapshot` until aircraft configuration and capability
-  tables exist.
-- Whether approval should be included or deferred.
+- Add `/operations-control/[flightLegId]/weight-balance`.
+- Create and edit manual `WeightBalanceRun` rows.
+- Link new runs to the current FlightLeg manifest when present.
+- Store manual notes and context in `calculationSnapshot`.
+- Support `DRAFT`, `CALCULATED`, and `VOIDED`.
+- Keep `APPROVED`, automated calculation, aircraft configuration/capability
+  data, and release gating deferred.
