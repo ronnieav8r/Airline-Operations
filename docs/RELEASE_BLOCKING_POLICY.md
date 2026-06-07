@@ -132,6 +132,25 @@ This lets the operator validate the policy visually before the app starts
 enforcing it. Prompt 48 should run focused QA on this preview before any
 authority-specific policy planning or hard-blocking implementation.
 
+## Prompt 48 Status
+
+Prompt 48 validated the non-enforcing release-blocking preview.
+
+Validation confirmed:
+
+- FlightLeg detail renders Release Readiness.
+- FlightLeg detail renders release-blocking preview markers.
+- Release Control remains visible.
+- Mark released, cancel release, and void release still mutate
+  `FlightRelease.status`.
+- The preview does not block release actions.
+
+Durable QA log:
+
+```text
+docs/RELEASE_BLOCKING_QA_LOG.md
+```
+
 ## Deferred
 
 - Actual hard release blocking.

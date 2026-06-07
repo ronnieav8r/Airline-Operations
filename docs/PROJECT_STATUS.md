@@ -91,6 +91,7 @@ It has:
 51. Airworthiness workflow QA and deploy readiness.
 52. Release blocking policy planning.
 53. Release blocking preview foundation.
+54. Release blocking preview QA.
 
 ## Current Data Model Boundaries
 
@@ -266,6 +267,13 @@ preview labels on each readiness checklist item, plus preview totals. Release
 action buttons remain available, and no schema, auth/signature, override,
 provider, file-upload, or actual blocking behavior was added.
 
+Release blocking preview QA is complete. Local validation passed for Prisma
+schema validation, typecheck, lint, and production build. Local route smoke
+passed for dashboard, Operations Control, FlightLeg detail, health, parity, and
+write-readiness. Local workflow smoke confirmed mark released, cancel release,
+and void release still mutate `FlightRelease.status`; the preview does not
+block release actions.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -422,17 +430,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 48: Release Blocking Preview QA
+Prompt 49: Authority-Specific Release Policy Planning
 ```
 
 Scope:
 
-- Run focused local QA on the FlightLeg detail release-readiness preview.
-- Confirm `Would block release`, `Would warn`, and `No blocker` labels render
-  as expected across representative FlightLegs.
-- Confirm Release Control buttons remain visible and usable.
-- Confirm no schema, auth/signature, override, provider, file-upload, or hard
-  blocking behavior was added.
+- Plan how release-blocking policy should vary by operating authority.
+- Compare Part 91, Part 91K, and Part 135-style expectations for manifest,
+  locating, dispatch/current-information, operational-control, aircraft
+  airworthiness, discrepancy, and deferral readiness.
+- Keep it docs-only. Do not enforce blocking, add schema, add auth/signatures,
+  add provider integrations, or add override workflow.
 
 Deferred follow-up to keep on the roadmap:
 
