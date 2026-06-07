@@ -1,6 +1,6 @@
 # Release Evidence Schema Decisions
 
-Last updated: 2026-06-06
+Last updated: 2026-06-07
 
 This document defines the additive release-evidence schema slice added after the
 `FlightLeg` read pilots. It is the source of truth for the Prompt 13 boundary.
@@ -14,6 +14,11 @@ fallbacks. Existing release records remain in `FlightRelease`, attached to
 
 Do not replace `FlightRelease` yet. A new `ReleasePackage` should wait until the
 release workflow transition is planned separately.
+
+Mutation planning now lives in `docs/RELEASE_EVIDENCE_MUTATION_PLAN.md`. The
+chosen first write workflow is manifest mutation because it can use the current
+`Manifest` and `ManifestItem` schema without provider integrations or passenger
+identity redesign.
 
 ## Prompt 13 First Additive Slice
 
@@ -70,6 +75,11 @@ These remain deferred:
 - Weather, NOTAM, or flight-plan provider integrations
 - Release CRUD, dispatch CRUD, manifest CRUD, or UI mutation flows
 - Current page rewiring beyond health/count visibility
+
+Updated transition note: manifest CRUD is no longer generally deferred. It is
+the selected next implementation target, scoped to manual manifest items and
+`DRAFT` to `READY` status. Manifest locking, amendment, passenger identity
+redesign, and release gating remain deferred.
 
 `PositionReport` belongs in a later locating-specific slice after the app needs
 position history, overdue checks, or actual flight-following workflows.

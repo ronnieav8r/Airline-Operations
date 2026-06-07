@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-06-06
+Last updated: 2026-06-07
 
 This document is the quick onboarding note for planner and builder chats. Read it
 before starting a new AeroOps slice.
@@ -62,6 +62,7 @@ It has:
 27. FlightLeg coverage API bridge.
 28. CrewLegAssignment snapshot sync on FlightLeg create/edit.
 29. Release-control actions foundation.
+30. Release evidence mutation planning.
 
 ## Current Data Model Boundaries
 
@@ -122,6 +123,9 @@ Use these DBML files for schema discussions:
 
 Use `docs/RELEASE_EVIDENCE_SCHEMA_DECISIONS.md` for the release-evidence
 boundary. `ReleasePackage` and `PositionReport` remain deferred.
+
+Use `docs/RELEASE_EVIDENCE_MUTATION_PLAN.md` for the release-evidence mutation
+sequence. The chosen first implementation workflow is manifest mutation.
 
 Crew coverage uses aircraft-block assignment:
 
@@ -222,13 +226,13 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 24: Release evidence mutation planning
+Prompt 25: Manifest mutation foundation
 ```
 
 Scope:
 
-- Decide the first safe mutation path for manifest, locating, dispatch package,
-  weather/NOTAM snapshots, or flight-plan references.
-- Keep provider integrations deferred unless explicitly scoped.
-- Preserve release-control actions as status-only until evidence workflows are
-  planned.
+- Add the first release-evidence write workflow for `Manifest` and
+  `ManifestItem`.
+- Support manual manifest items and marking the manifest `READY`.
+- Keep weight-and-balance, locating, dispatch package, provider integrations,
+  and release gating deferred.
