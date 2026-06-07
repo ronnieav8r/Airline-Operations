@@ -571,3 +571,19 @@ Prompt 60: Release Snapshot Findings Detail QA
 Prompt 60 should validate the snapshot findings detail page and links from
 FlightLeg detail and the internal diagnostic. Keep the slice QA/docs only
 unless a defect is found.
+
+Implementation status: complete.
+
+Prompt 60 validated the snapshot findings detail page, FlightLeg detail links,
+internal diagnostic links, and mismatched FlightLeg/snapshot not-found behavior.
+No code defect was found and release behavior remains warning-only.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 61: Release Evidence Workflow Review
+```
+
+Prompt 61 should review the current release evidence workflows end-to-end from
+FlightLeg detail, then identify the next smallest user-visible workflow
+improvement. Keep it planning/docs only unless a clear defect is found.

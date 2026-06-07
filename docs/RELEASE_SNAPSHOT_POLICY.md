@@ -34,6 +34,9 @@ Prompt 59 added a read-only snapshot findings detail page. It displays stored
 historical snapshot metadata and findings only; it does not recompute readiness
 or change release behavior.
 
+Prompt 60 validated the findings detail page, FlightLeg detail links, internal
+diagnostic links, and mismatched FlightLeg/snapshot not-found behavior.
+
 ## Snapshot Purpose
 
 Preview snapshots preserve what the release-readiness checklist showed at a

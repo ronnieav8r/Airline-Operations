@@ -107,6 +107,7 @@ It has:
 63. Release snapshot diagnostic readiness.
 64. Release snapshot drift QA.
 65. Release snapshot findings detail.
+66. Release snapshot findings detail QA.
 
 ## Current Data Model Boundaries
 
@@ -364,6 +365,11 @@ recent snapshot cards and the internal snapshot-readiness diagnostic link to
 this read-only detail view. Snapshot findings remain historical records; the
 page does not recompute readiness or change release behavior.
 
+Release snapshot findings detail QA is complete. Local QA confirmed the detail
+page renders stored snapshot metadata and findings, both link sources work, a
+mismatched FlightLeg/snapshot pair returns 404, and health still shows zero
+overrides and audit events. Release behavior remains warning-only.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -532,16 +538,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 60: Release Snapshot Findings Detail QA
+Prompt 61: Release Evidence Workflow Review
 ```
 
 Scope:
 
-- Validate the snapshot findings detail page, links from FlightLeg detail, and
-  links from `/internal/release-snapshot-readiness`.
-- Keep it read-only. Do not add hard blocking, overrides, auth/signatures,
-  provider integrations, file uploads, automatic snapshots, or release-action
-  changes.
+- Review the current release evidence workflows end-to-end from FlightLeg
+  detail: manifest, W&B, locating, dispatch, readiness, preview snapshots, and
+  snapshot findings.
+- Identify the next smallest user-visible workflow improvement.
+- Planning/docs only unless a clear defect is found.
 
 Deferred follow-up to keep on the roadmap:
 

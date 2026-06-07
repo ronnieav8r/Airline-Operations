@@ -76,3 +76,29 @@ Release behavior remains warning-only. No code defect was found. No hard
 blocking, overrides, auth/signatures, provider integrations, file uploads,
 automatic snapshots, release-action changes, or `ReleasePackage` behavior were
 added.
+
+## Prompt 60: Release Snapshot Findings Detail QA
+
+Status: complete.
+
+Validated the read-only snapshot findings detail page:
+
+- `/operations-control/cmq3xifbh0029v85guciafavn/snapshots/cmq40a23i0001v8j0tyvxqxfb`
+  returned 200 locally.
+- Detail page rendered Preview Snapshot Detail, Snapshot Findings, Policy,
+  Evidence, and finding details JSON.
+- FlightLeg detail page rendered a link to the snapshot findings detail route.
+- `/internal/release-snapshot-readiness` rendered a View findings link to the
+  latest snapshot detail route.
+- A mismatched FlightLeg/snapshot URL returned 404, confirming the route does
+  not show a snapshot that belongs to another FlightLeg.
+- `/api/health` returned 6 snapshots, 48 findings, 0 overrides, and 0 audit
+  events in the local QA database.
+- Main local routes returned 200: dashboard, Operations Control, release
+  snapshot diagnostic, release policy diagnostic, Flights, Aircraft, Crew, and
+  Scheduling.
+
+Release behavior remains warning-only. No code defect was found. No hard
+blocking, overrides, auth/signatures, provider integrations, file uploads,
+automatic snapshots, release-action changes, or `ReleasePackage` behavior were
+added.
