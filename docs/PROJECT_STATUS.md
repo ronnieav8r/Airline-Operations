@@ -45,6 +45,7 @@ It has:
 17. Dashboard FlightLeg read pilot.
 18. Release evidence schema planning.
 19. Additive release evidence schema foundation.
+20. Release evidence read-only summaries on Dashboard and Operations Control.
 
 ## Current Data Model Boundaries
 
@@ -177,15 +178,16 @@ Use the hidden parity diagnostic before adding write flows.
 Preferred next slice:
 
 ```text
-Prompt 14: Release evidence read-only summaries
+Prompt 15: Release evidence read-only detail drilldown
 ```
 
 Scope:
 
-- Add read-only release-evidence summaries to existing pages.
-- Keep all evidence data read-only.
-- Start with dashboard or Operations Control summary cards, not CRUD.
+- Add a read-only FlightLeg evidence detail view or expandable row for one leg.
+- Keep all evidence data read-only and avoid CRUD.
+- Include manifest items, W&B run, locating record, dispatch package, weather,
+  NOTAM, and flight-plan references.
 - Keep `FlightRelease` and deferred `ReleasePackage` boundaries intact.
 
-Avoid adding CRUD screens until the read-only summaries prove the evidence model
+Avoid adding CRUD screens until read-only detail views prove the evidence model
 is useful and correctly connected.

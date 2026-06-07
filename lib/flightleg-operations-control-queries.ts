@@ -1,4 +1,11 @@
-import { OperatingPart, Prisma, ReleaseStatus } from "@prisma/client";
+import {
+  FlightLocatingStatus,
+  ManifestStatus,
+  OperatingPart,
+  Prisma,
+  ReleaseStatus,
+  WeightBalanceStatus,
+} from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -64,6 +71,46 @@ const operationsControlSelect = {
         },
         take: 1,
       },
+      manifest: {
+        select: {
+          status: true,
+          items: {
+            select: { id: true },
+          },
+        },
+      },
+      weightBalanceRuns: {
+        select: {
+          status: true,
+          calculatedAt: true,
+          approvedAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+      flightLocatingRecord: {
+        select: {
+          status: true,
+          responsibleParty: true,
+          lastKnownPosition: true,
+        },
+      },
+      dispatchPackage: {
+        select: {
+          id: true,
+          weatherBriefingId: true,
+          notamSnapshotId: true,
+          flightPlanReferenceId: true,
+        },
+      },
+      flightPlanReferences: {
+        select: {
+          status: true,
+          filedAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
   },
   flight: {
@@ -122,6 +169,19 @@ export type OperationsControlLegRead = {
     tailNumber: string;
     type: string;
   } | null;
+  releaseEvidence: ReleaseEvidenceRead | null;
+};
+
+export type ReleaseEvidenceRead = {
+  manifestStatus: ManifestStatus | null;
+  manifestItemCount: number;
+  weightBalanceStatus: WeightBalanceStatus | null;
+  locatingStatus: FlightLocatingStatus | null;
+  dispatchPackageReady: boolean;
+  weatherSnapshotReady: boolean;
+  notamSnapshotReady: boolean;
+  flightPlanStatus: string | null;
+  flightPlanFiledAt: Date | null;
 };
 
 export type OperationsControlRecordRead = Omit<
@@ -142,12 +202,35 @@ export type OperationsControlData = {
     flightLegReads: number;
     fallbackFlightReads: number;
     unassignedRecords: number;
+    manifestReadyOrLocked: number;
+    weightBalanceCalculatedOrApproved: number;
+    locatingFiledOrActiveOrClosed: number;
+    dispatchPackagesReady: number;
     authorityMix: Array<{
       part: OperatingPart;
       count: number;
     }>;
   };
 };
+
+function buildReleaseEvidenceRead(
+  flightLeg: NonNullable<OperationsControlRecordPayload["flightLeg"]>,
+): ReleaseEvidenceRead {
+  const weightBalance = flightLeg.weightBalanceRuns[0] ?? null;
+  const flightPlan = flightLeg.flightPlanReferences[0] ?? null;
+
+  return {
+    manifestStatus: flightLeg.manifest?.status ?? null,
+    manifestItemCount: flightLeg.manifest?.items.length ?? 0,
+    weightBalanceStatus: weightBalance?.status ?? null,
+    locatingStatus: flightLeg.flightLocatingRecord?.status ?? null,
+    dispatchPackageReady: Boolean(flightLeg.dispatchPackage),
+    weatherSnapshotReady: Boolean(flightLeg.dispatchPackage?.weatherBriefingId),
+    notamSnapshotReady: Boolean(flightLeg.dispatchPackage?.notamSnapshotId),
+    flightPlanStatus: flightPlan?.status ?? null,
+    flightPlanFiledAt: flightPlan?.filedAt ?? null,
+  };
+}
 
 function normalizeRecord(record: OperationsControlRecordPayload): OperationsControlRecordRead {
   const { flight, flightLeg, ...controlRecord } = record;
@@ -166,6 +249,7 @@ function normalizeRecord(record: OperationsControlRecordPayload): OperationsCont
         departureStation: flightLeg.departureStation,
         arrivalStation: flightLeg.arrivalStation,
         aircraft,
+        releaseEvidence: buildReleaseEvidenceRead(flightLeg),
       },
     };
   }
@@ -182,6 +266,7 @@ function normalizeRecord(record: OperationsControlRecordPayload): OperationsCont
         departureStation: flight.departureStation,
         arrivalStation: flight.arrivalStation,
         aircraft: flight.aircraft,
+        releaseEvidence: null,
       },
     };
   }
@@ -211,6 +296,28 @@ function sortRecords(first: OperationsControlRecordRead, second: OperationsContr
   return first.createdAt.getTime() - second.createdAt.getTime();
 }
 
+function hasReadyManifest(record: OperationsControlRecordRead) {
+  return (
+    record.leg?.releaseEvidence?.manifestStatus === ManifestStatus.READY ||
+    record.leg?.releaseEvidence?.manifestStatus === ManifestStatus.LOCKED
+  );
+}
+
+function hasCalculatedWeightBalance(record: OperationsControlRecordRead) {
+  return (
+    record.leg?.releaseEvidence?.weightBalanceStatus === WeightBalanceStatus.CALCULATED ||
+    record.leg?.releaseEvidence?.weightBalanceStatus === WeightBalanceStatus.APPROVED
+  );
+}
+
+function hasFiledLocating(record: OperationsControlRecordRead) {
+  return (
+    record.leg?.releaseEvidence?.locatingStatus === FlightLocatingStatus.FILED ||
+    record.leg?.releaseEvidence?.locatingStatus === FlightLocatingStatus.ACTIVE ||
+    record.leg?.releaseEvidence?.locatingStatus === FlightLocatingStatus.CLOSED
+  );
+}
+
 export async function getFlightLegOperationsControlData(): Promise<OperationsControlData> {
   const rawRecords = await prisma.operationalControlRecord.findMany({
     select: operationsControlSelect,
@@ -231,6 +338,12 @@ export async function getFlightLegOperationsControlData(): Promise<OperationsCon
         (record) => record.readSource === "LEG_MISSING_FALLBACK_FLIGHT",
       ).length,
       unassignedRecords: records.filter((record) => record.readSource === "UNASSIGNED").length,
+      manifestReadyOrLocked: records.filter(hasReadyManifest).length,
+      weightBalanceCalculatedOrApproved: records.filter(hasCalculatedWeightBalance).length,
+      locatingFiledOrActiveOrClosed: records.filter(hasFiledLocating).length,
+      dispatchPackagesReady: records.filter(
+        (record) => record.leg?.releaseEvidence?.dispatchPackageReady,
+      ).length,
       authorityMix: buildAuthorityMix(records),
     },
   };

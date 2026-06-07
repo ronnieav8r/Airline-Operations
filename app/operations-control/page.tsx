@@ -38,6 +38,14 @@ function releaseBadgeClasses(status: ReleaseStatus | null): string {
   return "border-amber-200 bg-amber-50 text-amber-800";
 }
 
+function evidenceBadgeClasses(ready: boolean): string {
+  if (ready) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
 function sourceLabel(record: OperationsControlRecordRead): string {
   if (record.readSource === "FLIGHT_LEG") {
     return "FlightLeg read";
@@ -60,6 +68,57 @@ function sourceClasses(record: OperationsControlRecordRead): string {
   }
 
   return "border-zinc-200 bg-zinc-50 text-zinc-500";
+}
+
+function EvidenceCell({ record }: { record: OperationsControlRecordRead }) {
+  const evidence = record.leg?.releaseEvidence;
+
+  if (!evidence) {
+    return <span className="text-zinc-400">No FlightLeg evidence</span>;
+  }
+
+  const dispatchReady =
+    evidence.dispatchPackageReady &&
+    evidence.weatherSnapshotReady &&
+    evidence.notamSnapshotReady &&
+    Boolean(evidence.flightPlanStatus);
+
+  return (
+    <div className="min-w-52 space-y-1.5">
+      <div className="flex flex-wrap gap-1">
+        <span
+          className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${evidenceBadgeClasses(
+            Boolean(evidence.manifestStatus),
+          )}`}
+        >
+          Manifest {evidence.manifestStatus ?? "missing"} ({evidence.manifestItemCount})
+        </span>
+        <span
+          className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${evidenceBadgeClasses(
+            Boolean(evidence.weightBalanceStatus),
+          )}`}
+        >
+          W&B {evidence.weightBalanceStatus ?? "missing"}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        <span
+          className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${evidenceBadgeClasses(
+            Boolean(evidence.locatingStatus),
+          )}`}
+        >
+          Locate {evidence.locatingStatus ?? "missing"}
+        </span>
+        <span
+          className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${evidenceBadgeClasses(
+            dispatchReady,
+          )}`}
+        >
+          Dispatch {dispatchReady ? "ready" : "partial"}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 function FlightCell({ record }: { record: OperationsControlRecordRead }) {
@@ -143,6 +202,30 @@ export default async function OperationsControlPage() {
               {data.summary.fallbackFlightReads}
             </p>
           </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Manifests ready</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {data.summary.manifestReadyOrLocked}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">W&B calculated</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {data.summary.weightBalanceCalculatedOrApproved}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Locating filed/active</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {data.summary.locatingFiledOrActiveOrClosed}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Dispatch packages</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {data.summary.dispatchPackagesReady}
+            </p>
+          </article>
         </section>
 
         <section className="rounded-md border border-zinc-200 bg-white p-4">
@@ -198,6 +281,7 @@ export default async function OperationsControlPage() {
                     <th className="px-3 py-2 font-medium">Authority revision</th>
                     <th className="px-3 py-2 font-medium">Controlling entity</th>
                     <th className="px-3 py-2 font-medium">Release</th>
+                    <th className="px-3 py-2 font-medium">Evidence</th>
                     <th className="px-3 py-2 font-medium">Route</th>
                     <th className="px-3 py-2 font-medium">Aircraft</th>
                     <th className="px-3 py-2 font-medium">Scheduled</th>
@@ -245,6 +329,9 @@ export default async function OperationsControlPage() {
                             {toDateTimeLabel(record.release.releasedAt)}
                           </p>
                         ) : null}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <EvidenceCell record={record} />
                       </td>
                       <td className="px-3 py-2.5 text-zinc-700">
                         {record.leg?.departureStation && record.leg.arrivalStation ? (

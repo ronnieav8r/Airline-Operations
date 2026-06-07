@@ -4,8 +4,10 @@ import {
   AircraftStatus,
   FlightLegStatus,
   FlightStatus,
+  ManifestStatus,
   Prisma,
   SeatRole,
+  WeightBalanceStatus,
 } from "@prisma/client";
 
 import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
@@ -48,6 +50,36 @@ const dashboardFlightSelect = {
         },
         take: 1,
       },
+      manifest: {
+        select: {
+          status: true,
+          items: {
+            select: { id: true },
+          },
+        },
+      },
+      weightBalanceRuns: {
+        select: {
+          status: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 1,
+      },
+      flightLocatingRecord: {
+        select: {
+          status: true,
+        },
+      },
+      dispatchPackage: {
+        select: {
+          id: true,
+          weatherBriefingId: true,
+          notamSnapshotId: true,
+          flightPlanReferenceId: true,
+        },
+      },
     },
   },
 } satisfies Prisma.FlightSelect;
@@ -70,6 +102,16 @@ export type DashboardFlight = {
   arrivalCode: string;
   tailNumber: string;
   coverage: FlightCoverage | null;
+  releaseEvidence: DashboardReleaseEvidence | null;
+};
+
+export type DashboardReleaseEvidence = {
+  manifestStatus: ManifestStatus | null;
+  manifestItemCount: number;
+  weightBalanceStatus: WeightBalanceStatus | null;
+  locatingStatus: string | null;
+  dispatchPackageReady: boolean;
+  complete: boolean;
 };
 
 export type AlertRow = {
@@ -93,6 +135,8 @@ export type DashboardData = {
     crewCount: number;
     flightLegReads: number;
     fallbackFlightReads: number;
+    releaseEvidenceComplete: number;
+    releaseEvidenceMissing: number;
   };
   flights: DashboardFlight[];
   coverageGaps: Array<DashboardFlight & { missingRoles: SeatRole[] }>;
@@ -152,6 +196,33 @@ function buildFleetSnapshot(statusCounts: Array<{ status: AircraftStatus; count:
   return order.map((status) => ({ status, count: map[status] ?? 0 }));
 }
 
+function buildDashboardReleaseEvidence(
+  flightLeg: NonNullable<DashboardFlightPayload["flightLeg"]>,
+): DashboardReleaseEvidence {
+  const weightBalanceStatus = flightLeg.weightBalanceRuns[0]?.status ?? null;
+  const dispatchPackageReady = Boolean(
+    flightLeg.dispatchPackage?.weatherBriefingId &&
+      flightLeg.dispatchPackage.notamSnapshotId &&
+      flightLeg.dispatchPackage.flightPlanReferenceId,
+  );
+  const complete =
+    (flightLeg.manifest?.status === ManifestStatus.READY ||
+      flightLeg.manifest?.status === ManifestStatus.LOCKED) &&
+    (weightBalanceStatus === WeightBalanceStatus.CALCULATED ||
+      weightBalanceStatus === WeightBalanceStatus.APPROVED) &&
+    Boolean(flightLeg.flightLocatingRecord) &&
+    dispatchPackageReady;
+
+  return {
+    manifestStatus: flightLeg.manifest?.status ?? null,
+    manifestItemCount: flightLeg.manifest?.items.length ?? 0,
+    weightBalanceStatus,
+    locatingStatus: flightLeg.flightLocatingRecord?.status ?? null,
+    dispatchPackageReady,
+    complete,
+  };
+}
+
 function normalizeFlight(flight: DashboardFlightPayload): Omit<DashboardFlight, "coverage"> {
   if (flight.flightLeg) {
     return {
@@ -165,6 +236,7 @@ function normalizeFlight(flight: DashboardFlightPayload): Omit<DashboardFlight, 
       departureCode: flight.flightLeg.departureStation.code,
       arrivalCode: flight.flightLeg.arrivalStation.code,
       tailNumber: flight.flightLeg.aircraftAssignments[0]?.aircraft.tailNumber ?? flight.aircraft.tailNumber,
+      releaseEvidence: buildDashboardReleaseEvidence(flight.flightLeg),
     };
   }
 
@@ -179,6 +251,7 @@ function normalizeFlight(flight: DashboardFlightPayload): Omit<DashboardFlight, 
     departureCode: flight.departureStation.code,
     arrivalCode: flight.arrivalStation.code,
     tailNumber: flight.aircraft.tailNumber,
+    releaseEvidence: null,
   };
 }
 
@@ -281,6 +354,12 @@ export async function getDashboardData(): Promise<DashboardData> {
         .length,
       fallbackFlightReads: flightsWithCoverage.filter(
         (flight) => flight.readSource === "LEG_MISSING_FALLBACK_FLIGHT",
+      ).length,
+      releaseEvidenceComplete: flightsWithCoverage.filter(
+        (flight) => flight.releaseEvidence?.complete,
+      ).length,
+      releaseEvidenceMissing: flightsWithCoverage.filter(
+        (flight) => !flight.releaseEvidence?.complete,
       ).length,
     },
     flights: flightsWithCoverage,

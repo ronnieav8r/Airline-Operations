@@ -196,3 +196,7 @@ Release evidence has a separate implementation boundary in
 `WeatherBriefingSnapshot`, `NotamSnapshot`, and `FlightPlanReference` now exist
 as additive tables against `FlightLeg`. `ReleasePackage` and `PositionReport`
 should remain deferred until their workflows are planned.
+
+The first UI exposure for release evidence is read-only summary data on
+Dashboard and Operations Control. Do not add evidence CRUD or provider-backed
+fetches until the read-only summaries and a future detail view are validated.

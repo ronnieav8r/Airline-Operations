@@ -66,6 +66,30 @@ function severityBadgeClasses(severity: AlertSeverity): string {
   return "border-sky-200 bg-sky-50 text-sky-700";
 }
 
+function evidenceBadgeClasses(flight: DashboardFlight): string {
+  if (flight.releaseEvidence?.complete) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (flight.releaseEvidence) {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
+
+  return "border-zinc-200 bg-zinc-50 text-zinc-500";
+}
+
+function evidenceLabel(flight: DashboardFlight): string {
+  if (flight.releaseEvidence?.complete) {
+    return "Evidence ready";
+  }
+
+  if (flight.releaseEvidence) {
+    return "Evidence partial";
+  }
+
+  return "No evidence";
+}
+
 export default async function Home() {
   const dashboard = await getDashboardData();
 
@@ -84,7 +108,7 @@ export default async function Home() {
           </p>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-8">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Total flights today</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
@@ -133,6 +157,18 @@ export default async function Home() {
               {dashboard.statusSummary.fallbackFlightReads}
             </p>
           </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Evidence ready</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {dashboard.statusSummary.releaseEvidenceComplete}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Evidence partial/missing</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {dashboard.statusSummary.releaseEvidenceMissing}
+            </p>
+          </article>
         </section>
 
         <section className="grid gap-3 lg:grid-cols-2">
@@ -156,6 +192,7 @@ export default async function Home() {
                       <th className="px-3 py-2 font-medium">Aircraft</th>
                       <th className="px-3 py-2 font-medium">Status</th>
                       <th className="px-3 py-2 font-medium">Crew coverage</th>
+                      <th className="px-3 py-2 font-medium">Release evidence</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -215,6 +252,21 @@ export default async function Home() {
                             >
                               {coverageText}
                             </span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span
+                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${evidenceBadgeClasses(
+                                flight,
+                              )}`}
+                            >
+                              {evidenceLabel(flight)}
+                            </span>
+                            {flight.releaseEvidence ? (
+                              <p className="mt-1 text-xs text-zinc-500">
+                                M:{flight.releaseEvidence.manifestStatus ?? "none"} W&B:
+                                {flight.releaseEvidence.weightBalanceStatus ?? "none"}
+                              </p>
+                            ) : null}
                           </td>
                         </tr>
                       );
