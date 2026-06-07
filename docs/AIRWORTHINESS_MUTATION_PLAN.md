@@ -164,6 +164,13 @@ for aircraft airworthiness release state. It should clarify missing, current,
 expired, voided, and superseded context without adding hard release blocking or
 new release mutations.
 
+Prompt 44 implementation status: complete.
+
+Prompt 44 refreshed Aircraft and FlightLeg detail readiness displays so the app
+distinguishes current non-expired `RELEASED` aircraft airworthiness releases
+from expired current records, missing history, and latest non-current records.
+This remains warning-only and does not mutate `FlightRelease`.
+
 ## Readiness Policy
 
 Keep warning-first behavior.

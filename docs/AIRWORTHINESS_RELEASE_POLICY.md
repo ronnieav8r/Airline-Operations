@@ -86,6 +86,14 @@ Prompt 44 should refresh warning-only readiness display text so expired,
 missing, and current aircraft airworthiness release states are clearer across
 Aircraft and FlightLeg detail views.
 
+Prompt 44 implementation status: complete.
+
+Aircraft and FlightLeg detail now read recent aircraft airworthiness release
+history and separately identify the current `RELEASED` record. Missing release
+history, latest non-current records, and expired current releases are shown as
+warning-only readiness context. Operational `FlightRelease` actions remain
+available.
+
 ## Deferred
 
 Do not include these in Prompt 43:

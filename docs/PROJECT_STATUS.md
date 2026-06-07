@@ -87,6 +87,7 @@ It has:
 47. Maintenance event mutation foundation.
 48. Airworthiness release planning.
 49. Airworthiness release foundation.
+50. Airworthiness release readiness refresh.
 
 ## Current Data Model Boundaries
 
@@ -235,6 +236,13 @@ auto-generate release numbers, mark records `DRAFT`, `RELEASED`, `VOIDED`, or
 older current released aircraft records. This does not mutate operational
 `FlightRelease`; `AirworthinessRelease.flightLegId`, auth/signatures, and hard
 release blocking remain deferred.
+
+Airworthiness release readiness display refresh is implemented. Aircraft and
+FlightLeg detail now read recent aircraft release history and separately derive
+the current non-expired `RELEASED` maintenance airworthiness release. Missing
+history, latest non-current records, expired current records, discrepancies,
+and deferrals remain warning-only. Operational `FlightRelease` actions remain
+available.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,

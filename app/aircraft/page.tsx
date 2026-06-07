@@ -1,4 +1,5 @@
 import {
+  AirworthinessReleaseStatus,
   AircraftStatus,
   AlertSeverity,
   AlertType,
@@ -28,6 +29,46 @@ function toOptionalDateTime(value: Date | null | undefined): string {
   }
 
   return toDateTime(value);
+}
+
+function isCurrentAirworthinessRelease(
+  release: {
+    status: AirworthinessReleaseStatus;
+    expiresAt: Date | null;
+  } | null,
+): boolean {
+  return (
+    !!release &&
+    release.status === AirworthinessReleaseStatus.RELEASED &&
+    (!release.expiresAt || release.expiresAt > new Date())
+  );
+}
+
+function airworthinessReleaseStatusLabel(
+  latestRelease: {
+    releaseNumber: string;
+    status: AirworthinessReleaseStatus;
+    expiresAt: Date | null;
+  } | null,
+  currentRelease: {
+    releaseNumber: string;
+    status: AirworthinessReleaseStatus;
+    expiresAt: Date | null;
+  } | null,
+): string {
+  if (currentRelease && isCurrentAirworthinessRelease(currentRelease)) {
+    return `Current: ${currentRelease.releaseNumber}`;
+  }
+
+  if (currentRelease?.expiresAt && currentRelease.expiresAt <= new Date()) {
+    return `Expired: ${currentRelease.releaseNumber}`;
+  }
+
+  if (latestRelease) {
+    return `Latest ${latestRelease.status}: ${latestRelease.releaseNumber}`;
+  }
+
+  return "No airworthiness release history";
 }
 
 function formatAircraftType(value: string): string {
@@ -170,7 +211,7 @@ export default async function AircraftPage() {
             </p>
           </article>
           <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">A/W released</p>
+            <p className="text-sm text-zinc-500">Current A/W releases</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {summary.aircraftWithAirworthinessRelease}
             </p>
@@ -216,6 +257,13 @@ export default async function AircraftPage() {
               const currentConfiguration = item.configurations[0] ?? null;
               const latestMaintenanceEvent = item.maintenanceEvents[0] ?? null;
               const latestAirworthinessRelease = item.airworthinessReleases[0] ?? null;
+              const currentAirworthinessRelease =
+                item.airworthinessReleases.find(
+                  (release) => release.status === AirworthinessReleaseStatus.RELEASED,
+                ) ?? null;
+              const currentAirworthinessReleaseUsable = isCurrentAirworthinessRelease(
+                currentAirworthinessRelease,
+              );
               const activeCapabilityCodes = item.capabilities
                 .map((capability) => capability.capabilityCode)
                 .join(", ");
@@ -341,13 +389,17 @@ export default async function AircraftPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span
                           className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
-                            item.discrepancies.length === 0 && item.deferrals.length === 0
+                            item.discrepancies.length === 0 &&
+                            item.deferrals.length === 0 &&
+                            currentAirworthinessReleaseUsable
                               ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                               : "border-amber-200 bg-amber-50 text-amber-800"
                           }`}
                         >
-                          {item.discrepancies.length === 0 && item.deferrals.length === 0
-                            ? "No open A/W warnings"
+                          {item.discrepancies.length === 0 &&
+                          item.deferrals.length === 0 &&
+                          currentAirworthinessReleaseUsable
+                            ? "A/W current"
                             : "A/W warnings"}
                         </span>
                         <Link
@@ -377,12 +429,14 @@ export default async function AircraftPage() {
                       <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
                         <p className="font-semibold text-zinc-900">Release</p>
                         <p className="mt-1 text-zinc-700">
-                          {latestAirworthinessRelease?.releaseNumber ??
-                            "No released airworthiness record"}
+                          {airworthinessReleaseStatusLabel(
+                            latestAirworthinessRelease,
+                            currentAirworthinessRelease,
+                          )}
                         </p>
                         <p className="mt-1 text-xs text-zinc-500">
-                          Released {toOptionalDateTime(latestAirworthinessRelease?.releasedAt)} |
-                          Expires {toOptionalDateTime(latestAirworthinessRelease?.expiresAt)}
+                          Released {toOptionalDateTime(currentAirworthinessRelease?.releasedAt)} |
+                          Expires {toOptionalDateTime(currentAirworthinessRelease?.expiresAt)}
                         </p>
                       </div>
                       <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">

@@ -1,7 +1,6 @@
 import {
   AircraftCapabilityStatus,
   AircraftConfigurationStatus,
-  AirworthinessReleaseStatus,
   AssignmentStatus,
   DeferralStatus,
   DiscrepancyStatus,
@@ -138,10 +137,7 @@ const releaseEvidenceDetailSelect = {
             take: 1,
           },
           airworthinessReleases: {
-            where: {
-              status: AirworthinessReleaseStatus.RELEASED,
-            },
-            orderBy: [{ releasedAt: "desc" }],
+            orderBy: [{ createdAt: "desc" }],
             select: {
               releaseNumber: true,
               releasedAt: true,
@@ -149,8 +145,9 @@ const releaseEvidenceDetailSelect = {
               releaseNotes: true,
               status: true,
               flightLegId: true,
+              updatedAt: true,
             },
-            take: 1,
+            take: 5,
           },
         },
       },

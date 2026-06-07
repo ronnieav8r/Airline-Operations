@@ -197,10 +197,7 @@ const aircraftBoardSelect = {
     take: 1,
   },
   airworthinessReleases: {
-    where: {
-      status: AirworthinessReleaseStatus.RELEASED,
-    },
-    orderBy: [{ releasedAt: "desc" }],
+    orderBy: [{ createdAt: "desc" }],
     select: {
       id: true,
       releaseNumber: true,
@@ -208,8 +205,9 @@ const aircraftBoardSelect = {
       expiresAt: true,
       status: true,
       flightLegId: true,
+      updatedAt: true,
     },
-    take: 1,
+    take: 5,
   },
 } satisfies Prisma.AircraftSelect;
 
@@ -363,8 +361,12 @@ export async function getAircraftBoard(): Promise<AircraftBoardData> {
       aircraftWithOpenDiscrepancies: aircraft.filter(
         (item) => item.discrepancies.length > 0,
       ).length,
-      aircraftWithAirworthinessRelease: aircraft.filter(
-        (item) => item.airworthinessReleases.length > 0,
+      aircraftWithAirworthinessRelease: aircraft.filter((item) =>
+        item.airworthinessReleases.some(
+          (release) =>
+            release.status === AirworthinessReleaseStatus.RELEASED &&
+            (!release.expiresAt || release.expiresAt > now),
+        ),
       ).length,
     },
   };

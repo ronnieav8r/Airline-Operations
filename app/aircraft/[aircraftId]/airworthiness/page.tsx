@@ -74,6 +74,29 @@ function toInputDateTime(value: Date | null | undefined): string {
   return value.toISOString().slice(0, 16);
 }
 
+function isAirworthinessReleaseExpired(release: AirworthinessRelease | null): boolean {
+  return !!release?.expiresAt && release.expiresAt <= new Date();
+}
+
+function airworthinessReleaseStateLabel(
+  latestRelease: AirworthinessRelease | null,
+  currentRelease: AirworthinessRelease | null,
+): string {
+  if (currentRelease && !isAirworthinessReleaseExpired(currentRelease)) {
+    return `Current: ${currentRelease.releaseNumber}`;
+  }
+
+  if (currentRelease && isAirworthinessReleaseExpired(currentRelease)) {
+    return `Expired: ${currentRelease.releaseNumber}`;
+  }
+
+  if (latestRelease) {
+    return `Latest ${latestRelease.status}: ${latestRelease.releaseNumber}`;
+  }
+
+  return "No airworthiness release history";
+}
+
 function statusClasses(status: DiscrepancyStatus | null): string {
   if (status === DiscrepancyStatus.OPEN || status === DiscrepancyStatus.DEFERRED) {
     return "border-amber-200 bg-amber-50 text-amber-800";
@@ -612,6 +635,7 @@ function AirworthinessReleaseForm({
 
 function ContextCards({ aircraft }: { aircraft: AircraftAirworthinessWorkflowData }) {
   const configuration = aircraft.configurations[0] ?? null;
+  const latestRelease = aircraft.airworthinessReleases[0] ?? null;
   const release =
     aircraft.airworthinessReleases.find(
       (item) => item.status === AirworthinessReleaseStatus.RELEASED,
@@ -637,7 +661,7 @@ function ContextCards({ aircraft }: { aircraft: AircraftAirworthinessWorkflowDat
       <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
         <p className="text-sm font-semibold text-zinc-900">Airworthiness release</p>
         <p className="mt-2 text-sm text-zinc-700">
-          {release?.releaseNumber ?? "No released airworthiness record"}
+          {airworthinessReleaseStateLabel(latestRelease, release)}
         </p>
         <p className="mt-1 text-xs text-zinc-500">
           Released {toDateTimeLabel(release?.releasedAt)} | Expires{" "}
@@ -894,6 +918,8 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
     aircraft.airworthinessReleases.find(
       (release) => release.status === AirworthinessReleaseStatus.RELEASED,
     ) ?? null;
+  const currentReleaseUsable =
+    !!currentRelease && !isAirworthinessReleaseExpired(currentRelease);
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -963,7 +989,7 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
           <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-zinc-500">Current A/W release</p>
             <p className="mt-2 text-sm font-semibold text-zinc-900">
-              {currentRelease?.releaseNumber ?? "Missing"}
+              {currentReleaseUsable ? currentRelease.releaseNumber : "Needs attention"}
             </p>
           </article>
         </section>

@@ -163,6 +163,11 @@ generation, `RELEASED` supersede behavior, manual `VOIDED`, and optional
 expiration and notes. `flightLegId`, `releasedById`, operational
 `FlightRelease` mutation, and hard release blocking remain deferred.
 
+Prompt 44 implementation status: complete. Aircraft and FlightLeg detail now
+read recent airworthiness release history and derive warning-only readiness
+from the current non-expired `RELEASED` aircraft record. Expired, voided, and
+superseded context warns only; no operational release blocking was added.
+
 ## Deferred
 
 Do not include these in the first airworthiness mutation prompts:

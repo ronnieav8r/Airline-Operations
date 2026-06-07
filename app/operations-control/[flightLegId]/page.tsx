@@ -1,6 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { FlightLocatingStatus, ManifestStatus, ReleaseStatus, WeightBalanceStatus } from "@prisma/client";
+import {
+  AirworthinessReleaseStatus,
+  FlightLocatingStatus,
+  ManifestStatus,
+  ReleaseStatus,
+  WeightBalanceStatus,
+} from "@prisma/client";
 
 import {
   cancelFlightLegReleaseAction,
@@ -60,6 +66,10 @@ function statusBadgeClasses(value: string | null | undefined): string {
   }
 
   return "border-zinc-200 bg-zinc-50 text-zinc-600";
+}
+
+function releaseReadinessDate(value: Date | null | undefined): string {
+  return toDateTimeLabel(value ?? null);
 }
 
 function StatusBadge({ value }: { value: string | null | undefined }) {
@@ -150,10 +160,15 @@ function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[
   const aircraft = detail.aircraftAssignments[0]?.aircraft ?? null;
   const currentConfiguration = aircraft?.configurations[0] ?? null;
   const latestAirworthinessRelease = aircraft?.airworthinessReleases[0] ?? null;
-  const latestReleaseIsCurrent =
-    !!latestAirworthinessRelease &&
-    (!latestAirworthinessRelease.expiresAt ||
-      latestAirworthinessRelease.expiresAt.getTime() > Date.now());
+  const currentAirworthinessRelease =
+    aircraft?.airworthinessReleases.find(
+      (release) => release.status === AirworthinessReleaseStatus.RELEASED,
+    ) ?? null;
+  const currentAirworthinessReleaseExpired =
+    !!currentAirworthinessRelease?.expiresAt &&
+    currentAirworthinessRelease.expiresAt.getTime() <= Date.now();
+  const currentAirworthinessReleaseUsable =
+    !!currentAirworthinessRelease && !currentAirworthinessReleaseExpired;
   const latestUsableWeightBalanceRun =
     detail.weightBalanceRuns.find((run) => run.status !== WeightBalanceStatus.VOIDED) ?? null;
   const locating = detail.flightLocatingRecord;
@@ -181,7 +196,7 @@ function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[
   const airworthinessReady =
     !!aircraft &&
     !!currentConfiguration &&
-    latestReleaseIsCurrent &&
+    currentAirworthinessReleaseUsable &&
     aircraft.discrepancies.length === 0 &&
     aircraft.deferrals.length === 0;
 
@@ -189,11 +204,21 @@ function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[
     {
       label: "Airworthiness",
       message: airworthinessReady
-        ? `${aircraft.tailNumber} has current configuration and released airworthiness context.`
+        ? `${aircraft.tailNumber} has active configuration and current aircraft airworthiness release ${currentAirworthinessRelease?.releaseNumber ?? "record"}.`
         : [
             !aircraft ? "Assigned aircraft is missing." : null,
             aircraft && !currentConfiguration ? "No active configuration." : null,
-            aircraft && !latestReleaseIsCurrent ? "No current released airworthiness record." : null,
+            aircraft && !latestAirworthinessRelease
+              ? "No aircraft airworthiness release record."
+              : null,
+            aircraft && latestAirworthinessRelease && !currentAirworthinessRelease
+              ? `Latest aircraft airworthiness release ${latestAirworthinessRelease.releaseNumber} is ${latestAirworthinessRelease.status}; no current RELEASED record.`
+              : null,
+            aircraft && currentAirworthinessReleaseExpired
+              ? `Current aircraft airworthiness release ${currentAirworthinessRelease.releaseNumber} expired ${releaseReadinessDate(
+                  currentAirworthinessRelease.expiresAt,
+                )}.`
+              : null,
             aircraft && aircraft.discrepancies.length > 0
               ? `${aircraft.discrepancies.length} open/deferred discrepancy warning(s).`
               : null,
