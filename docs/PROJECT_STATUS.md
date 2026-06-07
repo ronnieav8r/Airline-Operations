@@ -76,6 +76,7 @@ It has:
 36. Manual dispatch-package mutation foundation.
 37. Release readiness guardrails planning.
 38. Release readiness guardrails foundation.
+39. Release evidence QA and Operations Control action discoverability.
 
 ## Current Data Model Boundaries
 
@@ -149,6 +150,11 @@ Release Control. The checklist covers manifest, W&B, locating, dispatch,
 weather, NOTAM, and flight-plan evidence. Release action buttons remain
 available. Hard release blocking, `ReleasePackage`, audit policy, and approval
 authority remain deferred.
+
+Operations Control now has a clear Actions column for FlightLeg-backed rows.
+The flight number links to detail, and row actions expose Detail, Edit,
+Manifest, W&B, Locating, and Dispatch. This was added after QA showed the prior
+detail/edit links were too easy to miss inside the evidence cell.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -288,12 +294,11 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 33: Release evidence QA and deploy verification
+Prompt 34: Post-deploy release evidence QA or next-domain planning
 ```
 
 Scope:
 
-- Re-run local workflow smoke checks across the completed release-evidence
-  workflows.
-- Verify Render deploy/routes after the pushed batch.
-- Do not add schema or new write workflows in the QA slice.
+- Confirm the Render deploy for Prompt 33 is live.
+- If stable, choose the next domain: release package, airworthiness, or crew
+  compliance planning.

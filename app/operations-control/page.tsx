@@ -140,6 +140,50 @@ function EvidenceCell({ record }: { record: OperationsControlRecordRead }) {
   );
 }
 
+function ActionLink({
+  href,
+  label,
+  primary = false,
+}: {
+  href: string;
+  label: string;
+  primary?: boolean;
+}) {
+  return (
+    <Link
+      className={
+        primary
+          ? "inline-flex rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800"
+          : "inline-flex rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+      }
+      href={href}
+    >
+      {label}
+    </Link>
+  );
+}
+
+function ActionCell({ record }: { record: OperationsControlRecordRead }) {
+  if (!record.leg?.id || record.readSource !== "FLIGHT_LEG") {
+    return <span className="text-xs text-zinc-400">No FlightLeg actions</span>;
+  }
+
+  const detailHref = `/operations-control/${record.leg.id}`;
+
+  return (
+    <div className="min-w-64">
+      <div className="flex flex-wrap gap-2">
+        <ActionLink href={detailHref} label="Detail" primary />
+        <ActionLink href={`${detailHref}/edit`} label="Edit" />
+        <ActionLink href={`${detailHref}/manifest`} label="Manifest" />
+        <ActionLink href={`${detailHref}/weight-balance`} label="W&B" />
+        <ActionLink href={`${detailHref}/locating`} label="Locating" />
+        <ActionLink href={`${detailHref}/dispatch`} label="Dispatch" />
+      </div>
+    </div>
+  );
+}
+
 function FlightCell({ record }: { record: OperationsControlRecordRead }) {
   if (!record.leg) {
     return (
@@ -152,7 +196,16 @@ function FlightCell({ record }: { record: OperationsControlRecordRead }) {
 
   return (
     <div>
-      <p className="font-medium text-zinc-900">{record.leg.flightNumber}</p>
+      {record.readSource === "FLIGHT_LEG" && record.leg.id ? (
+        <Link
+          className="font-medium text-sky-700 hover:text-sky-900"
+          href={`/operations-control/${record.leg.id}`}
+        >
+          {record.leg.flightNumber}
+        </Link>
+      ) : (
+        <p className="font-medium text-zinc-900">{record.leg.flightNumber}</p>
+      )}
       <p className="text-xs text-zinc-500">{record.leg.status}</p>
       <span
         className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceClasses(
@@ -305,6 +358,7 @@ export default async function OperationsControlPage() {
                 <thead>
                   <tr className="border-b border-zinc-200 text-zinc-500">
                     <th className="px-3 py-2 font-medium">Flight</th>
+                    <th className="px-3 py-2 font-medium">Actions</th>
                     <th className="px-3 py-2 font-medium">Operator</th>
                     <th className="px-3 py-2 font-medium">Operating part</th>
                     <th className="px-3 py-2 font-medium">Authority revision</th>
@@ -321,6 +375,9 @@ export default async function OperationsControlPage() {
                     <tr className="border-b border-zinc-100 align-top" key={record.id}>
                       <td className="px-3 py-2.5">
                         <FlightCell record={record} />
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <ActionCell record={record} />
                       </td>
                       <td className="px-3 py-2.5">
                         <p className="font-medium text-zinc-900">{record.operator.name}</p>

@@ -10,24 +10,26 @@ create/edit and release-control slices.
 Build release-evidence mutation in controlled phases. Manifest, locating,
 manual weight-and-balance, and manual dispatch-package mutation are complete.
 Release readiness guardrails planning is complete. The next implementation
-slice is complete. The next recommended work is a focused release-evidence QA
-and deploy verification pass before starting another domain.
+slice is complete. A focused release-evidence QA and discoverability pass is
+complete. The next recommended work is post-deploy verification and choosing
+the next domain.
 
-Chosen next follow-up:
+Latest QA follow-up:
 
 ```text
 Prompt 33: Release evidence QA and deploy verification
 ```
 
-Prompt 32 implementation status: complete.
+Prompt 33 implementation status: complete.
 
 Rationale:
 
 - The main manual evidence workflows now exist.
 - Warning-only release readiness guardrails now explain evidence readiness
   without blocking release actions.
-- A focused QA/deploy pass should verify the combined workflow before the next
-  domain area is added.
+- The combined workflow should be verified on Render after auto-deploy.
+- Operations Control action discoverability was improved after QA found the
+  evidence/detail links were too hidden.
 
 ## Phase Order
 
@@ -36,7 +38,7 @@ Rationale:
 3. Weight-and-balance run mutation. Complete.
 4. Manual dispatch-package evidence mutation. Complete.
 5. Release readiness guardrails. Complete.
-6. Release evidence QA and deploy verification. Recommended next.
+6. Release evidence QA and Operations Control discoverability. Complete.
 6. Provider integrations for weather, NOTAM, and flight plan data.
 
 ## Prompt 25 Boundary
@@ -288,3 +290,5 @@ Minimum workflow:
 - Confirm Render deploy succeeds from `origin main`.
 - Confirm Render routes return successfully.
 - Do not add schema or new write workflows in the QA slice.
+
+Implementation status: complete.
