@@ -587,3 +587,28 @@ Prompt 61: Release Evidence Workflow Review
 Prompt 61 should review the current release evidence workflows end-to-end from
 FlightLeg detail, then identify the next smallest user-visible workflow
 improvement. Keep it planning/docs only unless a clear defect is found.
+
+Implementation status: complete.
+
+Prompt 61 reviewed the current release evidence workflows end-to-end and found
+that the main remaining near-term gap is discoverability on FlightLeg detail.
+The current workflows exist, but the page is becoming a long evidence packet.
+
+Durable review:
+
+```text
+docs/RELEASE_EVIDENCE_WORKFLOW_REVIEW.md
+```
+
+Recommended next release evidence slice:
+
+```text
+Prompt 62: Release Evidence Action Panel
+```
+
+Prompt 62 should add a compact read-only action panel near the top of FlightLeg
+detail, summarizing Manifest, W&B, Locating, Dispatch, Airworthiness, and
+Preview Snapshots with status, a short message, and links to existing workflow
+or detail routes. Keep it UI-only and do not add new mutation actions, schema,
+hard blocking, overrides, auth/signatures, provider integrations, file uploads,
+automatic snapshots, or release-action changes.

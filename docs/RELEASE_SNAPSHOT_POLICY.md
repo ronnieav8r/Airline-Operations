@@ -37,6 +37,10 @@ or change release behavior.
 Prompt 60 validated the findings detail page, FlightLeg detail links, internal
 diagnostic links, and mismatched FlightLeg/snapshot not-found behavior.
 
+Prompt 61 reviewed the release evidence workflow and kept snapshot behavior
+unchanged. The recommended next improvement is UI discoverability on FlightLeg
+detail, not additional snapshot policy.
+
 ## Snapshot Purpose
 
 Preview snapshots preserve what the release-readiness checklist showed at a

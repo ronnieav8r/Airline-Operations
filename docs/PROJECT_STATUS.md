@@ -108,6 +108,7 @@ It has:
 64. Release snapshot drift QA.
 65. Release snapshot findings detail.
 66. Release snapshot findings detail QA.
+67. Release evidence workflow review.
 
 ## Current Data Model Boundaries
 
@@ -370,6 +371,12 @@ page renders stored snapshot metadata and findings, both link sources work, a
 mismatched FlightLeg/snapshot pair returns 404, and health still shows zero
 overrides and audit events. Release behavior remains warning-only.
 
+Release evidence workflow review is complete. The current evidence workflows
+are usable, but FlightLeg detail is now a long evidence packet. The next
+recommended user-visible improvement is a compact Release Evidence Action Panel
+near the top of FlightLeg detail that summarizes each evidence area and links
+to the existing workflows without adding new write behavior.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -408,6 +415,9 @@ boundary. `ReleasePackage` and `PositionReport` remain deferred.
 
 Use `docs/RELEASE_EVIDENCE_MUTATION_PLAN.md` for the release-evidence mutation
 sequence. The chosen first implementation workflow is manifest mutation.
+
+Use `docs/RELEASE_EVIDENCE_WORKFLOW_REVIEW.md` for the current end-to-end
+release evidence workflow review and the recommended next UI-only improvement.
 
 Use `docs/AIRWORTHINESS_MUTATION_PLAN.md` for the airworthiness mutation
 sequence. The chosen first implementation workflow is discrepancy mutation
@@ -538,16 +548,18 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 61: Release Evidence Workflow Review
+Prompt 62: Release Evidence Action Panel
 ```
 
 Scope:
 
-- Review the current release evidence workflows end-to-end from FlightLeg
-  detail: manifest, W&B, locating, dispatch, readiness, preview snapshots, and
-  snapshot findings.
-- Identify the next smallest user-visible workflow improvement.
-- Planning/docs only unless a clear defect is found.
+- Add a compact read-only action panel near the top of FlightLeg detail.
+- Summarize Manifest, W&B, Locating, Dispatch, Airworthiness, and Preview
+  Snapshots with status, a short message, and a link to the existing workflow
+  or detail route.
+- Keep it UI-only. Do not add new mutation actions, schema, hard blocking,
+  overrides, auth/signatures, provider integrations, file uploads, automatic
+  snapshots, or release-action changes.
 
 Deferred follow-up to keep on the roadmap:
 
