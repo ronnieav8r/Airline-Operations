@@ -90,6 +90,31 @@ Prompt 36 should add:
 - Warning-only airworthiness item in release readiness.
 - No mutation routes.
 
+Implementation status: complete.
+
+The read-only implementation surfaces assigned-aircraft configuration,
+capability, discrepancy, deferral, maintenance event, and airworthiness release
+context on `/aircraft` and `/operations-control/[flightLegId]`. The release
+readiness checklist treats airworthiness as warning-only. Release actions stay
+available even when warnings are present.
+
+## Prompt 37 Scope
+
+Prompt 37 should plan the first airworthiness mutation workflow before adding
+any writes.
+
+Planning questions:
+
+- Whether the first write surface belongs under Aircraft or Operations Control.
+- Whether discrepancy and deferral writes should ship together or as separate
+  slices.
+- Which audit fields are required without user auth/signatures.
+- Which warnings stay informational and which, if any, should become release
+  blockers later.
+
+No hard release blocking should be implemented without an explicit product
+decision.
+
 ## Deferred
 
 Do not include these in Prompts 35-36:

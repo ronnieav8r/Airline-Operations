@@ -147,6 +147,13 @@ type ReadinessItem = {
 
 function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[] {
   const manifest = detail.manifest;
+  const aircraft = detail.aircraftAssignments[0]?.aircraft ?? null;
+  const currentConfiguration = aircraft?.configurations[0] ?? null;
+  const latestAirworthinessRelease = aircraft?.airworthinessReleases[0] ?? null;
+  const latestReleaseIsCurrent =
+    !!latestAirworthinessRelease &&
+    (!latestAirworthinessRelease.expiresAt ||
+      latestAirworthinessRelease.expiresAt.getTime() > Date.now());
   const latestUsableWeightBalanceRun =
     detail.weightBalanceRuns.find((run) => run.status !== WeightBalanceStatus.VOIDED) ?? null;
   const locating = detail.flightLocatingRecord;
@@ -171,8 +178,33 @@ function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[
   const weatherReady = !!weather?.routeSummary;
   const notamReady = !!notam?.affectedStationCodes;
   const flightPlanReady = !!flightPlan?.externalReference && !!flightPlan.routeText;
+  const airworthinessReady =
+    !!aircraft &&
+    !!currentConfiguration &&
+    latestReleaseIsCurrent &&
+    aircraft.discrepancies.length === 0 &&
+    aircraft.deferrals.length === 0;
 
   return [
+    {
+      label: "Airworthiness",
+      message: airworthinessReady
+        ? `${aircraft.tailNumber} has current configuration and released airworthiness context.`
+        : [
+            !aircraft ? "Assigned aircraft is missing." : null,
+            aircraft && !currentConfiguration ? "No active configuration." : null,
+            aircraft && !latestReleaseIsCurrent ? "No current released airworthiness record." : null,
+            aircraft && aircraft.discrepancies.length > 0
+              ? `${aircraft.discrepancies.length} open/deferred discrepancy warning(s).`
+              : null,
+            aircraft && aircraft.deferrals.length > 0
+              ? `${aircraft.deferrals.length} active deferral warning(s).`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" "),
+      ready: airworthinessReady,
+    },
     {
       href: `/operations-control/${detail.id}/manifest`,
       label: "Manifest",
@@ -577,6 +609,106 @@ function DispatchSection({ detail }: { detail: ReleaseEvidenceDetail }) {
   );
 }
 
+function AirworthinessSection({ detail }: { detail: ReleaseEvidenceDetail }) {
+  const aircraft = detail.aircraftAssignments[0]?.aircraft ?? null;
+
+  if (!aircraft) {
+    return (
+      <p className="text-sm text-zinc-600">
+        No aircraft assignment is available for this FlightLeg.
+      </p>
+    );
+  }
+
+  const configuration = aircraft.configurations[0] ?? null;
+  const release = aircraft.airworthinessReleases[0] ?? null;
+  const maintenanceEvent = aircraft.maintenanceEvents[0] ?? null;
+  const capabilityCodes = aircraft.capabilities
+    .map((capability) => capability.capabilityCode)
+    .join(", ");
+
+  return (
+    <div>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+          <p className="text-sm font-semibold">Aircraft configuration</p>
+          <p className="mt-2 text-sm text-zinc-700">
+            {configuration?.configurationLabel ?? "No active configuration"}
+          </p>
+          <p className="mt-2 text-xs text-zinc-500">
+            Seats {configuration?.passengerSeatCount ?? aircraft.seats ?? "not set"} | Empty
+            weight {configuration?.emptyWeight?.toString() ?? "not set"} | CG{" "}
+            {configuration?.emptyWeightCg ?? "not set"}
+          </p>
+        </article>
+        <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+          <p className="text-sm font-semibold">Airworthiness release</p>
+          <p className="mt-2 text-sm text-zinc-700">
+            {release?.releaseNumber ?? "No released airworthiness record"}
+          </p>
+          <p className="mt-2 text-xs text-zinc-500">
+            Released {toDateTimeLabel(release?.releasedAt ?? null)} | Expires{" "}
+            {toDateTimeLabel(release?.expiresAt ?? null)}
+          </p>
+        </article>
+        <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+          <p className="text-sm font-semibold">Capabilities</p>
+          <p className="mt-2 text-sm text-zinc-700">
+            {capabilityCodes || "No active capability records"}
+          </p>
+        </article>
+        <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+          <p className="text-sm font-semibold">Latest maintenance event</p>
+          <p className="mt-2 text-sm text-zinc-700">
+            {maintenanceEvent
+              ? `${maintenanceEvent.maintenanceNumber} | ${maintenanceEvent.eventType}`
+              : "No completed maintenance event"}
+          </p>
+          <p className="mt-2 text-xs text-zinc-500">
+            Completed {toDateTimeLabel(maintenanceEvent?.completedAt ?? null)} | RTS{" "}
+            {toDateTimeLabel(maintenanceEvent?.returnToServiceAt ?? null)}
+          </p>
+        </article>
+      </div>
+
+      {aircraft.discrepancies.length > 0 || aircraft.deferrals.length > 0 ? (
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          <article className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <p className="font-semibold">Open/deferred discrepancies</p>
+            {aircraft.discrepancies.length === 0 ? (
+              <p className="mt-2">None.</p>
+            ) : (
+              <ul className="mt-2 space-y-1">
+                {aircraft.discrepancies.map((discrepancy) => (
+                  <li key={discrepancy.discrepancyNumber}>
+                    {discrepancy.discrepancyNumber}: {discrepancy.title} (
+                    {discrepancy.status})
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+          <article className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <p className="font-semibold">Active deferrals</p>
+            {aircraft.deferrals.length === 0 ? (
+              <p className="mt-2">None.</p>
+            ) : (
+              <ul className="mt-2 space-y-1">
+                {aircraft.deferrals.map((deferral) => (
+                  <li key={deferral.deferralNumber}>
+                    {deferral.deferralNumber}: {deferral.discrepancy.title}
+                    {deferral.dueAt ? ` due ${toDateTimeLabel(deferral.dueAt)}` : ""}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function SnapshotSection({ detail }: { detail: ReleaseEvidenceDetail }) {
   const dispatch = detail.dispatchPackage;
 
@@ -644,6 +776,13 @@ export default async function ReleaseEvidenceDetailPage({ params, searchParams }
         <ReleaseReadinessChecklist detail={detail} />
 
         <ReleaseControlActions detail={detail} />
+
+        <SectionCard
+          title="Airworthiness"
+          description="Read-only assigned-aircraft airworthiness context. Warnings do not block release actions yet."
+        >
+          <AirworthinessSection detail={detail} />
+        </SectionCard>
 
         <div className="grid gap-4 xl:grid-cols-2">
           <SectionCard

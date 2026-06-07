@@ -1,10 +1,16 @@
 import {
+  AircraftCapabilityStatus,
+  AircraftConfigurationStatus,
   AircraftStatus,
+  AirworthinessReleaseStatus,
   AlertSeverity,
   AlertStatus,
   AlertType,
+  DeferralStatus,
+  DiscrepancyStatus,
   FlightLegStatus,
   FlightStatus,
+  MaintenanceEventStatus,
   Prisma,
   SeatRole,
 } from "@prisma/client";
@@ -112,6 +118,99 @@ const aircraftBoardSelect = {
       },
     },
   },
+  configurations: {
+    where: {
+      status: AircraftConfigurationStatus.ACTIVE,
+    },
+    orderBy: [{ effectiveStart: "desc" }],
+    select: {
+      id: true,
+      configurationLabel: true,
+      passengerSeatCount: true,
+      emptyWeight: true,
+      emptyWeightCg: true,
+      effectiveStart: true,
+      effectiveEnd: true,
+      status: true,
+    },
+    take: 1,
+  },
+  capabilities: {
+    where: {
+      status: AircraftCapabilityStatus.ACTIVE,
+    },
+    orderBy: [{ capabilityCode: "asc" }],
+    select: {
+      id: true,
+      capabilityCode: true,
+      description: true,
+      effectiveEnd: true,
+      status: true,
+    },
+  },
+  discrepancies: {
+    where: {
+      status: { in: [DiscrepancyStatus.OPEN, DiscrepancyStatus.DEFERRED] },
+    },
+    orderBy: [{ reportedAt: "desc" }],
+    select: {
+      id: true,
+      discrepancyNumber: true,
+      title: true,
+      severity: true,
+      status: true,
+      reportedAt: true,
+    },
+  },
+  deferrals: {
+    where: {
+      status: DeferralStatus.ACTIVE,
+    },
+    orderBy: [{ dueAt: "asc" }],
+    select: {
+      id: true,
+      deferralNumber: true,
+      category: true,
+      dueAt: true,
+      status: true,
+      discrepancy: {
+        select: {
+          title: true,
+        },
+      },
+    },
+  },
+  maintenanceEvents: {
+    where: {
+      status: MaintenanceEventStatus.COMPLETED,
+    },
+    orderBy: [{ completedAt: "desc" }],
+    select: {
+      id: true,
+      maintenanceNumber: true,
+      eventType: true,
+      completedAt: true,
+      providerName: true,
+      returnToServiceAt: true,
+      status: true,
+    },
+    take: 1,
+  },
+  airworthinessReleases: {
+    where: {
+      status: AirworthinessReleaseStatus.RELEASED,
+    },
+    orderBy: [{ releasedAt: "desc" }],
+    select: {
+      id: true,
+      releaseNumber: true,
+      releasedAt: true,
+      expiresAt: true,
+      status: true,
+      flightLegId: true,
+    },
+    take: 1,
+  },
 } satisfies Prisma.AircraftSelect;
 
 type AircraftBoardPayload = Prisma.AircraftGetPayload<{
@@ -164,6 +263,10 @@ export type AircraftBoardSummary = {
   crewGaps: number;
   flightLegReads: number;
   fallbackFlightReads: number;
+  configuredAircraft: number;
+  aircraftWithActiveDeferrals: number;
+  aircraftWithOpenDiscrepancies: number;
+  aircraftWithAirworthinessRelease: number;
 };
 
 export type AircraftBoardData = {
@@ -255,6 +358,14 @@ export async function getAircraftBoard(): Promise<AircraftBoardData> {
             .length,
         0,
       ),
+      configuredAircraft: aircraft.filter((item) => item.configurations.length > 0).length,
+      aircraftWithActiveDeferrals: aircraft.filter((item) => item.deferrals.length > 0).length,
+      aircraftWithOpenDiscrepancies: aircraft.filter(
+        (item) => item.discrepancies.length > 0,
+      ).length,
+      aircraftWithAirworthinessRelease: aircraft.filter(
+        (item) => item.airworthinessReleases.length > 0,
+      ).length,
     },
   };
 }

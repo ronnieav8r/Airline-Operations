@@ -21,6 +21,14 @@ function toDateTime(value: Date): string {
   }).format(value);
 }
 
+function toOptionalDateTime(value: Date | null | undefined): string {
+  if (!value) {
+    return "Not set";
+  }
+
+  return toDateTime(value);
+}
+
 function formatAircraftType(value: string): string {
   return value.replaceAll("_", "-");
 }
@@ -154,6 +162,30 @@ export default async function AircraftPage() {
               {summary.fallbackFlightReads}
             </p>
           </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Configured</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {summary.configuredAircraft}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">A/W released</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {summary.aircraftWithAirworthinessRelease}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Open discrepancies</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {summary.aircraftWithOpenDiscrepancies}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Active deferrals</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {summary.aircraftWithActiveDeferrals}
+            </p>
+          </article>
         </section>
 
         {aircraft.length === 0 ? (
@@ -180,6 +212,12 @@ export default async function AircraftPage() {
               const maintenanceAlerts = item.alerts.filter(
                 (alert) => alert.type === AlertType.MAINTENANCE,
               );
+              const currentConfiguration = item.configurations[0] ?? null;
+              const latestMaintenanceEvent = item.maintenanceEvents[0] ?? null;
+              const latestAirworthinessRelease = item.airworthinessReleases[0] ?? null;
+              const activeCapabilityCodes = item.capabilities
+                .map((capability) => capability.capabilityCode)
+                .join(", ");
 
               return (
                 <article
@@ -293,6 +331,106 @@ export default async function AircraftPage() {
                       </div>
                     </section>
                   </div>
+
+                  <section className="mt-3 rounded-md border border-zinc-200 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-zinc-900">
+                        Airworthiness summary
+                      </h3>
+                      <span
+                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
+                          item.discrepancies.length === 0 && item.deferrals.length === 0
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-amber-200 bg-amber-50 text-amber-800"
+                        }`}
+                      >
+                        {item.discrepancies.length === 0 && item.deferrals.length === 0
+                          ? "No open A/W warnings"
+                          : "A/W warnings"}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
+                        <p className="font-semibold text-zinc-900">Configuration</p>
+                        <p className="mt-1 text-zinc-700">
+                          {currentConfiguration?.configurationLabel ?? "No active configuration"}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Seats{" "}
+                          {currentConfiguration?.passengerSeatCount ??
+                            item.seats ??
+                            "not set"}{" "}
+                          | Empty weight{" "}
+                          {currentConfiguration?.emptyWeight?.toString() ?? "not set"} | CG{" "}
+                          {currentConfiguration?.emptyWeightCg ?? "not set"}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
+                        <p className="font-semibold text-zinc-900">Release</p>
+                        <p className="mt-1 text-zinc-700">
+                          {latestAirworthinessRelease?.releaseNumber ??
+                            "No released airworthiness record"}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Released {toOptionalDateTime(latestAirworthinessRelease?.releasedAt)} |
+                          Expires {toOptionalDateTime(latestAirworthinessRelease?.expiresAt)}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
+                        <p className="font-semibold text-zinc-900">Capabilities</p>
+                        <p className="mt-1 text-zinc-700">
+                          {activeCapabilityCodes || "No active capability records"}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
+                        <p className="font-semibold text-zinc-900">Last maintenance</p>
+                        <p className="mt-1 text-zinc-700">
+                          {latestMaintenanceEvent
+                            ? `${latestMaintenanceEvent.maintenanceNumber} | ${latestMaintenanceEvent.eventType}`
+                            : "No completed maintenance event"}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Completed {toOptionalDateTime(latestMaintenanceEvent?.completedAt)} |
+                          RTS {toOptionalDateTime(latestMaintenanceEvent?.returnToServiceAt)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {item.discrepancies.length > 0 || item.deferrals.length > 0 ? (
+                      <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                          <p className="font-semibold">Open discrepancies</p>
+                          {item.discrepancies.length === 0 ? (
+                            <p className="mt-1 text-amber-800">None.</p>
+                          ) : (
+                            <ul className="mt-2 space-y-1">
+                              {item.discrepancies.map((discrepancy) => (
+                                <li key={discrepancy.id}>
+                                  {discrepancy.discrepancyNumber}: {discrepancy.title} (
+                                  {discrepancy.status})
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                          <p className="font-semibold">Active deferrals</p>
+                          {item.deferrals.length === 0 ? (
+                            <p className="mt-1 text-amber-800">None.</p>
+                          ) : (
+                            <ul className="mt-2 space-y-1">
+                              {item.deferrals.map((deferral) => (
+                                <li key={deferral.id}>
+                                  {deferral.deferralNumber}: {deferral.discrepancy.title}
+                                  {deferral.dueAt ? ` due ${toDateTime(deferral.dueAt)}` : ""}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+                  </section>
 
                   <section className="mt-3 rounded-md border border-zinc-200 p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">

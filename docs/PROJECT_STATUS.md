@@ -79,6 +79,7 @@ It has:
 39. Release evidence QA and Operations Control action discoverability.
 40. Airworthiness schema planning.
 41. Airworthiness additive schema foundation.
+42. Airworthiness read-only summaries.
 
 ## Current Data Model Boundaries
 
@@ -171,6 +172,12 @@ includes `AircraftConfiguration`, `AircraftCapability`, `Discrepancy`,
 `Deferral`, `MaintenanceEvent`, and `AirworthinessRelease`, with local demo
 seed data, a gated `RUN_AIRWORTHINESS_BACKFILL` script, health counts, and DBML
 updates. There is no airworthiness CRUD or release blocking yet.
+
+Aircraft and FlightLeg detail now show read-only airworthiness summaries. The
+FlightLeg release readiness checklist includes warning-only airworthiness
+context for assigned aircraft configuration, released airworthiness record,
+open/deferred discrepancies, and active deferrals. Release actions remain
+available; hard blocking and airworthiness mutation remain deferred.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -310,11 +317,12 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 36: Airworthiness read-only summaries
+Prompt 37: Airworthiness mutation planning
 ```
 
 Scope:
 
-- Show read-only aircraft airworthiness summaries.
-- Add warning-only airworthiness context to FlightLeg detail readiness.
-- Do not add airworthiness mutation or release blocking.
+- Plan the first narrow discrepancy/deferral maintenance workflow.
+- Decide whether the first write surface belongs under Aircraft or Operations Control.
+- Define validation and audit boundaries before creating airworthiness mutation routes.
+- Do not add hard release blocking until product policy is explicitly approved.

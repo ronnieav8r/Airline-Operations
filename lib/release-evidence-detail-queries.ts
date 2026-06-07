@@ -1,4 +1,13 @@
-import { AssignmentStatus, Prisma } from "@prisma/client";
+import {
+  AircraftCapabilityStatus,
+  AircraftConfigurationStatus,
+  AirworthinessReleaseStatus,
+  AssignmentStatus,
+  DeferralStatus,
+  DiscrepancyStatus,
+  MaintenanceEventStatus,
+  Prisma,
+} from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -51,9 +60,98 @@ const releaseEvidenceDetailSelect = {
       assignedAt: true,
       aircraft: {
         select: {
+          id: true,
           tailNumber: true,
           type: true,
           seats: true,
+          configurations: {
+            where: {
+              status: AircraftConfigurationStatus.ACTIVE,
+            },
+            orderBy: [{ effectiveStart: "desc" }],
+            select: {
+              configurationLabel: true,
+              passengerSeatCount: true,
+              emptyWeight: true,
+              emptyWeightCg: true,
+              effectiveStart: true,
+              effectiveEnd: true,
+              status: true,
+            },
+            take: 1,
+          },
+          capabilities: {
+            where: {
+              status: AircraftCapabilityStatus.ACTIVE,
+            },
+            orderBy: [{ capabilityCode: "asc" }],
+            select: {
+              capabilityCode: true,
+              description: true,
+              effectiveEnd: true,
+              status: true,
+            },
+          },
+          discrepancies: {
+            where: {
+              status: { in: [DiscrepancyStatus.OPEN, DiscrepancyStatus.DEFERRED] },
+            },
+            orderBy: [{ reportedAt: "desc" }],
+            select: {
+              discrepancyNumber: true,
+              title: true,
+              severity: true,
+              status: true,
+              reportedAt: true,
+            },
+          },
+          deferrals: {
+            where: {
+              status: DeferralStatus.ACTIVE,
+            },
+            orderBy: [{ dueAt: "asc" }],
+            select: {
+              deferralNumber: true,
+              category: true,
+              dueAt: true,
+              status: true,
+              discrepancy: {
+                select: {
+                  title: true,
+                },
+              },
+            },
+          },
+          maintenanceEvents: {
+            where: {
+              status: MaintenanceEventStatus.COMPLETED,
+            },
+            orderBy: [{ completedAt: "desc" }],
+            select: {
+              maintenanceNumber: true,
+              eventType: true,
+              completedAt: true,
+              providerName: true,
+              returnToServiceAt: true,
+              status: true,
+            },
+            take: 1,
+          },
+          airworthinessReleases: {
+            where: {
+              status: AirworthinessReleaseStatus.RELEASED,
+            },
+            orderBy: [{ releasedAt: "desc" }],
+            select: {
+              releaseNumber: true,
+              releasedAt: true,
+              expiresAt: true,
+              releaseNotes: true,
+              status: true,
+              flightLegId: true,
+            },
+            take: 1,
+          },
         },
       },
     },

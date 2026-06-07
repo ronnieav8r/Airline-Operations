@@ -122,8 +122,12 @@ Component state, reliability analytics, Service Difficulty Reports, and hard
 release blocking remain deferred until later maintenance-specific slices.
 
 Prompt 35 implementation status: complete as an additive schema foundation with
-seed/backfill, health counts, and DBML. Read-only summaries should come before
-any discrepancy/deferral mutation workflow.
+seed/backfill, health counts, and DBML.
+
+Prompt 36 implementation status: complete with read-only aircraft
+airworthiness summaries and warning-only FlightLeg release-readiness context.
+Discrepancy/deferral mutation planning should come before any airworthiness
+write workflow or release-blocking policy.
 
 ### 5. Crew, Training, Recency, Duty, and Rest
 
@@ -177,8 +181,8 @@ The next major schema-oriented slices should be:
 
 1. Flight-to-FlightLeg read comparison and parity checks
 2. Manifest, flight locating, and release package
-3. Maintenance discrepancy and airworthiness signals. Foundation implemented;
-   read-only summaries and then mutation planning should follow.
+3. Maintenance discrepancy and airworthiness signals. Foundation and read-only
+   summaries are implemented; mutation planning should follow.
 4. Crew training, checks, recency, duty, and rest
 5. Safety/SMS intake and corrective-action loop
 
