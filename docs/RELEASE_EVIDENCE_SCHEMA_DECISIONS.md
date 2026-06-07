@@ -76,10 +76,10 @@ These remain deferred:
 - Release CRUD, dispatch CRUD, manifest CRUD, or UI mutation flows
 - Current page rewiring beyond health/count visibility
 
-Updated transition note: manifest CRUD is no longer generally deferred. It is
-the selected next implementation target, scoped to manual manifest items and
-`DRAFT` to `READY` status. Manifest locking, amendment, passenger identity
-redesign, and release gating remain deferred.
+Updated transition note: manifest CRUD is no longer generally deferred. Manual
+manifest item mutation and `DRAFT` to `READY` status are implemented. Manifest
+locking, amendment, passenger identity redesign, and release gating remain
+deferred.
 
 `PositionReport` belongs in a later locating-specific slice after the app needs
 position history, overdue checks, or actual flight-following workflows.

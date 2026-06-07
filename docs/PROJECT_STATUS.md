@@ -20,6 +20,7 @@ It has:
 - Operations Control at `/operations-control`
 - FlightLeg create/edit at `/operations-control/new` and
   `/operations-control/[flightLegId]/edit`
+- Manifest management at `/operations-control/[flightLegId]/manifest`
 - Flights at `/flights`
 - Aircraft at `/aircraft`
 - Crew at `/crew`
@@ -63,6 +64,7 @@ It has:
 28. CrewLegAssignment snapshot sync on FlightLeg create/edit.
 29. Release-control actions foundation.
 30. Release evidence mutation planning.
+31. Manifest mutation foundation.
 
 ## Current Data Model Boundaries
 
@@ -87,6 +89,12 @@ current crew displays.
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
 release evidence or assemble dispatch packages.
+
+FlightLeg detail now links to manual manifest management. The manifest workflow
+can create a manifest, add/edit/remove manual manifest items, and mark the
+manifest `READY`. Manifest locking, amendments, passenger identity redesign,
+release gating, weight-and-balance, locating, and dispatch-package mutation
+remain deferred.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -226,13 +234,13 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 25: Manifest mutation foundation
+Prompt 26: Flight locating mutation foundation
 ```
 
 Scope:
 
-- Add the first release-evidence write workflow for `Manifest` and
-  `ManifestItem`.
-- Support manual manifest items and marking the manifest `READY`.
-- Keep weight-and-balance, locating, dispatch package, provider integrations,
-  and release gating deferred.
+- Add the next release-evidence write workflow for `FlightLocatingRecord`.
+- Support responsible party, planned route, last known position, notes, and
+  status transitions.
+- Keep position history, overdue automation, dispatch package, provider
+  integrations, and release gating deferred.

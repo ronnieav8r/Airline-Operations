@@ -16,6 +16,8 @@ Chosen first implementation slice:
 Prompt 25: Manifest mutation foundation
 ```
 
+Implementation status: complete.
+
 Rationale:
 
 - `Manifest` is already attached one-to-one to `FlightLeg`.
@@ -26,8 +28,8 @@ Rationale:
 
 ## Phase Order
 
-1. Manifest mutation foundation.
-2. Flight locating mutation.
+1. Manifest mutation foundation. Complete.
+2. Flight locating mutation. Next.
 3. Weight-and-balance run mutation.
 4. Manual dispatch-package evidence mutation.
 5. Release gating against required evidence.
@@ -99,3 +101,19 @@ Runtime checks:
 - Confirm `/operations-control`, `/api/health`,
   `/internal/flightleg-parity`, and `/internal/flightleg-write-readiness`
   still return 200.
+
+## Next Slice: Prompt 26
+
+The next implementation slice should be:
+
+```text
+Prompt 26: Flight locating mutation foundation
+```
+
+Minimum workflow:
+
+- Create a `FlightLocatingRecord` if one does not exist for the FlightLeg.
+- Edit `responsibleParty`, `plannedRoute`, `lastKnownPosition`, and notes.
+- Support simple status transitions: `NOT_STARTED`, `FILED`, `ACTIVE`, and
+  `CLOSED`.
+- Keep `OVERDUE` automation and position history deferred.

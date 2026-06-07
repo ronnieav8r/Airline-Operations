@@ -198,14 +198,32 @@ function ManifestSection({ detail }: { detail: ReleaseEvidenceDetail }) {
   const manifest = detail.manifest;
 
   if (!manifest) {
-    return <p className="text-sm text-zinc-600">No manifest record exists for this FlightLeg.</p>;
+    return (
+      <div>
+        <p className="text-sm text-zinc-600">No manifest record exists for this FlightLeg.</p>
+        <Link
+          className="mt-3 inline-flex rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+          href={`/operations-control/${detail.id}/manifest`}
+        >
+          Manage manifest
+        </Link>
+      </div>
+    );
   }
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2">
-        <StatusBadge value={manifest.status} />
-        <span className="text-sm text-zinc-500">{manifest.items.length} manifest items</span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge value={manifest.status} />
+          <span className="text-sm text-zinc-500">{manifest.items.length} manifest items</span>
+        </div>
+        <Link
+          className="inline-flex rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+          href={`/operations-control/${detail.id}/manifest`}
+        >
+          Manage manifest
+        </Link>
       </div>
       {manifest.items.length === 0 ? (
         <p className="mt-3 text-sm text-zinc-600">No manifest items recorded.</p>
