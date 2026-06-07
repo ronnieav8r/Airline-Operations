@@ -7,34 +7,32 @@ create/edit and release-control slices.
 
 ## Decision
 
-Build release-evidence mutation in controlled phases. Manifest and locating
-mutation are complete. The next implementation slice is manual
-weight-and-balance mutation.
+Build release-evidence mutation in controlled phases. Manifest, locating, and
+manual weight-and-balance mutation are complete. The next planning slice is
+manual dispatch-package mutation.
 
-Chosen next implementation slice:
+Chosen next planning slice:
 
 ```text
-Prompt 28: Weight-and-balance mutation foundation
+Prompt 29: Manual dispatch-package mutation planning
 ```
 
-Prompt 27 planning status: complete.
+Prompt 28 implementation status: complete.
 
 Rationale:
 
-- `WeightBalanceRun` already exists and can be mutated without a schema change.
-- Manual W&B entry gives Operations Control visible evidence before automated
-  aircraft configuration/capability work exists.
-- The workflow can link to the current manifest without changing the manifest
-  model.
-- Approval, automated calculations, and release gating need clearer policy and
-  should remain deferred.
+- The remaining dispatch-package tables already exist but need a narrow manual
+  workflow boundary before writes are added.
+- Weather, NOTAM, and flight-plan provider integrations remain deferred.
+- Release-readiness guardrails should wait until manual dispatch evidence can
+  be edited.
 
 ## Phase Order
 
 1. Manifest mutation foundation. Complete.
 2. Flight locating mutation. Complete.
-3. Weight-and-balance run mutation. Planning complete; implementation next.
-4. Manual dispatch-package evidence mutation.
+3. Weight-and-balance run mutation. Complete.
+4. Manual dispatch-package evidence mutation. Next planning target.
 5. Release gating against required evidence.
 6. Provider integrations for weather, NOTAM, and flight plan data.
 
@@ -155,3 +153,24 @@ Minimum workflow:
 - Support `DRAFT`, `CALCULATED`, and `VOIDED`.
 - Keep `APPROVED`, automated calculation, aircraft configuration/capability
   data, and release gating deferred.
+
+Implementation status: complete.
+
+## Next Slice: Prompt 29
+
+The next planning slice should be:
+
+```text
+Prompt 29: Manual dispatch-package mutation planning
+```
+
+Minimum planning questions:
+
+- Whether the first dispatch workflow should save all manual dispatch evidence
+  in one form.
+- Which weather, NOTAM, and flight-plan fields are required for warning-free
+  dispatch readiness.
+- How to create stable manual snapshot keys without provider integrations.
+- How `DispatchPackage.performanceData` should store manual context.
+- Whether release-readiness guardrails should be warning-only after dispatch
+  mutation is implemented.

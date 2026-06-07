@@ -22,6 +22,8 @@ It has:
   `/operations-control/[flightLegId]/edit`
 - Manifest management at `/operations-control/[flightLegId]/manifest`
 - Flight locating management at `/operations-control/[flightLegId]/locating`
+- Weight-and-balance management at
+  `/operations-control/[flightLegId]/weight-balance`
 - Flights at `/flights`
 - Aircraft at `/aircraft`
 - Crew at `/crew`
@@ -68,6 +70,7 @@ It has:
 31. Manifest mutation foundation.
 32. Flight locating mutation foundation.
 33. Weight-and-balance mutation planning.
+34. Weight-and-balance mutation foundation.
 
 ## Current Data Model Boundaries
 
@@ -110,6 +113,12 @@ be manual entry only, should use the current `WeightBalanceRun` schema, should
 link to the current manifest when present, and should store human-entered
 context in `calculationSnapshot`. Approval, automated calculations, aircraft
 configuration/capability schema, and release gating remain deferred.
+
+FlightLeg detail now links to manual weight-and-balance management. The W&B
+workflow can create/edit manual `WeightBalanceRun` rows, link new runs to the
+current manifest when present, store manual notes in `calculationSnapshot`,
+mark runs `CALCULATED`, and void runs. Approval, automated calculations,
+aircraft configuration/capability schema, and release gating remain deferred.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -249,13 +258,13 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 28: Weight-and-balance mutation foundation
+Prompt 29: Manual dispatch-package mutation planning
 ```
 
 Scope:
 
-- Add manual W&B entry under `/operations-control/[flightLegId]`.
-- Create/edit `WeightBalanceRun` rows using existing schema only.
-- Support `DRAFT`, `CALCULATED`, and `VOIDED`.
-- Keep approval, automated calculations, aircraft configuration/capability
-  schema, and release gating deferred.
+- Decide the first safe mutation path for manual `DispatchPackage` evidence.
+- Use existing `WeatherBriefingSnapshot`, `NotamSnapshot`,
+  `FlightPlanReference`, and `DispatchPackage` schema only.
+- Keep provider integrations and release blocking deferred unless explicitly
+  scoped.

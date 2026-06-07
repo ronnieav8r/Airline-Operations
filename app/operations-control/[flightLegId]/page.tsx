@@ -263,37 +263,57 @@ function ManifestSection({ detail }: { detail: ReleaseEvidenceDetail }) {
 
 function WeightBalanceSection({ detail }: { detail: ReleaseEvidenceDetail }) {
   if (detail.weightBalanceRuns.length === 0) {
-    return <p className="text-sm text-zinc-600">No weight and balance runs recorded.</p>;
+    return (
+      <div>
+        <p className="text-sm text-zinc-600">No weight and balance runs recorded.</p>
+        <Link
+          className="mt-3 inline-flex rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+          href={`/operations-control/${detail.id}/weight-balance`}
+        >
+          Manage W&B
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
-      {detail.weightBalanceRuns.map((run) => (
-        <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={run.id}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-medium">{run.runLabel}</p>
-            <StatusBadge value={run.status} />
-          </div>
-          <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-zinc-500">Takeoff weight</dt>
-              <dd className="font-medium">{run.takeoffWeight?.toString() ?? "Not set"}</dd>
+    <div>
+      <div className="flex justify-end">
+        <Link
+          className="inline-flex rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+          href={`/operations-control/${detail.id}/weight-balance`}
+        >
+          Manage W&B
+        </Link>
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        {detail.weightBalanceRuns.map((run) => (
+          <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={run.id}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-medium">{run.runLabel}</p>
+              <StatusBadge value={run.status} />
             </div>
-            <div>
-              <dt className="text-zinc-500">Landing weight</dt>
-              <dd className="font-medium">{run.landingWeight?.toString() ?? "Not set"}</dd>
-            </div>
-            <div>
-              <dt className="text-zinc-500">CG</dt>
-              <dd className="font-medium">{run.centerOfGravity ?? "Not set"}</dd>
-            </div>
-            <div>
-              <dt className="text-zinc-500">Calculated</dt>
-              <dd className="font-medium">{toDateTimeLabel(run.calculatedAt)}</dd>
-            </div>
-          </dl>
-        </article>
-      ))}
+            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-zinc-500">Takeoff weight</dt>
+                <dd className="font-medium">{run.takeoffWeight?.toString() ?? "Not set"}</dd>
+              </div>
+              <div>
+                <dt className="text-zinc-500">Landing weight</dt>
+                <dd className="font-medium">{run.landingWeight?.toString() ?? "Not set"}</dd>
+              </div>
+              <div>
+                <dt className="text-zinc-500">CG</dt>
+                <dd className="font-medium">{run.centerOfGravity ?? "Not set"}</dd>
+              </div>
+              <div>
+                <dt className="text-zinc-500">Calculated</dt>
+                <dd className="font-medium">{toDateTimeLabel(run.calculatedAt)}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }

@@ -92,6 +92,11 @@ the current manifest when present, store manual context in
 `calculationSnapshot`, and keep approval, automated calculations, aircraft
 configuration/capability schema, and release gating deferred.
 
+Updated transition note: weight-and-balance CRUD is no longer generally
+deferred. Manual `WeightBalanceRun` create/edit, `CALCULATED` transition, and
+`VOIDED` transition are implemented. Approval, automated calculations,
+aircraft configuration/capability schema, and release gating remain deferred.
+
 `PositionReport` belongs in a later locating-specific slice after the app needs
 position history, overdue checks, or actual flight-following workflows.
 
