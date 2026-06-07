@@ -71,6 +71,7 @@ It has:
 32. Flight locating mutation foundation.
 33. Weight-and-balance mutation planning.
 34. Weight-and-balance mutation foundation.
+35. Manual dispatch-package mutation planning.
 
 ## Current Data Model Boundaries
 
@@ -119,6 +120,12 @@ workflow can create/edit manual `WeightBalanceRun` rows, link new runs to the
 current manifest when present, store manual notes in `calculationSnapshot`,
 mark runs `CALCULATED`, and void runs. Approval, automated calculations,
 aircraft configuration/capability schema, and release gating remain deferred.
+
+Manual dispatch-package mutation planning is complete. The next dispatch
+workflow should save weather, NOTAM, flight-plan, and package notes in one
+manual form using existing schema only. Provider integrations, `ReleasePackage`,
+file uploads, aircraft performance calculations, and release gating remain
+deferred.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -258,13 +265,12 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 29: Manual dispatch-package mutation planning
+Prompt 30: Manual dispatch-package mutation foundation
 ```
 
 Scope:
 
-- Decide the first safe mutation path for manual `DispatchPackage` evidence.
-- Use existing `WeatherBriefingSnapshot`, `NotamSnapshot`,
-  `FlightPlanReference`, and `DispatchPackage` schema only.
-- Keep provider integrations and release blocking deferred unless explicitly
-  scoped.
+- Add manual dispatch evidence under `/operations-control/[flightLegId]`.
+- Upsert weather, NOTAM, flight-plan, and dispatch package rows using existing
+  schema only.
+- Keep provider integrations, `ReleasePackage`, and release gating deferred.

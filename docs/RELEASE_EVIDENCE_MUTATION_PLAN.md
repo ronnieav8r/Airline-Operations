@@ -8,21 +8,22 @@ create/edit and release-control slices.
 ## Decision
 
 Build release-evidence mutation in controlled phases. Manifest, locating, and
-manual weight-and-balance mutation are complete. The next planning slice is
-manual dispatch-package mutation.
+manual weight-and-balance mutation are complete. Manual dispatch-package
+mutation planning is complete. The next implementation slice is manual
+dispatch-package mutation.
 
-Chosen next planning slice:
+Chosen next implementation slice:
 
 ```text
-Prompt 29: Manual dispatch-package mutation planning
+Prompt 30: Manual dispatch-package mutation foundation
 ```
 
-Prompt 28 implementation status: complete.
+Prompt 29 planning status: complete.
 
 Rationale:
 
-- The remaining dispatch-package tables already exist but need a narrow manual
-  workflow boundary before writes are added.
+- The dispatch-package tables already exist and can be mutated without schema
+  changes.
 - Weather, NOTAM, and flight-plan provider integrations remain deferred.
 - Release-readiness guardrails should wait until manual dispatch evidence can
   be edited.
@@ -32,7 +33,7 @@ Rationale:
 1. Manifest mutation foundation. Complete.
 2. Flight locating mutation. Complete.
 3. Weight-and-balance run mutation. Complete.
-4. Manual dispatch-package evidence mutation. Next planning target.
+4. Manual dispatch-package evidence mutation. Planning complete; implementation next.
 5. Release gating against required evidence.
 6. Provider integrations for weather, NOTAM, and flight plan data.
 
@@ -174,3 +175,41 @@ Minimum planning questions:
 - How `DispatchPackage.performanceData` should store manual context.
 - Whether release-readiness guardrails should be warning-only after dispatch
   mutation is implemented.
+
+Implementation status: complete.
+
+## Prompt 29 Decision
+
+Prompt 29 answered the manual dispatch-package planning questions:
+
+- The first dispatch workflow should save all manual dispatch evidence in one
+  form.
+- A warning-free package should have linked weather, NOTAM, and flight-plan
+  records, plus route summary, affected station codes, external reference, and
+  route text.
+- Manual weather and NOTAM snapshots should use stable per-FlightLeg keys.
+- `DispatchPackage.performanceData` should store manual method, notes, and
+  timestamp context.
+- Release-readiness guardrails should be warning-only after dispatch mutation
+  is implemented.
+
+Implementation status: complete.
+
+## Next Slice: Prompt 30
+
+The next implementation slice should be:
+
+```text
+Prompt 30: Manual dispatch-package mutation foundation
+```
+
+Minimum workflow:
+
+- Add `/operations-control/[flightLegId]/dispatch`.
+- Save manual weather briefing evidence.
+- Save manual NOTAM snapshot evidence.
+- Save a manual flight-plan reference.
+- Upsert the FlightLeg `DispatchPackage` and link all three evidence records.
+- Store manual package notes in `DispatchPackage.performanceData`.
+- Keep provider integrations, release-package modeling, and release gating
+  deferred.

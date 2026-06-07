@@ -97,6 +97,13 @@ deferred. Manual `WeightBalanceRun` create/edit, `CALCULATED` transition, and
 `VOIDED` transition are implemented. Approval, automated calculations,
 aircraft configuration/capability schema, and release gating remain deferred.
 
+Updated transition note: manual dispatch-package mutation planning is complete.
+The first dispatch write workflow should upsert one manual weather snapshot,
+one manual NOTAM snapshot, one manual flight-plan reference, and the linked
+`DispatchPackage` using existing schema only. Provider integrations,
+`ReleasePackage`, file uploads, aircraft performance calculations, and release
+gating remain deferred.
+
 `PositionReport` belongs in a later locating-specific slice after the app needs
 position history, overdue checks, or actual flight-following workflows.
 
