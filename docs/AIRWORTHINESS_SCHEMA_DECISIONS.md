@@ -145,6 +145,11 @@ to a discrepancy, and may clear the linked discrepancy only through an explicit
 form choice. They should not clear deferrals or create airworthiness releases
 yet.
 
+Prompt 41 implementation status: complete. The aircraft-level workflow route
+now supports maintenance-event create/edit with optional discrepancy linking.
+Airworthiness release creation/signing still requires a planning slice before
+implementation.
+
 ## Deferred
 
 Do not include these in the first airworthiness mutation prompts:

@@ -128,6 +128,17 @@ Next implementation: Prompt 41 should add maintenance-event create/edit under
 `/aircraft/[aircraftId]/airworthiness`, with optional discrepancy linking and
 explicit discrepancy clearing. Airworthiness release signing remains deferred.
 
+Prompt 41 implementation status: complete.
+
+Next planning slice:
+
+```text
+Prompt 42: Airworthiness release planning
+```
+
+Prompt 42 should decide release creation/supersede/void policy before adding
+airworthiness release writes.
+
 ## Readiness Policy
 
 Keep warning-first behavior.

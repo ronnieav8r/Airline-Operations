@@ -1,16 +1,25 @@
-import { DeferralStatus, DiscrepancyStatus } from "@prisma/client";
+import {
+  DeferralStatus,
+  DiscrepancyStatus,
+  MaintenanceEventStatus,
+  MaintenanceEventType,
+} from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
   createDeferralAction,
   createDiscrepancyAction,
+  createMaintenanceEventAction,
   updateDeferralAction,
   updateDiscrepancyAction,
+  updateMaintenanceEventAction,
 } from "@/app/aircraft/[aircraftId]/airworthiness/actions";
 import {
   editableDeferralStatuses,
   editableDiscrepancyStatuses,
+  editableMaintenanceEventStatuses,
+  editableMaintenanceEventTypes,
   getAircraftAirworthinessWorkflowData,
   AircraftAirworthinessWorkflowData,
 } from "@/lib/airworthiness-workflow-queries";
@@ -28,6 +37,7 @@ type PageProps = {
 
 type Discrepancy = AircraftAirworthinessWorkflowData["discrepancies"][number];
 type Deferral = AircraftAirworthinessWorkflowData["deferrals"][number];
+type MaintenanceEvent = AircraftAirworthinessWorkflowData["maintenanceEvents"][number];
 
 function firstSearchParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
@@ -94,6 +104,23 @@ function DeferralStatusBadge({ status }: { status: DeferralStatus | null }) {
       : status === DeferralStatus.CLEARED
         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
         : "border-zinc-200 bg-zinc-50 text-zinc-500";
+
+  return (
+    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${classes}`}>
+      {status ?? "Missing"}
+    </span>
+  );
+}
+
+function MaintenanceStatusBadge({ status }: { status: MaintenanceEventStatus | null }) {
+  const classes =
+    status === MaintenanceEventStatus.COMPLETED
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : status === MaintenanceEventStatus.IN_PROGRESS
+        ? "border-blue-200 bg-blue-50 text-blue-700"
+        : status === MaintenanceEventStatus.PLANNED
+          ? "border-amber-200 bg-amber-50 text-amber-800"
+          : "border-zinc-200 bg-zinc-50 text-zinc-500";
 
   return (
     <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${classes}`}>
@@ -201,6 +228,74 @@ function DiscrepancySelect({ discrepancies }: { discrepancies: Discrepancy[] }) 
         {discrepancies.map((discrepancy) => (
           <option key={discrepancy.id} value={discrepancy.id}>
             {discrepancy.discrepancyNumber} | {discrepancy.title}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function OptionalDiscrepancySelect({
+  defaultValue,
+  discrepancies,
+}: {
+  defaultValue?: string | null;
+  discrepancies: Discrepancy[];
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-zinc-700">Linked discrepancy</span>
+      <select
+        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+        defaultValue={defaultValue ?? ""}
+        name="discrepancyId"
+      >
+        <option value="">No linked discrepancy</option>
+        {discrepancies.map((discrepancy) => (
+          <option key={discrepancy.id} value={discrepancy.id}>
+            {discrepancy.discrepancyNumber} | {discrepancy.title}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function MaintenanceEventTypeSelect({ defaultValue }: { defaultValue?: MaintenanceEventType }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-zinc-700">Event type</span>
+      <select
+        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+        defaultValue={defaultValue ?? MaintenanceEventType.UNSCHEDULED_MAINTENANCE}
+        name="eventType"
+      >
+        {editableMaintenanceEventTypes.map((eventType) => (
+          <option key={eventType} value={eventType}>
+            {eventType}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function MaintenanceEventStatusSelect({
+  defaultValue,
+}: {
+  defaultValue?: MaintenanceEventStatus;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-zinc-700">Status</span>
+      <select
+        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+        defaultValue={defaultValue ?? MaintenanceEventStatus.PLANNED}
+        name="status"
+      >
+        {editableMaintenanceEventStatuses.map((status) => (
+          <option key={status} value={status}>
+            {status}
           </option>
         ))}
       </select>
@@ -317,6 +412,90 @@ function DeferralForm({
           name="clearedAt"
           type="datetime-local"
         />
+      </div>
+      <div className="mt-3">
+        <button
+          className="rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+          type="submit"
+        >
+          {submitLabel}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function MaintenanceEventForm({
+  action,
+  discrepancies,
+  event,
+  submitLabel,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  discrepancies: Discrepancy[];
+  event?: MaintenanceEvent;
+  submitLabel: string;
+}) {
+  return (
+    <form action={action} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Field
+          defaultValue={event?.maintenanceNumber ?? ""}
+          label="Maintenance number"
+          name="maintenanceNumber"
+        />
+        <MaintenanceEventTypeSelect defaultValue={event?.eventType} />
+        <MaintenanceEventStatusSelect defaultValue={event?.status} />
+        <OptionalDiscrepancySelect
+          defaultValue={event?.discrepancyId}
+          discrepancies={discrepancies}
+        />
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Field
+          defaultValue={toInputDateTime(event?.scheduledAt)}
+          label="Scheduled at"
+          name="scheduledAt"
+          type="datetime-local"
+        />
+        <Field
+          defaultValue={toInputDateTime(event?.startedAt)}
+          label="Started at"
+          name="startedAt"
+          type="datetime-local"
+        />
+        <Field
+          defaultValue={toInputDateTime(event?.completedAt)}
+          label="Completed at"
+          name="completedAt"
+          type="datetime-local"
+        />
+        <Field
+          defaultValue={toInputDateTime(event?.returnToServiceAt)}
+          label="Return to service at"
+          name="returnToServiceAt"
+          type="datetime-local"
+        />
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <Field defaultValue={event?.providerName ?? ""} label="Provider" name="providerName" />
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">
+            Discrepancy handling when completed
+          </span>
+          <select
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+            defaultValue="NO_CHANGE"
+            name="discrepancyResolution"
+          >
+            <option value="NO_CHANGE">Leave linked discrepancy unchanged</option>
+            <option value="MARK_CLEARED">Mark linked discrepancy cleared</option>
+          </select>
+        </label>
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <TextArea defaultValue={event?.description} label="Description" name="description" />
+        <TextArea defaultValue={event?.notes} label="Notes" name="notes" />
       </div>
       <div className="mt-3">
         <button
@@ -484,6 +663,61 @@ function DiscrepancyList({
   );
 }
 
+function MaintenanceEventList({
+  aircraftId,
+  discrepancies,
+  events,
+}: {
+  aircraftId: string;
+  discrepancies: Discrepancy[];
+  events: MaintenanceEvent[];
+}) {
+  if (events.length === 0) {
+    return <p className="text-sm text-zinc-600">No maintenance events recorded.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {events.map((event) => (
+        <article className="rounded-md border border-zinc-200 bg-white p-3" key={event.id}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-zinc-950">{event.maintenanceNumber}</p>
+                <MaintenanceStatusBadge status={event.status} />
+                <span className="text-sm text-zinc-600">{event.eventType}</span>
+              </div>
+              <p className="mt-1 text-sm text-zinc-600">
+                Provider {event.providerName ?? "not set"} | Linked discrepancy{" "}
+                {event.discrepancy?.discrepancyNumber ?? "none"}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Scheduled {toDateTimeLabel(event.scheduledAt)} | Started{" "}
+                {toDateTimeLabel(event.startedAt)} | Completed{" "}
+                {toDateTimeLabel(event.completedAt)} | RTS{" "}
+                {toDateTimeLabel(event.returnToServiceAt)}
+              </p>
+            </div>
+          </div>
+          {event.description ? (
+            <p className="mt-2 rounded-md border border-zinc-200 bg-zinc-50 p-2 text-sm text-zinc-700">
+              {event.description}
+            </p>
+          ) : null}
+          <div className="mt-3">
+            <MaintenanceEventForm
+              action={updateMaintenanceEventAction.bind(null, aircraftId, event.id)}
+              discrepancies={discrepancies}
+              event={event}
+              submitLabel="Save maintenance event"
+            />
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 export default async function AircraftAirworthinessPage({ params, searchParams }: PageProps) {
   const [{ aircraftId }, queryParams] = await Promise.all([params, searchParams]);
   const aircraft = await getAircraftAirworthinessWorkflowData(aircraftId);
@@ -560,6 +794,12 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
               {aircraft.capabilities.length}
             </p>
           </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-sm text-zinc-500">Maintenance events</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {aircraft.maintenanceEvents.length}
+            </p>
+          </article>
         </section>
 
         <ContextCards aircraft={aircraft} />
@@ -611,6 +851,32 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
           </p>
           <div className="mt-4">
             <ActiveDeferrals aircraft={aircraft} />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Create maintenance event</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Maintenance events may link to a discrepancy. Airworthiness release
+            signing and deferral clearing remain deferred.
+          </p>
+          <div className="mt-4">
+            <MaintenanceEventForm
+              action={createMaintenanceEventAction.bind(null, aircraft.id)}
+              discrepancies={aircraft.discrepancies}
+              submitLabel="Create maintenance event"
+            />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Maintenance events</h2>
+          <div className="mt-4">
+            <MaintenanceEventList
+              aircraftId={aircraft.id}
+              discrepancies={aircraft.discrepancies}
+              events={aircraft.maintenanceEvents}
+            />
           </div>
         </section>
       </div>

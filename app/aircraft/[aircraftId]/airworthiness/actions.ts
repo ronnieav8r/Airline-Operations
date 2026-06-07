@@ -1,6 +1,12 @@
 "use server";
 
-import { DeferralStatus, DiscrepancyStatus, Prisma } from "@prisma/client";
+import {
+  DeferralStatus,
+  DiscrepancyStatus,
+  MaintenanceEventStatus,
+  MaintenanceEventType,
+  Prisma,
+} from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -27,6 +33,21 @@ type DeferralInput = {
   clearedAt: Date | null;
   notes: string | null;
   discrepancyResolution: "KEEP_DEFERRED" | "MARK_CLEARED";
+};
+
+type MaintenanceEventInput = {
+  maintenanceNumber: string | null;
+  discrepancyId: string | null;
+  eventType: MaintenanceEventType;
+  status: MaintenanceEventStatus;
+  scheduledAt: Date | null;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  providerName: string | null;
+  description: string | null;
+  returnToServiceAt: Date | null;
+  notes: string | null;
+  discrepancyResolution: "NO_CHANGE" | "MARK_CLEARED";
 };
 
 function getOptionalText(formData: FormData, key: string): string | null {
@@ -78,6 +99,38 @@ function parseDeferralStatus(formData: FormData): DeferralStatus {
   }
 
   throw new AirworthinessWorkflowError("Deferral status is not valid.");
+}
+
+function parseMaintenanceEventType(formData: FormData): MaintenanceEventType {
+  const value = getRequiredText(formData, "eventType", "Event type");
+
+  if (
+    value === MaintenanceEventType.INSPECTION ||
+    value === MaintenanceEventType.SCHEDULED_MAINTENANCE ||
+    value === MaintenanceEventType.UNSCHEDULED_MAINTENANCE ||
+    value === MaintenanceEventType.REPAIR ||
+    value === MaintenanceEventType.RETURN_TO_SERVICE ||
+    value === MaintenanceEventType.OTHER
+  ) {
+    return value;
+  }
+
+  throw new AirworthinessWorkflowError("Maintenance event type is not valid.");
+}
+
+function parseMaintenanceEventStatus(formData: FormData): MaintenanceEventStatus {
+  const value = getOptionalText(formData, "status") ?? MaintenanceEventStatus.PLANNED;
+
+  if (
+    value === MaintenanceEventStatus.PLANNED ||
+    value === MaintenanceEventStatus.IN_PROGRESS ||
+    value === MaintenanceEventStatus.COMPLETED ||
+    value === MaintenanceEventStatus.CANCELLED
+  ) {
+    return value;
+  }
+
+  throw new AirworthinessWorkflowError("Maintenance event status is not valid.");
 }
 
 function parseOptionalDateTime(formData: FormData, key: string, label: string): Date | null {
@@ -134,6 +187,35 @@ function parseDeferralInput(formData: FormData, requireDiscrepancy: boolean): De
     notes: getOptionalText(formData, "notes"),
     discrepancyResolution:
       resolution === "MARK_CLEARED" ? "MARK_CLEARED" : "KEEP_DEFERRED",
+  };
+}
+
+function parseMaintenanceEventInput(formData: FormData): MaintenanceEventInput {
+  const status = parseMaintenanceEventStatus(formData);
+  const enteredCompletedAt = parseOptionalDateTime(formData, "completedAt", "Completed at");
+  const resolution = getOptionalText(formData, "discrepancyResolution");
+
+  return {
+    maintenanceNumber: getOptionalText(formData, "maintenanceNumber")?.toUpperCase() ?? null,
+    discrepancyId: getOptionalText(formData, "discrepancyId"),
+    eventType: parseMaintenanceEventType(formData),
+    status,
+    scheduledAt: parseOptionalDateTime(formData, "scheduledAt", "Scheduled at"),
+    startedAt: parseOptionalDateTime(formData, "startedAt", "Started at"),
+    completedAt:
+      status === MaintenanceEventStatus.COMPLETED
+        ? enteredCompletedAt ?? new Date()
+        : enteredCompletedAt,
+    providerName: getOptionalText(formData, "providerName"),
+    description: getOptionalText(formData, "description"),
+    returnToServiceAt: parseOptionalDateTime(
+      formData,
+      "returnToServiceAt",
+      "Return to service at",
+    ),
+    notes: getOptionalText(formData, "notes"),
+    discrepancyResolution:
+      resolution === "MARK_CLEARED" ? "MARK_CLEARED" : "NO_CHANGE",
   };
 }
 
@@ -210,6 +292,28 @@ async function ensureDeferralBelongsToAircraft(
   return deferral;
 }
 
+async function ensureMaintenanceEventBelongsToAircraft(
+  tx: Prisma.TransactionClient,
+  aircraftId: string,
+  maintenanceEventId: string,
+) {
+  const maintenanceEvent = await tx.maintenanceEvent.findFirst({
+    where: {
+      id: maintenanceEventId,
+      aircraftId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!maintenanceEvent) {
+    throw new AirworthinessWorkflowError(
+      "Maintenance event was not found for this aircraft.",
+    );
+  }
+}
+
 async function generateDiscrepancyNumber(
   tx: Prisma.TransactionClient,
   aircraftId: string,
@@ -264,6 +368,55 @@ async function generateDeferralNumber(
   }
 
   throw new AirworthinessWorkflowError("Could not generate a deferral number.");
+}
+
+async function generateMaintenanceNumber(
+  tx: Prisma.TransactionClient,
+  aircraftId: string,
+  tailNumber: string,
+) {
+  const dateKey = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  const prefix = `MX-${tailNumber.replace(/\s+/g, "").toUpperCase()}-${dateKey}`;
+
+  for (let index = 1; index <= 999; index += 1) {
+    const candidate = `${prefix}-${String(index).padStart(2, "0")}`;
+    const existing = await tx.maintenanceEvent.findFirst({
+      where: {
+        aircraftId,
+        maintenanceNumber: candidate,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  throw new AirworthinessWorkflowError("Could not generate a maintenance event number.");
+}
+
+async function applyMaintenanceDiscrepancyResolution(
+  tx: Prisma.TransactionClient,
+  input: MaintenanceEventInput,
+) {
+  if (
+    !input.discrepancyId ||
+    input.status !== MaintenanceEventStatus.COMPLETED ||
+    input.discrepancyResolution !== "MARK_CLEARED"
+  ) {
+    return;
+  }
+
+  await tx.discrepancy.update({
+    where: { id: input.discrepancyId },
+    data: {
+      status: DiscrepancyStatus.CLEARED,
+      clearedAt: input.completedAt ?? new Date(),
+    },
+  });
 }
 
 function revalidateAirworthinessPaths(aircraftId: string) {
@@ -444,6 +597,95 @@ export async function updateDeferralAction(
           },
         });
       }
+    });
+  } catch (error) {
+    redirect(`/aircraft/${aircraftId}/airworthiness?error=${encodeError(error)}`);
+  }
+
+  revalidateAirworthinessPaths(aircraftId);
+  redirect(`/aircraft/${aircraftId}/airworthiness`);
+}
+
+export async function createMaintenanceEventAction(aircraftId: string, formData: FormData) {
+  try {
+    const input = parseMaintenanceEventInput(formData);
+
+    await prisma.$transaction(async (tx) => {
+      const aircraft = await ensureAircraftExists(tx, aircraftId);
+
+      if (input.discrepancyId) {
+        await ensureDiscrepancyBelongsToAircraft(tx, aircraftId, input.discrepancyId);
+      }
+
+      const maintenanceNumber =
+        input.maintenanceNumber ??
+        (await generateMaintenanceNumber(tx, aircraft.id, aircraft.tailNumber));
+
+      await tx.maintenanceEvent.create({
+        data: {
+          aircraftId,
+          discrepancyId: input.discrepancyId,
+          maintenanceNumber,
+          eventType: input.eventType,
+          status: input.status,
+          scheduledAt: input.scheduledAt,
+          startedAt: input.startedAt,
+          completedAt: input.completedAt,
+          providerName: input.providerName,
+          description: input.description,
+          returnToServiceAt: input.returnToServiceAt,
+          notes: input.notes,
+        },
+      });
+
+      await applyMaintenanceDiscrepancyResolution(tx, input);
+    });
+  } catch (error) {
+    redirect(`/aircraft/${aircraftId}/airworthiness?error=${encodeError(error)}`);
+  }
+
+  revalidateAirworthinessPaths(aircraftId);
+  redirect(`/aircraft/${aircraftId}/airworthiness`);
+}
+
+export async function updateMaintenanceEventAction(
+  aircraftId: string,
+  maintenanceEventId: string,
+  formData: FormData,
+) {
+  try {
+    const input = parseMaintenanceEventInput(formData);
+
+    await prisma.$transaction(async (tx) => {
+      const aircraft = await ensureAircraftExists(tx, aircraftId);
+      await ensureMaintenanceEventBelongsToAircraft(tx, aircraftId, maintenanceEventId);
+
+      if (input.discrepancyId) {
+        await ensureDiscrepancyBelongsToAircraft(tx, aircraftId, input.discrepancyId);
+      }
+
+      const maintenanceNumber =
+        input.maintenanceNumber ??
+        (await generateMaintenanceNumber(tx, aircraft.id, aircraft.tailNumber));
+
+      await tx.maintenanceEvent.update({
+        where: { id: maintenanceEventId },
+        data: {
+          discrepancyId: input.discrepancyId,
+          maintenanceNumber,
+          eventType: input.eventType,
+          status: input.status,
+          scheduledAt: input.scheduledAt,
+          startedAt: input.startedAt,
+          completedAt: input.completedAt,
+          providerName: input.providerName,
+          description: input.description,
+          returnToServiceAt: input.returnToServiceAt,
+          notes: input.notes,
+        },
+      });
+
+      await applyMaintenanceDiscrepancyResolution(tx, input);
     });
   } catch (error) {
     redirect(`/aircraft/${aircraftId}/airworthiness?error=${encodeError(error)}`);

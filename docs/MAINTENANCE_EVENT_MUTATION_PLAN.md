@@ -19,7 +19,7 @@ a discrepancy and support return-to-service context.
 
 ## Prompt 41 Scope
 
-The next implementation slice should be:
+Implementation slice:
 
 ```text
 Prompt 41: Maintenance event mutation foundation
@@ -39,6 +39,13 @@ Minimum workflow:
 - Keep deferral status unchanged unless a later policy slice explicitly
   decides maintenance completion can clear deferrals.
 - Keep `approvedById` null until auth/user attribution exists.
+
+Implementation status: complete.
+
+Prompt 41 added maintenance-event create/edit under
+`/aircraft/[aircraftId]/airworthiness`. Events can stand alone or link to a
+discrepancy. Completed linked events can clear the discrepancy only through an
+explicit form choice. Deferrals and airworthiness releases remain unchanged.
 
 ## Data Policy
 

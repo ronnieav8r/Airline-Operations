@@ -4,6 +4,7 @@ import {
   AirworthinessReleaseStatus,
   DeferralStatus,
   DiscrepancyStatus,
+  MaintenanceEventType,
   MaintenanceEventStatus,
   Prisma,
 } from "@prisma/client";
@@ -101,20 +102,29 @@ const aircraftAirworthinessWorkflowSelect = {
     },
   },
   maintenanceEvents: {
-    where: {
-      status: MaintenanceEventStatus.COMPLETED,
-    },
-    orderBy: [{ completedAt: "desc" }],
+    orderBy: [{ createdAt: "desc" }],
     select: {
       id: true,
+      discrepancyId: true,
       maintenanceNumber: true,
       eventType: true,
       status: true,
+      scheduledAt: true,
+      startedAt: true,
       completedAt: true,
       providerName: true,
+      description: true,
       returnToServiceAt: true,
+      notes: true,
+      discrepancy: {
+        select: {
+          id: true,
+          discrepancyNumber: true,
+          title: true,
+          status: true,
+        },
+      },
     },
-    take: 5,
   },
   airworthinessReleases: {
     where: {
@@ -159,4 +169,20 @@ export const editableDeferralStatuses = [
   DeferralStatus.CLEARED,
   DeferralStatus.EXPIRED,
   DeferralStatus.CANCELLED,
+];
+
+export const editableMaintenanceEventTypes = [
+  MaintenanceEventType.INSPECTION,
+  MaintenanceEventType.SCHEDULED_MAINTENANCE,
+  MaintenanceEventType.UNSCHEDULED_MAINTENANCE,
+  MaintenanceEventType.REPAIR,
+  MaintenanceEventType.RETURN_TO_SERVICE,
+  MaintenanceEventType.OTHER,
+];
+
+export const editableMaintenanceEventStatuses = [
+  MaintenanceEventStatus.PLANNED,
+  MaintenanceEventStatus.IN_PROGRESS,
+  MaintenanceEventStatus.COMPLETED,
+  MaintenanceEventStatus.CANCELLED,
 ];

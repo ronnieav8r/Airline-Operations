@@ -84,6 +84,7 @@ It has:
 44. Airworthiness discrepancy mutation foundation.
 45. Airworthiness deferral mutation foundation.
 46. Maintenance event mutation planning.
+47. Maintenance event mutation foundation.
 
 ## Current Data Model Boundaries
 
@@ -206,6 +207,13 @@ Maintenance event mutation planning is complete. The next implementation should
 add maintenance-event create/edit under `/aircraft/[aircraftId]/airworthiness`,
 allow optional discrepancy linking, and allow a completed event to clear a
 linked discrepancy only through an explicit form choice. Deferral clearing,
+airworthiness release signing, auth/signatures, and hard release blocking
+remain deferred.
+
+Maintenance event mutation foundation is implemented. The aircraft-level
+airworthiness workflow can create/edit maintenance events with optional
+discrepancy links. Completed linked events can mark the linked discrepancy
+`CLEARED` only through an explicit form choice. Deferral clearing,
 airworthiness release signing, auth/signatures, and hard release blocking
 remain deferred.
 
@@ -354,16 +362,16 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 41: Maintenance event mutation foundation
+Prompt 42: Airworthiness release planning
 ```
 
 Scope:
 
-- Add maintenance-event create/edit under
-  `/aircraft/[aircraftId]/airworthiness`.
-- Allow optional discrepancy linking.
-- Allow completed maintenance events to clear a linked discrepancy only through
-  an explicit form choice.
-- Keep deferral clearing, airworthiness release signing, auth/signatures, and
-  release blocking deferred.
+- Decide how aircraft airworthiness releases are created, superseded, and
+  voided.
+- Decide how releases interact with configuration, discrepancy, deferral, and
+  maintenance-event state.
+- Decide warning-only versus release-blocking policy before any release writes.
+- Keep implementation, auth/signatures, and release blocking deferred until the
+  policy is explicit.
 - Do not add hard release blocking until product policy is explicitly approved.
