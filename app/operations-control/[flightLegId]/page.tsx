@@ -1,6 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ReleaseStatus } from "@prisma/client";
+import {
+  AirworthinessReleaseStatus,
+  FlightLocatingStatus,
+  ManifestStatus,
+  ReleaseStatus,
+  WeightBalanceStatus,
+} from "@prisma/client";
 
 import {
   cancelFlightLegReleaseAction,
@@ -78,6 +84,57 @@ function StatusBadge({ value }: { value: string | null | undefined }) {
     >
       {value ?? "Missing"}
     </span>
+  );
+}
+
+function actionStatusClasses(tone: "good" | "warn" | "missing") {
+  if (tone === "good") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (tone === "warn") {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
+
+  return "border-zinc-200 bg-zinc-50 text-zinc-600";
+}
+
+function EvidenceActionCard({
+  href,
+  label,
+  message,
+  status,
+  tone,
+}: {
+  href?: string;
+  label: string;
+  message: string;
+  status: string;
+  tone: "good" | "warn" | "missing";
+}) {
+  return (
+    <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="font-medium text-zinc-900">{label}</p>
+          <p className="mt-1 text-sm text-zinc-600">{message}</p>
+        </div>
+        <span
+          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${actionStatusClasses(
+            tone,
+          )}`}
+        >
+          {status}
+        </span>
+      </div>
+      {href ? (
+        <Link className="mt-3 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900" href={href}>
+          Open
+        </Link>
+      ) : (
+        <p className="mt-3 text-xs font-medium text-zinc-500">No action link available</p>
+      )}
+    </article>
   );
 }
 
@@ -196,6 +253,135 @@ function BlockingPreviewBadge({
     <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${classes}`}>
       {label}
     </span>
+  );
+}
+
+function ReleaseEvidenceActionPanel({
+  detail,
+  now,
+}: {
+  detail: ReleaseEvidenceDetail;
+  now: Date;
+}) {
+  const manifest = detail.manifest;
+  const latestUsableWeightBalanceRun =
+    detail.weightBalanceRuns.find((run) => run.status !== WeightBalanceStatus.VOIDED) ?? null;
+  const locating = detail.flightLocatingRecord;
+  const dispatch = detail.dispatchPackage;
+  const weather = dispatch?.weatherBriefing ?? null;
+  const notam = dispatch?.notamSnapshot ?? null;
+  const flightPlan = dispatch?.flightPlanReference ?? null;
+  const aircraft = detail.aircraftAssignments[0]?.aircraft ?? null;
+  const configuration = aircraft?.configurations[0] ?? null;
+  const currentAirworthinessRelease =
+    aircraft?.airworthinessReleases.find(
+      (release) => release.status === AirworthinessReleaseStatus.RELEASED,
+    ) ?? null;
+  const airworthinessExpired =
+    !!currentAirworthinessRelease?.expiresAt &&
+    currentAirworthinessRelease.expiresAt.getTime() <= now.getTime();
+  const latestSnapshot = detail.readinessSnapshots[0] ?? null;
+  const manifestReady =
+    !!manifest &&
+    manifest.items.length > 0 &&
+    (manifest.status === ManifestStatus.READY || manifest.status === ManifestStatus.LOCKED);
+  const weightBalanceReady =
+    !!latestUsableWeightBalanceRun &&
+    (latestUsableWeightBalanceRun.status === WeightBalanceStatus.CALCULATED ||
+      latestUsableWeightBalanceRun.status === WeightBalanceStatus.APPROVED);
+  const locatingReady =
+    !!locating &&
+    (locating.status === FlightLocatingStatus.FILED ||
+      locating.status === FlightLocatingStatus.ACTIVE ||
+      locating.status === FlightLocatingStatus.CLOSED);
+  const dispatchReady = !!dispatch && !!weather && !!notam && !!flightPlan;
+  const airworthinessReady =
+    !!aircraft && !!configuration && !!currentAirworthinessRelease && !airworthinessExpired;
+
+  return (
+    <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Release Evidence Actions</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Quick links to the existing evidence workflows. These statuses are
+            informational and do not block release actions.
+          </p>
+        </div>
+        <Link
+          className="text-sm font-semibold text-sky-700 hover:text-sky-900"
+          href="/internal/release-snapshot-readiness"
+        >
+          Snapshot diagnostic
+        </Link>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <EvidenceActionCard
+          href={`/operations-control/${detail.id}/manifest`}
+          label="Manifest"
+          message={
+            manifest
+              ? `${manifest.items.length} item(s), status ${manifest.status}.`
+              : "No manifest has been created."
+          }
+          status={manifestReady ? "Ready" : manifest ? "Needs attention" : "Missing"}
+          tone={manifestReady ? "good" : manifest ? "warn" : "missing"}
+        />
+        <EvidenceActionCard
+          href={`/operations-control/${detail.id}/weight-balance`}
+          label="Weight and balance"
+          message={
+            latestUsableWeightBalanceRun
+              ? `${latestUsableWeightBalanceRun.runLabel} is ${latestUsableWeightBalanceRun.status}.`
+              : "No active W&B run is recorded."
+          }
+          status={weightBalanceReady ? "Ready" : latestUsableWeightBalanceRun ? "Needs attention" : "Missing"}
+          tone={weightBalanceReady ? "good" : latestUsableWeightBalanceRun ? "warn" : "missing"}
+        />
+        <EvidenceActionCard
+          href={`/operations-control/${detail.id}/locating`}
+          label="Flight locating"
+          message={locating ? `Locating status is ${locating.status}.` : "No locating record has been created."}
+          status={locatingReady ? "Ready" : locating ? "Needs attention" : "Missing"}
+          tone={locatingReady ? "good" : locating ? "warn" : "missing"}
+        />
+        <EvidenceActionCard
+          href={`/operations-control/${detail.id}/dispatch`}
+          label="Dispatch package"
+          message={
+            dispatchReady
+              ? "Weather, NOTAM, and flight-plan evidence are linked."
+              : "Dispatch evidence is incomplete."
+          }
+          status={dispatchReady ? "Ready" : dispatch ? "Needs attention" : "Missing"}
+          tone={dispatchReady ? "good" : dispatch ? "warn" : "missing"}
+        />
+        <EvidenceActionCard
+          href={aircraft ? `/aircraft/${aircraft.id}/airworthiness` : undefined}
+          label="Airworthiness"
+          message={
+            aircraft
+              ? `${aircraft.tailNumber}: ${
+                  airworthinessReady ? "current release and configuration found" : "review aircraft status"
+                }.`
+              : "No assigned aircraft is available."
+          }
+          status={airworthinessReady ? "Current" : aircraft ? "Review" : "Missing"}
+          tone={airworthinessReady ? "good" : aircraft ? "warn" : "missing"}
+        />
+        <EvidenceActionCard
+          href={latestSnapshot ? `/operations-control/${detail.id}/snapshots/${latestSnapshot.id}` : undefined}
+          label="Preview snapshots"
+          message={
+            latestSnapshot
+              ? `${latestSnapshot.snapshotStatus} captured ${toDateTimeLabel(latestSnapshot.evaluatedAt)}.`
+              : "No preview snapshot has been captured."
+          }
+          status={latestSnapshot ? latestSnapshot.snapshotStatus : "Missing"}
+          tone={latestSnapshot ? (latestSnapshot.snapshotStatus === "PASS" ? "good" : "warn") : "missing"}
+        />
+      </div>
+    </section>
   );
 }
 
@@ -741,6 +927,7 @@ function SnapshotSection({ detail }: { detail: ReleaseEvidenceDetail }) {
 export default async function ReleaseEvidenceDetailPage({ params, searchParams }: PageProps) {
   const [{ flightLegId }, queryParams] = await Promise.all([params, searchParams]);
   const detail = await getReleaseEvidenceDetail(flightLegId);
+  const now = new Date();
 
   if (!detail) {
     notFound();
@@ -792,6 +979,8 @@ export default async function ReleaseEvidenceDetailPage({ params, searchParams }
         ) : null}
 
         <SummaryGrid detail={detail} />
+
+        <ReleaseEvidenceActionPanel detail={detail} now={now} />
 
         <ReleaseReadinessChecklist detail={detail} />
 

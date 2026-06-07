@@ -612,3 +612,19 @@ Preview Snapshots with status, a short message, and links to existing workflow
 or detail routes. Keep it UI-only and do not add new mutation actions, schema,
 hard blocking, overrides, auth/signatures, provider integrations, file uploads,
 automatic snapshots, or release-action changes.
+
+Implementation status: complete.
+
+Prompt 62 added the Release Evidence Action Panel to FlightLeg detail. It is
+read-only, reuses existing detail data, and links to existing evidence
+workflows and snapshot detail pages.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 63: Release Evidence Action Panel QA
+```
+
+Prompt 63 should validate the panel across complete, partial, and missing
+evidence states and confirm links route correctly. Keep it QA/docs only unless
+a defect is found.

@@ -107,3 +107,22 @@ Scope:
 - Keep release behavior warning-only and unchanged.
 
 Prompt 62 should be UI-only unless a clear data access gap is discovered.
+
+## Prompt 62 Status
+
+Implementation status: complete.
+
+FlightLeg detail now includes a compact read-only Release Evidence Action Panel
+near the top of the page. It summarizes Manifest, W&B, Locating, Dispatch,
+Airworthiness, and Preview Snapshots with status, a short message, and links to
+existing workflows or detail pages.
+
+Next recommended slice:
+
+```text
+Prompt 63: Release Evidence Action Panel QA
+```
+
+Prompt 63 should validate the action panel across FlightLegs with complete,
+partial, and missing evidence states and confirm links route correctly. Keep it
+QA/docs only unless a defect is found.
