@@ -139,6 +139,12 @@ now supports deferral create/edit from existing `OPEN` or `DEFERRED`
 discrepancies. Maintenance-event mutation should be planned before adding
 maintenance-event writes.
 
+Prompt 40 implementation status: complete as a planning slice. Maintenance
+events should be added under `/aircraft/[aircraftId]/airworthiness`, may link
+to a discrepancy, and may clear the linked discrepancy only through an explicit
+form choice. They should not clear deferrals or create airworthiness releases
+yet.
+
 ## Deferred
 
 Do not include these in the first airworthiness mutation prompts:

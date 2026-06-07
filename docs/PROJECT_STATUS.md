@@ -83,6 +83,7 @@ It has:
 43. Airworthiness mutation planning.
 44. Airworthiness discrepancy mutation foundation.
 45. Airworthiness deferral mutation foundation.
+46. Maintenance event mutation planning.
 
 ## Current Data Model Boundaries
 
@@ -201,6 +202,13 @@ airworthiness workflow can create/edit deferrals from existing `OPEN` or
 explicitly mark it cleared. Maintenance events, airworthiness release signing,
 auth/signatures, and hard release blocking remain deferred.
 
+Maintenance event mutation planning is complete. The next implementation should
+add maintenance-event create/edit under `/aircraft/[aircraftId]/airworthiness`,
+allow optional discrepancy linking, and allow a completed event to clear a
+linked discrepancy only through an explicit form choice. Deferral clearing,
+airworthiness release signing, auth/signatures, and hard release blocking
+remain deferred.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -243,6 +251,9 @@ sequence. The chosen first implementation workflow is manifest mutation.
 Use `docs/AIRWORTHINESS_MUTATION_PLAN.md` for the airworthiness mutation
 sequence. The chosen first implementation workflow is discrepancy mutation
 under the aircraft-level airworthiness route.
+
+Use `docs/MAINTENANCE_EVENT_MUTATION_PLAN.md` for maintenance-event workflow
+planning.
 
 Crew coverage uses aircraft-block assignment:
 
@@ -343,14 +354,16 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 40: Maintenance event mutation planning
+Prompt 41: Maintenance event mutation foundation
 ```
 
 Scope:
 
-- Plan how maintenance events relate to discrepancies and deferrals.
-- Decide which fields are required for return-to-service.
-- Decide whether maintenance events can clear discrepancy/deferral records.
-- Keep implementation, airworthiness release signing, auth/signatures, and
+- Add maintenance-event create/edit under
+  `/aircraft/[aircraftId]/airworthiness`.
+- Allow optional discrepancy linking.
+- Allow completed maintenance events to clear a linked discrepancy only through
+  an explicit form choice.
+- Keep deferral clearing, airworthiness release signing, auth/signatures, and
   release blocking deferred.
 - Do not add hard release blocking until product policy is explicitly approved.

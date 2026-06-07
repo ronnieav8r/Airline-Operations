@@ -102,7 +102,7 @@ deferred or explicitly mark it cleared.
 
 ## Prompt 40 Scope
 
-Next planning slice:
+Planning slice:
 
 ```text
 Prompt 40: Maintenance event mutation planning
@@ -115,6 +115,18 @@ Minimum planning questions:
 - Which fields are required for a return-to-service event.
 - Whether a maintenance event should create or update an airworthiness release.
 - Which user/signature fields remain null until auth exists.
+
+Implementation status: complete.
+
+The durable maintenance-event plan is:
+
+```text
+docs/MAINTENANCE_EVENT_MUTATION_PLAN.md
+```
+
+Next implementation: Prompt 41 should add maintenance-event create/edit under
+`/aircraft/[aircraftId]/airworthiness`, with optional discrepancy linking and
+explicit discrepancy clearing. Airworthiness release signing remains deferred.
 
 ## Readiness Policy
 
