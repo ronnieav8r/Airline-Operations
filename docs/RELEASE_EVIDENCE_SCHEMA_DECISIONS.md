@@ -110,6 +110,11 @@ implemented through existing schema. Provider integrations, `ReleasePackage`,
 file uploads, aircraft performance calculations, and release gating remain
 deferred.
 
+Updated transition note: release readiness guardrails planning is complete. The
+first guardrail implementation should be a warning-only checklist on the
+FlightLeg detail page. It should not block release actions, mutate evidence,
+add schema, or introduce `ReleasePackage`.
+
 `PositionReport` belongs in a later locating-specific slice after the app needs
 position history, overdue checks, or actual flight-following workflows.
 

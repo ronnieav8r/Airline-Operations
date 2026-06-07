@@ -9,22 +9,23 @@ create/edit and release-control slices.
 
 Build release-evidence mutation in controlled phases. Manifest, locating,
 manual weight-and-balance, and manual dispatch-package mutation are complete.
-The next planning slice is release readiness guardrails.
+Release readiness guardrails planning is complete. The next implementation
+slice is warning-only release readiness guardrails.
 
-Chosen next planning slice:
+Chosen next implementation slice:
 
 ```text
-Prompt 31: Release readiness guardrails planning
+Prompt 32: Release readiness guardrails foundation
 ```
 
-Prompt 30 implementation status: complete.
+Prompt 31 planning status: complete.
 
 Rationale:
 
 - The main manual evidence workflows now exist.
 - Release controls still do not explain evidence readiness clearly enough.
-- Guardrails can be warning-only and should not block release until policy is
-  explicitly approved.
+- Warning-only guardrails can add useful operational visibility without hiding
+  release-blocking policy decisions in development code.
 
 ## Phase Order
 
@@ -32,7 +33,7 @@ Rationale:
 2. Flight locating mutation. Complete.
 3. Weight-and-balance run mutation. Complete.
 4. Manual dispatch-package evidence mutation. Complete.
-5. Release readiness guardrails. Next planning target.
+5. Release readiness guardrails. Planning complete; implementation next.
 6. Provider integrations for weather, NOTAM, and flight plan data.
 
 ## Prompt 25 Boundary
@@ -230,3 +231,39 @@ Minimum planning questions:
   dispatch evidence.
 - Where the readiness checklist should appear on the FlightLeg detail page.
 - Whether any schema changes are needed before guardrails are implemented.
+
+Implementation status: complete.
+
+## Prompt 31 Decision
+
+Prompt 31 answered the release-readiness guardrail questions:
+
+- The readiness checklist should cover manifest, weight and balance, locating,
+  dispatch package, weather, NOTAM, and flight-plan evidence.
+- Guardrails are warning-only. They must not block release actions.
+- Manifest is ready at `READY` or `LOCKED` with at least one item.
+- W&B is ready when the latest non-voided run is `CALCULATED` or `APPROVED`.
+- Locating is ready at `FILED`, `ACTIVE`, or `CLOSED`.
+- Dispatch is ready when package, weather, NOTAM, and flight-plan links exist,
+  with weather summary, affected station codes, external reference, and route
+  text present.
+- The checklist should appear near Release Control on the FlightLeg detail page.
+- No schema changes are needed.
+
+Implementation status: complete.
+
+## Next Slice: Prompt 32
+
+The next implementation slice should be:
+
+```text
+Prompt 32: Release readiness guardrails foundation
+```
+
+Minimum workflow:
+
+- Add a warning-only readiness checklist to `/operations-control/[flightLegId]`.
+- Show overall ready/not-ready status.
+- Show each evidence item as ready or needing attention.
+- Keep all release action buttons available.
+- Do not mutate evidence, add schema, or introduce `ReleasePackage`.

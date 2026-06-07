@@ -74,6 +74,7 @@ It has:
 34. Weight-and-balance mutation foundation.
 35. Manual dispatch-package mutation planning.
 36. Manual dispatch-package mutation foundation.
+37. Release readiness guardrails planning.
 
 ## Current Data Model Boundaries
 
@@ -135,6 +136,12 @@ flight-plan reference, and package/performance notes in one form, then link
 those records to the FlightLeg `DispatchPackage`. Provider integrations,
 `ReleasePackage`, file uploads, aircraft performance calculations, and release
 gating remain deferred.
+
+Release readiness guardrails planning is complete. The next guardrail
+implementation should add a warning-only checklist to FlightLeg detail near
+Release Control. It should cover manifest, W&B, locating, dispatch, weather,
+NOTAM, and flight-plan evidence. It must not block release actions, mutate
+evidence, add schema, or introduce `ReleasePackage`.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -274,12 +281,12 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 31: Release readiness guardrails planning
+Prompt 32: Release readiness guardrails foundation
 ```
 
 Scope:
 
-- Decide warning-only release readiness guardrails for the FlightLeg detail
-  page.
-- Use existing manifest, W&B, locating, and dispatch evidence only.
-- Stop before implementation if release blocking policy becomes ambiguous.
+- Add a warning-only readiness checklist to FlightLeg detail.
+- Keep release action buttons available.
+- Use existing release evidence only; no schema, release blocking, or
+  `ReleasePackage`.
