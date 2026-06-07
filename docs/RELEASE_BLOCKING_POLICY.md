@@ -104,6 +104,25 @@ These likely need authority-specific rules before hard enforcement:
 - Who may override a blocker.
 - What an override must record.
 
+Prompt 49 planned the first authority-specific release policy matrix in:
+
+```text
+docs/AUTHORITY_RELEASE_POLICY.md
+```
+
+Current direction:
+
+- Use shared future blockers for assigned aircraft, aircraft configuration,
+  current aircraft maintenance airworthiness release, operational-control
+  context, authority/revision, planned `FlightRelease`, and current W&B.
+- Keep baseline Part 91 strictness configurable for manifest, locating,
+  dispatch, weather, NOTAM, and flight-plan evidence.
+- Treat Part 91K and Part 135-style operations as stricter planning classes for
+  manifest, locating, dispatch/current-information, operational-control, and
+  aircraft airworthiness readiness.
+- Keep discrepancy and deferral blocking deferred until severity, due-date,
+  category, and MEL/CDL policy exists.
+
 ## Override Policy
 
 Do not implement overrides yet.
@@ -157,6 +176,7 @@ docs/RELEASE_BLOCKING_QA_LOG.md
 - Override workflow.
 - Auth, roles, user identity, and signatures.
 - Authority-specific policy engine.
+- Operator-configurable policy UI.
 - MEL/CDL legal interpretation.
 - Crew compliance enforcement.
 - Provider integrations.

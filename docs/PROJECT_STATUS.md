@@ -92,6 +92,7 @@ It has:
 52. Release blocking policy planning.
 53. Release blocking preview foundation.
 54. Release blocking preview QA.
+55. Authority-specific release policy planning.
 
 ## Current Data Model Boundaries
 
@@ -274,6 +275,15 @@ write-readiness. Local workflow smoke confirmed mark released, cancel release,
 and void release still mutate `FlightRelease.status`; the preview does not
 block release actions.
 
+Authority-specific release policy planning is complete. Current behavior
+remains warning-only, but `docs/AUTHORITY_RELEASE_POLICY.md` now defines the
+first planning matrix for `PART_91_BASELINE`, `PART_91K_FRACTIONAL`, and
+`PART_135_ON_DEMAND`. Shared future blockers include assigned aircraft, active
+configuration, current aircraft maintenance airworthiness release,
+operational-control context, authority/revision, planned `FlightRelease`, and
+current W&B. Baseline Part 91 strictness for manifest, locating, dispatch,
+weather, NOTAM, and flight-plan evidence remains operator-configurable.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -327,6 +337,10 @@ the full FlightLeg operational `FlightRelease`.
 Use `docs/RELEASE_BLOCKING_POLICY.md` for future operational release blocking
 policy. Current release actions remain warning-only until a later implementation
 slice explicitly changes that behavior.
+
+Use `docs/AUTHORITY_RELEASE_POLICY.md` for planning how release readiness should
+vary by authority class. This is policy planning only; there is no
+authority-specific policy engine yet.
 
 Use `docs/LEGACY_RECORD_IMPORT_PLAN.md` for the deferred old-record import
 lane. The future goal is a safe import method for legacy operational, aircraft,
@@ -430,15 +444,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 49: Authority-Specific Release Policy Planning
+Prompt 50: Release Override and Auth Planning
 ```
 
 Scope:
 
-- Plan how release-blocking policy should vary by operating authority.
-- Compare Part 91, Part 91K, and Part 135-style expectations for manifest,
-  locating, dispatch/current-information, operational-control, aircraft
-  airworthiness, discrepancy, and deferral readiness.
+- Plan who may override future release blockers.
+- Decide which blockers should be non-overridable until stronger compliance
+  policy exists.
+- Decide what reason, evidence, identity, timestamp, role, and signature fields
+  a future override must capture.
 - Keep it docs-only. Do not enforce blocking, add schema, add auth/signatures,
   add provider integrations, or add override workflow.
 

@@ -353,3 +353,25 @@ Prompt 49: Authority-Specific Release Policy Planning
 
 Prompt 49 should decide how the preview/enforcement policy should vary by
 operating authority. It should remain docs-only.
+
+Implementation status: complete.
+
+Prompt 49 created the authority-specific release policy matrix and kept release
+behavior warning-only.
+
+Durable policy:
+
+```text
+docs/AUTHORITY_RELEASE_POLICY.md
+```
+
+Recommended next release policy slice:
+
+```text
+Prompt 50: Release Override and Auth Planning
+```
+
+Prompt 50 should decide who may override future release blockers, which
+blockers are non-overridable, what reason/evidence/identity fields must be
+captured, and whether override policy varies by authority class. It should
+remain docs-only.
