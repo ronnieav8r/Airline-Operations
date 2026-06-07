@@ -554,3 +554,20 @@ Prompt 59 should add a read-only detail view for a captured preview snapshot
 and its findings, then link recent snapshots and diagnostic rows to that view.
 It should not add hard blocking, overrides, auth/signatures, provider
 integrations, file uploads, automatic snapshots, or release-action changes.
+
+Implementation status: complete.
+
+Prompt 59 added `/operations-control/[flightLegId]/snapshots/[snapshotId]` as a
+read-only detail page for stored preview snapshot metadata and findings. Recent
+snapshot cards on FlightLeg detail and latest snapshot rows in
+`/internal/release-snapshot-readiness` link to it.
+
+Recommended next release policy slice:
+
+```text
+Prompt 60: Release Snapshot Findings Detail QA
+```
+
+Prompt 60 should validate the snapshot findings detail page and links from
+FlightLeg detail and the internal diagnostic. Keep the slice QA/docs only
+unless a defect is found.

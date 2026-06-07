@@ -30,6 +30,10 @@ or change release behavior.
 Prompt 58 validated missing-snapshot, drifted-snapshot, and fresh-capture
 current cases. Snapshot drift remains informational only.
 
+Prompt 59 added a read-only snapshot findings detail page. It displays stored
+historical snapshot metadata and findings only; it does not recompute readiness
+or change release behavior.
+
 ## Snapshot Purpose
 
 Preview snapshots preserve what the release-readiness checklist showed at a

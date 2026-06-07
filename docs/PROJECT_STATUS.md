@@ -25,6 +25,8 @@ It has:
 - Weight-and-balance management at
   `/operations-control/[flightLegId]/weight-balance`
 - Dispatch package management at `/operations-control/[flightLegId]/dispatch`
+- Release snapshot detail at
+  `/operations-control/[flightLegId]/snapshots/[snapshotId]`
 - Flights at `/flights`
 - Aircraft at `/aircraft`
 - Crew at `/crew`
@@ -104,6 +106,7 @@ It has:
 62. Release snapshot QA.
 63. Release snapshot diagnostic readiness.
 64. Release snapshot drift QA.
+65. Release snapshot findings detail.
 
 ## Current Data Model Boundaries
 
@@ -354,6 +357,13 @@ no-snapshot FlightLegs, reports drift when local live readiness changes after a
 snapshot, and returns a stable FlightLeg to current after a fresh explicit
 preview snapshot. No release behavior changed.
 
+Release snapshot findings detail is implemented. Users can inspect a captured
+preview snapshot and its stored findings at
+`/operations-control/[flightLegId]/snapshots/[snapshotId]`. FlightLeg detail
+recent snapshot cards and the internal snapshot-readiness diagnostic link to
+this read-only detail view. Snapshot findings remain historical records; the
+page does not recompute readiness or change release behavior.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -522,14 +532,13 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 59: Release Snapshot Findings Detail
+Prompt 60: Release Snapshot Findings Detail QA
 ```
 
 Scope:
 
-- Add a read-only detail view for a captured preview snapshot and its findings.
-- Link recent snapshots on FlightLeg detail and diagnostic rows to the snapshot
-  detail view.
+- Validate the snapshot findings detail page, links from FlightLeg detail, and
+  links from `/internal/release-snapshot-readiness`.
 - Keep it read-only. Do not add hard blocking, overrides, auth/signatures,
   provider integrations, file uploads, automatic snapshots, or release-action
   changes.

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   getReleaseSnapshotDiagnosticReport,
   ReleaseSnapshotDiagnosticRow,
@@ -89,6 +91,14 @@ function SnapshotRow({ row }: { row: ReleaseSnapshotDiagnosticRow }) {
       <td className="px-3 py-2.5 text-zinc-700">
         <p>{row.latestSnapshotStatus ?? "Missing"}</p>
         <p className="mt-1 text-xs text-zinc-500">{toDateTimeLabel(row.latestSnapshotAt)}</p>
+        {row.latestSnapshotId ? (
+          <Link
+            className="mt-2 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
+            href={`/operations-control/${row.flightLegId}/snapshots/${row.latestSnapshotId}`}
+          >
+            View findings
+          </Link>
+        ) : null}
       </td>
       <td className="min-w-44 px-3 py-2.5">
         <FindingCounts counts={row.liveCounts} />

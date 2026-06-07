@@ -292,9 +292,12 @@ function RecentReleaseSnapshots({ detail }: { detail: ReleaseEvidenceDetail }) {
                   {snapshot.authorityClass} | {toDateTimeLabel(snapshot.evaluatedAt)}
                 </p>
               </div>
-              <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-600">
+              <Link
+                className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-600 hover:border-sky-200 hover:text-sky-700"
+                href={`/operations-control/${detail.id}/snapshots/${snapshot.id}`}
+              >
                 {snapshot.findings.length} findings
-              </span>
+              </Link>
             </div>
             <dl className="mt-3 grid grid-cols-4 gap-2 text-xs">
               <div>
