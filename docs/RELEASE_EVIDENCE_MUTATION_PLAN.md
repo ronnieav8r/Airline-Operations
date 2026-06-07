@@ -29,8 +29,8 @@ Rationale:
 ## Phase Order
 
 1. Manifest mutation foundation. Complete.
-2. Flight locating mutation. Next.
-3. Weight-and-balance run mutation.
+2. Flight locating mutation. Complete.
+3. Weight-and-balance run mutation. Next planning target.
 4. Manual dispatch-package evidence mutation.
 5. Release gating against required evidence.
 6. Provider integrations for weather, NOTAM, and flight plan data.
@@ -117,3 +117,22 @@ Minimum workflow:
 - Support simple status transitions: `NOT_STARTED`, `FILED`, `ACTIVE`, and
   `CLOSED`.
 - Keep `OVERDUE` automation and position history deferred.
+
+Implementation status: complete.
+
+## Next Slice: Prompt 27
+
+The next planning slice should be:
+
+```text
+Prompt 27: Weight-and-balance mutation planning
+```
+
+Minimum planning questions:
+
+- Whether the first `WeightBalanceRun` workflow is manual entry only.
+- Which fields are required for a warning-free calculated run.
+- How it should reference the current manifest.
+- How to use `calculationSnapshot` until aircraft configuration and capability
+  tables exist.
+- Whether approval should be included or deferred.

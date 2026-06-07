@@ -21,6 +21,7 @@ It has:
 - FlightLeg create/edit at `/operations-control/new` and
   `/operations-control/[flightLegId]/edit`
 - Manifest management at `/operations-control/[flightLegId]/manifest`
+- Flight locating management at `/operations-control/[flightLegId]/locating`
 - Flights at `/flights`
 - Aircraft at `/aircraft`
 - Crew at `/crew`
@@ -65,6 +66,7 @@ It has:
 29. Release-control actions foundation.
 30. Release evidence mutation planning.
 31. Manifest mutation foundation.
+32. Flight locating mutation foundation.
 
 ## Current Data Model Boundaries
 
@@ -95,6 +97,12 @@ can create a manifest, add/edit/remove manual manifest items, and mark the
 manifest `READY`. Manifest locking, amendments, passenger identity redesign,
 release gating, weight-and-balance, locating, and dispatch-package mutation
 remain deferred.
+
+FlightLeg detail now links to manual flight locating management. The locating
+workflow can create a locating record, edit responsible party, planned route,
+last known position, notes, and transition status to `FILED`, `ACTIVE`, or
+`CLOSED`. Position history, overdue automation, release gating, and dispatch
+mutation remain deferred.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -234,13 +242,12 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 26: Flight locating mutation foundation
+Prompt 27: Weight-and-balance mutation planning
 ```
 
 Scope:
 
-- Add the next release-evidence write workflow for `FlightLocatingRecord`.
-- Support responsible party, planned route, last known position, notes, and
-  status transitions.
-- Keep position history, overdue automation, dispatch package, provider
-  integrations, and release gating deferred.
+- Decide the first safe mutation path for `WeightBalanceRun`.
+- Use the existing manifest and calculation snapshot fields.
+- Keep aircraft configuration/capability schema, automated calculations, and
+  release gating deferred unless explicitly scoped.
