@@ -142,6 +142,11 @@ Required cockpit coverage for v1:
 - `CPT`
 - `FO`
 
+Coverage APIs accept either a legacy `Flight.id` or a `FlightLeg.id`. When a
+FlightLeg ID is provided, the resolver follows `FlightLeg.legacyFlight` and
+keeps the response shape keyed to the legacy Flight ID. Aircraft-block
+assignment remains the active crew source of truth.
+
 Missing roles should produce coverage warnings.
 
 ## Qualification Rule

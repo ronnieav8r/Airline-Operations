@@ -59,6 +59,7 @@ It has:
 24. Crew FlightLeg read migration.
 25. FlightLeg create/edit workflow foundation.
 26. FlightLeg write QA guardrails.
+27. FlightLeg coverage API bridge.
 
 ## Current Data Model Boundaries
 
@@ -68,8 +69,7 @@ Do not rename it or split it without an approved read-migration slice.
 `FlightLeg` now exists as an additive foundation table. It is bridged to current
 rows by `FlightLeg.legacyFlightId`. `/`, `/operations-control`, `/flights`,
 `/scheduling`, `/aircraft`, and `/crew` now pilot FlightLeg reads with legacy
-`Flight` fallback where needed. Existing coverage APIs still read from current
-`Flight` paths.
+`Flight` fallback where needed.
 
 Operations Control now has the first controlled FlightLeg write workflow. New
 and edited FlightLeg records also create/update the legacy `Flight` bridge row
@@ -120,6 +120,14 @@ Flight.aircraftId + Flight.scheduledDeparture
 
 Find active `AircraftCrewAssignment` rows for that aircraft and time. Required
 cockpit roles are currently `CPT` and `FO`.
+
+Coverage APIs accept either a legacy `Flight.id` or a `FlightLeg.id`:
+
+- `/api/flights/[id]/coverage`
+- `/api/flights/[id]/crew`
+
+When a FlightLeg ID is provided, the resolver follows `FlightLeg.legacyFlight`
+and returns the existing response shape keyed to the legacy Flight ID.
 
 Authority/control data exists now:
 
@@ -203,12 +211,12 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 21: FlightLeg-backed coverage API bridge
+Prompt 22: CrewLegAssignment snapshot sync on FlightLeg create/edit
 ```
 
 Scope:
 
-- Let current coverage APIs accept either a legacy Flight ID or a FlightLeg ID.
-- Preserve existing response shape and current aircraft-block crew resolution.
-- Keep CrewLegAssignment promotion deferred until the dedicated crew snapshot
-  sync slice.
+- Snapshot resolved aircraft-block crew onto `CrewLegAssignment` during
+  FlightLeg create/edit.
+- Preserve current aircraft-block coverage as the active source of truth.
+- Keep crew release/assignment override workflows deferred.

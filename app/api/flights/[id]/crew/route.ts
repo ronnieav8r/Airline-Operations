@@ -15,7 +15,7 @@ export async function GET(_request: Request, context: FlightRouteContext) {
     const resolvedCrew = await resolveFlightCrew(id);
 
     if (!resolvedCrew) {
-      throw notFound("Flight not found.", { flightId: id });
+      throw notFound("Flight or FlightLeg not found.", { id });
     }
 
     return NextResponse.json(resolvedCrew);

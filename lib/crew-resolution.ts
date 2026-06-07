@@ -72,11 +72,30 @@ const aircraftTypeSelect = {
   type: true,
 } satisfies Prisma.AircraftSelect;
 
-export async function resolveFlightCrew(flightId: string): Promise<FlightCrew | null> {
-  const flight = await prisma.flight.findUnique({
-    where: { id: flightId },
+async function resolveLegacyFlightForCoverage(inputId: string) {
+  const directFlight = await prisma.flight.findUnique({
+    where: { id: inputId },
     select: flightResolutionSelect,
   });
+
+  if (directFlight) {
+    return directFlight;
+  }
+
+  const flightLeg = await prisma.flightLeg.findUnique({
+    where: { id: inputId },
+    select: {
+      legacyFlight: {
+        select: flightResolutionSelect,
+      },
+    },
+  });
+
+  return flightLeg?.legacyFlight ?? null;
+}
+
+export async function resolveFlightCrew(flightId: string): Promise<FlightCrew | null> {
+  const flight = await resolveLegacyFlightForCoverage(flightId);
 
   if (!flight) {
     return null;
