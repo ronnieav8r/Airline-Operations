@@ -88,6 +88,7 @@ It has:
 48. Airworthiness release planning.
 49. Airworthiness release foundation.
 50. Airworthiness release readiness refresh.
+51. Airworthiness workflow QA and deploy readiness.
 
 ## Current Data Model Boundaries
 
@@ -243,6 +244,13 @@ the current non-expired `RELEASED` maintenance airworthiness release. Missing
 history, latest non-current records, expired current records, discrepancies,
 and deferrals remain warning-only. Operational `FlightRelease` actions remain
 available.
+
+Airworthiness workflow QA and deploy readiness is complete. Local validation
+passed for Prisma schema validation, typecheck, lint, and production build.
+Local workflow smoke passed for draft release creation, released release
+creation, superseding older current releases, and voiding a draft release.
+Local route smoke passed for dashboard, aircraft, airworthiness workflow,
+Operations Control, FlightLeg detail, health, parity, and write-readiness.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,

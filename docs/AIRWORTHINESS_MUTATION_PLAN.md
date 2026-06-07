@@ -171,6 +171,19 @@ distinguishes current non-expired `RELEASED` aircraft airworthiness releases
 from expired current records, missing history, and latest non-current records.
 This remains warning-only and does not mutate `FlightRelease`.
 
+Prompt 45 implementation status: complete as a QA slice.
+
+The durable QA note is:
+
+```text
+docs/AIRWORTHINESS_QA_LOG.md
+```
+
+Prompt 45 validated the aircraft-level airworthiness workflow and route
+surfaces after the release foundation and readiness refresh. No feature,
+schema, release-blocking, auth/signature, provider, upload, or operational
+`FlightRelease` mutation scope was added.
+
 ## Readiness Policy
 
 Keep warning-first behavior.
