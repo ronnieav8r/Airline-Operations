@@ -1,113 +1,19 @@
 import {
   AlertSeverity,
-  AlertStatus,
+  FlightLegStatus,
   FlightStatus,
-  Prisma,
   ReleaseStatus,
   SeatRole,
 } from "@prisma/client";
 
-import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
-import { prisma } from "@/lib/prisma";
+import {
+  getSchedulingData,
+  SCHEDULE_WINDOW_DAYS,
+  ScheduleFlight,
+} from "@/lib/scheduling-queries";
+import { FlightCoverage } from "@/lib/crew-resolution";
 
 export const dynamic = "force-dynamic";
-
-const SCHEDULE_WINDOW_DAYS = 14;
-const SCHEDULE_LIMIT = 80;
-
-const schedulingFlightSelect = {
-  id: true,
-  flightNumber: true,
-  aircraftId: true,
-  scheduledDeparture: true,
-  scheduledArrival: true,
-  actualDeparture: true,
-  actualArrival: true,
-  status: true,
-  notes: true,
-  departureStation: {
-    select: {
-      code: true,
-      city: true,
-      timezone: true,
-    },
-  },
-  arrivalStation: {
-    select: {
-      code: true,
-      city: true,
-      timezone: true,
-    },
-  },
-  aircraft: {
-    select: {
-      tailNumber: true,
-      type: true,
-      status: true,
-    },
-  },
-  operationalControlRecord: {
-    select: {
-      controllingEntity: true,
-      operatingAuthority: {
-        select: {
-          operatingPart: true,
-          displayName: true,
-        },
-      },
-      authorityRevision: {
-        select: {
-          revisionLabel: true,
-        },
-      },
-      release: {
-        select: {
-          status: true,
-          releasedAt: true,
-        },
-      },
-    },
-  },
-} satisfies Prisma.FlightSelect;
-
-type SchedulingFlightPayload = Prisma.FlightGetPayload<{
-  select: typeof schedulingFlightSelect;
-}>;
-
-type ScheduleAlert = {
-  id: string;
-  type: string;
-  severity: AlertSeverity;
-  title: string;
-  flightId: string | null;
-  aircraftId: string | null;
-};
-
-type ScheduleFlight = SchedulingFlightPayload & {
-  coverage: FlightCoverage | null;
-  alerts: ScheduleAlert[];
-};
-
-type ScheduleDayGroup = {
-  key: string;
-  label: string;
-  flights: ScheduleFlight[];
-};
-
-function toDateKey(value: Date): string {
-  const month = `${value.getMonth() + 1}`.padStart(2, "0");
-  const day = `${value.getDate()}`.padStart(2, "0");
-
-  return `${value.getFullYear()}-${month}-${day}`;
-}
-
-function toDateLabel(value: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(value);
-}
 
 function toDateTime(value: Date): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -143,7 +49,7 @@ function formatOperatingPart(value: string): string {
   return value.replace("PART_", "Part ");
 }
 
-function statusBadgeClasses(status: FlightStatus): string {
+function statusBadgeClasses(status: FlightStatus | FlightLegStatus): string {
   if (status === FlightStatus.ENROUTE) {
     return "border-blue-200 bg-blue-50 text-blue-700";
   }
@@ -157,6 +63,22 @@ function statusBadgeClasses(status: FlightStatus): string {
     return "border-slate-200 bg-slate-50 text-slate-600";
   }
   return "border-emerald-200 bg-emerald-50 text-emerald-700";
+}
+
+function sourceBadgeClasses(readSource: ScheduleFlight["readSource"]): string {
+  if (readSource === "FLIGHT_LEG") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
+function sourceLabel(readSource: ScheduleFlight["readSource"]): string {
+  if (readSource === "FLIGHT_LEG") {
+    return "FlightLeg read";
+  }
+
+  return "Fallback Flight read";
 }
 
 function releaseBadgeClasses(status: ReleaseStatus | null): string {
@@ -252,94 +174,6 @@ function controlLabel(flight: ScheduleFlight): string {
   )} | ${control.authorityRevision.revisionLabel}`;
 }
 
-function buildDayGroups(flights: ScheduleFlight[]): ScheduleDayGroup[] {
-  const groups = new Map<string, ScheduleDayGroup>();
-
-  for (const flight of flights) {
-    const key = toDateKey(flight.scheduledDeparture);
-    const group = groups.get(key);
-
-    if (group) {
-      group.flights.push(flight);
-    } else {
-      groups.set(key, {
-        key,
-        label: toDateLabel(flight.scheduledDeparture),
-        flights: [flight],
-      });
-    }
-  }
-
-  return Array.from(groups.values());
-}
-
-async function getSchedulingData() {
-  const now = new Date();
-  const windowEnd = new Date(now);
-  windowEnd.setDate(windowEnd.getDate() + SCHEDULE_WINDOW_DAYS);
-
-  const flights = await prisma.flight.findMany({
-    where: {
-      scheduledDeparture: {
-        gte: now,
-        lt: windowEnd,
-      },
-    },
-    select: schedulingFlightSelect,
-    orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
-    take: SCHEDULE_LIMIT,
-  });
-
-  const flightIds = flights.map((flight) => flight.id);
-  const aircraftIds = Array.from(new Set(flights.map((flight) => flight.aircraftId)));
-
-  const alerts =
-    flightIds.length === 0
-      ? []
-      : await prisma.alert.findMany({
-          where: {
-            status: AlertStatus.ACTIVE,
-            OR: [{ flightId: { in: flightIds } }, { aircraftId: { in: aircraftIds } }],
-          },
-          select: {
-            id: true,
-            type: true,
-            severity: true,
-            title: true,
-            flightId: true,
-            aircraftId: true,
-          },
-          orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
-        });
-
-  const scheduleFlights: ScheduleFlight[] = await Promise.all(
-    flights.map(async (flight) => ({
-      ...flight,
-      coverage: await resolveFlightCoverage(flight.id),
-      alerts: alerts.filter(
-        (alert) => alert.flightId === flight.id || alert.aircraftId === flight.aircraftId,
-      ),
-    })),
-  );
-
-  const summary = {
-    total: scheduleFlights.length,
-    delayed: scheduleFlights.filter((flight) => flight.status === FlightStatus.DELAYED).length,
-    coverageGaps: scheduleFlights.filter(
-      (flight) => flight.coverage && !flight.coverage.isCovered,
-    ).length,
-    released: scheduleFlights.filter((flight) => releaseStatus(flight) === ReleaseStatus.RELEASED)
-      .length,
-    activeAlerts: alerts.length,
-  };
-
-  return {
-    windowLabel: `${toDateLabel(now)} - ${toDateLabel(windowEnd)}`,
-    groups: buildDayGroups(scheduleFlights),
-    summary,
-  };
-}
-
 export default async function SchedulingPage() {
   const schedule = await getSchedulingData();
 
@@ -364,7 +198,7 @@ export default async function SchedulingPage() {
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Upcoming legs</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">{schedule.summary.total}</p>
@@ -391,6 +225,18 @@ export default async function SchedulingPage() {
             <p className="text-sm text-zinc-500">Active alerts</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {schedule.summary.activeAlerts}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">FlightLeg reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {schedule.summary.flightLegReads}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Fallback reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {schedule.summary.fallbackFlightReads}
             </p>
           </article>
         </section>
@@ -454,6 +300,13 @@ export default async function SchedulingPage() {
                                   {flight.flightNumber}
                                 </div>
                                 <div className="text-xs text-zinc-500">{toDateTime(flight.scheduledDeparture)}</div>
+                                <span
+                                  className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceBadgeClasses(
+                                    flight.readSource,
+                                  )}`}
+                                >
+                                  {sourceLabel(flight.readSource)}
+                                </span>
                               </td>
                               <td className="px-3 py-3">
                                 <div className="font-medium text-zinc-900">

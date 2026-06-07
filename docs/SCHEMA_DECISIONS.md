@@ -205,3 +205,7 @@ The first detail exposure is `/operations-control/[flightLegId]`, a read-only
 FlightLeg evidence packet. It is intentionally a drilldown, not a workflow
 surface. Evidence mutation, dispatch-package assembly, and release-package
 transition work remain deferred.
+
+Scheduling now follows the same FlightLeg-backed read pattern as Dashboard,
+Flights, and Operations Control, while preserving legacy `Flight` fallback and
+legacy Flight IDs for crew coverage resolution.
