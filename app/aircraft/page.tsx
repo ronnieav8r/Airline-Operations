@@ -2,11 +2,12 @@ import {
   AircraftStatus,
   AlertSeverity,
   AlertType,
+  FlightLegStatus,
   FlightStatus,
   SeatRole,
 } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
+import { getAircraftBoard } from "@/lib/aircraft-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ function aircraftStatusBadgeClasses(status: AircraftStatus): string {
   return "border-emerald-200 bg-emerald-50 text-emerald-700";
 }
 
-function flightStatusBadgeClasses(status: FlightStatus): string {
+function flightStatusBadgeClasses(status: FlightStatus | FlightLegStatus): string {
   if (status === FlightStatus.ENROUTE) {
     return "border-blue-200 bg-blue-50 text-blue-700";
   }
@@ -57,6 +58,22 @@ function flightStatusBadgeClasses(status: FlightStatus): string {
   return "border-emerald-200 bg-emerald-50 text-emerald-700";
 }
 
+function sourceBadgeClasses(readSource: "FLIGHT_LEG" | "LEG_MISSING_FALLBACK_FLIGHT"): string {
+  if (readSource === "FLIGHT_LEG") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
+function sourceLabel(readSource: "FLIGHT_LEG" | "LEG_MISSING_FALLBACK_FLIGHT"): string {
+  if (readSource === "FLIGHT_LEG") {
+    return "FlightLeg read";
+  }
+
+  return "Fallback Flight read";
+}
+
 function severityBadgeClasses(severity: AlertSeverity): string {
   if (severity === AlertSeverity.CRITICAL) {
     return "border-rose-200 bg-rose-50 text-rose-700";
@@ -70,136 +87,14 @@ function severityBadgeClasses(severity: AlertSeverity): string {
   return "border-sky-200 bg-sky-50 text-sky-700";
 }
 
-function getSummary(aircraft: Awaited<ReturnType<typeof getAircraftBoard>>) {
-  return {
-    total: aircraft.length,
-    available: aircraft.filter((item) => item.status === AircraftStatus.AVAILABLE).length,
-    inFlight: aircraft.filter((item) => item.status === AircraftStatus.IN_FLIGHT).length,
-    maintenance: aircraft.filter(
-      (item) =>
-        item.status === AircraftStatus.IN_MAINTENANCE ||
-        item.status === AircraftStatus.OUT_OF_SERVICE ||
-        item.alerts.some((alert) => alert.type === AlertType.MAINTENANCE),
-    ).length,
-    activeAlerts: aircraft.reduce((count, item) => count + item.alerts.length, 0),
-    crewGaps: aircraft.filter((item) => missingCockpitRoles(item.crewAssignments).length > 0)
-      .length,
-  };
-}
-
 function missingCockpitRoles(assignments: Array<{ seatRole: SeatRole }>): SeatRole[] {
   const assignedRoles = new Set(assignments.map((assignment) => assignment.seatRole));
 
   return [SeatRole.CPT, SeatRole.FO].filter((role) => !assignedRoles.has(role));
 }
 
-async function getAircraftBoard() {
-  const now = new Date();
-
-  return prisma.aircraft.findMany({
-    select: {
-      id: true,
-      tailNumber: true,
-      name: true,
-      type: true,
-      status: true,
-      seats: true,
-      homeStation: {
-        select: {
-          code: true,
-          city: true,
-        },
-      },
-      flights: {
-        where: {
-          scheduledArrival: {
-            gte: now,
-          },
-          status: {
-            not: FlightStatus.CANCELLED,
-          },
-        },
-        orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
-        take: 3,
-        select: {
-          id: true,
-          flightNumber: true,
-          scheduledDeparture: true,
-          scheduledArrival: true,
-          status: true,
-          departureStation: {
-            select: {
-              code: true,
-              city: true,
-            },
-          },
-          arrivalStation: {
-            select: {
-              code: true,
-              city: true,
-            },
-          },
-        },
-      },
-      crewAssignments: {
-        where: {
-          isActive: true,
-          startsAt: {
-            lte: now,
-          },
-          OR: [{ endsAt: null }, { endsAt: { gt: now } }],
-        },
-        orderBy: [{ seatRole: "asc" }, { startsAt: "asc" }],
-        select: {
-          id: true,
-          seatRole: true,
-          startsAt: true,
-          endsAt: true,
-          notes: true,
-          crewMember: {
-            select: {
-              firstName: true,
-              lastName: true,
-              employeeNumber: true,
-              dutyStatus: true,
-              employmentStatus: true,
-              qualifications: {
-                select: {
-                  aircraftType: true,
-                  seatRole: true,
-                  expiresAt: true,
-                },
-              },
-            },
-          },
-        },
-      },
-      alerts: {
-        where: {
-          status: "ACTIVE",
-        },
-        orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
-        select: {
-          id: true,
-          type: true,
-          severity: true,
-          title: true,
-          message: true,
-          flight: {
-            select: {
-              flightNumber: true,
-            },
-          },
-        },
-      },
-    },
-    orderBy: [{ tailNumber: "asc" }],
-  });
-}
-
 export default async function AircraftPage() {
-  const aircraft = await getAircraftBoard();
-  const summary = getSummary(aircraft);
+  const { aircraft, summary } = await getAircraftBoard();
   const now = new Date();
 
   return (
@@ -222,7 +117,7 @@ export default async function AircraftPage() {
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Aircraft</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.total}</p>
@@ -246,6 +141,18 @@ export default async function AircraftPage() {
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Crew gaps</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.crewGaps}</p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">FlightLeg reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {summary.flightLegReads}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Fallback reads</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {summary.fallbackFlightReads}
+            </p>
           </article>
         </section>
 
@@ -329,6 +236,13 @@ export default async function AircraftPage() {
                               {displayedFlight.status}
                             </span>
                           </div>
+                          <span
+                            className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceBadgeClasses(
+                              displayedFlight.readSource,
+                            )}`}
+                          >
+                            {sourceLabel(displayedFlight.readSource)}
+                          </span>
                           <p className="mt-2 font-medium text-zinc-800">
                             {displayedFlight.departureStation.code} -&gt;{" "}
                             {displayedFlight.arrivalStation.code}

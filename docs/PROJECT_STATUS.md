@@ -48,6 +48,7 @@ It has:
 20. Release evidence read-only summaries on Dashboard and Operations Control.
 21. Release evidence read-only FlightLeg detail drilldown.
 22. Scheduling FlightLeg read migration.
+23. Aircraft FlightLeg read migration.
 
 ## Current Data Model Boundaries
 
@@ -55,9 +56,9 @@ The current `Flight` model is still the v1 table read by the UI and APIs.
 Do not rename it or split it without an approved read-migration slice.
 
 `FlightLeg` now exists as an additive foundation table. It is bridged to current
-rows by `FlightLeg.legacyFlightId`. `/`, `/operations-control`, `/flights`, and
-`/scheduling` now pilot FlightLeg reads with legacy `Flight` fallback; aircraft,
-crew, and existing APIs still read from current `Flight` paths.
+rows by `FlightLeg.legacyFlightId`. `/`, `/operations-control`, `/flights`,
+`/scheduling`, and `/aircraft` now pilot FlightLeg reads with legacy `Flight`
+fallback; crew and existing APIs still read from current `Flight` paths.
 
 Render has been backfilled with FlightLeg foundation records. The
 `RUN_FLIGHTLEG_BACKFILL` flag should remain `0` unless intentionally rerunning
@@ -180,15 +181,15 @@ Use the hidden parity diagnostic before adding write flows.
 Preferred next slice:
 
 ```text
-Prompt 17: FlightLeg read migration for Aircraft
+Prompt 18: FlightLeg read migration for Crew
 ```
 
 Scope:
 
-- Move `/aircraft` current/next flight context to the FlightLeg-backed pattern
-  with legacy `Flight` fallback.
-- Keep Aircraft read-only.
-- Preserve aircraft status, crew block, coverage, and alert display.
+- Move Crew upcoming coverage/assignment context to the FlightLeg-backed pattern
+  with legacy `Flight` fallback where current APIs require it.
+- Keep Crew read-only.
+- Preserve crew roster, qualifications, duty status, and assignment display.
 - Keep release evidence detail read-only; do not add CRUD.
 
 Avoid adding CRUD screens until the remaining read-only pages are on the

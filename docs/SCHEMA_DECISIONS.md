@@ -209,3 +209,7 @@ transition work remain deferred.
 Scheduling now follows the same FlightLeg-backed read pattern as Dashboard,
 Flights, and Operations Control, while preserving legacy `Flight` fallback and
 legacy Flight IDs for crew coverage resolution.
+
+Aircraft now follows the FlightLeg-backed read pattern for current/next flight
+context, while preserving aircraft-block crew assignments, qualification
+warnings, aircraft alerts, and legacy fallback.
