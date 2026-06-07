@@ -26,6 +26,8 @@ It has:
 - Scheduling at `/scheduling`
 - Health endpoint at `/api/health`
 - Hidden FlightLeg parity diagnostic at `/internal/flightleg-parity`
+- Hidden FlightLeg write-readiness diagnostic at
+  `/internal/flightleg-write-readiness`
 - Local Docker Postgres development setup
 - Render deployment connected to `main`
 
@@ -56,6 +58,7 @@ It has:
 23. Aircraft FlightLeg read migration.
 24. Crew FlightLeg read migration.
 25. FlightLeg create/edit workflow foundation.
+26. FlightLeg write QA guardrails.
 
 ## Current Data Model Boundaries
 
@@ -72,6 +75,11 @@ Operations Control now has the first controlled FlightLeg write workflow. New
 and edited FlightLeg records also create/update the legacy `Flight` bridge row
 in the same transaction so current coverage APIs, fallback reads, and parity
 diagnostics continue to work during the transition.
+
+Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
+the expected write-workflow support records: legacy Flight bridge, auto trip,
+current aircraft assignment, operational-control link, release placeholder, and
+basic turnaround-link order.
 
 Render has been backfilled with FlightLeg foundation records. The
 `RUN_FLIGHTLEG_BACKFILL` flag should remain `0` unless intentionally rerunning
@@ -195,14 +203,12 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 20: FlightLeg write QA and release-readiness guardrails
+Prompt 21: FlightLeg-backed coverage API bridge
 ```
 
 Scope:
 
-- Add small QA helpers or diagnostics for newly created FlightLeg bridge parity.
-- Confirm create/edit behavior across Operations Control, Flights, Scheduling,
-  Aircraft, and Crew coverage APIs.
-- Decide whether the next product workflow should be release-control actions,
-  crew leg assignment promotion, or release-evidence mutation.
-- Keep schema changes deferred unless QA exposes a concrete model gap.
+- Let current coverage APIs accept either a legacy Flight ID or a FlightLeg ID.
+- Preserve existing response shape and current aircraft-block crew resolution.
+- Keep CrewLegAssignment promotion deferred until the dedicated crew snapshot
+  sync slice.
