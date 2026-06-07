@@ -131,6 +131,24 @@ Override behavior should wait until user identity, roles, and signature policy
 exist. Without auth, the app cannot responsibly capture who accepted a release
 risk.
 
+Prompt 50 planned the future override/auth policy in:
+
+```text
+docs/RELEASE_OVERRIDE_AUTH_POLICY.md
+```
+
+Current direction:
+
+- Overrides require user identity, role, timestamp, reason, authority context,
+  blocker key, and audit capture.
+- Overrides are exception records, not evidence replacements.
+- Missing FlightLeg, aircraft, operational-control context, authority/revision,
+  planned `FlightRelease`, active aircraft configuration, and current aircraft
+  maintenance airworthiness release should be non-overridable in the normal
+  operations-control workflow until stronger policy exists.
+- Manual weather, NOTAM, flight-plan, and selected baseline Part 91 evidence
+  gaps may become overridable only after auth, roles, and audit capture exist.
+
 ## Prompt 47 Status
 
 Prompt 47 implemented a read-only release-blocking preview.

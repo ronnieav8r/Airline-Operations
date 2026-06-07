@@ -375,3 +375,25 @@ Prompt 50 should decide who may override future release blockers, which
 blockers are non-overridable, what reason/evidence/identity fields must be
 captured, and whether override policy varies by authority class. It should
 remain docs-only.
+
+Implementation status: complete.
+
+Prompt 50 planned the future release override/auth boundary and kept release
+behavior warning-only.
+
+Durable policy:
+
+```text
+docs/RELEASE_OVERRIDE_AUTH_POLICY.md
+```
+
+Recommended next release policy slice:
+
+```text
+Prompt 51: Release Blocking Data Model Planning
+```
+
+Prompt 51 should plan the additive schema shape for authority policy profiles,
+policy rules, readiness snapshots, blocker findings, override records, and audit
+events. It should remain docs-only unless the next implementation prompt
+explicitly approves schema.

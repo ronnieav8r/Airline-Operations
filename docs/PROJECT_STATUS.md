@@ -93,6 +93,7 @@ It has:
 53. Release blocking preview foundation.
 54. Release blocking preview QA.
 55. Authority-specific release policy planning.
+56. Release override and auth planning.
 
 ## Current Data Model Boundaries
 
@@ -284,6 +285,13 @@ operational-control context, authority/revision, planned `FlightRelease`, and
 current W&B. Baseline Part 91 strictness for manifest, locating, dispatch,
 weather, NOTAM, and flight-plan evidence remains operator-configurable.
 
+Release override and auth planning is complete. Current behavior remains
+warning-only, but `docs/RELEASE_OVERRIDE_AUTH_POLICY.md` now defines the future
+override boundary. Overrides require user identity, role, reason, authority
+context, blocker key, timestamp, and audit capture; selected safety-critical
+findings should be non-overridable in the normal operations-control workflow
+until stronger policy exists.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -341,6 +349,10 @@ slice explicitly changes that behavior.
 Use `docs/AUTHORITY_RELEASE_POLICY.md` for planning how release readiness should
 vary by authority class. This is policy planning only; there is no
 authority-specific policy engine yet.
+
+Use `docs/RELEASE_OVERRIDE_AUTH_POLICY.md` for future release override, auth,
+role, signature, and audit policy. This is policy planning only; there is no
+override workflow or auth model yet.
 
 Use `docs/LEGACY_RECORD_IMPORT_PLAN.md` for the deferred old-record import
 lane. The future goal is a safe import method for legacy operational, aircraft,
@@ -444,16 +456,15 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 50: Release Override and Auth Planning
+Prompt 51: Release Blocking Data Model Planning
 ```
 
 Scope:
 
-- Plan who may override future release blockers.
-- Decide which blockers should be non-overridable until stronger compliance
-  policy exists.
-- Decide what reason, evidence, identity, timestamp, role, and signature fields
-  a future override must capture.
+- Plan the additive data model needed for authority policy profiles, policy
+  rules, readiness snapshots, blocker findings, override records, and audit
+  events.
+- Keep `FlightRelease` as the operational release record.
 - Keep it docs-only. Do not enforce blocking, add schema, add auth/signatures,
   add provider integrations, or add override workflow.
 

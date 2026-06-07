@@ -127,10 +127,10 @@ but the UI should continue to show that the evidence is manually entered.
 ## Deferred Decisions
 
 - Actual hard release blocking.
-- Authority-specific policy engine schema.
-- Operator-configurable policy UI.
 - Override workflow.
 - Auth, roles, user identity, and signatures.
+- Authority-specific policy engine schema.
+- Operator-configurable policy UI.
 - Legal interpretation for MEL/CDL and certificate-specific procedures.
 - Crew compliance enforcement.
 - Provider integrations for weather, NOTAM, and flight-plan data.
@@ -139,5 +139,11 @@ but the UI should continue to show that the evidence is manually entered.
 
 ## Next Slice
 
-Prompt 50 should plan release override, auth, role, and signature policy before
-any hard-blocking implementation.
+Prompt 50 planned release override, auth, role, and signature policy in:
+
+```text
+docs/RELEASE_OVERRIDE_AUTH_POLICY.md
+```
+
+Prompt 51 should plan the additive data model needed for authority policy,
+readiness snapshots, override records, and audit events.
