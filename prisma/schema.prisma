@@ -213,32 +213,78 @@ enum FlightLocatingStatus {
   OVERDUE
 }
 
+enum ReleaseAuthorityClass {
+  PART_91_BASELINE
+  PART_91K_FRACTIONAL
+  PART_135_ON_DEMAND
+}
+
+enum ReleaseRuleSeverity {
+  BLOCK
+  WARN
+  INFO
+}
+
+enum ReleaseSnapshotStatus {
+  PASS
+  BLOCKED
+  WARNING_ONLY
+}
+
+enum ReleaseFindingStatus {
+  PASS
+  FAIL
+  WARNING
+  OVERRIDDEN
+  NOT_APPLICABLE
+}
+
+enum ReleaseOverrideDecision {
+  APPROVED
+  DENIED
+  VOIDED
+  SUPERSEDED
+}
+
+enum ReleaseAuditEventType {
+  READINESS_EVALUATED
+  BLOCKER_FOUND
+  OVERRIDE_APPROVED
+  OVERRIDE_VOIDED
+  RELEASE_BLOCKED
+  RELEASE_COMPLETED
+  RELEASE_CANCELLED
+  RELEASE_VOIDED
+}
+
 model Operator {
-  id                   String                     @id @default(cuid())
-  name                 String
-  code                 String                     @unique
-  isActive             Boolean                    @default(true)
-  createdAt            DateTime                   @default(now())
-  updatedAt            DateTime                   @updatedAt
-  operatingAuthorities OperatingAuthority[]
-  controlRecords       OperationalControlRecord[]
-  tripOrMissions       TripOrMission[]
-  flightLegs           FlightLeg[]
+  id                    String                     @id @default(cuid())
+  name                  String
+  code                  String                     @unique
+  isActive              Boolean                    @default(true)
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  operatingAuthorities  OperatingAuthority[]
+  controlRecords        OperationalControlRecord[]
+  tripOrMissions        TripOrMission[]
+  flightLegs            FlightLeg[]
+  releasePolicyProfiles ReleasePolicyProfile[]
 }
 
 model OperatingAuthority {
-  id             String                     @id @default(cuid())
-  operatorId     String
-  operatingPart  OperatingPart
-  displayName    String
-  status         AuthorityStatus            @default(DRAFT)
-  createdAt      DateTime                   @default(now())
-  updatedAt      DateTime                   @updatedAt
-  operator       Operator                   @relation(fields: [operatorId], references: [id], onDelete: Restrict)
-  revisions      AuthorityRevision[]
-  manuals        Manual[]
-  controlRecords OperationalControlRecord[]
-  flightLegs     FlightLeg[]
+  id                    String                     @id @default(cuid())
+  operatorId            String
+  operatingPart         OperatingPart
+  displayName           String
+  status                AuthorityStatus            @default(DRAFT)
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  operator              Operator                   @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  revisions             AuthorityRevision[]
+  manuals               Manual[]
+  controlRecords        OperationalControlRecord[]
+  flightLegs            FlightLeg[]
+  releasePolicyProfiles ReleasePolicyProfile[]
 
   @@unique([operatorId, operatingPart])
   @@index([operatorId, status])
@@ -318,16 +364,19 @@ model OperationalControlRecord {
 }
 
 model FlightRelease {
-  id                         String                   @id @default(cuid())
-  operationalControlRecordId String                   @unique
-  status                     ReleaseStatus            @default(PLANNED)
+  id                         String                     @id @default(cuid())
+  operationalControlRecordId String                     @unique
+  status                     ReleaseStatus              @default(PLANNED)
   releasedById               String?
   releasedAt                 DateTime?
   releaseNotes               String?
-  createdAt                  DateTime                 @default(now())
-  updatedAt                  DateTime                 @updatedAt
-  operationalControlRecord   OperationalControlRecord @relation(fields: [operationalControlRecordId], references: [id], onDelete: Restrict)
-  releasedBy                 User?                    @relation("FlightReleaseReleasedBy", fields: [releasedById], references: [id], onDelete: SetNull)
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+  operationalControlRecord   OperationalControlRecord   @relation(fields: [operationalControlRecordId], references: [id], onDelete: Restrict)
+  releasedBy                 User?                      @relation("FlightReleaseReleasedBy", fields: [releasedById], references: [id], onDelete: SetNull)
+  readinessSnapshots         ReleaseReadinessSnapshot[]
+  releaseOverrides           ReleaseOverride[]
+  releaseAuditEvents         ReleaseAuditEvent[]
 
   @@index([operationalControlRecordId])
   @@index([status])
@@ -360,6 +409,10 @@ model User {
   authorizedDeferrals         Deferral[]                 @relation("DeferralAuthorizedBy")
   approvedMaintenanceEvents   MaintenanceEvent[]         @relation("MaintenanceEventApprovedBy")
   airworthinessReleases       AirworthinessRelease[]     @relation("AirworthinessReleaseReleasedBy")
+  evaluatedReleaseSnapshots   ReleaseReadinessSnapshot[] @relation("ReleaseReadinessSnapshotEvaluatedBy")
+  authoredReleaseOverrides    ReleaseOverride[]          @relation("ReleaseOverrideActor")
+  approvedReleaseOverrides    ReleaseOverride[]          @relation("ReleaseOverrideApprover")
+  releaseAuditEvents          ReleaseAuditEvent[]        @relation("ReleaseAuditEventActor")
 }
 
 model UserProfile {
@@ -617,6 +670,9 @@ model FlightLeg {
   dispatchPackage          DispatchPackage?
   airworthinessReleases    AirworthinessRelease[]
   flightPlanReferences     FlightPlanReference[]
+  readinessSnapshots       ReleaseReadinessSnapshot[]
+  releaseOverrides         ReleaseOverride[]
+  releaseAuditEvents       ReleaseAuditEvent[]
 
   @@index([scheduledDeparture])
   @@index([status, scheduledDeparture])
@@ -728,6 +784,164 @@ model AirworthinessRelease {
   @@index([releasedAt])
   @@index([expiresAt])
   @@index([releasedById])
+}
+
+model ReleasePolicyProfile {
+  id                   String                     @id @default(cuid())
+  profileKey           String                     @unique
+  operatorId           String
+  operatingAuthorityId String?
+  name                 String
+  authorityClass       ReleaseAuthorityClass
+  isDefault            Boolean                    @default(false)
+  effectiveFrom        DateTime                   @default(now())
+  effectiveTo          DateTime?
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  operator             Operator                   @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  operatingAuthority   OperatingAuthority?        @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
+  rules                ReleasePolicyRule[]
+  readinessSnapshots   ReleaseReadinessSnapshot[]
+  releaseOverrides     ReleaseOverride[]
+
+  @@index([operatorId, isDefault])
+  @@index([operatingAuthorityId, isDefault])
+  @@index([authorityClass])
+  @@index([effectiveFrom, effectiveTo])
+}
+
+model ReleasePolicyRule {
+  id                       String                     @id @default(cuid())
+  profileId                String
+  ruleKey                  String
+  readinessCategory        String
+  severity                 ReleaseRuleSeverity
+  isOverridable            Boolean                    @default(false)
+  requiresSecondApproval   Boolean                    @default(false)
+  manualEvidenceAllowed    Boolean                    @default(false)
+  providerEvidenceRequired Boolean                    @default(false)
+  effectiveFrom            DateTime                   @default(now())
+  effectiveTo              DateTime?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  profile                  ReleasePolicyProfile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  readinessFindings        ReleaseReadinessFinding[]
+
+  @@unique([profileId, ruleKey])
+  @@index([ruleKey])
+  @@index([readinessCategory, severity])
+  @@index([effectiveFrom, effectiveTo])
+}
+
+model ReleaseReadinessSnapshot {
+  id              String                     @id @default(cuid())
+  flightLegId     String
+  flightReleaseId String
+  policyProfileId String
+  snapshotStatus  ReleaseSnapshotStatus
+  evaluatedAt     DateTime                   @default(now())
+  evaluatedById   String?
+  authorityClass  ReleaseAuthorityClass
+  summary         Json?
+  createdAt       DateTime                   @default(now())
+  flightLeg       FlightLeg                  @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  flightRelease   FlightRelease              @relation(fields: [flightReleaseId], references: [id], onDelete: Cascade)
+  policyProfile   ReleasePolicyProfile       @relation(fields: [policyProfileId], references: [id], onDelete: Restrict)
+  evaluatedBy     User?                      @relation("ReleaseReadinessSnapshotEvaluatedBy", fields: [evaluatedById], references: [id], onDelete: SetNull)
+  findings        ReleaseReadinessFinding[]
+  auditEvents     ReleaseAuditEvent[]
+
+  @@index([flightLegId, evaluatedAt])
+  @@index([flightReleaseId, evaluatedAt])
+  @@index([policyProfileId])
+  @@index([snapshotStatus])
+  @@index([evaluatedById])
+}
+
+model ReleaseReadinessFinding {
+  id                String                    @id @default(cuid())
+  snapshotId        String
+  ruleId            String?
+  ruleKey           String
+  readinessCategory String
+  severity          ReleaseRuleSeverity
+  status            ReleaseFindingStatus
+  isOverridable     Boolean                   @default(false)
+  summary           String
+  evidenceRefType   String?
+  evidenceRefId     String?
+  details           Json?
+  createdAt         DateTime                  @default(now())
+  snapshot          ReleaseReadinessSnapshot  @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  rule              ReleasePolicyRule?        @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  releaseOverrides  ReleaseOverride[]
+
+  @@index([snapshotId, severity])
+  @@index([ruleId])
+  @@index([ruleKey])
+  @@index([readinessCategory, status])
+}
+
+model ReleaseOverride {
+  id                  String                  @id @default(cuid())
+  findingId           String
+  flightLegId         String
+  flightReleaseId     String
+  policyProfileId     String
+  decision            ReleaseOverrideDecision @default(APPROVED)
+  reason              String
+  supportingReference String?
+  actorUserId         String?
+  actorRole           String?
+  approvedById        String?
+  approvedRole        String?
+  attestationText     String?
+  signatureRef        String?
+  expiresAt           DateTime?
+  createdAt           DateTime                @default(now())
+  voidedAt            DateTime?
+  voidReason          String?
+  finding             ReleaseReadinessFinding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  flightLeg           FlightLeg               @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  flightRelease       FlightRelease           @relation(fields: [flightReleaseId], references: [id], onDelete: Cascade)
+  policyProfile       ReleasePolicyProfile    @relation(fields: [policyProfileId], references: [id], onDelete: Restrict)
+  actorUser           User?                   @relation("ReleaseOverrideActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  approvedBy          User?                   @relation("ReleaseOverrideApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  auditEvents         ReleaseAuditEvent[]
+
+  @@index([findingId])
+  @@index([flightLegId, createdAt])
+  @@index([flightReleaseId])
+  @@index([policyProfileId])
+  @@index([decision])
+  @@index([actorUserId])
+  @@index([approvedById])
+}
+
+model ReleaseAuditEvent {
+  id              String                @id @default(cuid())
+  flightLegId     String
+  flightReleaseId String?
+  snapshotId      String?
+  overrideId      String?
+  eventType       ReleaseAuditEventType
+  actorUserId     String?
+  actorRole       String?
+  message         String
+  metadata        Json?
+  createdAt       DateTime              @default(now())
+  flightLeg       FlightLeg             @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  flightRelease   FlightRelease?        @relation(fields: [flightReleaseId], references: [id], onDelete: SetNull)
+  snapshot        ReleaseReadinessSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+  override        ReleaseOverride?      @relation(fields: [overrideId], references: [id], onDelete: SetNull)
+  actorUser       User?                 @relation("ReleaseAuditEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([flightLegId, createdAt])
+  @@index([flightReleaseId])
+  @@index([snapshotId])
+  @@index([overrideId])
+  @@index([eventType])
+  @@index([actorUserId])
 }
 
 model AircraftAssignment {

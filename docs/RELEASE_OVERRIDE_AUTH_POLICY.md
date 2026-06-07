@@ -151,6 +151,10 @@ docs/RELEASE_BLOCKING_DATA_MODEL_PLAN.md
 
 Do not implement schema until the next implementation slice is approved.
 
+Prompt 52 added the additive override and audit-event tables, but there is still
+no override UI, auth implementation, role enforcement, signature capture, or
+hard release blocking.
+
 ## Deferred
 
 - Actual hard release blocking.

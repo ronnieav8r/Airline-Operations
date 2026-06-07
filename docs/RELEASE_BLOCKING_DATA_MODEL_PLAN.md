@@ -6,15 +6,18 @@ This document plans the additive data model needed before AeroOps implements
 hard FlightLeg release blocking, authority-specific policy, override records,
 and release audit events.
 
-It does not change the current Prisma schema.
+Prompt 52 implemented this plan as an additive schema foundation with
+conservative default policy/rule records. Current release behavior remains
+warning-only.
 
 ## Current Decision
 
 Do not implement hard blocking yet.
 
-The current schema is sufficient for warning-only release readiness preview.
-Hard blocking needs durable policy, snapshot, override, and audit records so a
-release decision can be explained after the fact.
+The current schema now has durable policy, snapshot, override, and audit tables
+needed for future enforcement. Only policy profiles and policy rules are seeded
+today. Readiness snapshots, findings, overrides, and audit events remain unused
+until later workflow slices.
 
 ## Existing Boundaries
 
@@ -28,6 +31,8 @@ Manual evidence tables remain the current source for manifest, W&B, locating,
 dispatch, weather, NOTAM, and flight-plan readiness.
 
 ## Proposed Additive Models
+
+Implementation status: complete for the additive schema foundation.
 
 ### ReleasePolicyProfile
 
@@ -224,16 +229,18 @@ FlightRelease -> ReleaseAuditEvent
 
 ## Implementation Order If Approved
 
-1. Add schema foundation with nullable user links and no enforcement.
-2. Seed conservative default policy profiles and rules for demo/local data.
-3. Add hidden diagnostic showing resolved policy and rule counts.
-4. Add readiness snapshot creation in preview mode only.
-5. Add hard blocking only after auth/override decisions are resolved.
+1. Add schema foundation with nullable user links and no enforcement. Complete.
+2. Seed conservative default policy profiles and rules for demo/local data. Complete.
+3. Add hidden diagnostic showing resolved policy and rule counts. Complete.
+4. Add readiness snapshot creation in preview mode only. Deferred.
+5. Add hard blocking only after auth/override decisions are resolved. Deferred.
 
 ## Deferred
 
-- Schema implementation in Prompt 51.
+- Release-policy diagnostic QA after Prompt 52.
 - Hard release blocking.
+- Readiness snapshot creation.
+- Readiness finding creation.
 - Override workflow.
 - Auth, roles, permissions, and signatures.
 - Provider-backed evidence verification.

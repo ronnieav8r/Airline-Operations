@@ -35,6 +35,12 @@ export async function GET() {
       deferralCount,
       maintenanceEventCount,
       airworthinessReleaseCount,
+      releasePolicyProfileCount,
+      releasePolicyRuleCount,
+      releaseReadinessSnapshotCount,
+      releaseReadinessFindingCount,
+      releaseOverrideCount,
+      releaseAuditEventCount,
     ] = await Promise.all([
       prisma.station.count(),
       prisma.aircraft.count(),
@@ -65,6 +71,12 @@ export async function GET() {
       prisma.deferral.count(),
       prisma.maintenanceEvent.count(),
       prisma.airworthinessRelease.count(),
+      prisma.releasePolicyProfile.count(),
+      prisma.releasePolicyRule.count(),
+      prisma.releaseReadinessSnapshot.count(),
+      prisma.releaseReadinessFinding.count(),
+      prisma.releaseOverride.count(),
+      prisma.releaseAuditEvent.count(),
     ]);
 
     return NextResponse.json({
@@ -100,6 +112,12 @@ export async function GET() {
         deferrals: deferralCount,
         maintenanceEvents: maintenanceEventCount,
         airworthinessReleases: airworthinessReleaseCount,
+        releasePolicyProfiles: releasePolicyProfileCount,
+        releasePolicyRules: releasePolicyRuleCount,
+        releaseReadinessSnapshots: releaseReadinessSnapshotCount,
+        releaseReadinessFindings: releaseReadinessFindingCount,
+        releaseOverrides: releaseOverrideCount,
+        releaseAuditEvents: releaseAuditEventCount,
       },
     });
   } catch (error) {

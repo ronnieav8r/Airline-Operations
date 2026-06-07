@@ -1,9 +1,9 @@
 // AeroOps Center planning DBML
 // Last updated: 2026-06-07
 // Scope: target data model direction. The initial FlightLeg foundation is now
-// implemented additively. Release evidence and first airworthiness foundation
-// tables are now implemented; deeper crew compliance and safety tables remain
-// planning-only.
+// implemented additively. Release evidence, first airworthiness foundation,
+// and release-policy foundation tables are now implemented; deeper crew
+// compliance and safety tables remain planning-only.
 
 Project AeroOps_Planning_FlightLeg {
   database_type: "PostgreSQL"
@@ -58,6 +58,50 @@ Enum ReleaseStatus {
   AMENDED
   CANCELLED
   VOIDED
+}
+
+Enum ReleaseAuthorityClass {
+  PART_91_BASELINE
+  PART_91K_FRACTIONAL
+  PART_135_ON_DEMAND
+}
+
+Enum ReleaseRuleSeverity {
+  BLOCK
+  WARN
+  INFO
+}
+
+Enum ReleaseSnapshotStatus {
+  PASS
+  BLOCKED
+  WARNING_ONLY
+}
+
+Enum ReleaseFindingStatus {
+  PASS
+  FAIL
+  WARNING
+  OVERRIDDEN
+  NOT_APPLICABLE
+}
+
+Enum ReleaseOverrideDecision {
+  APPROVED
+  DENIED
+  VOIDED
+  SUPERSEDED
+}
+
+Enum ReleaseAuditEventType {
+  READINESS_EVALUATED
+  BLOCKER_FOUND
+  OVERRIDE_APPROVED
+  OVERRIDE_VOIDED
+  RELEASE_BLOCKED
+  RELEASE_COMPLETED
+  RELEASE_CANCELLED
+  RELEASE_VOIDED
 }
 
 Enum ManifestStatus {
@@ -544,6 +588,100 @@ Table ReleasePackage {
   updatedAt timestamp [not null]
 }
 
+Table ReleasePolicyProfile {
+  id varchar [pk]
+  profileKey varchar [not null, unique]
+  operatorId varchar [not null]
+  operatingAuthorityId varchar
+  name varchar [not null]
+  authorityClass ReleaseAuthorityClass [not null]
+  isDefault boolean [not null]
+  effectiveFrom timestamp [not null]
+  effectiveTo timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table ReleasePolicyRule {
+  id varchar [pk]
+  profileId varchar [not null]
+  ruleKey varchar [not null]
+  readinessCategory varchar [not null]
+  severity ReleaseRuleSeverity [not null]
+  isOverridable boolean [not null]
+  requiresSecondApproval boolean [not null]
+  manualEvidenceAllowed boolean [not null]
+  providerEvidenceRequired boolean [not null]
+  effectiveFrom timestamp [not null]
+  effectiveTo timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table ReleaseReadinessSnapshot {
+  id varchar [pk]
+  flightLegId varchar [not null]
+  flightReleaseId varchar [not null]
+  policyProfileId varchar [not null]
+  snapshotStatus ReleaseSnapshotStatus [not null]
+  evaluatedAt timestamp [not null]
+  evaluatedById varchar
+  authorityClass ReleaseAuthorityClass [not null]
+  summary jsonb
+  createdAt timestamp [not null]
+}
+
+Table ReleaseReadinessFinding {
+  id varchar [pk]
+  snapshotId varchar [not null]
+  ruleId varchar
+  ruleKey varchar [not null]
+  readinessCategory varchar [not null]
+  severity ReleaseRuleSeverity [not null]
+  status ReleaseFindingStatus [not null]
+  isOverridable boolean [not null]
+  summary text [not null]
+  evidenceRefType varchar
+  evidenceRefId varchar
+  details jsonb
+  createdAt timestamp [not null]
+}
+
+Table ReleaseOverride {
+  id varchar [pk]
+  findingId varchar [not null]
+  flightLegId varchar [not null]
+  flightReleaseId varchar [not null]
+  policyProfileId varchar [not null]
+  decision ReleaseOverrideDecision [not null]
+  reason text [not null]
+  supportingReference text
+  actorUserId varchar
+  actorRole varchar
+  approvedById varchar
+  approvedRole varchar
+  attestationText text
+  signatureRef varchar
+  expiresAt timestamp
+  createdAt timestamp [not null]
+  voidedAt timestamp
+  voidReason text
+}
+
+Table ReleaseAuditEvent {
+  id varchar [pk]
+  flightLegId varchar [not null]
+  flightReleaseId varchar
+  snapshotId varchar
+  overrideId varchar
+  eventType ReleaseAuditEventType [not null]
+  actorUserId varchar
+  actorRole varchar
+  message text [not null]
+  metadata jsonb
+  createdAt timestamp [not null]
+}
+
 Table DispatchPackage {
   id varchar [pk]
   flightLegId varchar [not null, unique]
@@ -863,6 +1001,26 @@ Ref: OperationalControlRecord.createdById > User.id
 Ref: ReleasePackage.flightLegId > FlightLeg.id
 Ref: ReleasePackage.operationalControlRecordId > OperationalControlRecord.id
 Ref: ReleasePackage.releasedById > User.id
+Ref: ReleasePolicyProfile.operatorId > Operator.id
+Ref: ReleasePolicyProfile.operatingAuthorityId > OperatingAuthority.id
+Ref: ReleasePolicyRule.profileId > ReleasePolicyProfile.id
+Ref: ReleaseReadinessSnapshot.flightLegId > FlightLeg.id
+Ref: ReleaseReadinessSnapshot.flightReleaseId > ReleasePackage.id
+Ref: ReleaseReadinessSnapshot.policyProfileId > ReleasePolicyProfile.id
+Ref: ReleaseReadinessSnapshot.evaluatedById > User.id
+Ref: ReleaseReadinessFinding.snapshotId > ReleaseReadinessSnapshot.id
+Ref: ReleaseReadinessFinding.ruleId > ReleasePolicyRule.id
+Ref: ReleaseOverride.findingId > ReleaseReadinessFinding.id
+Ref: ReleaseOverride.flightLegId > FlightLeg.id
+Ref: ReleaseOverride.flightReleaseId > ReleasePackage.id
+Ref: ReleaseOverride.policyProfileId > ReleasePolicyProfile.id
+Ref: ReleaseOverride.actorUserId > User.id
+Ref: ReleaseOverride.approvedById > User.id
+Ref: ReleaseAuditEvent.flightLegId > FlightLeg.id
+Ref: ReleaseAuditEvent.flightReleaseId > ReleasePackage.id
+Ref: ReleaseAuditEvent.snapshotId > ReleaseReadinessSnapshot.id
+Ref: ReleaseAuditEvent.overrideId > ReleaseOverride.id
+Ref: ReleaseAuditEvent.actorUserId > User.id
 Ref: DispatchPackage.flightLegId > FlightLeg.id
 Ref: DispatchPackage.releasePackageId > ReleasePackage.id
 Ref: DispatchPackage.weatherBriefingId > WeatherBriefingSnapshot.id

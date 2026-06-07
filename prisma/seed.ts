@@ -30,6 +30,8 @@ import {
   WeightBalanceStatus,
 } from "@prisma/client";
 
+import { seedDefaultReleasePolicies } from "../lib/release-policy-defaults";
+
 const prisma = new PrismaClient();
 
 function addDays(date: Date, days: number): Date {
@@ -1451,6 +1453,8 @@ async function main() {
   await seedReleaseEvidenceFoundation();
 
   await seedAirworthinessFoundation();
+
+  await seedDefaultReleasePolicies(prisma);
 
   await prisma.timeOffRequest.create({
     data: {

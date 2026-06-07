@@ -133,6 +133,10 @@ The current schema is sufficient for warning-only preview. Hard blocking should
 wait for additive policy profile, policy rule, readiness snapshot, finding,
 override, and audit-event records.
 
+Prompt 52 added those records as an additive schema foundation. The app now
+stores default release policy profiles and rules, but it still does not enforce
+hard blocking or create release readiness snapshots/findings.
+
 ## Override Policy
 
 Do not implement overrides yet.
@@ -201,6 +205,7 @@ docs/RELEASE_BLOCKING_QA_LOG.md
 ## Deferred
 
 - Actual hard release blocking.
+- Readiness snapshot and finding creation.
 - Override workflow.
 - Auth, roles, user identity, and signatures.
 - Authority-specific policy engine.
