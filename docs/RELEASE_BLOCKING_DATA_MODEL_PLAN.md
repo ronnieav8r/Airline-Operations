@@ -232,12 +232,12 @@ FlightRelease -> ReleaseAuditEvent
 1. Add schema foundation with nullable user links and no enforcement. Complete.
 2. Seed conservative default policy profiles and rules for demo/local data. Complete.
 3. Add hidden diagnostic showing resolved policy and rule counts. Complete.
-4. Add readiness snapshot creation in preview mode only. Deferred.
-5. Add hard blocking only after auth/override decisions are resolved. Deferred.
+4. Run release-policy diagnostic QA. Complete.
+5. Add readiness snapshot creation in preview mode only. Deferred.
+6. Add hard blocking only after auth/override decisions are resolved. Deferred.
 
 ## Deferred
 
-- Release-policy diagnostic QA after Prompt 52.
 - Hard release blocking.
 - Readiness snapshot creation.
 - Readiness finding creation.

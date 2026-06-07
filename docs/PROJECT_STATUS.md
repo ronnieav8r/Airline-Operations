@@ -96,6 +96,7 @@ It has:
 56. Release override and auth planning.
 57. Release blocking data model planning.
 58. Release blocking schema foundation.
+59. Release policy diagnostic QA.
 
 ## Current Data Model Boundaries
 
@@ -309,6 +310,13 @@ Current `FlightRelease` actions remain warning-only; no snapshots, findings,
 overrides, hard blocking, auth/signatures, provider integrations, or file
 uploads were added.
 
+Release policy diagnostic QA is complete. Local validation confirmed default
+release policy profiles/rules seed and backfill successfully, health exposes
+the new counts, `/internal/release-policy-readiness` reports policy coverage,
+and FlightLeg detail still renders Release Readiness and Release Control.
+Snapshots, findings, overrides, audit events, hard blocking, auth/signatures,
+provider integrations, file uploads, and `ReleasePackage` remain deferred.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -477,15 +485,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 53: Release Policy Diagnostic QA
+Prompt 54: Release Snapshot Planning
 ```
 
 Scope:
 
-- Validate the release policy default records, health counts, hidden diagnostic,
-  and unchanged warning-only release behavior locally.
-- Do not add snapshots, findings, overrides, hard blocking, auth/signatures,
-  provider integrations, file uploads, or release-action changes.
+- Plan explicit preview snapshot creation from FlightLeg detail.
+- Define how `ReleaseReadinessSnapshot` and `ReleaseReadinessFinding` should be
+  populated from the current readiness checklist.
+- Keep it docs-only. Do not add snapshot writes, hard blocking, overrides,
+  auth/signatures, provider integrations, file uploads, or release-action
+  changes.
 
 Deferred follow-up to keep on the roadmap:
 

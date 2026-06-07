@@ -754,6 +754,12 @@ async function main() {
   const today = anchor;
   const tomorrow = addDays(anchor, 1);
 
+  await prisma.releaseAuditEvent.deleteMany();
+  await prisma.releaseOverride.deleteMany();
+  await prisma.releaseReadinessFinding.deleteMany();
+  await prisma.releaseReadinessSnapshot.deleteMany();
+  await prisma.releasePolicyRule.deleteMany();
+  await prisma.releasePolicyProfile.deleteMany();
   await prisma.turnaroundLink.deleteMany();
   await prisma.airworthinessRelease.deleteMany();
   await prisma.maintenanceEvent.deleteMany();
