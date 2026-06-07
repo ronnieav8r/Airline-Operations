@@ -115,9 +115,24 @@ Planning questions:
 No hard release blocking should be implemented without an explicit product
 decision.
 
+Implementation status: complete.
+
+Decision: the first mutation surface should be aircraft-scoped at
+`/aircraft/[aircraftId]/airworthiness`, not FlightLeg-scoped. Discrepancies and
+deferrals belong to the aircraft record and can affect more than one FlightLeg.
+
+Next implementation: Prompt 38 should add discrepancy create/edit only.
+Deferral mutation should follow separately in Prompt 39.
+
+The durable mutation plan is:
+
+```text
+docs/AIRWORTHINESS_MUTATION_PLAN.md
+```
+
 ## Deferred
 
-Do not include these in Prompts 35-36:
+Do not include these in the first airworthiness mutation prompts:
 
 - Component-level tracking.
 - Reliability/event trend analytics.

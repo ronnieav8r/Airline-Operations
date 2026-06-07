@@ -80,6 +80,7 @@ It has:
 40. Airworthiness schema planning.
 41. Airworthiness additive schema foundation.
 42. Airworthiness read-only summaries.
+43. Airworthiness mutation planning.
 
 ## Current Data Model Boundaries
 
@@ -179,6 +180,13 @@ context for assigned aircraft configuration, released airworthiness record,
 open/deferred discrepancies, and active deferrals. Release actions remain
 available; hard blocking and airworthiness mutation remain deferred.
 
+Airworthiness mutation planning is complete. The chosen first write surface is
+`/aircraft/[aircraftId]/airworthiness`, because discrepancies and deferrals are
+aircraft-level records that can affect multiple FlightLegs. The next
+implementation should add discrepancy create/edit only. Deferral mutation,
+maintenance events, airworthiness release signing, auth/signatures, and hard
+release blocking remain deferred.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -217,6 +225,10 @@ boundary. `ReleasePackage` and `PositionReport` remain deferred.
 
 Use `docs/RELEASE_EVIDENCE_MUTATION_PLAN.md` for the release-evidence mutation
 sequence. The chosen first implementation workflow is manifest mutation.
+
+Use `docs/AIRWORTHINESS_MUTATION_PLAN.md` for the airworthiness mutation
+sequence. The chosen first implementation workflow is discrepancy mutation
+under the aircraft-level airworthiness route.
 
 Crew coverage uses aircraft-block assignment:
 
@@ -317,12 +329,14 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 37: Airworthiness mutation planning
+Prompt 38: Airworthiness discrepancy mutation foundation
 ```
 
 Scope:
 
-- Plan the first narrow discrepancy/deferral maintenance workflow.
-- Decide whether the first write surface belongs under Aircraft or Operations Control.
-- Define validation and audit boundaries before creating airworthiness mutation routes.
+- Add `/aircraft/[aircraftId]/airworthiness`.
+- Link to the workflow from aircraft cards on `/aircraft`.
+- Create/edit aircraft-level discrepancies only.
+- Keep deferral mutation, maintenance events, airworthiness release signing,
+  auth/signatures, and release blocking deferred.
 - Do not add hard release blocking until product policy is explicitly approved.
