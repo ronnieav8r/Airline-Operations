@@ -537,3 +537,20 @@ Prompt 58: Release Snapshot Drift QA
 Prompt 58 should validate the diagnostic against local no-snapshot and drift
 cases, then confirm capturing a fresh explicit preview snapshot clears drift
 for a stable FlightLeg. Keep the slice QA/docs only unless a defect is found.
+
+Implementation status: complete.
+
+Prompt 58 validated `/internal/release-snapshot-readiness` against local
+no-snapshot, drifted-snapshot, and fresh-capture-current cases. No code defect
+was found and release behavior remains warning-only.
+
+Recommended next release policy slice:
+
+```text
+Prompt 59: Release Snapshot Findings Detail
+```
+
+Prompt 59 should add a read-only detail view for a captured preview snapshot
+and its findings, then link recent snapshots and diagnostic rows to that view.
+It should not add hard blocking, overrides, auth/signatures, provider
+integrations, file uploads, automatic snapshots, or release-action changes.

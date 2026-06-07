@@ -103,6 +103,7 @@ It has:
 61. Release snapshot preview foundation.
 62. Release snapshot QA.
 63. Release snapshot diagnostic readiness.
+64. Release snapshot drift QA.
 
 ## Current Data Model Boundaries
 
@@ -348,6 +349,11 @@ live release-readiness checklist with its latest explicit preview snapshot and
 flags missing or drifted snapshots. It is read-only and does not mutate
 snapshots, evidence, policy rules, or `FlightRelease` actions.
 
+Release snapshot drift QA is complete. Local QA confirmed the diagnostic reports
+no-snapshot FlightLegs, reports drift when local live readiness changes after a
+snapshot, and returns a stable FlightLeg to current after a fresh explicit
+preview snapshot. No release behavior changed.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -516,17 +522,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 58: Release Snapshot Drift QA
+Prompt 59: Release Snapshot Findings Detail
 ```
 
 Scope:
 
-- Validate `/internal/release-snapshot-readiness` against local snapshot drift
-  and no-snapshot cases.
-- Confirm capturing a fresh preview snapshot clears drift for that FlightLeg
-  when evidence has not changed.
+- Add a read-only detail view for a captured preview snapshot and its findings.
+- Link recent snapshots on FlightLeg detail and diagnostic rows to the snapshot
+  detail view.
 - Keep it read-only. Do not add hard blocking, overrides, auth/signatures,
-  provider integrations, file uploads, or release-action changes.
+  provider integrations, file uploads, automatic snapshots, or release-action
+  changes.
 
 Deferred follow-up to keep on the roadmap:
 

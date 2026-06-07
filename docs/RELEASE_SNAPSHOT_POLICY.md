@@ -27,6 +27,9 @@ that compares live readiness with each FlightLeg's latest explicit preview
 snapshot and flags missing or drifted snapshots. It does not create snapshots
 or change release behavior.
 
+Prompt 58 validated missing-snapshot, drifted-snapshot, and fresh-capture
+current cases. Snapshot drift remains informational only.
+
 ## Snapshot Purpose
 
 Preview snapshots preserve what the release-readiness checklist showed at a

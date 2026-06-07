@@ -49,3 +49,30 @@ Validated Prompt 55 explicit preview snapshot capture:
 Release behavior remains warning-only. No hard blocking, overrides,
 auth/signatures, provider integrations, file uploads, or `ReleasePackage`
 behavior were added.
+
+## Prompt 58: Release Snapshot Drift QA
+
+Status: complete.
+
+Validated `/internal/release-snapshot-readiness` against local snapshot
+diagnostic cases:
+
+- Initial diagnostic state showed 5 FlightLegs checked.
+- Initial diagnostic state showed 4 FlightLegs with no snapshot.
+- Initial diagnostic state showed 1 FlightLeg with a current latest snapshot.
+- Local drift case changed FlightLeg `AO101` manifest from `DRAFT` to `READY`.
+- Drift diagnostic reported 1 drifted snapshot and 4 missing snapshots.
+- Drift row changed from `CURRENT` to `DRIFT`.
+- Drift row showed manifest finding status changed from `WARNING` to `PASS`.
+- Fresh explicit preview snapshot capture returned `AO101` to `CURRENT`.
+- Fresh capture left diagnostic summary at 1 current snapshot, 0 drifted
+  snapshots, and 4 missing snapshots.
+- Direct local server-action invocation raised the expected cache revalidation
+  exception outside a request context after the snapshot write; database state
+  confirmed the snapshot was created.
+- Snapshot count for the target FlightLeg reached 6 after QA captures.
+
+Release behavior remains warning-only. No code defect was found. No hard
+blocking, overrides, auth/signatures, provider integrations, file uploads,
+automatic snapshots, release-action changes, or `ReleasePackage` behavior were
+added.
