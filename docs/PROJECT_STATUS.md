@@ -75,6 +75,7 @@ It has:
 35. Manual dispatch-package mutation planning.
 36. Manual dispatch-package mutation foundation.
 37. Release readiness guardrails planning.
+38. Release readiness guardrails foundation.
 
 ## Current Data Model Boundaries
 
@@ -142,6 +143,12 @@ implementation should add a warning-only checklist to FlightLeg detail near
 Release Control. It should cover manifest, W&B, locating, dispatch, weather,
 NOTAM, and flight-plan evidence. It must not block release actions, mutate
 evidence, add schema, or introduce `ReleasePackage`.
+
+FlightLeg detail now shows warning-only release readiness guardrails near
+Release Control. The checklist covers manifest, W&B, locating, dispatch,
+weather, NOTAM, and flight-plan evidence. Release action buttons remain
+available. Hard release blocking, `ReleasePackage`, audit policy, and approval
+authority remain deferred.
 
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
@@ -281,12 +288,12 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 32: Release readiness guardrails foundation
+Prompt 33: Release evidence QA and deploy verification
 ```
 
 Scope:
 
-- Add a warning-only readiness checklist to FlightLeg detail.
-- Keep release action buttons available.
-- Use existing release evidence only; no schema, release blocking, or
-  `ReleasePackage`.
+- Re-run local workflow smoke checks across the completed release-evidence
+  workflows.
+- Verify Render deploy/routes after the pushed batch.
+- Do not add schema or new write workflows in the QA slice.

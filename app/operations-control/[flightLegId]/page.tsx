@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ReleaseStatus } from "@prisma/client";
+import { FlightLocatingStatus, ManifestStatus, ReleaseStatus, WeightBalanceStatus } from "@prisma/client";
 
 import {
   cancelFlightLegReleaseAction,
@@ -133,6 +133,154 @@ function ReleaseControlActions({ detail }: { detail: ReleaseEvidenceDetail }) {
             <ReleaseActionButton action={voidRelease} label="Void Release" variant="secondary" />
           ) : null}
         </div>
+      </div>
+    </section>
+  );
+}
+
+type ReadinessItem = {
+  href?: string;
+  label: string;
+  message: string;
+  ready: boolean;
+};
+
+function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReadinessItem[] {
+  const manifest = detail.manifest;
+  const latestUsableWeightBalanceRun =
+    detail.weightBalanceRuns.find((run) => run.status !== WeightBalanceStatus.VOIDED) ?? null;
+  const locating = detail.flightLocatingRecord;
+  const dispatch = detail.dispatchPackage;
+  const weather = dispatch?.weatherBriefing ?? null;
+  const notam = dispatch?.notamSnapshot ?? null;
+  const flightPlan = dispatch?.flightPlanReference ?? null;
+  const manifestReady =
+    !!manifest &&
+    manifest.items.length > 0 &&
+    (manifest.status === ManifestStatus.READY || manifest.status === ManifestStatus.LOCKED);
+  const weightBalanceReady =
+    !!latestUsableWeightBalanceRun &&
+    (latestUsableWeightBalanceRun.status === WeightBalanceStatus.CALCULATED ||
+      latestUsableWeightBalanceRun.status === WeightBalanceStatus.APPROVED);
+  const locatingReady =
+    !!locating &&
+    (locating.status === FlightLocatingStatus.FILED ||
+      locating.status === FlightLocatingStatus.ACTIVE ||
+      locating.status === FlightLocatingStatus.CLOSED);
+  const dispatchReady = !!dispatch && !!weather && !!notam && !!flightPlan;
+  const weatherReady = !!weather?.routeSummary;
+  const notamReady = !!notam?.affectedStationCodes;
+  const flightPlanReady = !!flightPlan?.externalReference && !!flightPlan.routeText;
+
+  return [
+    {
+      href: `/operations-control/${detail.id}/manifest`,
+      label: "Manifest",
+      message: manifestReady
+        ? `${manifest.items.length} item(s), status ${manifest.status}.`
+        : "Needs a READY or LOCKED manifest with at least one item.",
+      ready: manifestReady,
+    },
+    {
+      href: `/operations-control/${detail.id}/weight-balance`,
+      label: "Weight and balance",
+      message: weightBalanceReady
+        ? `${latestUsableWeightBalanceRun.runLabel} is ${latestUsableWeightBalanceRun.status}.`
+        : "Needs a latest non-voided W&B run marked CALCULATED or APPROVED.",
+      ready: weightBalanceReady,
+    },
+    {
+      href: `/operations-control/${detail.id}/locating`,
+      label: "Flight locating",
+      message: locatingReady
+        ? `Locating status is ${locating.status}.`
+        : "Needs locating status FILED, ACTIVE, or CLOSED.",
+      ready: locatingReady,
+    },
+    {
+      href: `/operations-control/${detail.id}/dispatch`,
+      label: "Dispatch package",
+      message: dispatchReady
+        ? "Dispatch package links weather, NOTAM, and flight-plan evidence."
+        : "Needs a dispatch package linked to weather, NOTAM, and flight-plan evidence.",
+      ready: dispatchReady,
+    },
+    {
+      href: `/operations-control/${detail.id}/dispatch`,
+      label: "Weather",
+      message: weatherReady ? "Weather route summary is present." : "Needs a weather route summary.",
+      ready: weatherReady,
+    },
+    {
+      href: `/operations-control/${detail.id}/dispatch`,
+      label: "NOTAM",
+      message: notamReady ? "Affected station codes are present." : "Needs affected station codes.",
+      ready: notamReady,
+    },
+    {
+      href: `/operations-control/${detail.id}/dispatch`,
+      label: "Flight plan",
+      message: flightPlanReady
+        ? `${flightPlan.externalReference} has route text.`
+        : "Needs an external reference and route text.",
+      ready: flightPlanReady,
+    },
+  ];
+}
+
+function ReadinessBadge({ ready }: { ready: boolean }) {
+  return (
+    <span
+      className={
+        ready
+          ? "inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
+          : "inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800"
+      }
+    >
+      {ready ? "Ready" : "Needs attention"}
+    </span>
+  );
+}
+
+function ReleaseReadinessChecklist({ detail }: { detail: ReleaseEvidenceDetail }) {
+  const items = getReleaseReadinessItems(detail);
+  const readyCount = items.filter((item) => item.ready).length;
+  const overallReady = readyCount === items.length;
+
+  return (
+    <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Release Readiness</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Warning-only evidence checklist. Release actions remain available.
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-1 sm:items-end">
+          <ReadinessBadge ready={overallReady} />
+          <p className="text-xs text-zinc-500">
+            {readyCount} of {items.length} ready
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {items.map((item) => (
+          <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={item.label}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-medium text-zinc-900">{item.label}</p>
+              <ReadinessBadge ready={item.ready} />
+            </div>
+            <p className="mt-2 text-sm text-zinc-600">{item.message}</p>
+            {item.href ? (
+              <Link
+                className="mt-3 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
+                href={item.href}
+              >
+                Manage evidence
+              </Link>
+            ) : null}
+          </article>
+        ))}
       </div>
     </section>
   );
@@ -492,6 +640,8 @@ export default async function ReleaseEvidenceDetailPage({ params, searchParams }
         ) : null}
 
         <SummaryGrid detail={detail} />
+
+        <ReleaseReadinessChecklist detail={detail} />
 
         <ReleaseControlActions detail={detail} />
 

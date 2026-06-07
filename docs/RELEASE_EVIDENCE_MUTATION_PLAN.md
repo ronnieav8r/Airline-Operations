@@ -10,22 +10,24 @@ create/edit and release-control slices.
 Build release-evidence mutation in controlled phases. Manifest, locating,
 manual weight-and-balance, and manual dispatch-package mutation are complete.
 Release readiness guardrails planning is complete. The next implementation
-slice is warning-only release readiness guardrails.
+slice is complete. The next recommended work is a focused release-evidence QA
+and deploy verification pass before starting another domain.
 
-Chosen next implementation slice:
+Chosen next follow-up:
 
 ```text
-Prompt 32: Release readiness guardrails foundation
+Prompt 33: Release evidence QA and deploy verification
 ```
 
-Prompt 31 planning status: complete.
+Prompt 32 implementation status: complete.
 
 Rationale:
 
 - The main manual evidence workflows now exist.
-- Release controls still do not explain evidence readiness clearly enough.
-- Warning-only guardrails can add useful operational visibility without hiding
-  release-blocking policy decisions in development code.
+- Warning-only release readiness guardrails now explain evidence readiness
+  without blocking release actions.
+- A focused QA/deploy pass should verify the combined workflow before the next
+  domain area is added.
 
 ## Phase Order
 
@@ -33,7 +35,8 @@ Rationale:
 2. Flight locating mutation. Complete.
 3. Weight-and-balance run mutation. Complete.
 4. Manual dispatch-package evidence mutation. Complete.
-5. Release readiness guardrails. Planning complete; implementation next.
+5. Release readiness guardrails. Complete.
+6. Release evidence QA and deploy verification. Recommended next.
 6. Provider integrations for weather, NOTAM, and flight plan data.
 
 ## Prompt 25 Boundary
@@ -267,3 +270,21 @@ Minimum workflow:
 - Show each evidence item as ready or needing attention.
 - Keep all release action buttons available.
 - Do not mutate evidence, add schema, or introduce `ReleasePackage`.
+
+Implementation status: complete.
+
+## Next Slice: Prompt 33
+
+Recommended follow-up:
+
+```text
+Prompt 33: Release evidence QA and deploy verification
+```
+
+Minimum workflow:
+
+- Re-run local create/edit smoke checks for manifest, W&B, locating, dispatch,
+  release controls, and readiness checklist.
+- Confirm Render deploy succeeds from `origin main`.
+- Confirm Render routes return successfully.
+- Do not add schema or new write workflows in the QA slice.
