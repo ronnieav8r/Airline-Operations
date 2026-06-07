@@ -150,6 +150,13 @@ now supports maintenance-event create/edit with optional discrepancy linking.
 Airworthiness release creation/signing still requires a planning slice before
 implementation.
 
+Prompt 42 implementation status: complete as a planning slice.
+`AirworthinessRelease` is aircraft maintenance/airworthiness release state, not
+the full operational FlightLeg release. `FlightRelease` remains the operational
+FlightLeg release. The first airworthiness release workflow should be
+aircraft-current, should leave `flightLegId` unused, and should supersede prior
+current released aircraft records when a newer release becomes `RELEASED`.
+
 ## Deferred
 
 Do not include these in the first airworthiness mutation prompts:

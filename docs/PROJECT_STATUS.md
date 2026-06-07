@@ -85,6 +85,7 @@ It has:
 45. Airworthiness deferral mutation foundation.
 46. Maintenance event mutation planning.
 47. Maintenance event mutation foundation.
+48. Airworthiness release planning.
 
 ## Current Data Model Boundaries
 
@@ -217,6 +218,15 @@ discrepancy links. Completed linked events can mark the linked discrepancy
 airworthiness release signing, auth/signatures, and hard release blocking
 remain deferred.
 
+Airworthiness release planning is complete. `AirworthinessRelease` is treated
+as maintenance/aircraft airworthiness release state, not the full FlightLeg
+operational release. `FlightRelease` remains the operational FlightLeg release.
+The next implementation should add aircraft-level airworthiness release
+create/edit under `/aircraft/[aircraftId]/airworthiness`; new `RELEASED`
+records should supersede prior current released records for that aircraft.
+`AirworthinessRelease.flightLegId`, auth/signatures, and hard release blocking
+remain deferred.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -262,6 +272,10 @@ under the aircraft-level airworthiness route.
 
 Use `docs/MAINTENANCE_EVENT_MUTATION_PLAN.md` for maintenance-event workflow
 planning.
+
+Use `docs/AIRWORTHINESS_RELEASE_POLICY.md` for the aircraft maintenance
+airworthiness release policy. `AirworthinessRelease` is not the same thing as
+the full FlightLeg operational `FlightRelease`.
 
 Use `docs/LEGACY_RECORD_IMPORT_PLAN.md` for the deferred old-record import
 lane. The future goal is a safe import method for legacy operational, aircraft,
@@ -368,18 +382,19 @@ surface area.
 Preferred next slice:
 
 ```text
-Prompt 42: Airworthiness release planning
+Prompt 43: Airworthiness release foundation
 ```
 
 Scope:
 
-- Decide how aircraft airworthiness releases are created, superseded, and
-  voided.
-- Decide how releases interact with configuration, discrepancy, deferral, and
-  maintenance-event state.
-- Decide warning-only versus release-blocking policy before any release writes.
-- Keep implementation, auth/signatures, and release blocking deferred until the
-  policy is explicit.
+- Add aircraft-level `AirworthinessRelease` create/edit under
+  `/aircraft/[aircraftId]/airworthiness`.
+- Support `DRAFT`, `RELEASED`, `VOIDED`, and `SUPERSEDED`.
+- Auto-generate `releaseNumber` when blank.
+- When a record becomes `RELEASED`, set `releasedAt` if blank and supersede
+  prior current released records for that aircraft.
+- Keep `AirworthinessRelease.flightLegId`, `releasedById`, auth/signatures,
+  `FlightRelease` mutation, and release blocking deferred.
 - Do not add hard release blocking until product policy is explicitly approved.
 
 Deferred follow-up to keep on the roadmap:

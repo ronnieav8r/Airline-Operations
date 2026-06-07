@@ -139,6 +139,24 @@ Prompt 42: Airworthiness release planning
 Prompt 42 should decide release creation/supersede/void policy before adding
 airworthiness release writes.
 
+Prompt 42 implementation status: complete as a planning slice.
+
+The durable airworthiness release policy is:
+
+```text
+docs/AIRWORTHINESS_RELEASE_POLICY.md
+```
+
+Decision: `AirworthinessRelease` is a maintenance/aircraft airworthiness
+release, not the full operational FlightLeg release. `FlightRelease` remains
+the operational release for a FlightLeg.
+
+Next implementation: Prompt 43 should add aircraft-level
+`AirworthinessRelease` create/edit under
+`/aircraft/[aircraftId]/airworthiness`. New `RELEASED` records should supersede
+prior current `RELEASED` records for the same aircraft. Do not mutate
+`FlightRelease`.
+
 ## Readiness Policy
 
 Keep warning-first behavior.
