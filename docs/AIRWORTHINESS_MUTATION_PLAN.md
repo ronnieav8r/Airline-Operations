@@ -184,6 +184,20 @@ surfaces after the release foundation and readiness refresh. No feature,
 schema, release-blocking, auth/signature, provider, upload, or operational
 `FlightRelease` mutation scope was added.
 
+Prompt 46 implementation status: complete as release-blocking policy planning.
+
+The durable release-blocking policy is:
+
+```text
+docs/RELEASE_BLOCKING_POLICY.md
+```
+
+Airworthiness impact: missing or expired current aircraft maintenance
+airworthiness release is recommended as a future normal release blocker. Open
+discrepancies and active deferrals remain warnings until severity, category,
+due-date, MEL/CDL, and authority-specific policy exists. Current app behavior
+remains warning-only.
+
 ## Readiness Policy
 
 Keep warning-first behavior.
@@ -191,7 +205,8 @@ Keep warning-first behavior.
 - Open discrepancies warn.
 - Active deferrals warn.
 - Missing configuration or released airworthiness record warns.
-- No hard release blocking should be added in Prompts 38 or 39.
+- No hard release blocking should be added until a later implementation slice
+  explicitly enforces the Prompt 46 policy.
 
 Hard blocking should wait until a policy slice decides which warnings become
 release blockers, which authority contexts they apply to, and who can override

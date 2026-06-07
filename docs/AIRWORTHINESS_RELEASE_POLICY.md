@@ -94,6 +94,21 @@ history, latest non-current records, and expired current releases are shown as
 warning-only readiness context. Operational `FlightRelease` actions remain
 available.
 
+Prompt 46 implementation status: complete as release-blocking policy planning.
+
+The future release-blocking policy now recommends that a missing or expired
+current aircraft maintenance airworthiness release should become a normal
+release blocker in a later enforcement slice. Open discrepancies and active
+deferrals remain warnings until severity, category, due-date, MEL/CDL, and
+authority-specific policy is defined. Current app behavior remains
+warning-only.
+
+Durable policy doc:
+
+```text
+docs/RELEASE_BLOCKING_POLICY.md
+```
+
 ## Deferred
 
 Do not include these in Prompt 43:
@@ -102,7 +117,7 @@ Do not include these in Prompt 43:
 - FlightLeg-specific airworthiness snapshots.
 - Operational `FlightRelease` mutation.
 - Auth, roles, signatures, or user attribution.
-- Hard release blocking.
+- Hard release-blocking enforcement.
 - Maintenance work orders.
 - Provider integrations.
 - File uploads.

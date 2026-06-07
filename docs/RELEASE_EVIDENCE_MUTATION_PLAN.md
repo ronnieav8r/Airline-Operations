@@ -11,8 +11,9 @@ Build release-evidence mutation in controlled phases. Manifest, locating,
 manual weight-and-balance, and manual dispatch-package mutation are complete.
 Release readiness guardrails planning is complete. The next implementation
 slice is complete. A focused release-evidence QA and discoverability pass is
-complete. The next recommended work is post-deploy verification and choosing
-the next domain.
+complete. Release-blocking policy planning is complete. The next recommended
+release-readiness step is a non-enforcing blocker/warning preview on FlightLeg
+detail.
 
 Latest QA follow-up:
 
@@ -27,6 +28,8 @@ Rationale:
 - The main manual evidence workflows now exist.
 - Warning-only release readiness guardrails now explain evidence readiness
   without blocking release actions.
+- Prompt 46 classifies likely future blocker vs warning findings, but current
+  release actions remain warning-only.
 - The combined workflow should be verified on Render after auto-deploy.
 - Operations Control action discoverability was improved after QA found the
   evidence/detail links were too hidden.
@@ -39,7 +42,9 @@ Rationale:
 4. Manual dispatch-package evidence mutation. Complete.
 5. Release readiness guardrails. Complete.
 6. Release evidence QA and Operations Control discoverability. Complete.
-6. Provider integrations for weather, NOTAM, and flight plan data.
+7. Release blocking policy planning. Complete.
+8. Release-blocking preview. Next recommended release-readiness implementation.
+9. Provider integrations for weather, NOTAM, and flight plan data.
 
 ## Prompt 25 Boundary
 
@@ -292,3 +297,24 @@ Minimum workflow:
 - Do not add schema or new write workflows in the QA slice.
 
 Implementation status: complete.
+
+## Prompt 46 Decision
+
+Prompt 46 planned release-blocking policy without changing app behavior.
+
+Durable policy:
+
+```text
+docs/RELEASE_BLOCKING_POLICY.md
+```
+
+Recommended next release-readiness implementation:
+
+```text
+Prompt 47: Release Blocking Preview Foundation
+```
+
+Prompt 47 should add non-enforcing `Would block release` and `Would warn`
+classification labels to the existing FlightLeg readiness checklist. It should
+keep release action buttons available and must not mutate evidence, add schema,
+add auth/signatures, add overrides, or enforce blocking.

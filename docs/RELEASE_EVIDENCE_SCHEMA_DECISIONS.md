@@ -120,6 +120,13 @@ implemented on the FlightLeg detail page. They read existing release evidence
 and keep release actions available. Hard blocking, `ReleasePackage`, audit
 policy, and approval authority remain deferred.
 
+Updated transition note: release-blocking policy planning is complete in
+`docs/RELEASE_BLOCKING_POLICY.md`. The next recommended implementation should
+preview `Would block release` vs `Would warn` classifications on the existing
+readiness checklist without enforcing blocking. Actual hard blocking,
+overrides, auth/signatures, `ReleasePackage`, and authority-specific policy
+engines remain deferred.
+
 `PositionReport` belongs in a later locating-specific slice after the app needs
 position history, overdue checks, or actual flight-following workflows.
 

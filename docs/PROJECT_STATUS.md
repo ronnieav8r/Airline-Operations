@@ -89,6 +89,7 @@ It has:
 49. Airworthiness release foundation.
 50. Airworthiness release readiness refresh.
 51. Airworthiness workflow QA and deploy readiness.
+52. Release blocking policy planning.
 
 ## Current Data Model Boundaries
 
@@ -252,6 +253,12 @@ creation, superseding older current releases, and voiding a draft release.
 Local route smoke passed for dashboard, aircraft, airworthiness workflow,
 Operations Control, FlightLeg detail, health, parity, and write-readiness.
 
+Release blocking policy planning is complete. Current app behavior remains
+warning-only, but `docs/RELEASE_BLOCKING_POLICY.md` now classifies likely
+future `WOULD_BLOCK` and `WOULD_WARN` release-readiness findings. The next
+implementation should preview those classifications on FlightLeg detail without
+blocking `FlightRelease` actions, adding schema, or adding auth/signatures.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -301,6 +308,10 @@ planning.
 Use `docs/AIRWORTHINESS_RELEASE_POLICY.md` for the aircraft maintenance
 airworthiness release policy. `AirworthinessRelease` is not the same thing as
 the full FlightLeg operational `FlightRelease`.
+
+Use `docs/RELEASE_BLOCKING_POLICY.md` for future operational release blocking
+policy. Current release actions remain warning-only until a later implementation
+slice explicitly changes that behavior.
 
 Use `docs/LEGACY_RECORD_IMPORT_PLAN.md` for the deferred old-record import
 lane. The future goal is a safe import method for legacy operational, aircraft,
@@ -421,6 +432,8 @@ Scope:
 - Keep `AirworthinessRelease.flightLegId`, `releasedById`, auth/signatures,
   `FlightRelease` mutation, and release blocking deferred.
 - Do not add hard release blocking until product policy is explicitly approved.
+- Prompt 46 policy planning is complete; Prompt 47 should preview blocker vs
+  warning classifications before any enforcement.
 
 Deferred follow-up to keep on the roadmap:
 

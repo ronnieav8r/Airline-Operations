@@ -226,6 +226,12 @@ Release status controls now exist on the FlightLeg detail page. They mutate
 do not mutate manifests, weight and balance, locating records, weather/NOTAM
 snapshots, flight-plan references, or dispatch packages.
 
+Release-blocking policy planning is complete in
+`docs/RELEASE_BLOCKING_POLICY.md`. Current `FlightRelease` actions remain
+warning-only. The next safe implementation should preview blocker vs warning
+classifications before any hard enforcement, override workflow, auth/signature
+policy, authority-specific engine, or `ReleasePackage` transition.
+
 Scheduling now follows the same FlightLeg-backed read pattern as Dashboard,
 Flights, and Operations Control, while preserving legacy `Flight` fallback and
 legacy Flight IDs for crew coverage resolution.
