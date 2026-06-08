@@ -46,18 +46,19 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 109 should validate the dashboard surfacing foundation implemented by
-Prompt 108.
+Prompt 110 should plan the next app-development slice after dashboard
+surfacing.
 
 Minimum behavior:
 
-- Confirm today's flight board remains primary on `/`.
-- Confirm release/evidence attention signals render.
-- Confirm direct links route into FlightLeg detail and evidence workflows.
-- Confirm the AI Review Notes placeholder is visible and non-functional.
+- Compare aircraft context navigation, crew assignment workflow planning,
+  FlightLeg list/scheduling improvements, and the next release-evidence
+  workflow.
+- Keep Prompt 110 planning/docs-only.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
-  file uploads, imports, overrides, automatic snapshots, or `ReleasePackage`.
+  file uploads, imports, overrides, automatic snapshots, AI behavior, or
+  `ReleasePackage`.
 
 Why this is the right next slice:
 
@@ -87,6 +88,15 @@ list, release status on today's board, direct workflow links, and a clearly
 labeled AI Review Notes placeholder. The placeholder does not call AI providers,
 persist notes, or automate recommendations. Existing dashboard sections remain
 in place.
+
+## Prompt 109 Status
+
+Implementation status: complete.
+
+Local QA confirmed the dashboard attention surface, Priority FlightLegs, direct
+workflow links, AI Review Notes placeholder, retained dashboard sections, main
+route smoke, and browser rendering. Release behavior remains warning-only and
+no AI/provider code was added.
 
 ## Prompt 101 Status
 

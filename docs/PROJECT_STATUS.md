@@ -826,17 +826,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 109: Dashboard Surfacing QA
+Prompt 110: Next App Development Planning
 ```
 
 Scope:
 
-- Validate the Prompt 108 dashboard surfacing foundation.
-- Confirm `/` shows Operations Attention, Priority FlightLegs, direct workflow
-  links, and the AI Review Notes placeholder.
-- Confirm the placeholder is non-functional and no AI/provider code was added.
-- Confirm dashboard links route correctly and existing sections still render.
-- Keep Prompt 109 QA/docs-only unless a defect is found.
+- Decide the next safe app-development slice after dashboard surfacing.
+- Compare aircraft context navigation, crew assignment workflow planning,
+  FlightLeg list/scheduling improvements, or the next release-evidence workflow.
+- Keep Prompt 110 planning/docs-only.
+- Do not add schema, auth, hard release blocking, imports, provider
+  integrations, file uploads, AI behavior, or new release policy.
 
 Recommended app-development follow-up chain:
 
@@ -902,6 +902,11 @@ Priority FlightLegs list, direct links into FlightLeg detail/evidence
 workflows, release status on today's flight board, and a clearly labeled
 non-functional AI Review Notes placeholder. Existing dashboard sections remain
 visible and release behavior remains warning-only.
+
+Prompt 109 is complete. Local QA confirmed the dashboard attention surface,
+Priority FlightLegs, direct workflow links, AI Review Notes placeholder,
+retained dashboard sections, main route smoke, and browser rendering. Results
+are recorded in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
 
 Deferred follow-up to keep on the roadmap:
 

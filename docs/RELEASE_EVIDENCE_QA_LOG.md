@@ -2,6 +2,64 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 109: Dashboard Surfacing QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Dashboard QA:
+
+- Confirmed `/` returned 200.
+- Confirmed dashboard renders Operations Attention.
+- Confirmed dashboard renders Priority FlightLegs.
+- Confirmed dashboard renders the AI Review Notes placeholder.
+- Confirmed the placeholder says no AI provider is connected and does not
+  represent active AI behavior.
+- Confirmed today's flight board still renders.
+- Confirmed coverage gaps, active alerts, and fleet snapshot still render.
+
+Workflow link QA:
+
+- Confirmed dashboard includes links for FlightLeg Detail, Manifest, W&B,
+  Locating, Dispatch, and Operations Control.
+- Confirmed one live FlightLeg detail route returned 200.
+- Confirmed the dashboard did not add or change release actions.
+
+Route smoke:
+
+- `/` returned 200.
+- `/operations-control` returned 200.
+- `/operations-control/[flightLegId]` returned 200.
+- `/flights` returned 200.
+- `/aircraft` returned 200.
+- `/crew` returned 200.
+- `/scheduling` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Browser QA:
+
+- Browser check confirmed Operations Attention, Priority FlightLegs, AI Review
+  Notes placeholder, today's flight board, coverage gaps, active alerts, and
+  fleet snapshot.
+- Browser check confirmed direct workflow links for Detail, Manifest, W&B,
+  Locating, Dispatch, and the Operations Control workbench.
+
+Notes:
+
+- Prompt 109 was QA/docs only.
+- No workflow behavior changed.
+- Release behavior remains warning-only.
+- No AI/provider code, note persistence, recommendations engine, or automation
+  was added.
+
 ## 2026-06-08 - Prompt 106: Operations Control Workbench QA
 
 Status: passed.
