@@ -48,16 +48,15 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 104 should plan the **Operations Control Workbench** improvement.
+Prompt 105 should implement the **Operations Control Workbench** foundation.
 
 Minimum behavior:
 
-- Decide the first Operations Control list/workbench improvement before
-  implementation.
-- Consider status grouping, date/status/aircraft filters, quick links for
-  release/evidence/edit/aircraft context, and clearer missing-evidence
-  indicators.
-- Keep Prompt 104 planning/docs-only.
+- Add a filterable FlightLeg board above the current Operations Control table.
+- Support grouping by release state, schedule window, and aircraft.
+- Support server-rendered URL filters for release status, evidence state,
+  operating part, and aircraft.
+- Preserve the existing table below the board.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
   file uploads, imports, overrides, automatic snapshots, or `ReleasePackage`.
@@ -101,6 +100,16 @@ an aircraft airworthiness route, and a snapshot detail route returned 200.
 Browser QA confirmed the command center, five section navigation links, release
 controls, evidence actions, and raw reference data are visible. Release behavior
 remains warning-only.
+
+## Prompt 104 Status
+
+Implementation status: complete.
+
+Prompt 104 selected a filterable board plus existing table for Operations
+Control. Prompt 105 should add grouped FlightLeg cards above the current table,
+with URL-driven grouping by release state, schedule window, or aircraft and
+filters for release status, evidence state, operating part, and aircraft. The
+slice remains UI/read-only and must preserve warning-only release behavior.
 
 ## Deferred Alternatives
 

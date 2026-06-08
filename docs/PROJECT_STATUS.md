@@ -826,16 +826,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 104: Operations Control Workbench Planning
+Prompt 105: Operations Control Workbench Foundation
 ```
 
 Scope:
 
-- Plan the next Operations Control list/workbench improvement before
-  implementation.
-- Decide the first workbench scope for status grouping, filters, quick links,
-  and missing-evidence indicators.
-- Keep Prompt 104 planning/docs-only.
+- Implement the Prompt 104 Operations Control workbench plan.
+- Add a filterable board above the existing control-record table.
+- Support grouping by release state, schedule window, and aircraft.
+- Support server-rendered URL filters for release status, evidence state,
+  operating part, and aircraft.
+- Keep the existing table below the board with no behavior loss.
 - Do not add schema, auth, hard release blocking, imports, provider
   integrations, file uploads, or new release policy.
 
@@ -876,6 +877,11 @@ pages render the command-center layout markers, evidence workflow routes still
 return 200, snapshot and aircraft airworthiness links still route correctly, and
 release behavior remains warning-only. Results are recorded in
 `docs/RELEASE_EVIDENCE_QA_LOG.md`.
+
+Prompt 104 is complete. The selected Operations Control direction is a
+filterable board plus the existing table. Prompt 105 should add grouped
+FlightLeg cards with URL-driven grouping and filters, while preserving the
+current table and warning-only release behavior.
 
 Deferred follow-up to keep on the roadmap:
 
