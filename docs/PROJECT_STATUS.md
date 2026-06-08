@@ -133,6 +133,7 @@ It has:
 89. Release audit timeline planning.
 90. Release audit timeline read-only foundation.
 91. Release audit timeline QA.
+92. Legacy record import planning refresh.
 
 ## Current Data Model Boundaries
 
@@ -275,6 +276,12 @@ Release audit timeline QA is complete. Local QA confirmed the timeline renders
 with release audit events, linked snapshot detail routes load, actor placeholder
 and attempt metadata display, and release behavior remains warning-only.
 Results are recorded in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
+
+Legacy record import planning refresh is complete. Import execution remains
+deferred. The first candidate import domain remains aircraft maintenance and
+airworthiness history, targeting `Aircraft`, `MaintenanceEvent`,
+`Discrepancy`, `Deferral`, and `AirworthinessRelease` only after staging,
+dry-run, idempotency, and review policy are approved.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -717,13 +724,14 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 86: Legacy Record Import Planning Refresh
+Prompt 87: Legacy Import Staging/Dry-Run Planning
 ```
 
 Scope:
 
-- Refresh the existing legacy record import plan based on the current data
-  model and workflow state.
+- Decide staging/dry-run concepts for future legacy imports.
+- Define batch/source/staging-row fields, validation result shape,
+  idempotency strategy, dry-run summaries, and review boundary.
 - Keep it planning/docs only.
 - Do not add importer execution code, file uploads, schema changes, provider
   integrations, or mutation workflows.

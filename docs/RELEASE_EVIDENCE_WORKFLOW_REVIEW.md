@@ -511,3 +511,21 @@ Prompt 86: Legacy Record Import Planning Refresh
 
 Prompt 86 should refresh the deferred legacy import planning based on the
 current data model and workflow state without implementing importer execution.
+
+## Prompt 86 Status
+
+Implementation status: complete.
+
+Legacy import planning was refreshed. Import execution remains deferred. The
+first candidate domain remains aircraft maintenance and airworthiness history,
+but staging, dry-run, idempotency, source references, and review policy must be
+planned before implementation.
+
+Next recommended slice:
+
+```text
+Prompt 87: Legacy Import Staging/Dry-Run Planning
+```
+
+Prompt 87 should define staging/dry-run concepts and keep all importer
+execution deferred.

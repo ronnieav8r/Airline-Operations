@@ -17,6 +17,11 @@ Prompt 69 selected a staging plus dry-run direction. Imports should not write
 directly into operational tables until source formats, idempotency keys,
 validation rules, and review behavior are defined.
 
+Prompt 86 refresh: import execution remains deferred. The first import domain
+should still be aircraft maintenance and airworthiness history because the
+target workflows now exist and are less entangled than completed FlightLeg,
+crew compliance, manifest, dispatch, or release history imports.
+
 ## Goal
 
 Create a controlled import method for old records that can:
@@ -60,10 +65,28 @@ Expected first-domain mapping areas:
 - Airworthiness-release references when available.
 - Source document references.
 
+Current target tables that can receive this domain after staging policy is
+approved:
+
+- `Aircraft`
+- `MaintenanceEvent`
+- `Discrepancy`
+- `Deferral`
+- `AirworthinessRelease`
+
+Still missing by design:
+
+- Import staging records.
+- Source file metadata.
+- Batch-level dry-run summaries.
+- Row-level validation results.
+- Idempotency key policy.
+- Review/approval boundary before operational writes.
+
 ## Proposed Future Slices
 
 ```text
-Prompt X: Legacy import planning
+Prompt 86: Legacy record import planning refresh
 ```
 
 Planning-only. Decide source formats, import boundaries, idempotency keys,
@@ -71,7 +94,15 @@ validation rules, dry-run output, and which legacy records should be imported
 first.
 
 ```text
-Prompt X+1: Legacy import staging foundation
+Prompt 87: Legacy import staging/dry-run planning
+```
+
+Planning-only. Decide whether staging should use database tables, local files,
+or both; define batch/source/staging-row concepts; define validation result and
+dry-run summary shape; keep importer execution deferred.
+
+```text
+Prompt X: Legacy import staging foundation
 ```
 
 Add non-production import staging tables or files if needed. Do not write into
@@ -129,11 +160,12 @@ Likely future tables:
 
 Do not start implementation until:
 
-- Airworthiness release policy is planned.
-- Core aircraft airworthiness workflows are stable.
+- Import staging/dry-run policy is approved.
+- Source data format is known.
+- Import idempotency keys are defined.
+- Review behavior before operational writes is defined.
+- Core aircraft airworthiness workflows remain stable.
 - FlightLeg transition policy is further along.
-- The expected source data format is known.
-- A staging or dry-run strategy is selected.
 
 ## Stop Conditions
 
