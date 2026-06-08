@@ -118,6 +118,7 @@ It has:
 74. ADS-B / external tracking integration planning.
 75. Legacy record import planning.
 76. Manual Flight Locating position history foundation.
+77. Manual Flight Locating position history QA.
 
 ## Current Data Model Boundaries
 
@@ -169,6 +170,12 @@ recent reports, and keep `FlightLocatingRecord.lastKnownPosition` synchronized
 to the newest report by reported time. ADS-B, automatic tracking, automatic
 overdue rules, report edit/delete/void, auth/signatures, and hard release
 blocking remain deferred.
+
+Manual Flight Locating position history QA is complete. Local QA confirmed
+position report creation, parent locating record creation when missing, newest
+reported position summary synchronization, older-report non-overwrite behavior,
+health counts, route smoke checks, and browser rendering. Results are recorded
+in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -611,16 +618,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 71: Manual Flight Locating Position History QA
+Prompt 72: Locating Freshness Evidence Panel Update
 ```
 
 Scope:
 
-- Validate manual `PositionReport` creation.
-- Confirm the newest report updates `FlightLocatingRecord.lastKnownPosition`.
-- Confirm older reported times do not overwrite a newer locating summary.
-- Confirm health counts and route smoke checks pass.
-- Keep it QA/docs only unless a defect is found.
+- Update the Release Evidence Action Panel locating card to summarize position
+  report freshness.
+- Show latest position report age/summary when available.
+- Keep status warning-only and do not add automatic overdue rules, hard
+  blocking, provider integrations, auth/signatures, file uploads, or
+  release-action changes.
 
 Deferred follow-up to keep on the roadmap:
 

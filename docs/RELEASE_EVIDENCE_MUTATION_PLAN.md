@@ -779,3 +779,22 @@ Prompt 71: Manual Flight Locating Position History QA
 Prompt 71 should validate position report creation, latest-report summary
 synchronization, older-report non-overwrite behavior, health counts, and route
 smoke checks. Keep it QA/docs only unless a defect is found.
+
+Implementation status: complete.
+
+Prompt 71 validated the manual locating position history workflow. Local QA
+confirmed report creation, parent locating record creation when missing,
+newest-report summary synchronization, older-report non-overwrite behavior,
+health counts, route smoke checks, and browser rendering.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 72: Locating Freshness Evidence Panel Update
+```
+
+Prompt 72 should update the Release Evidence Action Panel locating card to show
+latest position report freshness and summary when available. Keep release
+behavior warning-only. Do not add automatic overdue rules, hard blocking,
+provider integrations, auth/signatures, file uploads, or release-action
+changes.
