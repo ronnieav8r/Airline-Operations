@@ -800,10 +800,13 @@ Table PositionReport {
   id varchar [pk]
   flightLocatingRecordId varchar [not null]
   reportedAt timestamp [not null]
+  positionSummary text [not null]
   latitude decimal
   longitude decimal
   altitude int
-  source varchar
+  groundspeed int
+  heading int
+  source varchar [not null]
   notes text
   createdAt timestamp [not null]
 }

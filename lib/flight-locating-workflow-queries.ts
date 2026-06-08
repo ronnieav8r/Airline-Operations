@@ -27,6 +27,25 @@ const flightLocatingWorkflowSelect = {
       closedAt: true,
       overdueAt: true,
       notes: true,
+      positionReports: {
+        orderBy: {
+          reportedAt: "desc",
+        },
+        take: 10,
+        select: {
+          id: true,
+          reportedAt: true,
+          positionSummary: true,
+          latitude: true,
+          longitude: true,
+          altitude: true,
+          groundspeed: true,
+          heading: true,
+          source: true,
+          notes: true,
+          createdAt: true,
+        },
+      },
     },
   },
 } satisfies Prisma.FlightLegSelect;

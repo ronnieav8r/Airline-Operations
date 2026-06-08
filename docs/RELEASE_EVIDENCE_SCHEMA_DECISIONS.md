@@ -131,11 +131,10 @@ Updated transition note: release-blocking preview is implemented on FlightLeg
 detail. The preview is UI-only and non-enforcing. It does not add schema, does
 not mutate evidence, and does not change `FlightRelease` actions.
 
-`PositionReport` is now planned as the next locating-specific additive schema
-slice. The first implementation should support manual append-only position
-history under `FlightLocatingRecord`. ADS-B/provider ingestion, automatic
-overdue checks, report edit/delete/void behavior, and release blocking remain
-deferred.
+`PositionReport` is implemented as a locating-specific additive schema slice.
+The first implementation supports manual append-only position history under
+`FlightLocatingRecord`. ADS-B/provider ingestion, automatic overdue checks,
+report edit/delete/void behavior, and release blocking remain deferred.
 
 ## DBML Delta Notes
 
@@ -146,8 +145,8 @@ DBML.
 Implementation DBML updates:
 
 - Add the eight Prompt 13 tables to `docs/schema.current.dbml`.
-- Keep `ReleasePackage` in planning-only DBML. Move `PositionReport` into
-  current DBML when the manual locating history foundation is implemented.
+- Keep `ReleasePackage` in planning-only DBML. `PositionReport` is now in
+  current DBML as an additive table under `FlightLocatingRecord`.
 - Keep `DispatchPackage.releasePackageId` out of the implemented schema until
   `ReleasePackage` exists.
 - Keep `WeightBalanceRun.aircraftConfigurationId` out of the implemented schema
@@ -196,6 +195,7 @@ Backfill must be idempotent.
 - `manifestItems`
 - `weightBalanceRuns`
 - `flightLocatingRecords`
+- `positionReports`
 - `dispatchPackages`
 - `weatherBriefingSnapshots`
 - `notamSnapshots`

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
+  addPositionReportAction,
   saveFlightLocatingAction,
   setFlightLocatingStatusAction,
 } from "@/app/operations-control/[flightLegId]/locating/actions";
@@ -21,6 +22,8 @@ type PageProps = {
     error?: string | string[];
   }>;
 };
+
+type PositionReport = NonNullable<FlightLocatingWorkflowData["flightLocatingRecord"]>["positionReports"][number];
 
 function firstSearchParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
@@ -42,6 +45,14 @@ function toDateTimeLabel(value: Date | null): string {
     minute: "2-digit",
     hour12: false,
   }).format(value);
+}
+
+function toDateTimeInputValue(value: Date): string {
+  return value.toISOString().slice(0, 16);
+}
+
+function decimalString(value: { toString(): string } | null): string {
+  return value?.toString() ?? "";
 }
 
 function statusClasses(status: FlightLocatingStatus | null): string {
@@ -80,10 +91,16 @@ function Field({
   defaultValue,
   label,
   name,
+  required = false,
+  step,
+  type = "text",
 }: {
   defaultValue?: string | null;
   label: string;
   name: string;
+  required?: boolean;
+  step?: string;
+  type?: string;
 }) {
   return (
     <label className="block">
@@ -92,6 +109,9 @@ function Field({
         className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
         defaultValue={defaultValue ?? ""}
         name={name}
+        required={required}
+        step={step}
+        type={type}
       />
     </label>
   );
@@ -115,6 +135,91 @@ function TextArea({
         name={name}
       />
     </label>
+  );
+}
+
+function PositionReportForm({
+  action,
+}: {
+  action: (formData: FormData) => Promise<void>;
+}) {
+  return (
+    <form action={action} className="mt-4 grid gap-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field
+          defaultValue={toDateTimeInputValue(new Date())}
+          label="Reported time"
+          name="reportedAt"
+          required
+          type="datetime-local"
+        />
+        <Field defaultValue="MANUAL" label="Source" name="source" />
+      </div>
+      <Field label="Position summary" name="positionSummary" required />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <Field label="Latitude" name="latitude" step="0.000001" type="number" />
+        <Field label="Longitude" name="longitude" step="0.000001" type="number" />
+        <Field label="Altitude" name="altitude" step="1" type="number" />
+        <Field label="Groundspeed" name="groundspeed" step="1" type="number" />
+        <Field label="Heading" name="heading" step="1" type="number" />
+      </div>
+      <TextArea label="Report notes" name="notes" />
+      <div>
+        <button
+          className="rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+          type="submit"
+        >
+          Add position report
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function PositionReportHistory({ reports }: { reports: PositionReport[] }) {
+  if (reports.length === 0) {
+    return <p className="text-sm text-zinc-600">No position reports recorded.</p>;
+  }
+
+  return (
+    <div className="mt-4 space-y-3">
+      {reports.map((report) => (
+        <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={report.id}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="font-medium text-zinc-900">{report.positionSummary}</p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Reported {toDateTimeLabel(report.reportedAt)} | Source {report.source}
+              </p>
+            </div>
+            <p className="text-xs text-zinc-500">Created {toDateTimeLabel(report.createdAt)}</p>
+          </div>
+          <dl className="mt-3 grid gap-2 text-sm text-zinc-600 sm:grid-cols-2 lg:grid-cols-5">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-zinc-500">Latitude</dt>
+              <dd>{decimalString(report.latitude)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-zinc-500">Longitude</dt>
+              <dd>{decimalString(report.longitude)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-zinc-500">Altitude</dt>
+              <dd>{report.altitude ?? "Not set"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-zinc-500">Groundspeed</dt>
+              <dd>{report.groundspeed ?? "Not set"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-zinc-500">Heading</dt>
+              <dd>{report.heading ?? "Not set"}</dd>
+            </div>
+          </dl>
+          {report.notes ? <p className="mt-3 text-sm text-zinc-600">{report.notes}</p> : null}
+        </article>
+      ))}
+    </div>
   );
 }
 
@@ -173,7 +278,9 @@ export default async function FlightLocatingWorkflowPage({ params, searchParams 
 
   const record = detail.flightLocatingRecord;
   const saveAction = saveFlightLocatingAction.bind(null, flightLegId);
+  const addPositionReport = addPositionReportAction.bind(null, flightLegId);
   const warnings = readinessWarnings(record);
+  const positionReports = record?.positionReports ?? [];
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -208,7 +315,7 @@ export default async function FlightLocatingWorkflowPage({ params, searchParams 
           </div>
         ) : null}
 
-        <section className="grid gap-3 md:grid-cols-4">
+        <section className="grid gap-3 md:grid-cols-5">
           <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-zinc-500">Status</p>
             <div className="mt-2">
@@ -226,6 +333,10 @@ export default async function FlightLocatingWorkflowPage({ params, searchParams 
           <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-zinc-500">Warnings</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">{warnings.length}</p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-sm text-zinc-500">Reports</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">{positionReports.length}</p>
           </article>
         </section>
 
@@ -245,7 +356,7 @@ export default async function FlightLocatingWorkflowPage({ params, searchParams 
             <div>
               <h2 className="text-lg font-semibold">Status transitions</h2>
               <p className="mt-1 text-sm text-zinc-600">
-                Manual status controls only. Overdue automation and position history remain deferred.
+                Manual status controls only. Overdue automation and external tracking remain deferred.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -297,6 +408,23 @@ export default async function FlightLocatingWorkflowPage({ params, searchParams 
               </button>
             </div>
           </form>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Add position report</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Manual position history only. ADS-B, automatic tracking, and overdue automation remain
+            deferred.
+          </p>
+          <PositionReportForm action={addPositionReport} />
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Recent position reports</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            The newest report by reported time updates the locating summary above.
+          </p>
+          <PositionReportHistory reports={positionReports} />
         </section>
       </div>
     </main>

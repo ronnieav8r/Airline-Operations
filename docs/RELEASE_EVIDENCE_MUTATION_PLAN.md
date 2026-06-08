@@ -762,3 +762,20 @@ position reports from `/operations-control/[flightLegId]/locating`, show recent
 position reports, and keep the parent locating summary synchronized. Do not add
 provider integrations, automatic overdue rules, hard blocking, auth,
 signatures, file uploads, or release-action changes.
+
+Implementation status: complete.
+
+Prompt 70 added additive `PositionReport` schema, health-count visibility, a
+manual position report form on the locating workflow, recent position history,
+and parent `FlightLocatingRecord.lastKnownPosition` synchronization from the
+newest reported position.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 71: Manual Flight Locating Position History QA
+```
+
+Prompt 71 should validate position report creation, latest-report summary
+synchronization, older-report non-overwrite behavior, health counts, and route
+smoke checks. Keep it QA/docs only unless a defect is found.

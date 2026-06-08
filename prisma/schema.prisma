@@ -1083,8 +1083,28 @@ model FlightLocatingRecord {
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   flightLeg         FlightLeg            @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  positionReports   PositionReport[]
 
   @@index([status])
+}
+
+model PositionReport {
+  id                     String               @id @default(cuid())
+  flightLocatingRecordId String
+  reportedAt             DateTime
+  positionSummary        String
+  latitude               Decimal?             @db.Decimal(9, 6)
+  longitude              Decimal?             @db.Decimal(9, 6)
+  altitude               Int?
+  groundspeed            Int?
+  heading                Int?
+  source                 String               @default("MANUAL")
+  notes                  String?
+  createdAt              DateTime             @default(now())
+  flightLocatingRecord   FlightLocatingRecord @relation(fields: [flightLocatingRecordId], references: [id], onDelete: Cascade)
+
+  @@index([flightLocatingRecordId, reportedAt])
+  @@index([source])
 }
 
 model WeatherBriefingSnapshot {

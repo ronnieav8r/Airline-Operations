@@ -446,6 +446,26 @@ Table "FlightLocatingRecord" {
   }
 }
 
+Table "PositionReport" {
+  "id" text [pk]
+  "flightLocatingRecordId" text [not null]
+  "reportedAt" timestamp [not null]
+  "positionSummary" text [not null]
+  "latitude" decimal
+  "longitude" decimal
+  "altitude" int
+  "groundspeed" int
+  "heading" int
+  "source" text [not null, default: 'MANUAL']
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    ("flightLocatingRecordId", "reportedAt")
+    "source"
+  }
+}
+
 Table "WeatherBriefingSnapshot" {
   "id" text [pk]
   "snapshotKey" text [not null, unique]
@@ -850,6 +870,7 @@ Ref: "WeightBalanceRun"."manifestId" > "Manifest"."id"
 Ref: "WeightBalanceRun"."calculatedById" > "User"."id"
 Ref: "WeightBalanceRun"."approvedById" > "User"."id"
 Ref: "FlightLocatingRecord"."flightLegId" > "FlightLeg"."id"
+Ref: "PositionReport"."flightLocatingRecordId" > "FlightLocatingRecord"."id"
 Ref: "FlightPlanReference"."flightLegId" > "FlightLeg"."id"
 Ref: "DispatchPackage"."flightLegId" > "FlightLeg"."id"
 Ref: "DispatchPackage"."weatherBriefingId" > "WeatherBriefingSnapshot"."id"

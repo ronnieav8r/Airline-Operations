@@ -117,6 +117,7 @@ It has:
 73. Flight locating position history planning.
 74. ADS-B / external tracking integration planning.
 75. Legacy record import planning.
+76. Manual Flight Locating position history foundation.
 
 ## Current Data Model Boundaries
 
@@ -159,6 +160,14 @@ is manual, append-only `PositionReport` history under `FlightLocatingRecord`.
 The parent locating record remains the one-row FlightLeg summary, and the
 newest manual position report should update `lastKnownPosition`. ADS-B,
 external tracking, automatic overdue rules, auth/signatures, and hard release
+blocking remain deferred.
+
+Manual Flight Locating position history foundation is implemented. The locating
+workflow can now add manual `PositionReport` rows with reported time, position
+summary, optional coordinates/altitude/groundspeed/heading/source/notes, show
+recent reports, and keep `FlightLocatingRecord.lastKnownPosition` synchronized
+to the newest report by reported time. ADS-B, automatic tracking, automatic
+overdue rules, report edit/delete/void, auth/signatures, and hard release
 blocking remain deferred.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
@@ -602,18 +611,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 70: Manual Flight Locating Position History Foundation
+Prompt 71: Manual Flight Locating Position History QA
 ```
 
 Scope:
 
-- Add additive `PositionReport` schema and migration.
-- Add manual position report creation under
-  `/operations-control/[flightLegId]/locating`.
-- Show recent position reports and keep `FlightLocatingRecord.lastKnownPosition`
-  synchronized to the newest manual report.
-- Do not add ADS-B, provider integrations, automatic overdue rules, hard
-  blocking, auth/signatures, file uploads, or release-action changes.
+- Validate manual `PositionReport` creation.
+- Confirm the newest report updates `FlightLocatingRecord.lastKnownPosition`.
+- Confirm older reported times do not overwrite a newer locating summary.
+- Confirm health counts and route smoke checks pass.
+- Keep it QA/docs only unless a defect is found.
 
 Deferred follow-up to keep on the roadmap:
 

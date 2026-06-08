@@ -223,3 +223,22 @@ Prompt 70: Manual Flight Locating Position History Foundation
 Prompt 70 should add additive `PositionReport` schema and a manual position
 report workflow under the existing locating page. Keep release behavior
 warning-only.
+
+## Prompt 70 Status
+
+Implementation status: complete.
+
+Manual Flight Locating position history is implemented. The locating workflow
+can now add manual `PositionReport` rows, show recent reports, and keep the
+parent locating summary synchronized to the newest report by reported time.
+ADS-B/provider integrations, automatic overdue rules, report edit/delete/void,
+auth/signatures, and release blocking remain deferred.
+
+Next recommended slice:
+
+```text
+Prompt 71: Manual Flight Locating Position History QA
+```
+
+Prompt 71 should validate the new locating history workflow and keep the slice
+QA/docs only unless a defect is found.
