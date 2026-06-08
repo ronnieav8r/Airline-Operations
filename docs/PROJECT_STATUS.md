@@ -147,6 +147,23 @@ It has:
 103. Import batch metadata planning.
 104. Import batch metadata foundation.
 105. Import batch metadata QA.
+106. FlightLeg detail information architecture planning.
+107. FlightLeg detail information architecture foundation.
+108. FlightLeg detail information architecture QA.
+109. Operations Control workbench planning.
+110. Operations Control workbench foundation.
+111. Operations Control workbench QA.
+112. Dashboard surfacing planning.
+113. Dashboard surfacing foundation.
+114. Dashboard surfacing QA.
+115. Aircraft context navigation planning.
+116. Aircraft context detail foundation.
+117. Aircraft context detail QA.
+118. Crew assignment workflow planning.
+119. Aircraft crew assignment foundation.
+120. Aircraft crew assignment QA.
+121. Aircraft crew assignment runtime QA.
+122. Crew Scheduling module planning.
 
 ## Current Data Model Boundaries
 
@@ -167,6 +184,11 @@ FlightLeg create/edit now snapshots resolved aircraft-block crew onto
 `CrewLegAssignment`. These rows are leg-level evidence, not the active source of
 truth. Aircraft-block assignment remains the source used by coverage APIs and
 current crew displays.
+
+Crew Scheduling is planned as a crew availability and planning module, not as
+the active coverage source. `CrewSchedule` and `TimeOffRequest` describe
+availability context; `AircraftCrewAssignment` remains the operational staffing
+record that flights inherit.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -826,19 +848,19 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 115: Aircraft Crew Assignment QA
+Prompt 118: Crew Scheduling Read-Only Planner Board
 ```
 
 Scope:
 
-- Validate the Prompt 114 aircraft crew assignment foundation.
-- Confirm `/aircraft/[aircraftId]/crew` renders current and future crew blocks.
-- Confirm create, limited edit, and relieve/end update aircraft-block coverage.
-- Confirm affected future `CrewLegAssignment` snapshots resync.
-- Confirm warnings display but do not block saves.
-- Keep Prompt 115 QA/docs-only unless a defect is found.
+- Add read-only `/crew/scheduling`.
+- Show crew availability by day/window, schedule blocks, time off, duty status,
+  current aircraft-block assignments, and upcoming FlightLeg coverage.
+- Surface warning-only planning conflicts.
+- Link to `/aircraft/[aircraftId]/crew` for actual staffing changes.
+- Do not add schema or mutations.
 
-Recommended app-development follow-up chain:
+Recent completed app-development chain:
 
 ```text
 Prompt 101: FlightLeg Detail Information Architecture Planning
@@ -951,21 +973,27 @@ assignment workflow was validated locally. QA confirmed create, limited edit,
 Relieve Now, warning-only qualification display, route rendering, and future
 FlightLeg `CrewLegAssignment` snapshot resync.
 
+Prompt 117 is complete. The broader Crew Scheduling module is planned as a
+crew availability and planning system. It does not replace
+`AircraftCrewAssignment` as the active coverage source. Future scheduling
+surfaces should show availability, time off, duty/training/reserve context, and
+warning-only conflicts, then link to aircraft-block assignment workflows for
+actual staffing changes.
+
 Preferred next slice:
 
 ```text
-Prompt 117: Crew Scheduling Module Planning
+Prompt 118: Crew Scheduling Read-Only Planner Board
 ```
 
 Scope:
 
-- Plan, but do not implement, the broader Crew Scheduling module.
-- Define how crew schedules, days off, vacation/time off, duty/rest,
-  schedule imports, and future schedule-apply workflows should relate to
-  aircraft-block assignments.
-- Keep `AircraftCrewAssignment` as the current coverage source of truth until a
-  later approved migration.
-- Do not add schema or write behavior in Prompt 117.
+- Add read-only `/crew/scheduling`.
+- Show crew availability by day/window, schedule blocks, time off, duty status,
+  current aircraft-block assignments, and upcoming FlightLeg coverage.
+- Surface warning-only planning conflicts.
+- Link to `/aircraft/[aircraftId]/crew` for actual assignment changes.
+- Do not add schema or mutations in Prompt 118.
 
 Deferred follow-up to keep on the roadmap:
 

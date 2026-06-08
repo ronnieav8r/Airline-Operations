@@ -19,9 +19,9 @@ FlightLeg:
 The current system is usable for development. FlightLeg detail now acts as a
 clearer command center, Operations Control now has a filterable workbench
 board, the dashboard surfaces current attention items, and each aircraft has a
-read-only context page. The next app-development improvement should add the
-first controlled aircraft-block crew assignment workflow without changing
-release behavior.
+read-only context page. Aircraft-block crew assignment writes are now locally
+validated. The next crew workflow improvement should add a read-only crew
+availability planner without changing coverage truth or release behavior.
 
 ## Current Workflow Map
 
@@ -48,28 +48,28 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 115 should validate the aircraft-block crew assignment workflow
-implemented by Prompt 114.
+Prompt 118 should implement a read-only crew availability planner at
+`/crew/scheduling`.
 
 Minimum behavior:
 
-- Confirm `/aircraft/[aircraftId]/crew` renders current and future crew blocks.
-- Confirm create, limited edit, and relieve/end behavior.
-- Confirm affected future `CrewLegAssignment` snapshots resync.
-- Confirm qualification and coverage issues remain warning-only.
-- Do not add schema, hard blocking, auth/signatures, provider integrations,
-  file uploads, imports, leg-specific crew overrides, duty/rest enforcement,
-  Crew Scheduling imports, automatic snapshots, AI behavior, or
-  `ReleasePackage`.
+- Show crew availability by day/window.
+- Show schedule blocks, time off, duty status, current aircraft-block
+  assignment, and upcoming FlightLeg coverage.
+- Surface warning-only planning conflicts.
+- Link to `/aircraft/[aircraftId]/crew` for actual staffing changes.
+- Do not add schema, mutations, hard blocking, auth/signatures, provider
+  integrations, file uploads, imports, leg-specific crew overrides, duty/rest
+  enforcement, automatic snapshots, AI behavior, or `ReleasePackage`.
 
 Why this is the right next slice:
 
 - It is user-visible.
-- It makes existing work easier to use.
-- It does not require policy decisions.
+- It makes existing aircraft crew assignment work easier to use.
+- It preserves `AircraftCrewAssignment` as coverage truth.
 - It does not change release behavior.
-- It prepares the UI for later release readiness, blocking, and operational
-  workflow work without enforcing anything.
+- It prepares for later schedule/time-off/duty workflows without enforcing
+  anything.
 
 ## Prompt 107 Status
 
@@ -169,6 +169,17 @@ Docker Desktop was started, local Postgres was available, migrations were
 current, and local seed ran. QA confirmed create, limited edit, Relieve Now,
 warning-only qualification display, route rendering, and future FlightLeg
 `CrewLegAssignment` snapshot resync. Release behavior remains warning-only.
+
+## Prompt 117 Status
+
+Implementation status: complete.
+
+Crew Scheduling is planned as a crew availability and planning module, not the
+active flight coverage source. `AircraftCrewAssignment` remains the operational
+staffing record used by flight coverage. `CrewSchedule` and `TimeOffRequest`
+provide availability context only. The next implementation should add a
+read-only `/crew/scheduling` planner board and link users to the aircraft crew
+assignment workflow for actual staffing changes.
 
 ## Prompt 101 Status
 

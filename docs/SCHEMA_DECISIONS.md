@@ -81,8 +81,11 @@ Current transition state:
   `AircraftCrewAssignment` only, then resync affected future
   `CrewLegAssignment` snapshots. Qualification and coverage issues are warnings
   in this phase, not blockers.
-- The broader Crew Scheduling module remains a future lane for schedules, days
-  off, vacation/time-off, duty/rest, and schedule import/apply behavior.
+- The broader Crew Scheduling module is a planning and availability lane for
+  schedules, days off, vacation/time-off, duty/rest, reserve, training, and
+  schedule import/apply behavior. It should help determine who is available for
+  aircraft-block staffing, but it should not replace `AircraftCrewAssignment`
+  as the operational coverage source.
 
 ## Preferred V1 Tables
 
@@ -154,6 +157,25 @@ keeps the response shape keyed to the legacy Flight ID. Aircraft-block
 assignment remains the active crew source of truth.
 
 Missing roles should produce coverage warnings.
+
+## Crew Scheduling Boundary
+
+Crew Scheduling should answer who appears available and suitable. It should not
+answer who is operationally assigned to an aircraft.
+
+Durable responsibilities:
+
+- `CrewSchedule` records planned availability, duty state, reserve, training,
+  and station context.
+- `TimeOffRequest` records requested or approved absence.
+- Future duty/rest records should support compliance checks.
+- `AircraftCrewAssignment` records the actual aircraft-block staffing decision
+  that flights inherit.
+- `CrewLegAssignment` records FlightLeg snapshot/evidence.
+
+Future Crew Scheduling automation may suggest or prefill aircraft-block
+assignment changes, but it should not silently apply them. Actual coverage
+changes should remain explicit `AircraftCrewAssignment` mutations.
 
 ## Qualification Rule
 
