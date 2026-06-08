@@ -939,6 +939,28 @@ affected future `CrewLegAssignment` snapshots, and leaves full Crew Scheduling,
 duty/rest, imports, auth/signatures, hard release blocking, and leg-specific
 crew override behavior deferred.
 
+Prompt 115 is complete as a code-validation QA pass. Prisma validation,
+typecheck, lint, and production build passed. Local runtime workflow smoke was
+blocked because Docker Desktop was not running, so the local PostgreSQL
+database at `127.0.0.1:5434` was unavailable. The next focused follow-up should
+rerun local aircraft crew workflow smoke once Docker is available.
+
+Preferred next slice:
+
+```text
+Prompt 116: Aircraft Crew Assignment Runtime QA
+```
+
+Scope:
+
+- Start local Docker Postgres.
+- Visit `/aircraft/[aircraftId]/crew`.
+- Create, edit, and relieve/end an aircraft-block crew assignment.
+- Confirm affected future `CrewLegAssignment` snapshots resync.
+- Confirm `/aircraft`, `/aircraft/[aircraftId]`, `/crew`, `/flights`,
+  `/scheduling`, and `/operations-control` reflect coverage changes.
+- Keep the slice QA-only unless a defect is found.
+
 Deferred follow-up to keep on the roadmap:
 
 ```text

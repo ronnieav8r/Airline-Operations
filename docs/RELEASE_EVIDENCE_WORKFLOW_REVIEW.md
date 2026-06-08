@@ -150,6 +150,16 @@ actions for `AircraftCrewAssignment`, displays warning-only qualification and
 CPT/FO coverage signals, and resyncs affected future `CrewLegAssignment`
 snapshots. Current coverage APIs still use aircraft-block crew resolution.
 
+## Prompt 115 Status
+
+Implementation status: QA complete with runtime smoke deferred.
+
+Prisma validation, typecheck, lint, and production build passed for the crew
+assignment workflow. Local database-backed workflow smoke could not run because
+Docker Desktop was not running and the local PostgreSQL database at
+`127.0.0.1:5434` was unavailable. The next focused follow-up should rerun
+aircraft crew assignment runtime QA once Docker is available.
+
 ## Prompt 101 Status
 
 Implementation status: complete.

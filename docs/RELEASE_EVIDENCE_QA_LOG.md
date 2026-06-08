@@ -2,6 +2,46 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 115: Aircraft Crew Assignment QA
+
+Status: code validation passed; runtime workflow smoke blocked by local Docker
+availability.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Runtime QA:
+
+- `npm run db:local:up` did not start the local PostgreSQL container because
+  Docker Desktop was not running.
+- Direct local database lookup against `127.0.0.1:5434` failed because the
+  local database was unavailable.
+- Database-backed route smoke and browser workflow checks were not completed in
+  this pass.
+
+Implementation checks:
+
+- Confirmed Prompt 114 added `/aircraft/[aircraftId]/crew`.
+- Confirmed aircraft fleet and aircraft context pages link to the crew
+  assignment workflow.
+- Confirmed the edit workflow preserves the selected crew member and only edits
+  seat role, start/end time, and notes.
+- Confirmed create, edit, and Relieve Now actions resync affected future
+  `CrewLegAssignment` snapshots in the same transaction.
+- Confirmed qualification and CPT/FO coverage signals are warning-only.
+
+Notes:
+
+- Prompt 115 did not add schema, duty/rest enforcement, crew schedule imports,
+  vacation/time-off enforcement, leg-specific crew overrides, auth/signatures,
+  or hard release blocking.
+- The required follow-up is local runtime workflow QA after Docker Desktop is
+  available.
+
 ## 2026-06-08 - Prompt 112: Aircraft Context Detail QA
 
 Status: passed.
