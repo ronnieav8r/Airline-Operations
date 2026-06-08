@@ -125,6 +125,7 @@ It has:
 81. Dispatch package review state foundation.
 82. Dispatch package review state QA.
 83. Dispatch review freshness panel update.
+84. Dispatch review freshness QA.
 
 ## Current Data Model Boundaries
 
@@ -219,6 +220,11 @@ Release Evidence Action Panel dispatch card now shows dispatch package review
 state and relevant ready/reviewed/voided timestamps. `VOIDED` packages surface
 as needing attention in the panel. Release readiness and release actions remain
 warning-only and unchanged.
+
+Dispatch review freshness QA is complete. Local QA confirmed the FlightLeg
+detail dispatch card shows review state and timestamp context, surfaces
+`VOIDED` packages as needing attention, and keeps release actions warning-only.
+Results are recorded in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -661,16 +667,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 78: Dispatch Review Freshness QA
+Prompt 79: Release Attempt Snapshot Planning
 ```
 
 Scope:
 
-- Validate the FlightLeg detail dispatch card for `DRAFT`, `READY`,
-  `REVIEWED`, and `VOIDED` states.
-- Confirm dispatch workflow and main routes still render.
-- Confirm release readiness and release actions remain warning-only.
-- Keep the slice QA/docs only unless a defect is found.
+- Decide whether release-control actions should capture preview snapshots on
+  release attempts.
+- Define what counts as an attempt and what snapshot/audit data is stored.
+- Keep the slice planning/docs only.
+- Do not add hard blocking, auth/signatures, provider integrations, file
+  uploads, `ReleasePackage`, or release-action behavior changes yet.
 
 Deferred follow-up to keep on the roadmap:
 

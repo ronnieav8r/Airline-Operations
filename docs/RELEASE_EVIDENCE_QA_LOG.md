@@ -2,6 +2,54 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-07 - Prompt 78: Dispatch Review Freshness QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Panel QA:
+
+- Used local FlightLeg `cmq3xifbh0029v85guciafavn`.
+- Confirmed FlightLeg detail renders the Release Evidence Actions panel.
+- Confirmed the dispatch card shows the dispatch package review state.
+- Confirmed the local `VOIDED` dispatch package surfaces as needing attention.
+- Confirmed the dispatch card shows voided timestamp context.
+- Confirmed Release Control remains visible and release behavior remains
+  warning-only.
+
+Route smoke:
+
+- `/` returned 200.
+- `/operations-control` returned 200.
+- `/operations-control/[flightLegId]` returned 200.
+- `/operations-control/[flightLegId]/dispatch` returned 200.
+- `/flights` returned 200.
+- `/aircraft` returned 200.
+- `/crew` returned 200.
+- `/scheduling` returned 200.
+- `/api/health` returned 200.
+
+Browser QA:
+
+- `http://localhost:3200/operations-control/[flightLegId]` rendered the
+  FlightLeg detail page.
+- Confirmed visible `Release Evidence Actions`.
+- Confirmed visible dispatch package card.
+- Confirmed visible `Dispatch package is voided` message.
+- Confirmed visible `Needs attention` state.
+- Confirmed visible warning-only release messaging.
+
+Notes:
+
+- Prompt 78 was QA/docs only.
+- No release-action behavior changed.
+
 ## 2026-06-07 - Prompt 76: Dispatch Package Review State QA
 
 Status: passed.

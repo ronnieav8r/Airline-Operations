@@ -370,3 +370,21 @@ Prompt 78: Dispatch Review Freshness QA
 
 Prompt 78 should validate the panel display for dispatch review states and
 keep the slice QA/docs only unless a defect is found.
+
+## Prompt 78 Status
+
+Implementation status: complete.
+
+Local QA confirmed the FlightLeg detail dispatch card shows review state and
+timestamp context, surfaces `VOIDED` packages as needing attention, and keeps
+release actions warning-only.
+
+Next recommended slice:
+
+```text
+Prompt 79: Release Attempt Snapshot Planning
+```
+
+Prompt 79 should decide whether release-control actions should capture
+readiness snapshots on attempts before any release-action implementation
+changes.
