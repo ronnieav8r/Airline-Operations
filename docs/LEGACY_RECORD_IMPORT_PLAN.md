@@ -150,6 +150,17 @@ discrepancies, deferrals, and airworthiness releases. The durable plan is:
 docs/AIRCRAFT_MAINTENANCE_IMPORT_DRY_RUN_MAPPING_PLAN.md
 ```
 
+Prompt 94 status: complete. A future hidden read-only staging diagnostic is
+planned in:
+
+```text
+docs/IMPORT_STAGING_DIAGNOSTIC_PLAN.md
+```
+
+The planned diagnostic should inspect staging counts and summaries only. It
+must not add import execution, parser code, file uploads, staging mutations, or
+operational writes.
+
 ```text
 Prompt 90: Legacy import staging schema foundation
 ```

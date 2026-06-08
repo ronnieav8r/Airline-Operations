@@ -652,3 +652,20 @@ Prompt 94: Import Staging Read-Only Diagnostic Planning
 
 Prompt 94 should plan a hidden read-only staging diagnostic route without
 adding parser/import execution or staging mutations.
+
+## Prompt 94 Status
+
+Implementation status: complete.
+
+Import staging read-only diagnostic planning is complete. The next safe
+implementation, if approved, is a hidden `/internal/import-staging-readiness`
+route that summarizes staging table counts, batch coverage, row validation
+coverage, findings, and mapping decisions without mutation controls.
+
+Durable plan:
+
+```text
+docs/IMPORT_STAGING_DIAGNOSTIC_PLAN.md
+```
+
+Stop after Prompt 94 unless a new plan is approved.

@@ -72,6 +72,13 @@ Prompt 93 status: complete. The first-domain dry-run mapping plan is:
 docs/AIRCRAFT_MAINTENANCE_IMPORT_DRY_RUN_MAPPING_PLAN.md
 ```
 
+Prompt 94 status: complete. The future read-only staging diagnostic is planned
+in:
+
+```text
+docs/IMPORT_STAGING_DIAGNOSTIC_PLAN.md
+```
+
 ## First Import Domain
 
 The first domain remains aircraft maintenance and airworthiness history:

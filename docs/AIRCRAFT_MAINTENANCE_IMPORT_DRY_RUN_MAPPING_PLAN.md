@@ -207,3 +207,14 @@ Stop before importer implementation if:
 - A row appears to be an operational FlightLeg release instead of aircraft
   airworthiness release.
 - Duplicate detection cannot be made idempotent.
+
+## Prompt 94 Status
+
+Prompt 94 planned a future read-only import staging diagnostic route. The
+durable diagnostic plan is:
+
+```text
+docs/IMPORT_STAGING_DIAGNOSTIC_PLAN.md
+```
+
+No diagnostic route or import execution was implemented.
