@@ -168,6 +168,13 @@ aggregates only.
 Prompt 96 status: complete. Local QA confirmed the diagnostic renders and
 remains read-only while staging tables are empty.
 
+Prompt 97 status: complete. A metadata-only workflow is planned for creating
+and editing `ImportBatch` metadata and adding `ImportSource` metadata only:
+
+```text
+docs/IMPORT_BATCH_METADATA_WORKFLOW_PLAN.md
+```
+
 ```text
 Prompt 90: Legacy import staging schema foundation
 ```

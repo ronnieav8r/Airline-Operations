@@ -707,3 +707,24 @@ Prompt 97 should plan a metadata-only workflow for import batches and source
 references. Parser execution, file uploads, staging-row writes, dry-run
 execution, review/apply workflow, and operational writes should remain
 deferred.
+
+## Prompt 97 Status
+
+Implementation status: complete.
+
+Import batch metadata planning is complete. The next implementation should add
+a hidden `/internal/import-batches` workflow for `ImportBatch` and
+`ImportSource` metadata only. It should not parse files, upload files, create
+staging rows, run dry-runs, apply imports, or write operational records.
+
+Durable plan:
+
+```text
+docs/IMPORT_BATCH_METADATA_WORKFLOW_PLAN.md
+```
+
+Next recommended slice:
+
+```text
+Prompt 98: Import Batch Metadata Foundation
+```

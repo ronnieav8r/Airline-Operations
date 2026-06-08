@@ -144,6 +144,7 @@ It has:
 100. Import staging read-only diagnostic planning.
 101. Import staging read-only diagnostic foundation.
 102. Import staging diagnostic QA.
+103. Import batch metadata planning.
 
 ## Current Data Model Boundaries
 
@@ -362,6 +363,13 @@ diagnostic route renders, shows empty-state guidance while staging tables are
 empty, exposes summary count labels, keeps `/api/health` import counts at zero,
 and leaves main app routes healthy. Results are recorded in
 `docs/LEGACY_IMPORT_QA_LOG.md`.
+
+Import batch metadata planning is complete. The next implementation should add
+a hidden internal `/internal/import-batches` workflow that creates/edits
+`ImportBatch` metadata and adds `ImportSource` metadata only. It must not add
+file uploads, parser execution, staging-row writes, dry-run execution,
+review/apply workflow, operational writes, auth/signatures, destructive
+cleanup, provider integrations, or source-specific mapping code.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -804,14 +812,14 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 97: Import Batch Metadata Planning
+Prompt 98: Import Batch Metadata Foundation
 ```
 
 Scope:
 
-- Plan a metadata-only workflow for creating import batches and source
-  references.
-- Keep it planning/docs-only.
+- Implement `/internal/import-batches` for metadata-only import batches and
+  source references.
+- Link it from `/internal/import-staging-readiness`.
 - Do not add parser code, importer execution, file uploads, staging-row writes,
   dry-run execution, review/apply workflow, or operational writes.
 - Do not add importer execution, file uploads, operational writes,

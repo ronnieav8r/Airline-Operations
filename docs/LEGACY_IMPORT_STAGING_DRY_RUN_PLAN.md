@@ -87,6 +87,13 @@ Prompt 96 status: complete. Local QA confirmed the read-only diagnostic route,
 empty-state behavior, health counters, route smoke, browser rendering, and
 validation/build checks.
 
+Prompt 97 status: complete. Metadata-only import batch/source setup is planned
+in:
+
+```text
+docs/IMPORT_BATCH_METADATA_WORKFLOW_PLAN.md
+```
+
 ## First Import Domain
 
 The first domain remains aircraft maintenance and airworthiness history:

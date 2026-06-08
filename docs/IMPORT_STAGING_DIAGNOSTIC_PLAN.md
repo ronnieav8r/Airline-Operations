@@ -127,6 +127,10 @@ state appears while staging tables are empty, health counts remain available,
 and validation/build checks pass. Results are recorded in
 `docs/LEGACY_IMPORT_QA_LOG.md`.
 
+Prompt 97 planning status: complete. The next workflow should add metadata-only
+`ImportBatch` and `ImportSource` setup at `/internal/import-batches`, then link
+from this diagnostic page.
+
 ## Deferred
 
 - Import batch creation UI.
