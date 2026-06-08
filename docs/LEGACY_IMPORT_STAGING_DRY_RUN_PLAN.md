@@ -52,6 +52,14 @@ Prompt 90 status: complete. Additive staging schema tables now exist, and
 `/api/health` exposes their counts. The tables are empty by default and remain
 staging-only.
 
+Prompt 91 status: complete. Local QA confirmed migrations, validation, build,
+route smoke, browser smoke, and zero-count health diagnostics for the staging
+tables. Results are recorded in:
+
+```text
+docs/LEGACY_IMPORT_QA_LOG.md
+```
+
 ## First Import Domain
 
 The first domain remains aircraft maintenance and airworthiness history:

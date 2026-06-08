@@ -128,6 +128,10 @@ only. Import execution, source parsing, file uploads, operational writes,
 review/apply workflow, auth/signatures, and source-specific mapping remain
 deferred.
 
+Prompt 91 status: complete. Local QA confirmed the staging schema, migration,
+health counters, main routes, and browser rendering. Import staging tables are
+empty by default.
+
 ```text
 Prompt 90: Legacy import staging schema foundation
 ```

@@ -138,6 +138,7 @@ It has:
 94. Next slice planning.
 95. Legacy import staging schema planning.
 96. Legacy import staging schema foundation.
+97. Legacy import staging schema QA.
 
 ## Current Data Model Boundaries
 
@@ -313,6 +314,12 @@ updates. These tables are empty by default and do not perform imports. Importer
 execution, parser code, file uploads, operational writes, review/apply routes,
 auth/signatures, destructive cleanup, provider integrations, and source-specific
 mapping remain deferred.
+
+Legacy import staging schema QA is complete. Local QA confirmed the migration
+state, Prisma validation, typecheck after build regeneration, lint, production
+build, route smoke, browser rendering, and zero-count `/api/health` diagnostics
+for the new import staging tables. Results are recorded in
+`docs/LEGACY_IMPORT_QA_LOG.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -755,14 +762,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 91: Legacy Import Staging Schema QA
+Prompt 92: Aircraft Maintenance Import Source Format Planning
 ```
 
 Scope:
 
-- Validate the additive import staging schema and health counts.
-- Confirm local migration and build checks pass.
-- Keep it QA/docs-only unless a schema defect is found.
+- Define the expected source-file/reference format for aircraft maintenance
+  and airworthiness history imports.
+- Keep it planning/docs-only.
+- Do not add parser code, importer execution, file uploads, staging-row writes,
+  or operational writes.
 - Do not add importer execution, file uploads, operational writes,
   auth/signatures, destructive cleanup, or provider integrations.
 

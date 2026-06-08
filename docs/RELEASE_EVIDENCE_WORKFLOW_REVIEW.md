@@ -578,3 +578,27 @@ Prompt 91: Legacy Import Staging Schema QA
 
 Prompt 91 should validate the schema, migration, zero-count health diagnostics,
 and unchanged app routes.
+
+## Prompt 91 Status
+
+Implementation status: complete.
+
+Local QA confirmed the import staging schema has no pending local migrations,
+passes Prisma validation, typecheck, lint, and production build, exposes
+zero-count staging diagnostics in `/api/health`, and leaves the main app routes
+and Operations Control browser rendering intact.
+
+Durable QA result:
+
+```text
+docs/LEGACY_IMPORT_QA_LOG.md
+```
+
+Next recommended slice:
+
+```text
+Prompt 92: Aircraft Maintenance Import Source Format Planning
+```
+
+Prompt 92 should define expected source formats for the first aircraft
+maintenance/airworthiness import domain without adding parser or importer code.
