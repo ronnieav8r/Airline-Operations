@@ -1,6 +1,6 @@
 # Legacy Record Import Plan
 
-Last updated: 2026-06-07
+Last updated: 2026-06-08
 
 This document tracks the future need to import old operational, aircraft,
 maintenance, crew, and release records into AeroOps.
@@ -109,6 +109,10 @@ with file uploads deferred. Detailed staging/dry-run planning lives in:
 ```text
 docs/LEGACY_IMPORT_STAGING_DRY_RUN_PLAN.md
 ```
+
+Prompt 88 selected additive import staging schema as the next safe build path.
+Prompt 89 should plan the schema, and Prompt 90 should implement it only after
+that planning slice.
 
 ```text
 Prompt X: Legacy import staging foundation

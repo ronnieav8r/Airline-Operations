@@ -1,6 +1,6 @@
 # Legacy Import Staging And Dry-Run Plan
 
-Last updated: 2026-06-07
+Last updated: 2026-06-08
 
 ## Decision
 
@@ -34,6 +34,9 @@ Potential future tables:
 - `ImportMappingDecision`
 
 Prompt 87 does not implement these tables.
+
+Prompt 88 status: complete. The next safe implementation path is Prompt 89
+schema planning followed by Prompt 90 additive staging schema foundation.
 
 ## First Import Domain
 

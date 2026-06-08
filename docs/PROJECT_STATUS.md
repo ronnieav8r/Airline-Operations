@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-06-07
+Last updated: 2026-06-08
 
 This document is the quick onboarding note for planner and builder chats. Read it
 before starting a new AeroOps slice.
@@ -135,6 +135,7 @@ It has:
 91. Release audit timeline QA.
 92. Legacy record import planning refresh.
 93. Legacy import staging/dry-run planning.
+94. Next slice planning.
 
 ## Current Data Model Boundaries
 
@@ -289,6 +290,12 @@ foundation should use database-backed staging tables, with file uploads,
 parser implementation, operational writes, auth/signatures, and schema changes
 still deferred until a separate implementation plan is approved. Detailed
 planning lives in `docs/LEGACY_IMPORT_STAGING_DRY_RUN_PLAN.md`.
+
+Next slice planning is complete. The selected next path is additive legacy
+import staging schema planning and foundation work, followed by source-format
+and dry-run mapping planning. Import execution, file uploads, operational
+writes, auth/signatures, destructive cleanup, provider integrations, and
+ambiguous source-field mapping remain stop conditions.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -731,17 +738,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 88: Next Slice Planning
+Prompt 89: Legacy Import Staging Schema Planning
 ```
 
 Scope:
 
-- Choose the next safe AeroOps slice after the 82-87 batch.
-- Candidate paths: importer staging schema planning, audit timeline polish,
-  aircraft maintenance import source-format review, or another read-only
-  workflow panel.
-- Keep planning separate from implementation if schema/import execution is
-  involved.
+- Plan additive import staging schema tables and enums.
+- Keep it planning/docs only.
+- Do not add schema until Prompt 90.
+- Do not add importer execution, file uploads, operational writes,
+  auth/signatures, destructive cleanup, or provider integrations.
 
 Deferred follow-up to keep on the roadmap:
 
