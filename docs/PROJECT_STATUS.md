@@ -129,6 +129,7 @@ It has:
 85. Release attempt snapshot planning.
 86. Release attempt snapshot foundation.
 87. Release attempt snapshot QA.
+88. Next release workflow planning.
 
 ## Current Data Model Boundaries
 
@@ -247,6 +248,12 @@ Cancel Release, and Void Release each create release-attempt snapshots and
 linked audit events, while explicit preview snapshot capture still works.
 Release behavior remains warning-only. Results are recorded in
 `docs/RELEASE_EVIDENCE_QA_LOG.md`.
+
+Next release workflow planning is complete. The chosen next improvement is a
+read-only release audit timeline on FlightLeg detail so operators can see the
+release attempt audit events and linked readiness snapshots created by the
+current workflow. Detailed planning lives in
+`docs/NEXT_RELEASE_WORKFLOW_PLAN.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -689,16 +696,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 82: Next Release Workflow Planning
+Prompt 83: Release Audit Timeline Planning
 ```
 
 Scope:
 
-- Choose the next release-evidence workflow improvement after attempt
-  snapshots.
-- Candidate options include release audit visibility, snapshot/audit detail
-  UI, or importer planning.
-- Keep the next slice planning-only until a target is selected.
+- Plan where and how to show release audit events on FlightLeg detail.
+- Define fields, snapshot links, skipped snapshot metadata, and read-only
+  guardrails.
+- Do not add schema, auth/signatures, hard blocking, provider integrations,
+  file uploads, or `ReleasePackage`.
 
 Deferred follow-up to keep on the roadmap:
 

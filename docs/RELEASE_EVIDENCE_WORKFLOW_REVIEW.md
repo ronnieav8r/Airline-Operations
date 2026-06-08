@@ -440,3 +440,21 @@ Prompt 82: Next Release Workflow Planning
 
 Prompt 82 should choose the next small release-evidence workflow target after
 attempt snapshots.
+
+## Prompt 82 Status
+
+Implementation status: complete.
+
+Prompt 82 selected a read-only release audit timeline on FlightLeg detail as
+the next workflow improvement. This exposes the release attempt audit events
+and linked readiness snapshots created by the current workflow without changing
+release actions.
+
+Next recommended slice:
+
+```text
+Prompt 83: Release Audit Timeline Planning
+```
+
+Prompt 83 should plan timeline placement, fields, snapshot links, skipped
+snapshot metadata, and read-only guardrails before implementation.

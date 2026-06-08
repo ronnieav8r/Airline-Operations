@@ -963,3 +963,15 @@ Prompt 81 validated release-attempt snapshot behavior. Local QA confirmed Mark
 Released, Cancel Release, and Void Release each create release-attempt
 snapshots and linked audit events, while explicit preview snapshot capture
 still works. Release behavior remains warning-only.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 82: Next Release Workflow Planning
+```
+
+Implementation status: complete.
+
+Prompt 82 selected a read-only release audit timeline on FlightLeg detail as
+the next release workflow target. Prompt 83 should plan that timeline before
+Prompt 84 implements it.
