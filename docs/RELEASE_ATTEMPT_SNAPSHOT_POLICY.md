@@ -10,6 +10,9 @@ the release status changes.
 This is not hard release blocking. A failed or missing snapshot must not stop
 Mark Released, Cancel Release, or Void Release.
 
+Implementation status: Prompt 80 implements best-effort pre-action release
+attempt snapshots and linked release audit events using existing tables.
+
 ## Attempt Definition
 
 A release attempt is one of these submitted actions on FlightLeg detail:

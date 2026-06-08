@@ -5,6 +5,7 @@ import {
   FlightLegStatus,
   FlightStatus,
   Prisma,
+  ReleaseAuditEventType,
   ReleaseFindingStatus,
   ReleaseStatus,
 } from "@prisma/client";
@@ -21,6 +22,25 @@ import {
 } from "@/lib/release-readiness";
 
 class FlightLegFormError extends Error {}
+
+type SnapshotCaptureMode = "strict" | "best-effort";
+
+type SnapshotSummaryContext =
+  | {
+      source: "explicit-preview";
+    }
+  | {
+      attemptedAction: string;
+      attemptedReleaseStatus: ReleaseStatus;
+      capturedBeforeStatus: ReleaseStatus | null;
+      source: "release-attempt";
+    };
+
+type AttemptSnapshotResult = {
+  capturedBeforeStatus: ReleaseStatus | null;
+  skippedReason: string | null;
+  snapshotId: string | null;
+};
 
 type FlightLegFormInput = {
   flightNumber: string;
@@ -680,7 +700,7 @@ export async function updateFlightLegAction(flightLegId: string, formData: FormD
 }
 
 async function setFlightLegReleaseStatus(flightLegId: string, status: ReleaseStatus) {
-  await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const controlRecord = await tx.operationalControlRecord.findUnique({
       where: { flightLegId },
       select: { id: true },
@@ -690,7 +710,7 @@ async function setFlightLegReleaseStatus(flightLegId: string, status: ReleaseSta
       throw new FlightLegFormError("Operational-control record was not found.");
     }
 
-    await tx.flightRelease.upsert({
+    const release = await tx.flightRelease.upsert({
       where: { operationalControlRecordId: controlRecord.id },
       update: {
         status,
@@ -701,6 +721,7 @@ async function setFlightLegReleaseStatus(flightLegId: string, status: ReleaseSta
         status,
         releasedAt: status === ReleaseStatus.RELEASED ? new Date() : null,
       },
+      select: { id: true },
     });
 
     await tx.flightLeg.update({
@@ -709,34 +730,55 @@ async function setFlightLegReleaseStatus(flightLegId: string, status: ReleaseSta
         status: status === ReleaseStatus.RELEASED ? FlightLegStatus.RELEASED : FlightLegStatus.SCHEDULED,
       },
     });
+
+    return release;
   });
 }
 
-async function runReleaseAction(flightLegId: string, status: ReleaseStatus) {
-  try {
-    await setFlightLegReleaseStatus(flightLegId, status);
-  } catch (error) {
-    redirect(`/operations-control/${flightLegId}?releaseError=${encodeError(error)}`);
+function releaseAuditEventType(status: ReleaseStatus): ReleaseAuditEventType {
+  if (status === ReleaseStatus.RELEASED) {
+    return ReleaseAuditEventType.RELEASE_COMPLETED;
   }
 
-  revalidateFlightLegWorkflowPaths();
-  revalidatePath(`/operations-control/${flightLegId}`);
-  redirect(`/operations-control/${flightLegId}`);
+  if (status === ReleaseStatus.CANCELLED) {
+    return ReleaseAuditEventType.RELEASE_CANCELLED;
+  }
+
+  return ReleaseAuditEventType.RELEASE_VOIDED;
 }
 
-export async function markFlightLegReleasedAction(flightLegId: string) {
-  await runReleaseAction(flightLegId, ReleaseStatus.RELEASED);
+function releaseAttemptAction(status: ReleaseStatus): string {
+  if (status === ReleaseStatus.RELEASED) {
+    return "mark-released";
+  }
+
+  if (status === ReleaseStatus.CANCELLED) {
+    return "cancel-release";
+  }
+
+  return "void-release";
 }
 
-export async function cancelFlightLegReleaseAction(flightLegId: string) {
-  await runReleaseAction(flightLegId, ReleaseStatus.CANCELLED);
+function releaseAuditMessage(status: ReleaseStatus, snapshot: AttemptSnapshotResult): string {
+  const action =
+    status === ReleaseStatus.RELEASED
+      ? "marked released"
+      : status === ReleaseStatus.CANCELLED
+        ? "cancelled"
+        : "voided";
+
+  if (snapshot.snapshotId) {
+    return `FlightLeg release ${action}; pre-action readiness snapshot captured.`;
+  }
+
+  return `FlightLeg release ${action}; pre-action readiness snapshot skipped.`;
 }
 
-export async function voidFlightLegReleaseAction(flightLegId: string) {
-  await runReleaseAction(flightLegId, ReleaseStatus.VOIDED);
-}
-
-export async function captureReleasePreviewSnapshotAction(flightLegId: string) {
+async function createReadinessSnapshot(
+  flightLegId: string,
+  summaryContext: SnapshotSummaryContext,
+  mode: SnapshotCaptureMode,
+): Promise<AttemptSnapshotResult> {
   try {
     const detail = await getReleaseEvidenceDetail(flightLegId);
 
@@ -745,6 +787,8 @@ export async function captureReleasePreviewSnapshotAction(flightLegId: string) {
     }
 
     const flightRelease = detail.operationalControlRecord?.release;
+    const capturedBeforeStatus = flightRelease?.status ?? null;
+
     if (!flightRelease) {
       throw new FlightLegFormError("FlightRelease record was not found.");
     }
@@ -774,13 +818,13 @@ export async function captureReleasePreviewSnapshotAction(flightLegId: string) {
     const findings = readinessItems.map((item) => {
       const policyRule = policyRulesByKey.get(item.ruleKey) ?? null;
       const severity = policyRule?.severity ?? mapReadinessClassificationToSeverity(item.classification);
-      const status = mapReleaseReadinessFindingStatus(item.ready, severity);
+      const findingStatus = mapReleaseReadinessFindingStatus(item.ready, severity);
 
       return {
         item,
         policyRule,
         severity,
-        status,
+        status: findingStatus,
       };
     });
     const passCount = findings.filter((finding) => finding.status === ReleaseFindingStatus.PASS).length;
@@ -793,39 +837,136 @@ export async function captureReleasePreviewSnapshotAction(flightLegId: string) {
     ).length;
     const snapshotStatus = getReleaseSnapshotStatus(failCount, warningCount);
 
-    await prisma.$transaction(async (tx) => {
-      await tx.releaseReadinessSnapshot.create({
-        data: {
-          flightLegId: detail.id,
-          flightReleaseId: flightRelease.id,
-          policyProfileId: policyProfile.id,
-          snapshotStatus,
-          authorityClass: policyProfile.authorityClass,
-          summary: {
-            total: findings.length,
-            pass: passCount,
-            fail: failCount,
-            warning: warningCount,
-            notApplicable: notApplicableCount,
-            source: "explicit-preview",
-          },
-          findings: {
-            create: findings.map((finding) => ({
-              ruleId: finding.policyRule?.id ?? null,
-              ruleKey: finding.item.ruleKey,
-              readinessCategory: finding.item.readinessCategory,
-              severity: finding.severity,
-              status: finding.status,
-              isOverridable: finding.policyRule?.isOverridable ?? false,
-              summary: finding.item.message,
-              evidenceRefType: finding.item.evidenceRefType ?? null,
-              evidenceRefId: finding.item.evidenceRefId ?? null,
-              details: finding.item.details ?? {},
-            })),
-          },
+    const snapshot = await prisma.releaseReadinessSnapshot.create({
+      data: {
+        flightLegId: detail.id,
+        flightReleaseId: flightRelease.id,
+        policyProfileId: policyProfile.id,
+        snapshotStatus,
+        authorityClass: policyProfile.authorityClass,
+        summary: {
+          total: findings.length,
+          pass: passCount,
+          fail: failCount,
+          warning: warningCount,
+          notApplicable: notApplicableCount,
+          ...summaryContext,
         },
-      });
+        findings: {
+          create: findings.map((finding) => ({
+            ruleId: finding.policyRule?.id ?? null,
+            ruleKey: finding.item.ruleKey,
+            readinessCategory: finding.item.readinessCategory,
+            severity: finding.severity,
+            status: finding.status,
+            isOverridable: finding.policyRule?.isOverridable ?? false,
+            summary: finding.item.message,
+            evidenceRefType: finding.item.evidenceRefType ?? null,
+            evidenceRefId: finding.item.evidenceRefId ?? null,
+            details: finding.item.details ?? {},
+          })),
+        },
+      },
+      select: { id: true },
     });
+
+    return {
+      capturedBeforeStatus,
+      skippedReason: null,
+      snapshotId: snapshot.id,
+    };
+  } catch (error) {
+    if (mode === "strict") {
+      throw error;
+    }
+
+    return {
+      capturedBeforeStatus:
+        summaryContext.source === "release-attempt" ? summaryContext.capturedBeforeStatus : null,
+      skippedReason: error instanceof Error ? error.message : "Readiness snapshot capture failed.",
+      snapshotId: null,
+    };
+  }
+}
+
+async function captureReleaseAttemptSnapshot(
+  flightLegId: string,
+  status: ReleaseStatus,
+): Promise<AttemptSnapshotResult> {
+  const detail = await getReleaseEvidenceDetail(flightLegId);
+  const capturedBeforeStatus = detail?.operationalControlRecord?.release?.status ?? null;
+
+  return createReadinessSnapshot(
+    flightLegId,
+    {
+      attemptedAction: releaseAttemptAction(status),
+      attemptedReleaseStatus: status,
+      capturedBeforeStatus,
+      source: "release-attempt",
+    },
+    "best-effort",
+  );
+}
+
+async function createReleaseAuditEvent(
+  flightLegId: string,
+  releaseId: string,
+  status: ReleaseStatus,
+  snapshot: AttemptSnapshotResult,
+) {
+  await prisma.$transaction(async (tx) => {
+    await tx.releaseAuditEvent.create({
+      data: {
+        flightLegId,
+        flightReleaseId: releaseId,
+        snapshotId: snapshot.snapshotId,
+        eventType: releaseAuditEventType(status),
+        actorUserId: null,
+        message: releaseAuditMessage(status, snapshot),
+        metadata: {
+          attemptedAction: releaseAttemptAction(status),
+          attemptedReleaseStatus: status,
+          capturedBeforeStatus: snapshot.capturedBeforeStatus,
+          snapshotCaptured: !!snapshot.snapshotId,
+          snapshotSkippedReason: snapshot.skippedReason,
+        },
+      },
+    });
+  });
+}
+
+async function runReleaseAction(flightLegId: string, status: ReleaseStatus) {
+  let attemptSnapshot: AttemptSnapshotResult;
+  let release: { id: string };
+
+  try {
+    attemptSnapshot = await captureReleaseAttemptSnapshot(flightLegId, status);
+    release = await setFlightLegReleaseStatus(flightLegId, status);
+    await createReleaseAuditEvent(flightLegId, release.id, status, attemptSnapshot);
+  } catch (error) {
+    redirect(`/operations-control/${flightLegId}?releaseError=${encodeError(error)}`);
+  }
+
+  revalidateFlightLegWorkflowPaths();
+  revalidatePath(`/operations-control/${flightLegId}`);
+  redirect(`/operations-control/${flightLegId}`);
+}
+
+export async function markFlightLegReleasedAction(flightLegId: string) {
+  await runReleaseAction(flightLegId, ReleaseStatus.RELEASED);
+}
+
+export async function cancelFlightLegReleaseAction(flightLegId: string) {
+  await runReleaseAction(flightLegId, ReleaseStatus.CANCELLED);
+}
+
+export async function voidFlightLegReleaseAction(flightLegId: string) {
+  await runReleaseAction(flightLegId, ReleaseStatus.VOIDED);
+}
+
+export async function captureReleasePreviewSnapshotAction(flightLegId: string) {
+  try {
+    await createReadinessSnapshot(flightLegId, { source: "explicit-preview" }, "strict");
   } catch (error) {
     redirect(`/operations-control/${flightLegId}?snapshotError=${encodeError(error)}`);
   }

@@ -127,6 +127,7 @@ It has:
 83. Dispatch review freshness panel update.
 84. Dispatch review freshness QA.
 85. Release attempt snapshot planning.
+86. Release attempt snapshot foundation.
 
 ## Current Data Model Boundaries
 
@@ -233,6 +234,12 @@ and Void Release, using existing snapshot/finding/audit tables. Snapshot
 capture must not block release actions; missing policy data should be recorded
 as an audit skip reason. Detailed policy is in
 `docs/RELEASE_ATTEMPT_SNAPSHOT_POLICY.md`.
+
+Release attempt snapshot foundation is implemented. Release-control actions now
+attempt to capture a pre-action readiness snapshot and create a linked
+`ReleaseAuditEvent` for Mark Released, Cancel Release, and Void Release.
+Explicit preview snapshot behavior is preserved. Release actions remain
+warning-only and do not hard-block on readiness findings.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -675,18 +682,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 80: Release Attempt Snapshot Foundation
+Prompt 81: Release Attempt Snapshot QA
 ```
 
 Scope:
 
-- Refactor explicit preview snapshot creation into a shared helper.
-- Capture best-effort pre-action readiness snapshots on Mark Released, Cancel
-  Release, and Void Release.
-- Create linked release audit events.
-- Keep release actions warning-only and do not block on snapshot failures.
-- Do not add hard blocking, auth/signatures, provider integrations, file
-  uploads, `ReleasePackage`, or schema changes.
+- Validate Mark Released, Cancel Release, and Void Release create attempt
+  snapshots and audit events.
+- Confirm explicit preview snapshot still works.
+- Confirm release actions remain warning-only.
+- Keep the slice QA/docs only unless a defect is found.
 
 Deferred follow-up to keep on the roadmap:
 

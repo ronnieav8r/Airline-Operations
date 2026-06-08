@@ -121,6 +121,9 @@ same readiness snapshot data before mutating release status, then create a
 linked `ReleaseAuditEvent`. Missing policy data must not block the release
 action; the audit event should record the skip reason instead.
 
+Prompt 80 implements this foundation. Explicit preview snapshots still use the
+same readiness source, and release actions remain warning-only.
+
 Detailed policy lives in:
 
 ```text

@@ -406,3 +406,20 @@ Prompt 80: Release Attempt Snapshot Foundation
 
 Prompt 80 should implement the shared snapshot helper and release-action audit
 events while preserving warning-only release behavior.
+
+## Prompt 80 Status
+
+Implementation status: complete.
+
+Release-control actions now use a shared snapshot helper to attempt pre-action
+readiness snapshots and create linked release audit events. Explicit preview
+snapshot behavior is preserved. Release actions remain warning-only.
+
+Next recommended slice:
+
+```text
+Prompt 81: Release Attempt Snapshot QA
+```
+
+Prompt 81 should validate attempt snapshots and audit events for release,
+cancel, and void actions.
