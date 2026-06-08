@@ -164,3 +164,33 @@ Prompt 66: Weight-and-Balance Approval QA
 
 Prompt 66 should validate approval behavior and keep the slice QA/docs only
 unless a defect is found.
+
+## Prompt 66 Status
+
+Implementation status: complete.
+
+Local QA confirmed W&B approval behavior:
+
+- Complete `CALCULATED` runs can be approved.
+- Approval sets `APPROVED` and `approvedAt`.
+- `approvedById` remains null until auth exists.
+- DRAFT, incomplete, and wrong-FlightLeg approval attempts are rejected.
+- Approved runs remain locked from edit and void.
+- Non-approved Mark Calculated behavior still works.
+- FlightLeg detail, W&B workflow, health, and main routes still load.
+
+Durable QA result:
+
+```text
+docs/RELEASE_EVIDENCE_QA_LOG.md
+```
+
+Next recommended slice:
+
+```text
+Prompt 67: Flight Locating Position History Planning
+```
+
+Prompt 67 should decide whether the next workflow should add manual
+FlightLocating position history, latest-position summaries, and overdue
+warnings. Keep it planning/docs only unless a defect is found.

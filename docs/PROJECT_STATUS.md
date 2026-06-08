@@ -113,6 +113,7 @@ It has:
 69. Release evidence action panel QA.
 70. Weight-and-balance approval planning.
 71. Weight-and-balance approval foundation.
+72. Weight-and-balance approval QA.
 
 ## Current Data Model Boundaries
 
@@ -403,6 +404,12 @@ and center of gravity. Approval sets `APPROVED` plus `approvedAt`, keeps
 `approvedById` null until auth exists, and leaves release behavior
 warning-only.
 
+Weight-and-balance approval QA is complete. Local QA confirmed approval from
+`CALCULATED` to `APPROVED`, rejection of DRAFT, incomplete, and wrong-FlightLeg
+approval attempts, approved-run edit/void locking, unchanged non-approved Mark
+Calculated behavior, and successful route/browser smoke checks. Results are
+recorded in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
+
 Use `/internal/flightleg-write-readiness` after local create/edit QA. It checks
 the expected write-workflow support records: legacy Flight bridge, auto trip,
 current aircraft assignment, operational-control link, release placeholder, and
@@ -574,16 +581,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 66: Weight-and-Balance Approval QA
+Prompt 67: Flight Locating Position History Planning
 ```
 
 Scope:
 
-- Validate W&B approval from `CALCULATED` to `APPROVED`.
-- Confirm DRAFT/incomplete/wrong-FlightLeg runs cannot be approved.
-- Confirm approved runs remain non-editable/non-voidable and FlightLeg detail
-  readiness/action panel still render.
-- Keep it QA/docs only unless a defect is found.
+- Decide whether the next release-evidence workflow should add manual
+  FlightLocating position history, latest-position summaries, and overdue
+  warnings.
+- Keep it planning/docs only.
+- Do not add schema, provider integrations, hard blocking, auth/signatures,
+  file uploads, automatic tracking, or release-action changes.
 
 Deferred follow-up to keep on the roadmap:
 

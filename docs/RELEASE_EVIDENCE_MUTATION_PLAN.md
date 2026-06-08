@@ -701,3 +701,28 @@ Prompt 66 should validate calculated-to-approved behavior, rejection of
 DRAFT/incomplete/wrong-FlightLeg runs, approved-run locking, and unchanged
 FlightLeg detail/action-panel/readiness behavior. Keep it QA/docs only unless a
 defect is found.
+
+Implementation status: complete.
+
+Prompt 66 validated W&B approval behavior against the local Docker database.
+Approval from `CALCULATED` to `APPROVED` passed, `approvedAt` was populated,
+`approvedById` stayed null, and DRAFT, incomplete, and wrong-FlightLeg approval
+attempts were rejected. Approved-run edit/void locking and non-approved Mark
+Calculated behavior were also confirmed.
+
+Durable QA result:
+
+```text
+docs/RELEASE_EVIDENCE_QA_LOG.md
+```
+
+Recommended next release evidence slice:
+
+```text
+Prompt 67: Flight Locating Position History Planning
+```
+
+Prompt 67 should decide the first manual position-history workflow for
+`FlightLocatingRecord` before implementation. Keep it planning/docs only. Do
+not add provider integrations, automatic tracking, hard blocking, auth,
+signatures, file uploads, schema changes, or release-action changes.
