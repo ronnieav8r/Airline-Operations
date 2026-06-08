@@ -146,3 +146,21 @@ Prompt 64 should decide the next workflow improvement after the action panel.
 Compare manifest locking/amendments, W&B approval, locating position history,
 dispatch package review state, and release-attempt snapshot planning. Keep it
 planning/docs only.
+
+## Prompt 64-65 Status
+
+Implementation status: complete.
+
+Prompt 64 selected W&B approval as the next workflow lane. Prompt 65
+implemented the first approval foundation: only `CALCULATED` W&B runs can be
+approved, approval sets `APPROVED` and `approvedAt`, and approved runs remain
+locked from edit/void. Release behavior remains warning-only.
+
+Next recommended slice:
+
+```text
+Prompt 66: Weight-and-Balance Approval QA
+```
+
+Prompt 66 should validate approval behavior and keep the slice QA/docs only
+unless a defect is found.

@@ -124,6 +124,44 @@ async function ensureRunBelongsToFlightLeg(flightLegId: string, runId: string) {
   return run;
 }
 
+async function ensureRunCanBeApproved(flightLegId: string, runId: string) {
+  const run = await prisma.weightBalanceRun.findFirst({
+    where: {
+      id: runId,
+      flightLegId,
+    },
+    select: {
+      id: true,
+      status: true,
+      takeoffWeight: true,
+      landingWeight: true,
+      centerOfGravity: true,
+    },
+  });
+
+  if (!run) {
+    throw new WeightBalanceWorkflowError("Weight-and-balance run was not found.");
+  }
+
+  if (run.status !== WeightBalanceStatus.CALCULATED) {
+    throw new WeightBalanceWorkflowError("Only calculated W&B runs can be approved.");
+  }
+
+  if (!run.takeoffWeight) {
+    throw new WeightBalanceWorkflowError("Takeoff weight is required before approval.");
+  }
+
+  if (!run.landingWeight) {
+    throw new WeightBalanceWorkflowError("Landing weight is required before approval.");
+  }
+
+  if (!run.centerOfGravity) {
+    throw new WeightBalanceWorkflowError("Center of gravity is required before approval.");
+  }
+
+  return run;
+}
+
 function buildCalculationSnapshot(
   input: WeightBalanceRunInput,
   manifestItemCount: number,
@@ -210,6 +248,26 @@ export async function markWeightBalanceCalculatedAction(flightLegId: string, run
       data: {
         status: WeightBalanceStatus.CALCULATED,
         calculatedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    redirect(`/operations-control/${flightLegId}/weight-balance?error=${encodeError(error)}`);
+  }
+
+  revalidateWeightBalancePaths(flightLegId);
+  redirect(`/operations-control/${flightLegId}/weight-balance`);
+}
+
+export async function approveWeightBalanceRunAction(flightLegId: string, runId: string) {
+  try {
+    await ensureRunCanBeApproved(flightLegId, runId);
+
+    await prisma.weightBalanceRun.update({
+      where: { id: runId },
+      data: {
+        status: WeightBalanceStatus.APPROVED,
+        approvedAt: new Date(),
+        approvedById: null,
       },
     });
   } catch (error) {

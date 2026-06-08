@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import {
   addWeightBalanceRunAction,
+  approveWeightBalanceRunAction,
   markWeightBalanceCalculatedAction,
   updateWeightBalanceRunAction,
   voidWeightBalanceRunAction,
@@ -240,6 +241,7 @@ function WeightBalanceRuns({
       {runs.map((run) => {
         const updateAction = updateWeightBalanceRunAction.bind(null, flightLegId, run.id);
         const calculateAction = markWeightBalanceCalculatedAction.bind(null, flightLegId, run.id);
+        const approveAction = approveWeightBalanceRunAction.bind(null, flightLegId, run.id);
         const voidAction = voidWeightBalanceRunAction.bind(null, flightLegId, run.id);
         const warnings = runWarnings(run);
         const canMutate = run.status !== WeightBalanceStatus.APPROVED;
@@ -261,6 +263,9 @@ function WeightBalanceRuns({
                   Calculated {toDateTimeLabel(run.calculatedAt)} | Updated{" "}
                   {toDateTimeLabel(run.updatedAt)}
                 </p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Approved {toDateTimeLabel(run.approvedAt)}
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <form action={calculateAction}>
@@ -272,6 +277,16 @@ function WeightBalanceRuns({
                     Mark Calculated
                   </button>
                 </form>
+                {run.status === WeightBalanceStatus.CALCULATED ? (
+                  <form action={approveAction}>
+                    <button
+                      className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800"
+                      type="submit"
+                    >
+                      Approve
+                    </button>
+                  </form>
+                ) : null}
                 <form action={voidAction}>
                   <button
                     className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
@@ -382,8 +397,8 @@ export default async function WeightBalanceWorkflowPage({ params, searchParams }
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
           <h2 className="text-lg font-semibold">Add manual W&B run</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            This records manual evidence only. Automated calculations, approval, and release gating remain
-            deferred.
+            This records manual evidence only. Calculated runs can be approved, while automated
+            calculations, signatures, and release gating remain deferred.
           </p>
           <div className="mt-4">
             <WeightBalanceRunForm action={addAction} submitLabel="Add W&B run" />

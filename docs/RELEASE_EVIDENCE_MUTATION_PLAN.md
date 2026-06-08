@@ -683,3 +683,21 @@ Prompt 65 should add an `Approve` action for `CALCULATED` W&B runs under
 `/operations-control/[flightLegId]/weight-balance`, set `APPROVED` plus
 `approvedAt`, reject incomplete or wrong-status runs, and keep existing
 non-approved W&B behavior unchanged.
+
+Implementation status: complete.
+
+Prompt 65 added W&B approval for `CALCULATED` runs. Approval sets `APPROVED`
+and `approvedAt`, leaves `approvedById` null until auth exists, rejects
+incomplete or wrong-status runs, and keeps approved runs locked from edit/void.
+Release behavior remains warning-only.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 66: Weight-and-Balance Approval QA
+```
+
+Prompt 66 should validate calculated-to-approved behavior, rejection of
+DRAFT/incomplete/wrong-FlightLeg runs, approved-run locking, and unchanged
+FlightLeg detail/action-panel/readiness behavior. Keep it QA/docs only unless a
+defect is found.
