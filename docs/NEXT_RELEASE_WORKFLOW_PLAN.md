@@ -38,6 +38,19 @@ Implement the timeline:
 - Link to existing snapshot detail pages when available.
 - Keep release actions warning-only and unchanged.
 
+## Prompt 83 Planning Status
+
+Prompt 83 selected a FlightLeg-local timeline placed below Preview Snapshots
+and above Release Control. The first display should show the latest 10
+`ReleaseAuditEvent` rows, newest first, with event type, message, created time,
+actor placeholder, linked snapshot when available, and useful attempt metadata.
+
+Detailed timeline plan:
+
+```text
+docs/RELEASE_AUDIT_TIMELINE_PLAN.md
+```
+
 ## Deferred
 
 - Auth/signatures.

@@ -975,3 +975,15 @@ Implementation status: complete.
 Prompt 82 selected a read-only release audit timeline on FlightLeg detail as
 the next release workflow target. Prompt 83 should plan that timeline before
 Prompt 84 implements it.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 83: Release Audit Timeline Planning
+```
+
+Implementation status: complete.
+
+Prompt 83 planned the FlightLeg-local release audit timeline. Prompt 84 should
+implement a read-only section showing recent release audit events and linked
+snapshots.

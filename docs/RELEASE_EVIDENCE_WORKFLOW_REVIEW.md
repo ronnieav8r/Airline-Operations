@@ -458,3 +458,21 @@ Prompt 83: Release Audit Timeline Planning
 
 Prompt 83 should plan timeline placement, fields, snapshot links, skipped
 snapshot metadata, and read-only guardrails before implementation.
+
+## Prompt 83 Status
+
+Implementation status: complete.
+
+Prompt 83 planned the first release audit timeline. It should be
+FlightLeg-local, newest-first, limited to 10 events, placed below Preview
+Snapshots and above Release Control, and display event type, message, created
+time, actor placeholder, snapshot links, and useful attempt metadata.
+
+Next recommended slice:
+
+```text
+Prompt 84: Release Audit Timeline Read-Only Foundation
+```
+
+Prompt 84 should implement the read-only timeline on FlightLeg detail without
+changing release behavior.
