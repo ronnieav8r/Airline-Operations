@@ -279,3 +279,20 @@ Prompt 73: Locating Freshness QA
 
 Prompt 73 should validate the panel states and keep the slice QA/docs only
 unless a defect is found.
+
+## Prompt 73 Status
+
+Implementation status: complete.
+
+Local QA confirmed locating freshness panel behavior for both latest-report and
+active-with-no-report states. Release Control still renders and release
+behavior remains warning-only.
+
+Next recommended slice:
+
+```text
+Prompt 74: Dispatch Package Review State Planning
+```
+
+Prompt 74 should decide the next dispatch-package workflow improvement before
+implementation.

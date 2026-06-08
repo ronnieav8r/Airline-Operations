@@ -61,6 +61,61 @@ Notes:
   used as the source of truth for pass/fail.
 - Release behavior remains warning-only.
 
+## 2026-06-07 - Prompt 73: Locating Freshness QA
+
+Status: passed.
+
+Local database:
+
+- `npm run db:local:up` passed.
+- `npm run db:local:migrate` passed with no pending migrations.
+- Local health returned `ok: true` with nonzero `positionReports`.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Fixture setup:
+
+- Prepared local FlightLeg `AO101` with a latest manual position report.
+- Prepared local FlightLeg `AO303` with `ACTIVE` locating status and no
+  position reports.
+
+Panel QA:
+
+- Confirmed AO101 FlightLeg detail shows Release Evidence Actions.
+- Confirmed AO101 locating card shows latest position summary and freshness
+  text.
+- Confirmed AO303 FlightLeg detail shows the no-position-report message.
+- Confirmed AO303 locating card shows needs-attention state in the panel.
+- Confirmed Release Control still renders on both FlightLeg detail pages.
+
+Route smoke:
+
+- `/` returned 200.
+- `/operations-control` returned 200.
+- `/operations-control/[flightLegId]` returned 200 for both locating states.
+- `/operations-control/[flightLegId]/locating` returned 200.
+- `/api/health` returned 200.
+- `/flights` returned 200.
+- `/aircraft` returned 200.
+- `/crew` returned 200.
+- `/scheduling` returned 200.
+
+Browser QA:
+
+- Confirmed latest-position state in the browser.
+- Confirmed no-position-report needs-attention state in the browser.
+- Confirmed Release Control remains visible.
+
+Notes:
+
+- Freshness remains informational only.
+- Release readiness and release actions remain warning-only.
+
 ## 2026-06-07 - Prompt 71: Manual Flight Locating Position History QA
 
 Status: passed.

@@ -120,6 +120,7 @@ It has:
 76. Manual Flight Locating position history foundation.
 77. Manual Flight Locating position history QA.
 78. Locating freshness evidence panel update.
+79. Locating freshness QA.
 
 ## Current Data Model Boundaries
 
@@ -183,6 +184,12 @@ Action Panel now includes latest manual position report summary and age on the
 Flight locating card when available. An `ACTIVE` locating record with no
 position report is shown as needing attention in the panel only. Release
 readiness and release actions remain warning-only and unchanged.
+
+Locating freshness QA is complete. Local QA confirmed the panel shows latest
+manual position report summary/freshness when available, shows an
+`ACTIVE`-with-no-report needs-attention state in the panel only, and keeps
+Release Control visible. Results are recorded in
+`docs/RELEASE_EVIDENCE_QA_LOG.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -625,16 +632,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 73: Locating Freshness QA
+Prompt 74: Dispatch Package Review State Planning
 ```
 
 Scope:
 
-- Validate the Release Evidence Action Panel locating freshness display.
-- Confirm latest position summary/age appears when a report exists.
-- Confirm active locating with no position report shows needs attention in the
-  panel only.
-- Confirm release readiness and release actions remain unchanged.
+- Decide whether the next release-evidence workflow should add manual dispatch
+  package review states such as `DRAFT`, `READY`, `REVIEWED`, or `VOIDED`.
+- Keep it planning/docs only.
+- Do not add schema or workflow code until the review-state policy is decided.
+- Do not add provider integrations, file uploads, hard blocking,
+  auth/signatures, or release-action changes.
 
 Deferred follow-up to keep on the roadmap:
 

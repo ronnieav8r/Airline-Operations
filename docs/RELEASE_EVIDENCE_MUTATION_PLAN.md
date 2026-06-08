@@ -815,3 +815,20 @@ Prompt 73: Locating Freshness QA
 
 Prompt 73 should validate the locating freshness panel display and confirm
 release readiness and release actions remain warning-only and unchanged.
+
+Implementation status: complete.
+
+Prompt 73 validated the locating freshness panel update. Local QA confirmed the
+latest-position state, the `ACTIVE`-with-no-report needs-attention state,
+route/browser rendering, health counts, and unchanged Release Control
+visibility.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 74: Dispatch Package Review State Planning
+```
+
+Prompt 74 should decide whether dispatch packages need manual review states
+before implementation. Keep it planning/docs only. Do not add schema or
+workflow code until the state policy is decided.
