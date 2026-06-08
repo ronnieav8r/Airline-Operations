@@ -687,3 +687,23 @@ Prompt 96: Import Staging Diagnostic QA
 
 Prompt 96 should validate the diagnostic and keep the slice QA/docs-only unless
 a defect is found.
+
+## Prompt 96 Status
+
+Implementation status: complete.
+
+Local QA confirmed `/internal/import-staging-readiness` renders the empty-state
+diagnostic and summary count labels, main routes remain healthy, `/api/health`
+continues to expose zero-count import staging diagnostics, and validation/build
+checks pass.
+
+Next recommended slice:
+
+```text
+Prompt 97: Import Batch Metadata Planning
+```
+
+Prompt 97 should plan a metadata-only workflow for import batches and source
+references. Parser execution, file uploads, staging-row writes, dry-run
+execution, review/apply workflow, and operational writes should remain
+deferred.

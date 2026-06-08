@@ -165,6 +165,9 @@ Prompt 95 status: complete. The hidden read-only
 `/internal/import-staging-readiness` diagnostic now exists and reads staging
 aggregates only.
 
+Prompt 96 status: complete. Local QA confirmed the diagnostic renders and
+remains read-only while staging tables are empty.
+
 ```text
 Prompt 90: Legacy import staging schema foundation
 ```

@@ -143,6 +143,7 @@ It has:
 99. Aircraft maintenance import dry-run mapping planning.
 100. Import staging read-only diagnostic planning.
 101. Import staging read-only diagnostic foundation.
+102. Import staging diagnostic QA.
 
 ## Current Data Model Boundaries
 
@@ -355,6 +356,12 @@ batches, recent sources, and empty-state guidance. It is read-only and does not
 add parser/import execution, file uploads, staging mutations, operational
 writes, review/apply routes, auth/signatures, destructive cleanup, provider
 integrations, or source-specific mapping code.
+
+Import staging diagnostic QA is complete. Local QA confirmed the hidden
+diagnostic route renders, shows empty-state guidance while staging tables are
+empty, exposes summary count labels, keeps `/api/health` import counts at zero,
+and leaves main app routes healthy. Results are recorded in
+`docs/LEGACY_IMPORT_QA_LOG.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -797,16 +804,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 96: Import Staging Diagnostic QA
+Prompt 97: Import Batch Metadata Planning
 ```
 
 Scope:
 
-- Validate `/internal/import-staging-readiness`.
-- Confirm empty-state diagnostics render while staging tables are empty.
-- Keep it QA/docs-only unless a diagnostic defect is found.
+- Plan a metadata-only workflow for creating import batches and source
+  references.
+- Keep it planning/docs-only.
 - Do not add parser code, importer execution, file uploads, staging-row writes,
-  or operational writes.
+  dry-run execution, review/apply workflow, or operational writes.
 - Do not add importer execution, file uploads, operational writes,
   auth/signatures, destructive cleanup, or provider integrations.
 

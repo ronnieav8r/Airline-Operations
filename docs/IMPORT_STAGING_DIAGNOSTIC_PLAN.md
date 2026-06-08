@@ -122,6 +122,11 @@ staging-row write, operational write, review/apply route, auth/signature,
 destructive cleanup, provider integration, or source-specific mapping code was
 added.
 
+Prompt 96 QA status: complete. Local QA confirmed the route renders, empty
+state appears while staging tables are empty, health counts remain available,
+and validation/build checks pass. Results are recorded in
+`docs/LEGACY_IMPORT_QA_LOG.md`.
+
 ## Deferred
 
 - Import batch creation UI.

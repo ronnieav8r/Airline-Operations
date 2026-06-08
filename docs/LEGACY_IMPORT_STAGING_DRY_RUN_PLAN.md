@@ -83,6 +83,10 @@ Prompt 95 status: complete. The hidden read-only route
 `/internal/import-staging-readiness` now summarizes staging table diagnostics
 without mutation controls.
 
+Prompt 96 status: complete. Local QA confirmed the read-only diagnostic route,
+empty-state behavior, health counters, route smoke, browser rendering, and
+validation/build checks.
+
 ## First Import Domain
 
 The first domain remains aircraft maintenance and airworthiness history:

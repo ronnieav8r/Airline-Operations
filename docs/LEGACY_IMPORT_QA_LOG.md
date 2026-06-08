@@ -31,3 +31,27 @@ Results:
 
 Conclusion: Prompt 90 staging schema and diagnostics are ready for the next
 planning slice. No operational import behavior exists yet.
+
+## Prompt 96: Import Staging Diagnostic QA
+
+Scope: validate the read-only `/internal/import-staging-readiness` diagnostic
+added in Prompt 95.
+
+Results:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+- Local route smoke returned 200 for `/internal/import-staging-readiness`, `/`,
+  `/operations-control`, `/aircraft`, `/api/health`, `/flights`, `/crew`, and
+  `/scheduling`.
+- `/api/health` still exposed zero-count import staging keys:
+  `importBatches`, `importSources`, `importStagingRows`,
+  `importValidationFindings`, and `importMappingDecisions`.
+- Browser smoke confirmed `/internal/import-staging-readiness` rendered
+  `Import Staging Readiness`, the empty-state message, and summary count
+  labels.
+
+Conclusion: the read-only import staging diagnostic is ready. No mutation,
+parser, upload, staging-row write, or operational import behavior exists.
