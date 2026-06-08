@@ -128,6 +128,7 @@ It has:
 84. Dispatch review freshness QA.
 85. Release attempt snapshot planning.
 86. Release attempt snapshot foundation.
+87. Release attempt snapshot QA.
 
 ## Current Data Model Boundaries
 
@@ -240,6 +241,12 @@ attempt to capture a pre-action readiness snapshot and create a linked
 `ReleaseAuditEvent` for Mark Released, Cancel Release, and Void Release.
 Explicit preview snapshot behavior is preserved. Release actions remain
 warning-only and do not hard-block on readiness findings.
+
+Release attempt snapshot QA is complete. Local QA confirmed Mark Released,
+Cancel Release, and Void Release each create release-attempt snapshots and
+linked audit events, while explicit preview snapshot capture still works.
+Release behavior remains warning-only. Results are recorded in
+`docs/RELEASE_EVIDENCE_QA_LOG.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -682,16 +689,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 81: Release Attempt Snapshot QA
+Prompt 82: Next Release Workflow Planning
 ```
 
 Scope:
 
-- Validate Mark Released, Cancel Release, and Void Release create attempt
-  snapshots and audit events.
-- Confirm explicit preview snapshot still works.
-- Confirm release actions remain warning-only.
-- Keep the slice QA/docs only unless a defect is found.
+- Choose the next release-evidence workflow improvement after attempt
+  snapshots.
+- Candidate options include release audit visibility, snapshot/audit detail
+  UI, or importer planning.
+- Keep the next slice planning-only until a target is selected.
 
 Deferred follow-up to keep on the roadmap:
 

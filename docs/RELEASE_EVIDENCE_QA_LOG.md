@@ -2,6 +2,61 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-07 - Prompt 81: Release Attempt Snapshot QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Workflow QA:
+
+- Used local FlightLeg `cmq3xifbh0029v85guciafavn`.
+- Mark Released changed `FlightRelease.status` to `RELEASED`.
+- Mark Released created a `source: "release-attempt"` readiness snapshot.
+- Mark Released created a linked `RELEASE_COMPLETED` audit event.
+- Cancel Release changed `FlightRelease.status` to `CANCELLED`.
+- Cancel Release created a `source: "release-attempt"` readiness snapshot.
+- Cancel Release created a linked `RELEASE_CANCELLED` audit event.
+- Void Release changed `FlightRelease.status` to `VOIDED`.
+- Void Release created a `source: "release-attempt"` readiness snapshot.
+- Void Release created a linked `RELEASE_VOIDED` audit event.
+- Explicit preview capture still created a `source: "explicit-preview"`
+  snapshot with findings.
+- Workflow smoke added four snapshots and three audit events in total.
+
+Route smoke:
+
+- `/` returned 200.
+- `/operations-control` returned 200.
+- `/operations-control/[flightLegId]` returned 200.
+- `/internal/release-snapshot-readiness` returned 200.
+- `/api/health` returned 200.
+- `/flights` returned 200.
+- `/aircraft` returned 200.
+- `/crew` returned 200.
+- `/scheduling` returned 200.
+
+Browser QA:
+
+- `http://localhost:3200/operations-control/[flightLegId]` rendered the
+  FlightLeg detail page.
+- Confirmed visible `Release Evidence Detail`.
+- Confirmed visible `Preview Snapshots`.
+- Confirmed visible `Release Control`.
+- Confirmed visible warning-only release messaging.
+
+Notes:
+
+- Direct server-action QA outside a browser request produced expected
+  redirect/revalidation exceptions after mutation attempts. Database state was
+  used as the source of truth for pass/fail.
+- Release behavior remains warning-only.
+
 ## 2026-06-07 - Prompt 78: Dispatch Review Freshness QA
 
 Status: passed.

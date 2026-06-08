@@ -956,3 +956,10 @@ Prompt 81: Release Attempt Snapshot QA
 
 Prompt 81 should validate release-attempt snapshot and audit event behavior for
 Mark Released, Cancel Release, and Void Release.
+
+Implementation status: complete.
+
+Prompt 81 validated release-attempt snapshot behavior. Local QA confirmed Mark
+Released, Cancel Release, and Void Release each create release-attempt
+snapshots and linked audit events, while explicit preview snapshot capture
+still works. Release behavior remains warning-only.

@@ -423,3 +423,20 @@ Prompt 81: Release Attempt Snapshot QA
 
 Prompt 81 should validate attempt snapshots and audit events for release,
 cancel, and void actions.
+
+## Prompt 81 Status
+
+Implementation status: complete.
+
+Local QA confirmed Mark Released, Cancel Release, and Void Release each create
+release-attempt snapshots and linked audit events. Explicit preview snapshot
+capture still works. Release behavior remains warning-only.
+
+Next recommended slice:
+
+```text
+Prompt 82: Next Release Workflow Planning
+```
+
+Prompt 82 should choose the next small release-evidence workflow target after
+attempt snapshots.

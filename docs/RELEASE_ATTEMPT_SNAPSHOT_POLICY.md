@@ -13,6 +13,9 @@ Mark Released, Cancel Release, or Void Release.
 Implementation status: Prompt 80 implements best-effort pre-action release
 attempt snapshots and linked release audit events using existing tables.
 
+Prompt 81 validated release, cancel, and void attempt snapshots plus linked
+audit events in local QA.
+
 ## Attempt Definition
 
 A release attempt is one of these submitted actions on FlightLeg detail:
