@@ -48,15 +48,15 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 105 should implement the **Operations Control Workbench** foundation.
+Prompt 106 should validate the **Operations Control Workbench** foundation.
 
 Minimum behavior:
 
-- Add a filterable FlightLeg board above the current Operations Control table.
-- Support grouping by release state, schedule window, and aircraft.
-- Support server-rendered URL filters for release status, evidence state,
+- Confirm the board renders above the current Operations Control table.
+- Confirm grouping by release state, schedule window, and aircraft.
+- Confirm server-rendered URL filters for release status, evidence state,
   operating part, and aircraft.
-- Preserve the existing table below the board.
+- Confirm board links and existing table behavior are preserved.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
   file uploads, imports, overrides, automatic snapshots, or `ReleasePackage`.
@@ -110,6 +110,16 @@ Control. Prompt 105 should add grouped FlightLeg cards above the current table,
 with URL-driven grouping by release state, schedule window, or aircraft and
 filters for release status, evidence state, operating part, and aircraft. The
 slice remains UI/read-only and must preserve warning-only release behavior.
+
+## Prompt 105 Status
+
+Implementation status: complete.
+
+Operations Control now renders a URL-driven workbench board above the existing
+Control Records table. The board supports grouping by release state, schedule
+window, or aircraft and filters by release status, evidence state, operating
+part, and aircraft. It preserves current action links and does not change
+release or evidence workflow behavior.
 
 ## Deferred Alternatives
 

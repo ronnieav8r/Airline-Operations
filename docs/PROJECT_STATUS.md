@@ -826,17 +826,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 105: Operations Control Workbench Foundation
+Prompt 106: Operations Control Workbench QA
 ```
 
 Scope:
 
-- Implement the Prompt 104 Operations Control workbench plan.
-- Add a filterable board above the existing control-record table.
-- Support grouping by release state, schedule window, and aircraft.
-- Support server-rendered URL filters for release status, evidence state,
-  operating part, and aircraft.
-- Keep the existing table below the board with no behavior loss.
+- Validate the Prompt 105 Operations Control workbench.
+- Confirm grouping by release state, schedule window, and aircraft.
+- Confirm URL-driven filters work independently and in combination.
+- Confirm board card links preserve Detail, Edit, Manifest, W&B, Locating, and
+  Dispatch destinations.
+- Confirm the existing table still renders below the board.
 - Do not add schema, auth, hard release blocking, imports, provider
   integrations, file uploads, or new release policy.
 
@@ -882,6 +882,11 @@ Prompt 104 is complete. The selected Operations Control direction is a
 filterable board plus the existing table. Prompt 105 should add grouped
 FlightLeg cards with URL-driven grouping and filters, while preserving the
 current table and warning-only release behavior.
+
+Prompt 105 is complete. Operations Control now has a URL-driven workbench board
+above the existing table, with grouping by release state, schedule window, or
+aircraft and filters for release status, evidence state, operating part, and
+aircraft. The existing Control Records table remains below the board.
 
 Deferred follow-up to keep on the roadmap:
 
