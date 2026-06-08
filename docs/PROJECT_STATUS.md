@@ -114,6 +114,9 @@ It has:
 70. Weight-and-balance approval planning.
 71. Weight-and-balance approval foundation.
 72. Weight-and-balance approval QA.
+73. Flight locating position history planning.
+74. ADS-B / external tracking integration planning.
+75. Legacy record import planning.
 
 ## Current Data Model Boundaries
 
@@ -150,6 +153,24 @@ workflow can create a locating record, edit responsible party, planned route,
 last known position, notes, and transition status to `FILED`, `ACTIVE`, or
 `CLOSED`. Position history, overdue automation, release gating, and dispatch
 mutation remain deferred.
+
+Flight locating position history is now planned. The chosen next implementation
+is manual, append-only `PositionReport` history under `FlightLocatingRecord`.
+The parent locating record remains the one-row FlightLeg summary, and the
+newest manual position report should update `lastKnownPosition`. ADS-B,
+external tracking, automatic overdue rules, auth/signatures, and hard release
+blocking remain deferred.
+
+ADS-B / external tracking is planned as a future provider-neutral integration.
+External observations should become attributed position reports later, not the
+sole source of operational-control truth. Provider selection, credentials,
+polling/webhooks, aircraft identifier mapping, raw payload storage, and
+provider-based release blocking remain deferred.
+
+Legacy record import is planned as a future staging/dry-run workflow. The first
+candidate domain should be aircraft maintenance and airworthiness history.
+Direct operational imports, file uploads, parser implementation, and
+flight/crew/manifest imports remain deferred until source formats are known.
 
 Weight-and-balance mutation planning is complete. The next W&B workflow should
 be manual entry only, should use the current `WeightBalanceRun` schema, should
@@ -581,17 +602,18 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 67: Flight Locating Position History Planning
+Prompt 70: Manual Flight Locating Position History Foundation
 ```
 
 Scope:
 
-- Decide whether the next release-evidence workflow should add manual
-  FlightLocating position history, latest-position summaries, and overdue
-  warnings.
-- Keep it planning/docs only.
-- Do not add schema, provider integrations, hard blocking, auth/signatures,
-  file uploads, automatic tracking, or release-action changes.
+- Add additive `PositionReport` schema and migration.
+- Add manual position report creation under
+  `/operations-control/[flightLegId]/locating`.
+- Show recent position reports and keep `FlightLocatingRecord.lastKnownPosition`
+  synchronized to the newest manual report.
+- Do not add ADS-B, provider integrations, automatic overdue rules, hard
+  blocking, auth/signatures, file uploads, or release-action changes.
 
 Deferred follow-up to keep on the roadmap:
 

@@ -726,3 +726,39 @@ Prompt 67 should decide the first manual position-history workflow for
 `FlightLocatingRecord` before implementation. Keep it planning/docs only. Do
 not add provider integrations, automatic tracking, hard blocking, auth,
 signatures, file uploads, schema changes, or release-action changes.
+
+Implementation status: complete.
+
+Prompt 67 selected manual, append-only `PositionReport` history as the next
+flight locating workflow. `FlightLocatingRecord` remains the one-row FlightLeg
+summary. The newest manual position report should update
+`FlightLocatingRecord.lastKnownPosition`.
+
+Related planning status:
+
+- Prompt 68 planned ADS-B / external tracking as a future provider-neutral
+  integration. External observations should become attributed position reports
+  later, not the sole operational-control truth.
+- Prompt 69 planned legacy record import as a future staging/dry-run workflow,
+  starting with aircraft maintenance and airworthiness history once source
+  formats are known.
+
+Durable planning docs:
+
+```text
+docs/FLIGHT_LOCATING_POSITION_HISTORY_PLAN.md
+docs/EXTERNAL_TRACKING_INTEGRATION_PLAN.md
+docs/LEGACY_RECORD_IMPORT_PLAN.md
+```
+
+Recommended next release evidence slice:
+
+```text
+Prompt 70: Manual Flight Locating Position History Foundation
+```
+
+Prompt 70 should add the additive `PositionReport` schema, create manual
+position reports from `/operations-control/[flightLegId]/locating`, show recent
+position reports, and keep the parent locating summary synchronized. Do not add
+provider integrations, automatic overdue rules, hard blocking, auth,
+signatures, file uploads, or release-action changes.

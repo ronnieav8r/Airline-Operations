@@ -194,3 +194,32 @@ Prompt 67: Flight Locating Position History Planning
 Prompt 67 should decide whether the next workflow should add manual
 FlightLocating position history, latest-position summaries, and overdue
 warnings. Keep it planning/docs only unless a defect is found.
+
+## Prompt 67-69 Status
+
+Implementation status: complete.
+
+Prompt 67 selected manual, append-only `PositionReport` history as the next
+Flight Locating workflow. Prompt 68 planned ADS-B / external tracking as a
+future provider-neutral integration, not a near-term dependency. Prompt 69
+planned legacy record import as a future staging/dry-run workflow, starting
+with aircraft maintenance and airworthiness history once source formats are
+known.
+
+Durable planning docs:
+
+```text
+docs/FLIGHT_LOCATING_POSITION_HISTORY_PLAN.md
+docs/EXTERNAL_TRACKING_INTEGRATION_PLAN.md
+docs/LEGACY_RECORD_IMPORT_PLAN.md
+```
+
+Next recommended slice:
+
+```text
+Prompt 70: Manual Flight Locating Position History Foundation
+```
+
+Prompt 70 should add additive `PositionReport` schema and a manual position
+report workflow under the existing locating page. Keep release behavior
+warning-only.

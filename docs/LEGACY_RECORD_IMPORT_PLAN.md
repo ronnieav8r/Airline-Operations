@@ -13,6 +13,10 @@ The app is still defining core operational write workflows. Importing historical
 records should wait until the target tables and transition policies are stable
 enough to avoid re-importing or reshaping the same data multiple times.
 
+Prompt 69 selected a staging plus dry-run direction. Imports should not write
+directly into operational tables until source formats, idempotency keys,
+validation rules, and review behavior are defined.
+
 ## Goal
 
 Create a controlled import method for old records that can:
@@ -23,6 +27,8 @@ Create a controlled import method for old records that can:
 - Preserve source-system references for audit and troubleshooting.
 - Run safely in local/staging before any Render production import.
 - Avoid broad destructive cleanup.
+- Show dry-run counts, warnings, and rejected rows before operational writes.
+- Preserve import batch and source row references for every imported record.
 
 ## Likely Import Sources
 
@@ -36,6 +42,23 @@ Possible old-record sources may include:
 - Crew assignment or qualification records.
 - Passenger/manifest records.
 - Dispatch/release evidence records.
+
+## First Candidate Domain
+
+The first practical import domain should be aircraft maintenance and
+airworthiness history.
+
+This is useful early and less entangled than completed flight history, release
+records, crew compliance, or manifest history.
+
+Expected first-domain mapping areas:
+
+- Aircraft identity mapping.
+- Maintenance event date/type/description.
+- Discrepancy references when available.
+- Deferral references when available.
+- Airworthiness-release references when available.
+- Source document references.
 
 ## Proposed Future Slices
 
@@ -69,6 +92,28 @@ Prompt X+3: FlightLeg history import
 Import historical or completed flight/trip records only after FlightLeg has
 fully replaced legacy `Flight` as the operational anchor.
 
+## Future Import Flow
+
+Recommended import workflow:
+
+1. Upload or place source file.
+2. Parse into staging rows.
+3. Show dry-run counts, warnings, and rejected rows.
+4. Let a reviewer approve an import batch.
+5. Write operational records with source references and idempotency keys.
+6. Store import summary and rejected-row details.
+
+## Future Data Concepts
+
+Likely future tables:
+
+- `ImportBatch`
+- `ImportSourceFile`
+- `ImportStagingRow`
+- `ImportMappingRule`
+- `ImportReviewDecision`
+- Source reference fields on imported operational records
+
 ## Import Policy
 
 - Every imported row should keep a source reference such as source system,
@@ -78,6 +123,7 @@ fully replaced legacy `Flight` as the operational anchor.
 - Import should produce readable errors for skipped or invalid rows.
 - Import should never run automatically during normal Render deploys.
 - Import should not run broad seed cleanup.
+- Import should require review before operational writes.
 
 ## Deferred Until
 
