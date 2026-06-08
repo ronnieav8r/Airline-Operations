@@ -20,6 +20,9 @@ Use a FlightLeg-local timeline:
 Implementation status: Prompt 84 implements this first read-only timeline on
 FlightLeg detail.
 
+Prompt 85 QA status: passed. Local QA confirmed timeline rendering, snapshot
+links, actor placeholder, and unchanged warning-only release behavior.
+
 ## Display Fields
 
 Show each event with:

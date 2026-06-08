@@ -132,6 +132,7 @@ It has:
 88. Next release workflow planning.
 89. Release audit timeline planning.
 90. Release audit timeline read-only foundation.
+91. Release audit timeline QA.
 
 ## Current Data Model Boundaries
 
@@ -269,6 +270,11 @@ now shows a Release Audit Timeline below Preview Snapshots and above Release
 Control, including event type, message, created time, actor placeholder,
 snapshot links, and attempt metadata. It is read-only and does not change
 warning-only release behavior.
+
+Release audit timeline QA is complete. Local QA confirmed the timeline renders
+with release audit events, linked snapshot detail routes load, actor placeholder
+and attempt metadata display, and release behavior remains warning-only.
+Results are recorded in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -711,16 +717,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 85: Release Audit Timeline QA
+Prompt 86: Legacy Record Import Planning Refresh
 ```
 
 Scope:
 
-- Validate the Release Audit Timeline renders with audit events.
-- Confirm snapshot links resolve.
-- Confirm FlightLeg detail still renders without audit events.
-- Confirm release actions remain warning-only.
-- Keep the slice QA/docs only unless a defect is found.
+- Refresh the existing legacy record import plan based on the current data
+  model and workflow state.
+- Keep it planning/docs only.
+- Do not add importer execution code, file uploads, schema changes, provider
+  integrations, or mutation workflows.
 
 Deferred follow-up to keep on the roadmap:
 

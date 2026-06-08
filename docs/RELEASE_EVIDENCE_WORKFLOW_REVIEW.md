@@ -494,3 +494,20 @@ Prompt 85: Release Audit Timeline QA
 
 Prompt 85 should validate timeline rendering, snapshot links, no-event state,
 and unchanged warning-only release behavior.
+
+## Prompt 85 Status
+
+Implementation status: complete.
+
+Local QA confirmed Release Audit Timeline rendering, visible release event
+types, actor placeholder, snapshot links, linked snapshot route loading, and
+unchanged warning-only release behavior.
+
+Next recommended slice:
+
+```text
+Prompt 86: Legacy Record Import Planning Refresh
+```
+
+Prompt 86 should refresh the deferred legacy import planning based on the
+current data model and workflow state without implementing importer execution.

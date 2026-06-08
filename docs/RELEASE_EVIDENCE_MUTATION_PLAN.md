@@ -999,3 +999,14 @@ Implementation status: complete.
 Prompt 84 implemented the read-only Release Audit Timeline on FlightLeg detail.
 Prompt 85 should validate timeline rendering, snapshot links, and unchanged
 release behavior.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 85: Release Audit Timeline QA
+```
+
+Implementation status: complete.
+
+Prompt 85 validated Release Audit Timeline rendering, linked snapshot routes,
+actor placeholder display, and unchanged warning-only release behavior.

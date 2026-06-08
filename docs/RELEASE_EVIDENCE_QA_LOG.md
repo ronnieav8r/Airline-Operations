@@ -2,6 +2,56 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-07 - Prompt 85: Release Audit Timeline QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Timeline QA:
+
+- Used local FlightLeg `cmq3xifbh0029v85guciafavn`.
+- Confirmed local data includes release audit events for the FlightLeg.
+- Confirmed FlightLeg detail renders the `Release Audit Timeline`.
+- Confirmed visible release event type such as `RELEASE_VOIDED`.
+- Confirmed actor placeholder displays as `System / unauthenticated`.
+- Confirmed visible snapshot link text.
+- Confirmed the linked snapshot detail route returned 200.
+- Confirmed Release Control remains visible.
+
+Route smoke:
+
+- `/` returned 200.
+- `/operations-control` returned 200.
+- `/operations-control/[flightLegId]` returned 200.
+- `/operations-control/[flightLegId]/snapshots/[snapshotId]` returned 200.
+- `/internal/release-snapshot-readiness` returned 200.
+- `/api/health` returned 200.
+- `/flights` returned 200.
+- `/aircraft` returned 200.
+- `/crew` returned 200.
+- `/scheduling` returned 200.
+
+Browser QA:
+
+- `http://localhost:3200/operations-control/[flightLegId]` rendered the
+  FlightLeg detail page.
+- Confirmed visible `Release Audit Timeline`.
+- Confirmed visible `RELEASE_VOIDED`.
+- Confirmed visible `Snapshot`.
+- Confirmed visible `System / unauthenticated`.
+- Confirmed visible `Release Control`.
+
+Notes:
+
+- The timeline is read-only.
+- Release behavior remains warning-only.
+
 ## 2026-06-07 - Prompt 81: Release Attempt Snapshot QA
 
 Status: passed.
