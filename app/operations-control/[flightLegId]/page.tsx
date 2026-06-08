@@ -518,6 +518,39 @@ function snapshotSummaryValue(summary: unknown, key: string): number {
   return typeof value === "number" ? value : 0;
 }
 
+function metadataValue(metadata: unknown, key: string): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const value = (metadata as Record<string, unknown>)[key];
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+
+  return null;
+}
+
+function actorLabel(event: ReleaseEvidenceDetail["releaseAuditEvents"][number]): string {
+  const profile = event.actorUser?.profile;
+  const profileName = [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
+
+  if (profileName) {
+    return profileName;
+  }
+
+  if (event.actorUser?.email) {
+    return event.actorUser.email;
+  }
+
+  return event.actorRole ?? "System / unauthenticated";
+}
+
 function RecentReleaseSnapshots({ detail }: { detail: ReleaseEvidenceDetail }) {
   if (detail.readinessSnapshots.length === 0) {
     return (
@@ -575,6 +608,102 @@ function RecentReleaseSnapshots({ detail }: { detail: ReleaseEvidenceDetail }) {
             </dl>
           </article>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function ReleaseAuditTimeline({ detail }: { detail: ReleaseEvidenceDetail }) {
+  if (detail.releaseAuditEvents.length === 0) {
+    return (
+      <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+        <h2 className="text-lg font-semibold">Release Audit Timeline</h2>
+        <p className="mt-2 text-sm text-zinc-600">
+          No release audit events have been recorded for this FlightLeg yet.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+      <h2 className="text-lg font-semibold">Release Audit Timeline</h2>
+      <p className="mt-1 text-sm text-zinc-600">
+        Read-only release-control audit events. These records do not change
+        warning-only release behavior.
+      </p>
+      <div className="mt-4 space-y-3">
+        {detail.releaseAuditEvents.map((event) => {
+          const attemptedAction = metadataValue(event.metadata, "attemptedAction");
+          const attemptedReleaseStatus = metadataValue(event.metadata, "attemptedReleaseStatus");
+          const capturedBeforeStatus = metadataValue(event.metadata, "capturedBeforeStatus");
+          const snapshotCaptured = metadataValue(event.metadata, "snapshotCaptured");
+          const snapshotSkippedReason = metadataValue(event.metadata, "snapshotSkippedReason");
+
+          return (
+            <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={event.id}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-zinc-900">{event.eventType}</p>
+                  <p className="mt-1 text-sm text-zinc-700">{event.message}</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {toDateTimeLabel(event.createdAt)} | {actorLabel(event)}
+                  </p>
+                </div>
+                {event.snapshot ? (
+                  <Link
+                    className="inline-flex rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-600 hover:border-sky-200 hover:text-sky-700"
+                    href={`/operations-control/${detail.id}/snapshots/${event.snapshot.id}`}
+                  >
+                    Snapshot {event.snapshot.snapshotStatus}
+                  </Link>
+                ) : (
+                  <span className="inline-flex rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-500">
+                    No snapshot link
+                  </span>
+                )}
+              </div>
+              {attemptedAction ||
+              attemptedReleaseStatus ||
+              capturedBeforeStatus ||
+              snapshotCaptured ||
+              snapshotSkippedReason ? (
+                <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-5">
+                  {attemptedAction ? (
+                    <div>
+                      <dt className="text-zinc-500">Attempt</dt>
+                      <dd className="font-medium">{attemptedAction}</dd>
+                    </div>
+                  ) : null}
+                  {attemptedReleaseStatus ? (
+                    <div>
+                      <dt className="text-zinc-500">Requested status</dt>
+                      <dd className="font-medium">{attemptedReleaseStatus}</dd>
+                    </div>
+                  ) : null}
+                  {capturedBeforeStatus ? (
+                    <div>
+                      <dt className="text-zinc-500">Before status</dt>
+                      <dd className="font-medium">{capturedBeforeStatus}</dd>
+                    </div>
+                  ) : null}
+                  {snapshotCaptured ? (
+                    <div>
+                      <dt className="text-zinc-500">Snapshot captured</dt>
+                      <dd className="font-medium">{snapshotCaptured}</dd>
+                    </div>
+                  ) : null}
+                  {snapshotSkippedReason ? (
+                    <div className="lg:col-span-2">
+                      <dt className="text-zinc-500">Snapshot skip reason</dt>
+                      <dd className="font-medium">{snapshotSkippedReason}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              ) : null}
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -1053,6 +1182,8 @@ export default async function ReleaseEvidenceDetailPage({ params, searchParams }
         <ReleaseReadinessChecklist detail={detail} />
 
         <RecentReleaseSnapshots detail={detail} />
+
+        <ReleaseAuditTimeline detail={detail} />
 
         <ReleaseControlActions detail={detail} />
 

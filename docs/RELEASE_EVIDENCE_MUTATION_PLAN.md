@@ -987,3 +987,15 @@ Implementation status: complete.
 Prompt 83 planned the FlightLeg-local release audit timeline. Prompt 84 should
 implement a read-only section showing recent release audit events and linked
 snapshots.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 84: Release Audit Timeline Read-Only Foundation
+```
+
+Implementation status: complete.
+
+Prompt 84 implemented the read-only Release Audit Timeline on FlightLeg detail.
+Prompt 85 should validate timeline rendering, snapshot links, and unchanged
+release behavior.

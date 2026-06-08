@@ -17,6 +17,9 @@ Use a FlightLeg-local timeline:
 - Limit: latest 10 events.
 - Location: below Preview Snapshots and above Release Control.
 
+Implementation status: Prompt 84 implements this first read-only timeline on
+FlightLeg detail.
+
 ## Display Fields
 
 Show each event with:

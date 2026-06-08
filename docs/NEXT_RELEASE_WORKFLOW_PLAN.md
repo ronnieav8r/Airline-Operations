@@ -51,6 +51,9 @@ Detailed timeline plan:
 docs/RELEASE_AUDIT_TIMELINE_PLAN.md
 ```
 
+Prompt 84 implementation status: complete. FlightLeg detail now has a
+read-only Release Audit Timeline using existing audit events.
+
 ## Deferred
 
 - Auth/signatures.

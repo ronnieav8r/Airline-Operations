@@ -476,3 +476,21 @@ Prompt 84: Release Audit Timeline Read-Only Foundation
 
 Prompt 84 should implement the read-only timeline on FlightLeg detail without
 changing release behavior.
+
+## Prompt 84 Status
+
+Implementation status: complete.
+
+FlightLeg detail now includes a read-only Release Audit Timeline below Preview
+Snapshots and above Release Control. It shows recent `ReleaseAuditEvent` rows
+with event type, message, created time, actor placeholder, snapshot links, and
+attempt metadata.
+
+Next recommended slice:
+
+```text
+Prompt 85: Release Audit Timeline QA
+```
+
+Prompt 85 should validate timeline rendering, snapshot links, no-event state,
+and unchanged warning-only release behavior.

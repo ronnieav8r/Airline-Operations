@@ -131,6 +131,7 @@ It has:
 87. Release attempt snapshot QA.
 88. Next release workflow planning.
 89. Release audit timeline planning.
+90. Release audit timeline read-only foundation.
 
 ## Current Data Model Boundaries
 
@@ -262,6 +263,12 @@ rows, placed below Preview Snapshots and above Release Control. It should show
 event type, message, created time, actor placeholder, snapshot links, and
 attempt metadata without changing release behavior. Detailed planning lives in
 `docs/RELEASE_AUDIT_TIMELINE_PLAN.md`.
+
+Release audit timeline read-only foundation is implemented. FlightLeg detail
+now shows a Release Audit Timeline below Preview Snapshots and above Release
+Control, including event type, message, created time, actor placeholder,
+snapshot links, and attempt metadata. It is read-only and does not change
+warning-only release behavior.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -704,17 +711,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 84: Release Audit Timeline Read-Only Foundation
+Prompt 85: Release Audit Timeline QA
 ```
 
 Scope:
 
-- Add a read-only Release Audit Timeline section to FlightLeg detail.
-- Query recent `ReleaseAuditEvent` rows for the FlightLeg.
-- Show event type, message, created time, actor placeholder, snapshot links,
-  and metadata summary.
-- Do not add schema, auth/signatures, hard blocking, provider integrations,
-  file uploads, `ReleasePackage`, or audit mutation.
+- Validate the Release Audit Timeline renders with audit events.
+- Confirm snapshot links resolve.
+- Confirm FlightLeg detail still renders without audit events.
+- Confirm release actions remain warning-only.
+- Keep the slice QA/docs only unless a defect is found.
 
 Deferred follow-up to keep on the roadmap:
 

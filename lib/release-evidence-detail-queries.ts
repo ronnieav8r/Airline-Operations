@@ -296,6 +296,39 @@ const releaseEvidenceDetailSelect = {
       },
     },
   },
+  releaseAuditEvents: {
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 10,
+    select: {
+      id: true,
+      eventType: true,
+      message: true,
+      metadata: true,
+      createdAt: true,
+      snapshotId: true,
+      actorRole: true,
+      actorUser: {
+        select: {
+          email: true,
+          profile: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      },
+      snapshot: {
+        select: {
+          id: true,
+          snapshotStatus: true,
+          evaluatedAt: true,
+        },
+      },
+    },
+  },
 } satisfies Prisma.FlightLegSelect;
 
 export type ReleaseEvidenceDetail = Prisma.FlightLegGetPayload<{
