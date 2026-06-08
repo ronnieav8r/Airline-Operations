@@ -826,17 +826,22 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 110: Next App Development Planning
+Prompt 111: Aircraft Context Detail Foundation
 ```
 
 Scope:
 
-- Decide the next safe app-development slice after dashboard surfacing.
-- Compare aircraft context navigation, crew assignment workflow planning,
-  FlightLeg list/scheduling improvements, or the next release-evidence workflow.
-- Keep Prompt 110 planning/docs-only.
-- Do not add schema, auth, hard release blocking, imports, provider
-  integrations, file uploads, AI behavior, or new release policy.
+- Add `/aircraft/[aircraftId]` as a read-only aircraft operational context
+  page.
+- Keep `/aircraft` as the fleet board and link each aircraft card to its detail
+  page.
+- Show current assignment, upcoming legs, crew coverage, airworthiness status,
+  discrepancies, deferrals, alerts, and Operations Control workflow links.
+- Preserve `/aircraft/[aircraftId]/airworthiness` as the existing
+  airworthiness write surface.
+- Keep the slice UI/read-only with no schema, auth, hard release blocking,
+  imports, provider integrations, file uploads, AI behavior, or new release
+  policy.
 
 Recommended app-development follow-up chain:
 
@@ -907,6 +912,12 @@ Prompt 109 is complete. Local QA confirmed the dashboard attention surface,
 Priority FlightLegs, direct workflow links, AI Review Notes placeholder,
 retained dashboard sections, main route smoke, and browser rendering. Results
 are recorded in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
+
+Prompt 110 is complete. The selected aircraft context direction is Fleet +
+Detail: keep `/aircraft` as the fleet board and add `/aircraft/[aircraftId]`
+as a read-only aircraft operational context page. Prompt 111 should implement
+the detail page and link to it from aircraft cards while preserving the existing
+airworthiness workflow route.
 
 Deferred follow-up to keep on the roadmap:
 

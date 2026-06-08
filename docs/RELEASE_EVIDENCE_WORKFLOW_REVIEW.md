@@ -17,9 +17,10 @@ FlightLeg:
 - Snapshot findings detail.
 
 The current system is usable for development. FlightLeg detail now acts as a
-clearer command center, and Operations Control now has a filterable workbench
-board. The next app-development improvement should surface those operational
-priorities on the main dashboard without adding new write behavior.
+clearer command center, Operations Control now has a filterable workbench
+board, and the dashboard surfaces current attention items. The next
+app-development improvement should make each aircraft easier to use as an
+operational context page without adding new write behavior.
 
 ## Current Workflow Map
 
@@ -46,15 +47,16 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 110 should plan the next app-development slice after dashboard
-surfacing.
+Prompt 111 should implement the aircraft context detail foundation selected by
+Prompt 110.
 
 Minimum behavior:
 
-- Compare aircraft context navigation, crew assignment workflow planning,
-  FlightLeg list/scheduling improvements, and the next release-evidence
-  workflow.
-- Keep Prompt 110 planning/docs-only.
+- Keep `/aircraft` as the fleet board.
+- Add `/aircraft/[aircraftId]` as a read-only aircraft context page.
+- Link aircraft cards to the new context page.
+- Show current assignment, upcoming legs, crew coverage, airworthiness status,
+  discrepancies, deferrals, alerts, and Operations Control workflow links.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
   file uploads, imports, overrides, automatic snapshots, AI behavior, or
@@ -97,6 +99,16 @@ Local QA confirmed the dashboard attention surface, Priority FlightLegs, direct
 workflow links, AI Review Notes placeholder, retained dashboard sections, main
 route smoke, and browser rendering. Release behavior remains warning-only and
 no AI/provider code was added.
+
+## Prompt 110 Status
+
+Implementation status: complete.
+
+Prompt 110 selected Fleet + Detail aircraft context navigation. Prompt 111
+should add `/aircraft/[aircraftId]` as a read-only operational context page,
+keep `/aircraft` as the fleet board, and preserve
+`/aircraft/[aircraftId]/airworthiness` as the aircraft-level airworthiness
+write surface.
 
 ## Prompt 101 Status
 
