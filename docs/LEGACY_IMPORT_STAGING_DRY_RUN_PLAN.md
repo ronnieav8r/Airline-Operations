@@ -60,6 +60,12 @@ tables. Results are recorded in:
 docs/LEGACY_IMPORT_QA_LOG.md
 ```
 
+Prompt 92 status: complete. The first-domain source format is planned in:
+
+```text
+docs/AIRCRAFT_MAINTENANCE_IMPORT_SOURCE_FORMAT_PLAN.md
+```
+
 ## First Import Domain
 
 The first domain remains aircraft maintenance and airworthiness history:

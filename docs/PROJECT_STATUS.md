@@ -139,6 +139,7 @@ It has:
 95. Legacy import staging schema planning.
 96. Legacy import staging schema foundation.
 97. Legacy import staging schema QA.
+98. Aircraft maintenance import source format planning.
 
 ## Current Data Model Boundaries
 
@@ -320,6 +321,13 @@ state, Prisma validation, typecheck after build regeneration, lint, production
 build, route smoke, browser rendering, and zero-count `/api/health` diagnostics
 for the new import staging tables. Results are recorded in
 `docs/LEGACY_IMPORT_QA_LOG.md`.
+
+Aircraft maintenance import source format planning is complete. The first
+legacy import domain should use a small source packet covering aircraft
+identity, maintenance events, discrepancies, deferrals, and aircraft
+airworthiness releases. Actual parser code, file uploads, staging-row writes,
+operational writes, review/apply workflow, auth/signatures, destructive
+cleanup, provider integrations, and source-specific mapping remain deferred.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -762,13 +770,13 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 92: Aircraft Maintenance Import Source Format Planning
+Prompt 93: Aircraft Maintenance Import Dry-Run Mapping Planning
 ```
 
 Scope:
 
-- Define the expected source-file/reference format for aircraft maintenance
-  and airworthiness history imports.
+- Plan dry-run mapping from the source packet into staging candidates and
+  validation findings.
 - Keep it planning/docs-only.
 - Do not add parser code, importer execution, file uploads, staging-row writes,
   or operational writes.

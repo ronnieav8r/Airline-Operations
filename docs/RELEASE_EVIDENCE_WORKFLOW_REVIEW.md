@@ -602,3 +602,28 @@ Prompt 92: Aircraft Maintenance Import Source Format Planning
 
 Prompt 92 should define expected source formats for the first aircraft
 maintenance/airworthiness import domain without adding parser or importer code.
+
+## Prompt 92 Status
+
+Implementation status: complete.
+
+Aircraft maintenance import source format planning is complete. The planned
+source packet covers aircraft identity, maintenance events, discrepancies,
+deferrals, and aircraft airworthiness releases. It keeps parser code, file
+uploads, staging-row writes, operational writes, source-specific mapping,
+auth/signatures, and provider integrations deferred.
+
+Durable plan:
+
+```text
+docs/AIRCRAFT_MAINTENANCE_IMPORT_SOURCE_FORMAT_PLAN.md
+```
+
+Next recommended slice:
+
+```text
+Prompt 93: Aircraft Maintenance Import Dry-Run Mapping Planning
+```
+
+Prompt 93 should plan how those source rows become staging candidates and
+validation findings without implementing importer execution.

@@ -132,6 +132,15 @@ Prompt 91 status: complete. Local QA confirmed the staging schema, migration,
 health counters, main routes, and browser rendering. Import staging tables are
 empty by default.
 
+Prompt 92 status: complete. The aircraft maintenance and airworthiness source
+format is planned as a small source packet covering aircraft identity,
+maintenance events, discrepancies, deferrals, and aircraft airworthiness
+releases. The durable source-format plan is:
+
+```text
+docs/AIRCRAFT_MAINTENANCE_IMPORT_SOURCE_FORMAT_PLAN.md
+```
+
 ```text
 Prompt 90: Legacy import staging schema foundation
 ```
