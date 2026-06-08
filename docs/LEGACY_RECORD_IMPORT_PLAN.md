@@ -114,8 +114,17 @@ Prompt 88 selected additive import staging schema as the next safe build path.
 Prompt 89 should plan the schema, and Prompt 90 should implement it only after
 that planning slice.
 
+Prompt 89 planned the additive staging schema. The durable schema plan is:
+
 ```text
-Prompt X: Legacy import staging foundation
+docs/LEGACY_IMPORT_STAGING_SCHEMA_PLAN.md
+```
+
+Prompt 90 should implement only the staging tables, migration, health counts,
+and DBML updates. It should not add importer execution or operational writes.
+
+```text
+Prompt 90: Legacy import staging schema foundation
 ```
 
 Add non-production import staging tables or files if needed. Do not write into

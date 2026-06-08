@@ -539,4 +539,22 @@ with file uploads, parser implementation, operational writes, auth/signatures,
 and schema changes deferred. The first candidate domain remains aircraft
 maintenance and airworthiness history.
 
-Stop after Prompt 87 unless a new plan is approved.
+## Prompt 88-89 Status
+
+Implementation status: complete.
+
+Prompt 88 selected additive legacy import staging schema as the next safe path.
+Prompt 89 planned the schema for import batches, sources, staged rows,
+validation findings, and mapping decisions. The schema remains staging-only:
+no importer execution, parser code, file uploads, operational writes,
+auth/signatures, destructive cleanup, provider integrations, or operational
+foreign-key assumptions should be added.
+
+Next recommended slice:
+
+```text
+Prompt 90: Legacy Import Staging Schema Foundation
+```
+
+Prompt 90 should implement the additive staging schema, health counts, and DBML
+updates only.

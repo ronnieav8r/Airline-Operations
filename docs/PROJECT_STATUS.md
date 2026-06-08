@@ -136,6 +136,7 @@ It has:
 92. Legacy record import planning refresh.
 93. Legacy import staging/dry-run planning.
 94. Next slice planning.
+95. Legacy import staging schema planning.
 
 ## Current Data Model Boundaries
 
@@ -296,6 +297,13 @@ import staging schema planning and foundation work, followed by source-format
 and dry-run mapping planning. Import execution, file uploads, operational
 writes, auth/signatures, destructive cleanup, provider integrations, and
 ambiguous source-field mapping remain stop conditions.
+
+Legacy import staging schema planning is complete. Prompt 90 should add
+additive staging tables for import batches, sources, staged rows, validation
+findings, and mapping decisions only. The staging tables should not hold
+operational foreign keys yet, and no importer execution, file uploads,
+operational writes, auth/signatures, destructive cleanup, or provider
+integrations should be added.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -738,14 +746,14 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 89: Legacy Import Staging Schema Planning
+Prompt 90: Legacy Import Staging Schema Foundation
 ```
 
 Scope:
 
-- Plan additive import staging schema tables and enums.
-- Keep it planning/docs only.
-- Do not add schema until Prompt 90.
+- Add the planned import staging enums and tables additively.
+- Add health counts and DBML updates.
+- Keep it schema/diagnostic-only.
 - Do not add importer execution, file uploads, operational writes,
   auth/signatures, destructive cleanup, or provider integrations.
 

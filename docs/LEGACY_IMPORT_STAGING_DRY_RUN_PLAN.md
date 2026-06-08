@@ -38,6 +38,16 @@ Prompt 87 does not implement these tables.
 Prompt 88 status: complete. The next safe implementation path is Prompt 89
 schema planning followed by Prompt 90 additive staging schema foundation.
 
+Prompt 89 status: complete. The planned staging schema is documented in:
+
+```text
+docs/LEGACY_IMPORT_STAGING_SCHEMA_PLAN.md
+```
+
+Prompt 90 should add the planned tables additively only. It should not add
+importer execution, parser code, file uploads, operational writes, review/apply
+routes, auth/signatures, destructive cleanup, or provider integrations.
+
 ## First Import Domain
 
 The first domain remains aircraft maintenance and airworthiness history:
