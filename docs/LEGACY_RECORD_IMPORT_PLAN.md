@@ -7,11 +7,16 @@ maintenance, crew, and release records into AeroOps.
 
 ## Current Status
 
-Deferred. Do not implement import tooling yet.
+Deferred and moved down the priority list. Do not implement additional import
+tooling yet.
 
 The app is still defining core operational write workflows. Importing historical
 records should wait until the target tables and transition policies are stable
 enough to avoid re-importing or reshaping the same data multiple times.
+
+Prompt 100 reset the next workstream back to app development and usability.
+Import staging, dry-run, parser, file upload, review/apply, and operational
+import writes should wait until the app workflows are more mature.
 
 Prompt 69 selected a staging plus dry-run direction. Imports should not write
 directly into operational tables until source formats, idempotency keys,

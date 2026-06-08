@@ -826,18 +826,41 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 100: Next Import Workflow Planning
+Prompt 100: App Development Priority Reset
 ```
 
 Scope:
 
-- Decide whether to continue with staging-row creation planning, import dry-run
-  execution planning, or pause import work and return to operational workflows.
-- Keep it planning/docs-only.
+- Move legacy import work down the priority list.
+- Return the next build chain to core app development and user-visible
+  operational workflows.
+- Keep Prompt 100 planning/docs-only.
 - Do not add parser code, importer execution, file uploads, staging-row writes,
-  dry-run execution, review/apply workflow, or operational writes.
-- Do not add importer execution, file uploads, operational writes,
-  auth/signatures, destructive cleanup, or provider integrations.
+  dry-run execution, review/apply workflow, operational imports, auth,
+  signatures, destructive cleanup, or provider integrations.
+
+Recommended app-development follow-up chain:
+
+```text
+Prompt 101: FlightLeg Detail Information Architecture Planning
+Prompt 102: FlightLeg Detail Information Architecture Foundation
+Prompt 103: FlightLeg Detail Information Architecture QA
+Prompt 104: Operations Control Workbench Planning
+Prompt 105: Operations Control Workbench Foundation
+Prompt 106: Operations Control Workbench QA
+```
+
+Scope:
+
+- Improve the usability of existing FlightLeg/evidence workflows before adding
+  more evidence or import features.
+- Make FlightLeg detail easier to scan by grouping summary, readiness,
+  release actions, evidence, audit history, and raw reference sections.
+- Improve Operations Control list usability with clearer status/filter/action
+  affordances.
+- Keep release behavior warning-only.
+- Do not add schema changes unless a later planning slice explicitly approves
+  them.
 
 Deferred follow-up to keep on the roadmap:
 
@@ -849,6 +872,6 @@ Scope:
 
 - Plan import formats, staging/dry-run behavior, idempotency keys, source
   references, and target table mappings for old records.
-- Start with aircraft maintenance history only after the current
-  airworthiness workflows stabilize.
+- Start with aircraft maintenance history only after current app workflows and
+  operational screens are more stable.
 - Do not build import execution until source data shape is known.

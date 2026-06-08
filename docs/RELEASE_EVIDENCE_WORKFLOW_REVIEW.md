@@ -1,6 +1,6 @@
 # Release Evidence Workflow Review
 
-Last updated: 2026-06-07
+Last updated: 2026-06-08
 
 ## Summary
 
@@ -16,9 +16,12 @@ FlightLeg:
 - Snapshot drift diagnostic.
 - Snapshot findings detail.
 
-The current system is usable for development, but FlightLeg detail is becoming a
-long evidence packet. The next smallest user-visible improvement should make the
-available evidence actions easier to find without adding new write behavior.
+The current system is usable for development, but FlightLeg detail is still a
+long evidence packet. The Release Evidence Action Panel helps, and later slices
+added locating freshness, dispatch review state, release-attempt snapshots, and
+the read-only release audit timeline. The next app-development improvement
+should organize FlightLeg detail into a clearer command-center layout without
+adding new write behavior.
 
 ## Current Workflow Map
 
@@ -45,27 +48,18 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 62 should add a compact **Release Evidence Action Panel** near the top
-of FlightLeg detail, after the FlightLeg summary cards and before Release
-Readiness.
+Prompt 101 should plan **FlightLeg Detail Information Architecture**.
 
 Minimum behavior:
 
-- Show one card per evidence area:
-  - Manifest.
-  - Weight and balance.
-  - Flight locating.
-  - Dispatch package.
-  - Airworthiness.
-  - Preview snapshots.
-- Each card should show:
-  - Current status or missing state.
-  - One concise readiness message.
-  - Primary link to manage or inspect that area.
-- Keep all existing workflow pages and release actions unchanged.
+- Keep all existing workflow pages and release actions available.
+- Decide how to group summary, readiness, release controls, evidence actions,
+  detailed evidence sections, snapshots, audit history, and raw reference data.
+- Prefer a compact command-center plus section navigation unless the planning
+  slice finds a stronger option.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
-  file uploads, overrides, automatic snapshots, or `ReleasePackage`.
+  file uploads, imports, overrides, automatic snapshots, or `ReleasePackage`.
 
 Why this is the right next slice:
 
@@ -73,8 +67,8 @@ Why this is the right next slice:
 - It makes existing work easier to use.
 - It does not require policy decisions.
 - It does not change release behavior.
-- It prepares the UI for later release readiness and blocking work without
-  enforcing anything.
+- It prepares the UI for later release readiness, blocking, and operational
+  workflow work without enforcing anything.
 
 ## Deferred Alternatives
 
