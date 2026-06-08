@@ -2,6 +2,58 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 103: FlightLeg Detail Information Architecture QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Layout QA:
+
+- Confirmed all five local FlightLeg detail pages returned 200.
+- Confirmed all five local FlightLeg detail pages rendered the command-center
+  layout markers.
+- Confirmed section navigation exposes Readiness, Release History,
+  Aircraft/Airworthiness, Evidence Details, and Raw Reference Data.
+- Confirmed Release Evidence Actions and Release Control render near the top.
+- Confirmed evidence workflow routes returned 200 for manifest, W&B, locating,
+  and dispatch.
+- Confirmed an aircraft airworthiness link returned 200.
+- Confirmed an existing snapshot detail link returned 200.
+
+Route smoke:
+
+- `/` returned 200.
+- `/operations-control` returned 200.
+- `/operations-control/[flightLegId]` returned 200.
+- `/flights` returned 200.
+- `/aircraft` returned 200.
+- `/crew` returned 200.
+- `/scheduling` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Browser QA:
+
+- Browser check confirmed the command-center layout on a local FlightLeg detail
+  page.
+- Browser check confirmed all six page section IDs exist.
+- Browser check confirmed five section navigation links.
+- Browser check confirmed visible Release Control, Release Evidence Actions,
+  and Raw Reference Data.
+
+Notes:
+
+- Prompt 103 was QA/docs only.
+- No workflow behavior changed.
+- Release behavior remains warning-only.
+
 ## 2026-06-07 - Prompt 85: Release Audit Timeline QA
 
 Status: passed.

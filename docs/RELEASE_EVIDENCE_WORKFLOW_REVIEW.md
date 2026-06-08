@@ -48,15 +48,16 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 103 should validate **FlightLeg Detail Information Architecture**.
+Prompt 104 should plan the **Operations Control Workbench** improvement.
 
 Minimum behavior:
 
-- Confirm the command-center layout renders on FlightLeg detail.
-- Confirm section navigation exposes Readiness, Release History,
-  Aircraft/Airworthiness, Evidence Details, and Raw Reference Data.
-- Confirm release actions, evidence workflow links, snapshot links, and raw
-  reference sections still render.
+- Decide the first Operations Control list/workbench improvement before
+  implementation.
+- Consider status grouping, date/status/aircraft filters, quick links for
+  release/evidence/edit/aircraft context, and clearer missing-evidence
+  indicators.
+- Keep Prompt 104 planning/docs-only.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
   file uploads, imports, overrides, automatic snapshots, or `ReleasePackage`.
@@ -89,6 +90,17 @@ Actions and Release Control, followed by visible section navigation. Readiness,
 Release History, Aircraft/Airworthiness, Evidence Details, and Raw Reference
 Data are grouped as scan-friendly page sections. No data query, server action,
 release behavior, evidence workflow route, schema, or policy change was added.
+
+## Prompt 103 Status
+
+Implementation status: complete.
+
+Local QA confirmed all five local FlightLeg detail pages render the
+command-center layout and section navigation markers. Evidence workflow routes,
+an aircraft airworthiness route, and a snapshot detail route returned 200.
+Browser QA confirmed the command center, five section navigation links, release
+controls, evidence actions, and raw reference data are visible. Release behavior
+remains warning-only.
 
 ## Deferred Alternatives
 

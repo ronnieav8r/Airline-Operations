@@ -826,18 +826,18 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 103: FlightLeg Detail Information Architecture QA
+Prompt 104: Operations Control Workbench Planning
 ```
 
 Scope:
 
-- Validate the Prompt 102 FlightLeg detail command-center layout.
-- Confirm the page still renders with complete, partial, and missing evidence
-  states.
-- Confirm Release Control actions appear near the top and remain warning-only.
-- Confirm evidence workflow links, snapshot links, and aircraft airworthiness
-  links still route correctly.
-- Confirm no workflow behavior changes were introduced.
+- Plan the next Operations Control list/workbench improvement before
+  implementation.
+- Decide the first workbench scope for status grouping, filters, quick links,
+  and missing-evidence indicators.
+- Keep Prompt 104 planning/docs-only.
+- Do not add schema, auth, hard release blocking, imports, provider
+  integrations, file uploads, or new release policy.
 
 Recommended app-development follow-up chain:
 
@@ -870,6 +870,12 @@ Prompt 102 is complete. FlightLeg detail now groups Release Evidence Actions
 and Release Control into a top command center, adds visible section navigation,
 and groups readiness, release history, aircraft/airworthiness, evidence
 details, and raw reference data without changing release behavior.
+
+Prompt 103 is complete. Local QA confirmed all five local FlightLeg detail
+pages render the command-center layout markers, evidence workflow routes still
+return 200, snapshot and aircraft airworthiness links still route correctly, and
+release behavior remains warning-only. Results are recorded in
+`docs/RELEASE_EVIDENCE_QA_LOG.md`.
 
 Deferred follow-up to keep on the roadmap:
 
