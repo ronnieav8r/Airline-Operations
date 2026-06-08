@@ -826,18 +826,21 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 100: App Development Priority Reset
+Prompt 102: FlightLeg Detail Information Architecture Foundation
 ```
 
 Scope:
 
-- Move legacy import work down the priority list.
-- Return the next build chain to core app development and user-visible
-  operational workflows.
-- Keep Prompt 100 planning/docs-only.
-- Do not add parser code, importer execution, file uploads, staging-row writes,
-  dry-run execution, review/apply workflow, operational imports, auth,
-  signatures, destructive cleanup, or provider integrations.
+- Implement the Prompt 101 command-center layout for
+  `/operations-control/[flightLegId]`.
+- Move Release Evidence Actions and Release Control into a clear top command
+  center.
+- Add visible section navigation for Readiness, Release History,
+  Aircraft/Airworthiness, Evidence Details, and Raw Reference Data.
+- Preserve all existing routes, evidence workflow links, release actions,
+  snapshots, audit behavior, and warning-only release behavior.
+- Do not add schema, auth, hard release blocking, imports, provider
+  integrations, file uploads, or new release policy.
 
 Recommended app-development follow-up chain:
 
@@ -861,6 +864,10 @@ Scope:
 - Keep release behavior warning-only.
 - Do not add schema changes unless a later planning slice explicitly approves
   them.
+
+Prompt 101 is complete. The selected FlightLeg detail information architecture
+is a compact command-center plus section navigation. Prompt 102 should
+implement this as a layout-only change, and Prompt 103 should validate it.
 
 Deferred follow-up to keep on the roadmap:
 
