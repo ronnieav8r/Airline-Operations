@@ -832,3 +832,27 @@ Prompt 74: Dispatch Package Review State Planning
 Prompt 74 should decide whether dispatch packages need manual review states
 before implementation. Keep it planning/docs only. Do not add schema or
 workflow code until the state policy is decided.
+
+Implementation status: complete.
+
+Prompt 74 selected lightweight status fields on `DispatchPackage` as the first
+dispatch-review approach. The status vocabulary should be `DRAFT`, `READY`,
+`REVIEWED`, and `VOIDED`. Review is a workflow state, not a legal signature or
+FlightLeg release.
+
+Durable planning doc:
+
+```text
+docs/DISPATCH_PACKAGE_REVIEW_STATE_PLAN.md
+```
+
+Recommended next release evidence slice:
+
+```text
+Prompt 75: Dispatch Package Review State Foundation
+```
+
+Prompt 75 should add additive dispatch package status/review fields and manual
+Mark Ready, Mark Reviewed, and Void actions. Keep release behavior
+warning-only. Do not add provider integrations, file uploads, auth/signatures,
+hard blocking, `ReleasePackage`, or release-action changes.

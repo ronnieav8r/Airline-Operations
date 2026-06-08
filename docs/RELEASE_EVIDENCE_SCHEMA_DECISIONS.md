@@ -110,6 +110,12 @@ implemented through existing schema. Provider integrations, `ReleasePackage`,
 file uploads, aircraft performance calculations, and release gating remain
 deferred.
 
+Updated transition note: dispatch package review-state planning is complete.
+The next dispatch schema slice should add lightweight additive status/review
+fields directly to `DispatchPackage`. Review remains a workflow state, not a
+legal signature or FlightLeg release. Review history/audit tables remain
+deferred until auth and audit policy exist.
+
 Updated transition note: release readiness guardrails planning is complete. The
 first guardrail implementation should be a warning-only checklist on the
 FlightLeg detail page. It should not block release actions, mutate evidence,

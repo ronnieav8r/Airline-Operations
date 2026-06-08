@@ -121,6 +121,7 @@ It has:
 77. Manual Flight Locating position history QA.
 78. Locating freshness evidence panel update.
 79. Locating freshness QA.
+80. Dispatch package review state planning.
 
 ## Current Data Model Boundaries
 
@@ -190,6 +191,13 @@ manual position report summary/freshness when available, shows an
 `ACTIVE`-with-no-report needs-attention state in the panel only, and keeps
 Release Control visible. Results are recorded in
 `docs/RELEASE_EVIDENCE_QA_LOG.md`.
+
+Dispatch package review state planning is complete. The chosen first policy is
+to add lightweight status fields directly to `DispatchPackage`: `DRAFT`,
+`READY`, `REVIEWED`, and `VOIDED`. Review is a workflow state, not a legal
+signature or FlightLeg release. Auth/roles, review audit history, file uploads,
+provider integrations, `ReleasePackage`, hard blocking, and release-action
+changes remain deferred.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -632,17 +640,19 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 74: Dispatch Package Review State Planning
+Prompt 75: Dispatch Package Review State Foundation
 ```
 
 Scope:
 
-- Decide whether the next release-evidence workflow should add manual dispatch
-  package review states such as `DRAFT`, `READY`, `REVIEWED`, or `VOIDED`.
-- Keep it planning/docs only.
-- Do not add schema or workflow code until the review-state policy is decided.
-- Do not add provider integrations, file uploads, hard blocking,
-  auth/signatures, or release-action changes.
+- Add additive dispatch package status/review fields and enum.
+- Add Mark Ready, Mark Reviewed, and Void actions under
+  `/operations-control/[flightLegId]/dispatch`.
+- Require complete manual dispatch evidence before READY.
+- Require READY before REVIEWED.
+- Keep release behavior warning-only and do not add provider integrations, file
+  uploads, auth/signatures, hard blocking, `ReleasePackage`, or release-action
+  changes.
 
 Deferred follow-up to keep on the roadmap:
 

@@ -296,3 +296,21 @@ Prompt 74: Dispatch Package Review State Planning
 
 Prompt 74 should decide the next dispatch-package workflow improvement before
 implementation.
+
+## Prompt 74 Status
+
+Implementation status: complete.
+
+Prompt 74 selected lightweight status fields on `DispatchPackage` as the first
+manual dispatch-review workflow. The intended statuses are `DRAFT`, `READY`,
+`REVIEWED`, and `VOIDED`. This remains warning-only and separate from
+`FlightRelease`.
+
+Next recommended slice:
+
+```text
+Prompt 75: Dispatch Package Review State Foundation
+```
+
+Prompt 75 should implement the additive schema fields and manual status actions
+under the existing dispatch workflow.
