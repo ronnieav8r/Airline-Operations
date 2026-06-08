@@ -160,6 +160,16 @@ Docker Desktop was not running and the local PostgreSQL database at
 `127.0.0.1:5434` was unavailable. The next focused follow-up should rerun
 aircraft crew assignment runtime QA once Docker is available.
 
+## Prompt 116 Status
+
+Implementation status: complete.
+
+Local runtime QA for the aircraft-block crew assignment workflow passed.
+Docker Desktop was started, local Postgres was available, migrations were
+current, and local seed ran. QA confirmed create, limited edit, Relieve Now,
+warning-only qualification display, route rendering, and future FlightLeg
+`CrewLegAssignment` snapshot resync. Release behavior remains warning-only.
+
 ## Prompt 101 Status
 
 Implementation status: complete.

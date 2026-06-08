@@ -2,6 +2,72 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 116: Aircraft Crew Assignment Runtime QA
+
+Status: passed.
+
+Local database:
+
+- Started Docker Desktop.
+- `npm run db:local:up` passed.
+- `npm run db:local:migrate` passed with no pending migrations.
+- `npm run db:local:seed` passed.
+- Local demo data included aircraft, crew, FlightLegs,
+  `AircraftCrewAssignment`, and `CrewLegAssignment` rows.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed after rerunning once build route-type generation
+  had settled.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Workflow QA:
+
+- Created an aircraft-block crew assignment through the server action and
+  confirmed the row became active.
+- Edited the assignment seat role, start/end time, and notes through the server
+  action and confirmed the row changed.
+- Relieved the assignment through the server action and confirmed the row
+  became inactive with an end time.
+- Created a source assignment covering future FlightLeg `AO404` and confirmed
+  a matching `CrewLegAssignment` snapshot was created as `PLANNED`.
+- Relieved that source assignment and confirmed the matching snapshot changed
+  to `RELIEVED` with a `releaseTime`.
+
+Route smoke:
+
+- `/` returned 200.
+- `/aircraft` returned 200.
+- `/aircraft/[aircraftId]` returned 200.
+- `/aircraft/[aircraftId]/crew` returned 200.
+- `/aircraft/[aircraftId]/airworthiness` returned 200.
+- `/crew` returned 200.
+- `/operations-control` returned 200.
+- `/operations-control/[flightLegId]` returned 200.
+- `/flights` returned 200.
+- `/scheduling` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Rendered page QA:
+
+- Confirmed `/aircraft/[aircraftId]/crew` includes the create assignment form,
+  current assignments, upcoming assignments, future FlightLeg snapshot impact,
+  qualification warning panel, Relieve Now control, and Edit assignment
+  details.
+
+Notes:
+
+- Direct server-action QA outside a browser request produced expected
+  post-action revalidation exceptions after mutation. Database state was used
+  as the source of truth for pass/fail.
+- No schema, duty/rest enforcement, crew schedule imports, vacation/time-off
+  enforcement, leg-specific crew overrides, auth/signatures, or hard release
+  blocking were added.
+
 ## 2026-06-08 - Prompt 115: Aircraft Crew Assignment QA
 
 Status: code validation passed; runtime workflow smoke blocked by local Docker

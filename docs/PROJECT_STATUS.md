@@ -945,21 +945,27 @@ blocked because Docker Desktop was not running, so the local PostgreSQL
 database at `127.0.0.1:5434` was unavailable. The next focused follow-up should
 rerun local aircraft crew workflow smoke once Docker is available.
 
+Prompt 116 is complete. Docker Desktop was started, local Postgres was brought
+up, migrations were current, local seed ran, and the aircraft-block crew
+assignment workflow was validated locally. QA confirmed create, limited edit,
+Relieve Now, warning-only qualification display, route rendering, and future
+FlightLeg `CrewLegAssignment` snapshot resync.
+
 Preferred next slice:
 
 ```text
-Prompt 116: Aircraft Crew Assignment Runtime QA
+Prompt 117: Crew Scheduling Module Planning
 ```
 
 Scope:
 
-- Start local Docker Postgres.
-- Visit `/aircraft/[aircraftId]/crew`.
-- Create, edit, and relieve/end an aircraft-block crew assignment.
-- Confirm affected future `CrewLegAssignment` snapshots resync.
-- Confirm `/aircraft`, `/aircraft/[aircraftId]`, `/crew`, `/flights`,
-  `/scheduling`, and `/operations-control` reflect coverage changes.
-- Keep the slice QA-only unless a defect is found.
+- Plan, but do not implement, the broader Crew Scheduling module.
+- Define how crew schedules, days off, vacation/time off, duty/rest,
+  schedule imports, and future schedule-apply workflows should relate to
+  aircraft-block assignments.
+- Keep `AircraftCrewAssignment` as the current coverage source of truth until a
+  later approved migration.
+- Do not add schema or write behavior in Prompt 117.
 
 Deferred follow-up to keep on the roadmap:
 
