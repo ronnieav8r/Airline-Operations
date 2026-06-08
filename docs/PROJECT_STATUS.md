@@ -826,19 +826,19 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 107: Next App Development Planning
+Prompt 108: Dashboard Surfacing Foundation
 ```
 
 Scope:
 
-- Decide the next app-development slice after the FlightLeg detail and
-  Operations Control workbench improvements.
-- Compare safe next targets such as improved dashboard surfacing, aircraft
-  context navigation, crew assignment workflow planning, or the next
-  release-evidence workflow.
-- Keep Prompt 107 planning/docs-only.
-- Do not add schema, auth, hard release blocking, imports, provider
-  integrations, file uploads, or new release policy.
+- Upgrade `/` into a quick Today + Attention dashboard surface.
+- Keep today's flight board primary.
+- Add release/evidence attention signals and direct links into FlightLeg detail,
+  Manifest, W&B, Locating, Dispatch, and Operations Control.
+- Add a clearly labeled AI Review Notes placeholder for future operational
+  suggestions, with no AI calls, provider setup, persistence, or automation.
+- Keep the slice UI/read-only with no schema, auth, hard release blocking,
+  imports, provider integrations, file uploads, or new release policy.
 
 Recommended app-development follow-up chain:
 
@@ -892,6 +892,12 @@ Prompt 106 is complete. Local QA confirmed all workbench grouping modes,
 URL-driven filters, card action links, retained Control Records table, main
 route smoke, and browser rendering. Results are recorded in
 `docs/RELEASE_EVIDENCE_QA_LOG.md`.
+
+Prompt 107 is complete. The selected next app-development direction is
+dashboard surfacing using Today + Attention. Prompt 108 should improve `/` with
+release/evidence attention signals, direct FlightLeg workflow links, and a
+non-functional AI Review Notes placeholder while preserving existing dashboard
+sections and warning-only release behavior.
 
 Deferred follow-up to keep on the roadmap:
 

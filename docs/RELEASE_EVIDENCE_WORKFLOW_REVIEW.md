@@ -16,12 +16,10 @@ FlightLeg:
 - Snapshot drift diagnostic.
 - Snapshot findings detail.
 
-The current system is usable for development, but FlightLeg detail is still a
-long evidence packet. The Release Evidence Action Panel helps, and later slices
-added locating freshness, dispatch review state, release-attempt snapshots, and
-the read-only release audit timeline. The next app-development improvement
-should organize FlightLeg detail into a clearer command-center layout without
-adding new write behavior.
+The current system is usable for development. FlightLeg detail now acts as a
+clearer command center, and Operations Control now has a filterable workbench
+board. The next app-development improvement should surface those operational
+priorities on the main dashboard without adding new write behavior.
 
 ## Current Workflow Map
 
@@ -48,15 +46,18 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 107 should plan the next app-development slice.
+Prompt 108 should implement the dashboard surfacing foundation selected by
+Prompt 107.
 
 Minimum behavior:
 
-- Decide the next safe product improvement after FlightLeg detail and
-  Operations Control workbench usability are improved.
-- Compare dashboard surfacing, aircraft context navigation, crew assignment
-  workflow planning, and the next release-evidence workflow.
-- Keep Prompt 107 planning/docs-only.
+- Keep today's flight board primary on `/`.
+- Add release/evidence attention signals.
+- Add direct links into FlightLeg detail and evidence workflows.
+- Add a clearly labeled AI Review Notes placeholder for future operational
+  suggestions.
+- Keep the AI area non-functional: no provider calls, persistence,
+  recommendations engine, or automation.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
   file uploads, imports, overrides, automatic snapshots, or `ReleasePackage`.
@@ -69,6 +70,16 @@ Why this is the right next slice:
 - It does not change release behavior.
 - It prepares the UI for later release readiness, blocking, and operational
   workflow work without enforcing anything.
+
+## Prompt 107 Status
+
+Implementation status: complete.
+
+Prompt 107 selected Today + Attention dashboard surfacing as the next
+app-development direction. Prompt 108 should update `/` with an Operations
+Attention panel, Priority FlightLegs list, direct workflow links, and a
+non-functional AI Review Notes placeholder. Prompt 109 should validate the
+dashboard update and confirm release/evidence workflows remain unchanged.
 
 ## Prompt 101 Status
 
