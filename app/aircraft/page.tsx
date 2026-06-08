@@ -301,6 +301,20 @@ export default async function AircraftPage() {
                     <div className="text-left text-xs text-zinc-500 sm:text-right">
                       <p>Aircraft ID</p>
                       <p className="font-mono text-zinc-700">{item.id.slice(0, 8)}</p>
+                      <div className="mt-3 flex flex-wrap gap-2 sm:justify-end">
+                        <Link
+                          className="rounded-md bg-zinc-950 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800"
+                          href={`/aircraft/${item.id}`}
+                        >
+                          Aircraft context
+                        </Link>
+                        <Link
+                          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                          href={`/aircraft/${item.id}/airworthiness`}
+                        >
+                          Airworthiness
+                        </Link>
+                      </div>
                     </div>
                   </div>
 

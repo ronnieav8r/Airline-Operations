@@ -826,22 +826,18 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 111: Aircraft Context Detail Foundation
+Prompt 112: Aircraft Context Detail QA
 ```
 
 Scope:
 
-- Add `/aircraft/[aircraftId]` as a read-only aircraft operational context
-  page.
-- Keep `/aircraft` as the fleet board and link each aircraft card to its detail
-  page.
-- Show current assignment, upcoming legs, crew coverage, airworthiness status,
-  discrepancies, deferrals, alerts, and Operations Control workflow links.
-- Preserve `/aircraft/[aircraftId]/airworthiness` as the existing
-  airworthiness write surface.
-- Keep the slice UI/read-only with no schema, auth, hard release blocking,
-  imports, provider integrations, file uploads, AI behavior, or new release
-  policy.
+- Validate the Prompt 111 aircraft context detail foundation.
+- Confirm `/aircraft` still renders the fleet board and links into aircraft
+  detail pages.
+- Confirm `/aircraft/[aircraftId]` renders aircraft context sections and
+  Operations Control workflow links.
+- Confirm `/aircraft/[aircraftId]/airworthiness` still works.
+- Keep Prompt 112 QA/docs-only unless a defect is found.
 
 Recommended app-development follow-up chain:
 
@@ -918,6 +914,12 @@ Detail: keep `/aircraft` as the fleet board and add `/aircraft/[aircraftId]`
 as a read-only aircraft operational context page. Prompt 111 should implement
 the detail page and link to it from aircraft cards while preserving the existing
 airworthiness workflow route.
+
+Prompt 111 is complete. Aircraft cards now link to `/aircraft/[aircraftId]`,
+which shows read-only aircraft identity, current/next assignment, upcoming
+FlightLegs, crew coverage, airworthiness state, discrepancies, deferrals,
+alerts, and Operations Control workflow links. The existing aircraft
+airworthiness workflow remains under `/aircraft/[aircraftId]/airworthiness`.
 
 Deferred follow-up to keep on the roadmap:
 

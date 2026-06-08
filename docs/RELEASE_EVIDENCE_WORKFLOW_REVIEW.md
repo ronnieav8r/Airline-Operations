@@ -47,16 +47,14 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 111 should implement the aircraft context detail foundation selected by
-Prompt 110.
+Prompt 112 should validate the aircraft context detail foundation implemented
+by Prompt 111.
 
 Minimum behavior:
 
-- Keep `/aircraft` as the fleet board.
-- Add `/aircraft/[aircraftId]` as a read-only aircraft context page.
-- Link aircraft cards to the new context page.
-- Show current assignment, upcoming legs, crew coverage, airworthiness status,
-  discrepancies, deferrals, alerts, and Operations Control workflow links.
+- Confirm `/aircraft` still renders the fleet board.
+- Confirm `/aircraft/[aircraftId]` renders context sections and workflow links.
+- Confirm `/aircraft/[aircraftId]/airworthiness` still works.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
   file uploads, imports, overrides, automatic snapshots, AI behavior, or
@@ -109,6 +107,16 @@ should add `/aircraft/[aircraftId]` as a read-only operational context page,
 keep `/aircraft` as the fleet board, and preserve
 `/aircraft/[aircraftId]/airworthiness` as the aircraft-level airworthiness
 write surface.
+
+## Prompt 111 Status
+
+Implementation status: complete.
+
+Aircraft cards now link to a read-only aircraft context page at
+`/aircraft/[aircraftId]`. The detail page shows aircraft identity,
+current/next assignment, upcoming FlightLegs, crew coverage, airworthiness
+state, discrepancies, deferrals, alerts, and Operations Control workflow links.
+The aircraft-level airworthiness workflow remains unchanged.
 
 ## Prompt 101 Status
 
