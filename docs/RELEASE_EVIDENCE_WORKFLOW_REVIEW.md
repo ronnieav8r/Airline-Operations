@@ -46,18 +46,15 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 108 should implement the dashboard surfacing foundation selected by
-Prompt 107.
+Prompt 109 should validate the dashboard surfacing foundation implemented by
+Prompt 108.
 
 Minimum behavior:
 
-- Keep today's flight board primary on `/`.
-- Add release/evidence attention signals.
-- Add direct links into FlightLeg detail and evidence workflows.
-- Add a clearly labeled AI Review Notes placeholder for future operational
-  suggestions.
-- Keep the AI area non-functional: no provider calls, persistence,
-  recommendations engine, or automation.
+- Confirm today's flight board remains primary on `/`.
+- Confirm release/evidence attention signals render.
+- Confirm direct links route into FlightLeg detail and evidence workflows.
+- Confirm the AI Review Notes placeholder is visible and non-functional.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
   file uploads, imports, overrides, automatic snapshots, or `ReleasePackage`.
@@ -80,6 +77,16 @@ app-development direction. Prompt 108 should update `/` with an Operations
 Attention panel, Priority FlightLegs list, direct workflow links, and a
 non-functional AI Review Notes placeholder. Prompt 109 should validate the
 dashboard update and confirm release/evidence workflows remain unchanged.
+
+## Prompt 108 Status
+
+Implementation status: complete.
+
+The dashboard now surfaces Operations Attention counts, a Priority FlightLegs
+list, release status on today's board, direct workflow links, and a clearly
+labeled AI Review Notes placeholder. The placeholder does not call AI providers,
+persist notes, or automate recommendations. Existing dashboard sections remain
+in place.
 
 ## Prompt 101 Status
 

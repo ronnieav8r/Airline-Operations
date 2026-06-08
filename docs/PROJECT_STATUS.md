@@ -826,19 +826,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 108: Dashboard Surfacing Foundation
+Prompt 109: Dashboard Surfacing QA
 ```
 
 Scope:
 
-- Upgrade `/` into a quick Today + Attention dashboard surface.
-- Keep today's flight board primary.
-- Add release/evidence attention signals and direct links into FlightLeg detail,
-  Manifest, W&B, Locating, Dispatch, and Operations Control.
-- Add a clearly labeled AI Review Notes placeholder for future operational
-  suggestions, with no AI calls, provider setup, persistence, or automation.
-- Keep the slice UI/read-only with no schema, auth, hard release blocking,
-  imports, provider integrations, file uploads, or new release policy.
+- Validate the Prompt 108 dashboard surfacing foundation.
+- Confirm `/` shows Operations Attention, Priority FlightLegs, direct workflow
+  links, and the AI Review Notes placeholder.
+- Confirm the placeholder is non-functional and no AI/provider code was added.
+- Confirm dashboard links route correctly and existing sections still render.
+- Keep Prompt 109 QA/docs-only unless a defect is found.
 
 Recommended app-development follow-up chain:
 
@@ -898,6 +896,12 @@ dashboard surfacing using Today + Attention. Prompt 108 should improve `/` with
 release/evidence attention signals, direct FlightLeg workflow links, and a
 non-functional AI Review Notes placeholder while preserving existing dashboard
 sections and warning-only release behavior.
+
+Prompt 108 is complete. The dashboard now has an Operations Attention panel,
+Priority FlightLegs list, direct links into FlightLeg detail/evidence
+workflows, release status on today's flight board, and a clearly labeled
+non-functional AI Review Notes placeholder. Existing dashboard sections remain
+visible and release behavior remains warning-only.
 
 Deferred follow-up to keep on the roadmap:
 

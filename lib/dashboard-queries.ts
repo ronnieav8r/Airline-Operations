@@ -3,15 +3,21 @@ import {
   AlertStatus,
   AssignmentStatus,
   AircraftStatus,
+  FlightLocatingStatus,
   FlightLegStatus,
   FlightStatus,
   ManifestStatus,
   Prisma,
+  ReleaseStatus,
   SeatRole,
   WeightBalanceStatus,
 } from "@prisma/client";
 
 import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
+import {
+  getFlightLegOperationsControlData,
+  OperationsControlRecordRead,
+} from "@/lib/flightleg-operations-control-queries";
 import { prisma } from "@/lib/prisma";
 
 const dashboardFlightSelect = {
@@ -76,6 +82,16 @@ const dashboardFlightSelect = {
           status: true,
         },
       },
+      operationalControlRecord: {
+        select: {
+          release: {
+            select: {
+              status: true,
+              releasedAt: true,
+            },
+          },
+        },
+      },
       dispatchPackage: {
         select: {
           id: true,
@@ -107,6 +123,8 @@ export type DashboardFlight = {
   tailNumber: string;
   coverage: FlightCoverage | null;
   releaseEvidence: DashboardReleaseEvidence | null;
+  releaseStatus: ReleaseStatus | null;
+  releasedAt: Date | null;
 };
 
 export type DashboardReleaseEvidence = {
@@ -116,6 +134,17 @@ export type DashboardReleaseEvidence = {
   locatingStatus: string | null;
   dispatchPackageReady: boolean;
   complete: boolean;
+};
+
+export type DashboardPriorityFlightLeg = {
+  id: string;
+  flightNumber: string;
+  scheduledDeparture: Date | null;
+  route: string;
+  tailNumber: string;
+  releaseStatus: ReleaseStatus | null;
+  evidenceState: "Ready" | "Needs attention" | "Missing";
+  attentionReasons: string[];
 };
 
 export type AlertRow = {
@@ -141,6 +170,13 @@ export type DashboardData = {
     fallbackFlightReads: number;
     releaseEvidenceComplete: number;
     releaseEvidenceMissing: number;
+    plannedOrUnreleased: number;
+    released: number;
+    operationsEvidenceReady: number;
+    operationsEvidencePartialMissing: number;
+  };
+  operationsAttention: {
+    priorityFlightLegs: DashboardPriorityFlightLeg[];
   };
   flights: DashboardFlight[];
   coverageGaps: Array<DashboardFlight & { missingRoles: SeatRole[] }>;
@@ -227,6 +263,140 @@ function buildDashboardReleaseEvidence(
   };
 }
 
+function dashboardEvidenceReady(record: OperationsControlRecordRead): boolean {
+  const evidence = record.leg?.releaseEvidence;
+
+  return Boolean(
+    evidence &&
+      (evidence.manifestStatus === ManifestStatus.READY ||
+        evidence.manifestStatus === ManifestStatus.LOCKED) &&
+      (evidence.weightBalanceStatus === WeightBalanceStatus.CALCULATED ||
+        evidence.weightBalanceStatus === WeightBalanceStatus.APPROVED) &&
+      (evidence.locatingStatus === FlightLocatingStatus.FILED ||
+        evidence.locatingStatus === FlightLocatingStatus.ACTIVE ||
+        evidence.locatingStatus === FlightLocatingStatus.CLOSED) &&
+      evidence.dispatchPackageReady &&
+      evidence.weatherSnapshotReady &&
+      evidence.notamSnapshotReady &&
+      Boolean(evidence.flightPlanStatus),
+  );
+}
+
+function dashboardEvidenceMissing(record: OperationsControlRecordRead): boolean {
+  const evidence = record.leg?.releaseEvidence;
+
+  return (
+    !evidence ||
+    !evidence.manifestStatus ||
+    !evidence.weightBalanceStatus ||
+    !evidence.locatingStatus ||
+    !evidence.dispatchPackageReady
+  );
+}
+
+function dashboardEvidenceState(
+  record: OperationsControlRecordRead,
+): DashboardPriorityFlightLeg["evidenceState"] {
+  if (dashboardEvidenceReady(record)) {
+    return "Ready";
+  }
+
+  if (dashboardEvidenceMissing(record)) {
+    return "Missing";
+  }
+
+  return "Needs attention";
+}
+
+function buildAttentionReasons(record: OperationsControlRecordRead): string[] {
+  const reasons: string[] = [];
+  const evidence = record.leg?.releaseEvidence;
+
+  if (record.release?.status !== ReleaseStatus.RELEASED) {
+    reasons.push(record.release?.status ? `Release ${record.release.status}` : "No release record");
+  }
+
+  if (!evidence) {
+    reasons.push("No FlightLeg evidence");
+    return reasons;
+  }
+
+  if (
+    evidence.manifestStatus !== ManifestStatus.READY &&
+    evidence.manifestStatus !== ManifestStatus.LOCKED
+  ) {
+    reasons.push(`Manifest ${evidence.manifestStatus ?? "missing"}`);
+  }
+
+  if (
+    evidence.weightBalanceStatus !== WeightBalanceStatus.CALCULATED &&
+    evidence.weightBalanceStatus !== WeightBalanceStatus.APPROVED
+  ) {
+    reasons.push(`W&B ${evidence.weightBalanceStatus ?? "missing"}`);
+  }
+
+  if (
+    evidence.locatingStatus !== FlightLocatingStatus.FILED &&
+    evidence.locatingStatus !== FlightLocatingStatus.ACTIVE &&
+    evidence.locatingStatus !== FlightLocatingStatus.CLOSED
+  ) {
+    reasons.push(`Locating ${evidence.locatingStatus ?? "missing"}`);
+  }
+
+  if (
+    !evidence.dispatchPackageReady ||
+    !evidence.weatherSnapshotReady ||
+    !evidence.notamSnapshotReady ||
+    !evidence.flightPlanStatus
+  ) {
+    reasons.push("Dispatch incomplete");
+  }
+
+  return reasons;
+}
+
+function routeLabel(record: OperationsControlRecordRead): string {
+  if (record.leg?.departureStation && record.leg.arrivalStation) {
+    return `${record.leg.departureStation.code} -> ${record.leg.arrivalStation.code}`;
+  }
+
+  return "Route not assigned";
+}
+
+function buildPriorityFlightLegs(
+  records: OperationsControlRecordRead[],
+): DashboardPriorityFlightLeg[] {
+  return records
+    .filter((record) => record.readSource === "FLIGHT_LEG" && record.leg?.id)
+    .map((record) => ({
+      id: record.leg?.id ?? "",
+      flightNumber: record.leg?.flightNumber ?? "Unnumbered",
+      scheduledDeparture: record.leg?.scheduledDeparture ?? null,
+      route: routeLabel(record),
+      tailNumber: record.leg?.aircraft?.tailNumber ?? "Unassigned",
+      releaseStatus: record.release?.status ?? null,
+      evidenceState: dashboardEvidenceState(record),
+      attentionReasons: buildAttentionReasons(record),
+    }))
+    .filter(
+      (record) =>
+        record.attentionReasons.length > 0 ||
+        record.releaseStatus !== ReleaseStatus.RELEASED ||
+        record.evidenceState !== "Ready",
+    )
+    .sort((first, second) => {
+      const firstTime = first.scheduledDeparture?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const secondTime = second.scheduledDeparture?.getTime() ?? Number.MAX_SAFE_INTEGER;
+
+      if (firstTime !== secondTime) {
+        return firstTime - secondTime;
+      }
+
+      return first.flightNumber.localeCompare(second.flightNumber);
+    })
+    .slice(0, 6);
+}
+
 function normalizeFlight(flight: DashboardFlightPayload): Omit<DashboardFlight, "coverage"> {
   if (flight.flightLeg) {
     return {
@@ -241,6 +411,8 @@ function normalizeFlight(flight: DashboardFlightPayload): Omit<DashboardFlight, 
       arrivalCode: flight.flightLeg.arrivalStation.code,
       tailNumber: flight.flightLeg.aircraftAssignments[0]?.aircraft.tailNumber ?? flight.aircraft.tailNumber,
       releaseEvidence: buildDashboardReleaseEvidence(flight.flightLeg),
+      releaseStatus: flight.flightLeg.operationalControlRecord?.release?.status ?? null,
+      releasedAt: flight.flightLeg.operationalControlRecord?.release?.releasedAt ?? null,
     };
   }
 
@@ -256,13 +428,15 @@ function normalizeFlight(flight: DashboardFlightPayload): Omit<DashboardFlight, 
     arrivalCode: flight.arrivalStation.code,
     tailNumber: flight.aircraft.tailNumber,
     releaseEvidence: null,
+    releaseStatus: null,
+    releasedAt: null,
   };
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
   const now = new Date();
   const { start, end } = getTodayRange(now);
-  const [aircraftCount, crewCount, todayFlights, alerts, fleetStatusGroups] =
+  const [aircraftCount, crewCount, todayFlights, alerts, fleetStatusGroups, operationsControl] =
     await Promise.all([
       prisma.aircraft.count(),
       prisma.crewMember.count(),
@@ -303,6 +477,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         by: ["status"],
         _count: { _all: true },
       }),
+      getFlightLegOperationsControlData(),
     ]);
 
   const flightsWithCoverage: DashboardFlight[] = await Promise.all(
@@ -342,6 +517,10 @@ export async function getDashboardData(): Promise<DashboardData> {
       count: group._count._all,
     })),
   );
+  const operationsEvidenceReady = operationsControl.records.filter(dashboardEvidenceReady).length;
+  const plannedOrUnreleased = operationsControl.records.filter(
+    (record) => record.release?.status !== ReleaseStatus.RELEASED,
+  ).length;
 
   return {
     dateLabel: toDateLabel(now),
@@ -365,6 +544,15 @@ export async function getDashboardData(): Promise<DashboardData> {
       releaseEvidenceMissing: flightsWithCoverage.filter(
         (flight) => !flight.releaseEvidence?.complete,
       ).length,
+      plannedOrUnreleased,
+      released: operationsControl.records.filter(
+        (record) => record.release?.status === ReleaseStatus.RELEASED,
+      ).length,
+      operationsEvidenceReady,
+      operationsEvidencePartialMissing: operationsControl.records.length - operationsEvidenceReady,
+    },
+    operationsAttention: {
+      priorityFlightLegs: buildPriorityFlightLegs(operationsControl.records),
     },
     flights: flightsWithCoverage,
     coverageGaps,

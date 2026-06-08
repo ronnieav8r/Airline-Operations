@@ -2,8 +2,10 @@ import {
   AlertSeverity,
   FlightLegStatus,
   FlightStatus,
+  ReleaseStatus,
   SeatRole,
 } from "@prisma/client";
+import Link from "next/link";
 
 import { DashboardFlight, getDashboardData } from "@/lib/dashboard-queries";
 
@@ -90,6 +92,56 @@ function evidenceLabel(flight: DashboardFlight): string {
   return "No evidence";
 }
 
+function releaseBadgeClasses(status: ReleaseStatus | null): string {
+  if (status === ReleaseStatus.RELEASED) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  if (status === ReleaseStatus.PLANNED) {
+    return "border-sky-200 bg-sky-50 text-sky-700";
+  }
+  if (status === ReleaseStatus.CANCELLED || status === ReleaseStatus.VOIDED) {
+    return "border-zinc-200 bg-zinc-50 text-zinc-500";
+  }
+  return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
+function releaseLabel(status: ReleaseStatus | null): string {
+  return status ?? "NO RELEASE";
+}
+
+function attentionBadgeClasses(state: "Ready" | "Needs attention" | "Missing"): string {
+  if (state === "Ready") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  if (state === "Missing") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
+function DashboardActionLink({
+  href,
+  label,
+  primary = false,
+}: {
+  href: string;
+  label: string;
+  primary?: boolean;
+}) {
+  return (
+    <Link
+      className={
+        primary
+          ? "inline-flex rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800"
+          : "inline-flex rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+      }
+      href={href}
+    >
+      {label}
+    </Link>
+  );
+}
+
 export default async function Home() {
   const dashboard = await getDashboardData();
 
@@ -171,6 +223,164 @@ export default async function Home() {
           </article>
         </section>
 
+        <section className="grid gap-3 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Operations Attention
+                </p>
+                <h2 className="mt-1 text-lg font-semibold">Today + release priorities</h2>
+                <p className="mt-1 text-sm text-zinc-600">
+                  Quick scan for release state, evidence gaps, and crew coverage before
+                  moving into the full Operations Control workbench.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <DashboardActionLink href="/operations-control" label="Open workbench" primary />
+                <DashboardActionLink
+                  href="/operations-control?release=planned"
+                  label="Planned releases"
+                />
+                <DashboardActionLink
+                  href="/operations-control?evidence=missing"
+                  label="Missing evidence"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-md border border-sky-200 bg-sky-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-sky-700">
+                  Planned/unreleased
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-sky-950">
+                  {dashboard.statusSummary.plannedOrUnreleased}
+                </p>
+              </div>
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-emerald-700">Released</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-950">
+                  {dashboard.statusSummary.released}
+                </p>
+              </div>
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-emerald-700">
+                  Evidence ready
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-950">
+                  {dashboard.statusSummary.operationsEvidenceReady}
+                </p>
+              </div>
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-amber-700">
+                  Partial/missing
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-amber-950">
+                  {dashboard.statusSummary.operationsEvidencePartialMissing}
+                </p>
+              </div>
+              <div className="rounded-md border border-rose-200 bg-rose-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-rose-700">
+                  Crew gaps today
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-rose-950">
+                  {dashboard.coverageGaps.length}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
+                Priority FlightLegs
+              </h3>
+              {dashboard.operationsAttention.priorityFlightLegs.length === 0 ? (
+                <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                  No current FlightLeg attention items found.
+                </p>
+              ) : (
+                <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                  {dashboard.operationsAttention.priorityFlightLegs.map((flightLeg) => {
+                    const detailHref = `/operations-control/${flightLeg.id}`;
+
+                    return (
+                      <article
+                        className="rounded-md border border-zinc-200 bg-zinc-50 p-3"
+                        key={flightLeg.id}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <Link
+                              className="font-semibold text-sky-700 hover:text-sky-900"
+                              href={detailHref}
+                            >
+                              {flightLeg.flightNumber}
+                            </Link>
+                            <p className="mt-1 text-sm text-zinc-600">
+                              {flightLeg.route} · {flightLeg.tailNumber}
+                            </p>
+                            <p className="mt-1 text-xs text-zinc-500">
+                              {flightLeg.scheduledDeparture
+                                ? toTime(flightLeg.scheduledDeparture)
+                                : "Not scheduled"}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-start gap-1 sm:items-end">
+                            <span
+                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${releaseBadgeClasses(
+                                flightLeg.releaseStatus,
+                              )}`}
+                            >
+                              {releaseLabel(flightLeg.releaseStatus)}
+                            </span>
+                            <span
+                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${attentionBadgeClasses(
+                                flightLeg.evidenceState,
+                              )}`}
+                            >
+                              Evidence {flightLeg.evidenceState}
+                            </span>
+                          </div>
+                        </div>
+                        {flightLeg.attentionReasons.length > 0 ? (
+                          <p className="mt-3 text-xs text-zinc-600">
+                            {flightLeg.attentionReasons.slice(0, 4).join(" · ")}
+                          </p>
+                        ) : null}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <DashboardActionLink href={detailHref} label="Detail" primary />
+                          <DashboardActionLink href={`${detailHref}/manifest`} label="Manifest" />
+                          <DashboardActionLink
+                            href={`${detailHref}/weight-balance`}
+                            label="W&B"
+                          />
+                          <DashboardActionLink href={`${detailHref}/locating`} label="Locating" />
+                          <DashboardActionLink href={`${detailHref}/dispatch`} label="Dispatch" />
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <aside className="rounded-md border border-dashed border-sky-300 bg-sky-50/60 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-sky-700">
+              Future Placeholder
+            </p>
+            <h2 className="mt-1 text-lg font-semibold text-sky-950">AI Review Notes</h2>
+            <p className="mt-2 text-sm text-sky-900">
+              Reserved space for future AI-generated operational observations,
+              suggested follow-ups, and release-readiness review notes.
+            </p>
+            <div className="mt-4 rounded-md border border-sky-200 bg-white/80 p-3 text-sm text-sky-900">
+              No AI provider is connected in this slice. This panel does not call
+              external services, store notes, or automate recommendations.
+            </div>
+          </aside>
+        </section>
+
         <section className="grid gap-3 lg:grid-cols-2">
           <div className="rounded-md border border-zinc-200 bg-white p-4">
               <h2 className="text-lg font-semibold">Today&apos;s flight board</h2>
@@ -192,7 +402,9 @@ export default async function Home() {
                       <th className="px-3 py-2 font-medium">Aircraft</th>
                       <th className="px-3 py-2 font-medium">Status</th>
                       <th className="px-3 py-2 font-medium">Crew coverage</th>
+                      <th className="px-3 py-2 font-medium">Release</th>
                       <th className="px-3 py-2 font-medium">Release evidence</th>
+                      <th className="px-3 py-2 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -255,6 +467,20 @@ export default async function Home() {
                           </td>
                           <td className="px-3 py-2.5">
                             <span
+                              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${releaseBadgeClasses(
+                                flight.releaseStatus,
+                              )}`}
+                            >
+                              {releaseLabel(flight.releaseStatus)}
+                            </span>
+                            {flight.releasedAt ? (
+                              <p className="mt-1 text-xs text-zinc-500">
+                                {toTime(flight.releasedAt)}
+                              </p>
+                            ) : null}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span
                               className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${evidenceBadgeClasses(
                                 flight,
                               )}`}
@@ -267,6 +493,35 @@ export default async function Home() {
                                 {flight.releaseEvidence.weightBalanceStatus ?? "none"}
                               </p>
                             ) : null}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            {flight.flightLegId ? (
+                              <div className="flex min-w-64 flex-wrap gap-2">
+                                <DashboardActionLink
+                                  href={`/operations-control/${flight.flightLegId}`}
+                                  label="Detail"
+                                  primary
+                                />
+                                <DashboardActionLink
+                                  href={`/operations-control/${flight.flightLegId}/manifest`}
+                                  label="Manifest"
+                                />
+                                <DashboardActionLink
+                                  href={`/operations-control/${flight.flightLegId}/weight-balance`}
+                                  label="W&B"
+                                />
+                                <DashboardActionLink
+                                  href={`/operations-control/${flight.flightLegId}/locating`}
+                                  label="Locating"
+                                />
+                                <DashboardActionLink
+                                  href={`/operations-control/${flight.flightLegId}/dispatch`}
+                                  label="Dispatch"
+                                />
+                              </div>
+                            ) : (
+                              <span className="text-xs text-zinc-400">No FlightLeg actions</span>
+                            )}
                           </td>
                         </tr>
                       );
