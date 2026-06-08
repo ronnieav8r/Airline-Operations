@@ -334,3 +334,21 @@ Prompt 76: Dispatch Package Review State QA
 
 Prompt 76 should validate the dispatch review-state workflow and keep the
 slice QA/docs only unless a defect is found.
+
+## Prompt 76 Status
+
+Implementation status: complete.
+
+Local QA confirmed incomplete dispatch Ready rejection, complete Ready,
+Reviewed, edit reset to `DRAFT`, Void, route/browser rendering, and unchanged
+warning-only release behavior.
+
+Next recommended slice:
+
+```text
+Prompt 77: Dispatch Review Freshness Panel Update
+```
+
+Prompt 77 should surface dispatch package review status and freshness in the
+FlightLeg detail Release Evidence Action Panel without changing release
+readiness enforcement or release actions.

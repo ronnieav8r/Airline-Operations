@@ -123,6 +123,7 @@ It has:
 79. Locating freshness QA.
 80. Dispatch package review state planning.
 81. Dispatch package review state foundation.
+82. Dispatch package review state QA.
 
 ## Current Data Model Boundaries
 
@@ -206,6 +207,11 @@ Mark Ready, Mark Reviewed, and Void actions, and records ready/review/void
 timestamps. `reviewedById` remains null until auth exists. Voided dispatch
 packages no longer count as dispatch-ready in warning-only readiness, but
 release actions remain available and unchanged.
+
+Dispatch package review state QA is complete. Local QA confirmed incomplete
+Ready rejection, complete Ready, Reviewed, edit reset to `DRAFT`, Void,
+route/browser rendering, and unchanged warning-only release behavior. Results
+are recorded in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -648,16 +654,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 76: Dispatch Package Review State QA
+Prompt 77: Dispatch Review Freshness Panel Update
 ```
 
 Scope:
 
-- Validate incomplete package Ready rejection.
-- Validate complete package Ready, Reviewed, reset-to-DRAFT on edit, and Void.
-- Confirm dispatch page, FlightLeg detail, Release Evidence Action Panel,
-  `/api/health`, and main routes still load.
-- Keep the slice QA/docs only unless a defect is found.
+- Update the FlightLeg detail Release Evidence Action Panel dispatch card to
+  show package review status and freshness.
+- Show `DRAFT`, `READY`, `REVIEWED`, and `VOIDED` states clearly.
+- Keep release readiness and release actions warning-only and unchanged.
+- Do not add schema, provider integrations, file uploads, auth/signatures,
+  `ReleasePackage`, or hard blocking.
 
 Deferred follow-up to keep on the roadmap:
 

@@ -2,6 +2,70 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-07 - Prompt 76: Dispatch Package Review State QA
+
+Status: passed.
+
+Local database:
+
+- `npm run db:local:up` passed.
+- `npm run db:local:migrate` passed with no pending migrations after the
+  Prompt 75 additive migration was applied.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Workflow QA:
+
+- Used local FlightLeg `cmq3xifbh0029v85guciafavn`.
+- Saved incomplete manual dispatch evidence and confirmed package remained
+  `DRAFT`.
+- Attempted Mark Ready with incomplete evidence and confirmed the package
+  stayed `DRAFT`.
+- Saved complete manual dispatch evidence and confirmed it remained `DRAFT`
+  until manually marked ready.
+- Marked the package `READY` and confirmed `readyAt` was set.
+- Marked the ready package `REVIEWED` and confirmed `reviewedAt`, review notes,
+  and null `reviewedById`.
+- Edited the reviewed package and confirmed it reset to `DRAFT` and cleared
+  review state.
+- Marked the package ready again, then voided it and confirmed `VOIDED` plus
+  `voidedAt`.
+
+Route smoke:
+
+- `/` returned 200.
+- `/operations-control` returned 200.
+- `/operations-control/[flightLegId]` returned 200.
+- `/operations-control/[flightLegId]/dispatch` returned 200.
+- `/flights` returned 200.
+- `/aircraft` returned 200.
+- `/crew` returned 200.
+- `/scheduling` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Browser QA:
+
+- `http://localhost:3200/operations-control/[flightLegId]/dispatch` rendered
+  the dispatch workflow.
+- Confirmed visible `Dispatch review state` section.
+- Confirmed visible `Mark Ready`, `Mark Reviewed`, and `Void Package` actions.
+- Confirmed visible `VOIDED` status after workflow smoke.
+- Confirmed visible note that review is workflow state only.
+
+Notes:
+
+- Direct server-action QA outside a browser request produced expected
+  redirect/revalidation exceptions after mutation attempts. Database state was
+  used as the source of truth for pass/fail.
+- Release actions remain warning-only and unchanged.
+
 ## 2026-06-07 - Prompt 66: Weight-and-Balance Approval QA
 
 Status: passed.
