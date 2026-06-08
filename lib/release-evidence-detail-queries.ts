@@ -243,6 +243,9 @@ const releaseEvidenceDetailSelect = {
     select: {
       performanceData: true,
       status: true,
+      readyAt: true,
+      reviewedAt: true,
+      voidedAt: true,
       weatherBriefing: {
         select: {
           provider: true,

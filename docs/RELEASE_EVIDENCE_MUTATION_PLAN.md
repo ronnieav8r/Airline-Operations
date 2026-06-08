@@ -891,3 +891,19 @@ Prompt 77: Dispatch Review Freshness Panel Update
 Prompt 77 should update the FlightLeg detail Release Evidence Action Panel
 dispatch card to show dispatch package review status and freshness while
 keeping release readiness and release actions warning-only.
+
+Implementation status: complete.
+
+Prompt 77 updated the FlightLeg detail Release Evidence Action Panel dispatch
+card to show dispatch package review state and ready/reviewed/voided timestamp
+context. `VOIDED` packages surface as needing attention in the panel. Release
+readiness and release actions remain warning-only and unchanged.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 78: Dispatch Review Freshness QA
+```
+
+Prompt 78 should validate the panel display for dispatch review states and keep
+the slice QA/docs only unless a defect is found.

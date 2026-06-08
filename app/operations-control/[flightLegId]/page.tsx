@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   AirworthinessReleaseStatus,
+  DispatchPackageStatus,
   FlightLocatingStatus,
   ManifestStatus,
   ReleaseStatus,
@@ -71,6 +72,33 @@ function positionReportFreshnessLabel(reportedAt: Date, now: Date): string {
   }
 
   return `${Math.floor(diffHours / 24)} day(s) ago`;
+}
+
+function dispatchReviewMessage(
+  dispatch: ReleaseEvidenceDetail["dispatchPackage"],
+  linkedEvidenceReady: boolean,
+): string {
+  if (!dispatch) {
+    return "No dispatch package has been created.";
+  }
+
+  const evidenceMessage = linkedEvidenceReady
+    ? "Weather, NOTAM, and flight-plan evidence are linked."
+    : "Dispatch evidence is incomplete.";
+
+  if (dispatch.status === DispatchPackageStatus.REVIEWED) {
+    return `${evidenceMessage} Reviewed ${toDateTimeLabel(dispatch.reviewedAt)}.`;
+  }
+
+  if (dispatch.status === DispatchPackageStatus.READY) {
+    return `${evidenceMessage} Ready ${toDateTimeLabel(dispatch.readyAt)} and awaiting review.`;
+  }
+
+  if (dispatch.status === DispatchPackageStatus.VOIDED) {
+    return `Dispatch package is voided as of ${toDateTimeLabel(dispatch.voidedAt)}.`;
+  }
+
+  return `${evidenceMessage} Current package status is DRAFT.`;
 }
 
 function formatJson(value: unknown): string {
@@ -324,7 +352,17 @@ function ReleaseEvidenceActionPanel({
     (locating.status === FlightLocatingStatus.FILED ||
       locating.status === FlightLocatingStatus.ACTIVE ||
       locating.status === FlightLocatingStatus.CLOSED);
-  const dispatchReady = !!dispatch && !!weather && !!notam && !!flightPlan;
+  const dispatchLinkedEvidenceReady = !!dispatch && !!weather && !!notam && !!flightPlan;
+  const dispatchReady =
+    dispatchLinkedEvidenceReady && dispatch.status !== DispatchPackageStatus.VOIDED;
+  const dispatchStatus =
+    dispatch?.status === DispatchPackageStatus.REVIEWED
+      ? "Reviewed"
+      : dispatch?.status === DispatchPackageStatus.READY
+        ? "Ready"
+        : dispatch
+          ? "Needs attention"
+          : "Missing";
   const airworthinessReady =
     !!aircraft && !!configuration && !!currentAirworthinessRelease && !airworthinessExpired;
 
@@ -382,12 +420,8 @@ function ReleaseEvidenceActionPanel({
         <EvidenceActionCard
           href={`/operations-control/${detail.id}/dispatch`}
           label="Dispatch package"
-          message={
-            dispatchReady
-              ? "Weather, NOTAM, and flight-plan evidence are linked."
-              : "Dispatch evidence is incomplete."
-          }
-          status={dispatchReady ? "Ready" : dispatch ? "Needs attention" : "Missing"}
+          message={dispatchReviewMessage(dispatch, dispatchLinkedEvidenceReady)}
+          status={dispatchReady ? dispatchStatus : dispatch ? "Needs attention" : "Missing"}
           tone={dispatchReady ? "good" : dispatch ? "warn" : "missing"}
         />
         <EvidenceActionCard

@@ -88,3 +88,11 @@ dispatch readiness warnings, but release actions remain warning-only and
 unchanged.
 
 Prompt 76 should be a QA/docs slice for the new dispatch review-state workflow.
+
+## Prompt 77 Implementation Status
+
+Implementation status: complete.
+
+The FlightLeg detail Release Evidence Action Panel now surfaces dispatch
+review state and ready/reviewed/voided timestamp context. This is display-only;
+release readiness and release actions remain warning-only and unchanged.

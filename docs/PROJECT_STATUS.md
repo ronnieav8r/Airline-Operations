@@ -124,6 +124,7 @@ It has:
 80. Dispatch package review state planning.
 81. Dispatch package review state foundation.
 82. Dispatch package review state QA.
+83. Dispatch review freshness panel update.
 
 ## Current Data Model Boundaries
 
@@ -212,6 +213,12 @@ Dispatch package review state QA is complete. Local QA confirmed incomplete
 Ready rejection, complete Ready, Reviewed, edit reset to `DRAFT`, Void,
 route/browser rendering, and unchanged warning-only release behavior. Results
 are recorded in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
+
+Dispatch review freshness panel update is implemented. The FlightLeg detail
+Release Evidence Action Panel dispatch card now shows dispatch package review
+state and relevant ready/reviewed/voided timestamps. `VOIDED` packages surface
+as needing attention in the panel. Release readiness and release actions remain
+warning-only and unchanged.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -654,17 +661,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 77: Dispatch Review Freshness Panel Update
+Prompt 78: Dispatch Review Freshness QA
 ```
 
 Scope:
 
-- Update the FlightLeg detail Release Evidence Action Panel dispatch card to
-  show package review status and freshness.
-- Show `DRAFT`, `READY`, `REVIEWED`, and `VOIDED` states clearly.
-- Keep release readiness and release actions warning-only and unchanged.
-- Do not add schema, provider integrations, file uploads, auth/signatures,
-  `ReleasePackage`, or hard blocking.
+- Validate the FlightLeg detail dispatch card for `DRAFT`, `READY`,
+  `REVIEWED`, and `VOIDED` states.
+- Confirm dispatch workflow and main routes still render.
+- Confirm release readiness and release actions remain warning-only.
+- Keep the slice QA/docs only unless a defect is found.
 
 Deferred follow-up to keep on the roadmap:
 
