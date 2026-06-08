@@ -134,6 +134,7 @@ It has:
 90. Release audit timeline read-only foundation.
 91. Release audit timeline QA.
 92. Legacy record import planning refresh.
+93. Legacy import staging/dry-run planning.
 
 ## Current Data Model Boundaries
 
@@ -282,6 +283,12 @@ deferred. The first candidate import domain remains aircraft maintenance and
 airworthiness history, targeting `Aircraft`, `MaintenanceEvent`,
 `Discrepancy`, `Deferral`, and `AirworthinessRelease` only after staging,
 dry-run, idempotency, and review policy are approved.
+
+Legacy import staging/dry-run planning is complete. The future import
+foundation should use database-backed staging tables, with file uploads,
+parser implementation, operational writes, auth/signatures, and schema changes
+still deferred until a separate implementation plan is approved. Detailed
+planning lives in `docs/LEGACY_IMPORT_STAGING_DRY_RUN_PLAN.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -724,17 +731,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 87: Legacy Import Staging/Dry-Run Planning
+Prompt 88: Next Slice Planning
 ```
 
 Scope:
 
-- Decide staging/dry-run concepts for future legacy imports.
-- Define batch/source/staging-row fields, validation result shape,
-  idempotency strategy, dry-run summaries, and review boundary.
-- Keep it planning/docs only.
-- Do not add importer execution code, file uploads, schema changes, provider
-  integrations, or mutation workflows.
+- Choose the next safe AeroOps slice after the 82-87 batch.
+- Candidate paths: importer staging schema planning, audit timeline polish,
+  aircraft maintenance import source-format review, or another read-only
+  workflow panel.
+- Keep planning separate from implementation if schema/import execution is
+  involved.
 
 Deferred follow-up to keep on the roadmap:
 

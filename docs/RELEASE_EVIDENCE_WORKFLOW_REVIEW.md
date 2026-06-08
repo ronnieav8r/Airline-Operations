@@ -529,3 +529,14 @@ Prompt 87: Legacy Import Staging/Dry-Run Planning
 
 Prompt 87 should define staging/dry-run concepts and keep all importer
 execution deferred.
+
+## Prompt 87 Status
+
+Implementation status: complete.
+
+Legacy import staging/dry-run planning selected future database-backed staging
+with file uploads, parser implementation, operational writes, auth/signatures,
+and schema changes deferred. The first candidate domain remains aircraft
+maintenance and airworthiness history.
+
+Stop after Prompt 87 unless a new plan is approved.

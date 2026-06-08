@@ -101,6 +101,15 @@ Planning-only. Decide whether staging should use database tables, local files,
 or both; define batch/source/staging-row concepts; define validation result and
 dry-run summary shape; keep importer execution deferred.
 
+Implementation status: complete.
+
+Prompt 87 selects database-backed staging for the future import foundation,
+with file uploads deferred. Detailed staging/dry-run planning lives in:
+
+```text
+docs/LEGACY_IMPORT_STAGING_DRY_RUN_PLAN.md
+```
+
 ```text
 Prompt X: Legacy import staging foundation
 ```
