@@ -388,3 +388,21 @@ Prompt 79: Release Attempt Snapshot Planning
 Prompt 79 should decide whether release-control actions should capture
 readiness snapshots on attempts before any release-action implementation
 changes.
+
+## Prompt 79 Status
+
+Implementation status: complete.
+
+Prompt 79 selected best-effort pre-action readiness snapshots for release
+attempts. Mark Released, Cancel Release, and Void Release should try to capture
+a readiness snapshot before mutating release status and then create a linked
+release audit event. Snapshot capture must not block release actions.
+
+Next recommended slice:
+
+```text
+Prompt 80: Release Attempt Snapshot Foundation
+```
+
+Prompt 80 should implement the shared snapshot helper and release-action audit
+events while preserving warning-only release behavior.

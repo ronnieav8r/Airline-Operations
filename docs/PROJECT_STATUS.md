@@ -126,6 +126,7 @@ It has:
 82. Dispatch package review state QA.
 83. Dispatch review freshness panel update.
 84. Dispatch review freshness QA.
+85. Release attempt snapshot planning.
 
 ## Current Data Model Boundaries
 
@@ -225,6 +226,13 @@ Dispatch review freshness QA is complete. Local QA confirmed the FlightLeg
 detail dispatch card shows review state and timestamp context, surfaces
 `VOIDED` packages as needing attention, and keeps release actions warning-only.
 Results are recorded in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
+
+Release attempt snapshot planning is complete. The chosen policy is
+best-effort pre-action readiness snapshots for Mark Released, Cancel Release,
+and Void Release, using existing snapshot/finding/audit tables. Snapshot
+capture must not block release actions; missing policy data should be recorded
+as an audit skip reason. Detailed policy is in
+`docs/RELEASE_ATTEMPT_SNAPSHOT_POLICY.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -667,17 +675,18 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 79: Release Attempt Snapshot Planning
+Prompt 80: Release Attempt Snapshot Foundation
 ```
 
 Scope:
 
-- Decide whether release-control actions should capture preview snapshots on
-  release attempts.
-- Define what counts as an attempt and what snapshot/audit data is stored.
-- Keep the slice planning/docs only.
+- Refactor explicit preview snapshot creation into a shared helper.
+- Capture best-effort pre-action readiness snapshots on Mark Released, Cancel
+  Release, and Void Release.
+- Create linked release audit events.
+- Keep release actions warning-only and do not block on snapshot failures.
 - Do not add hard blocking, auth/signatures, provider integrations, file
-  uploads, `ReleasePackage`, or release-action behavior changes yet.
+  uploads, `ReleasePackage`, or schema changes.
 
 Deferred follow-up to keep on the roadmap:
 

@@ -105,7 +105,6 @@ snapshot action should show a readable error and create no records.
 
 ## Deferred
 
-- Automatic release-attempt snapshots.
 - Hard release blocking.
 - Snapshot drift enforcement.
 - Override workflow.
@@ -113,3 +112,17 @@ snapshot action should show a readable error and create no records.
 - Provider-backed verification.
 - File uploads.
 - `ReleasePackage`.
+
+## Release Attempt Snapshot Planning
+
+Prompt 79 plans release-attempt snapshots as best-effort pre-action captures.
+Mark Released, Cancel Release, and Void Release should attempt to capture the
+same readiness snapshot data before mutating release status, then create a
+linked `ReleaseAuditEvent`. Missing policy data must not block the release
+action; the audit event should record the skip reason instead.
+
+Detailed policy lives in:
+
+```text
+docs/RELEASE_ATTEMPT_SNAPSHOT_POLICY.md
+```

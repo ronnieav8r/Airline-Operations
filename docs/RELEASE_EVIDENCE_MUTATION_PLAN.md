@@ -923,3 +923,20 @@ Prompt 79: Release Attempt Snapshot Planning
 
 Prompt 79 should decide if and how release-control attempts should capture
 readiness snapshots before any implementation changes are made.
+
+Implementation status: complete.
+
+Prompt 79 selected best-effort pre-action release-attempt snapshots using the
+existing snapshot, finding, and audit-event tables. Snapshot capture must not
+block release actions. Missing policy data should be recorded as an audit skip
+reason.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 80: Release Attempt Snapshot Foundation
+```
+
+Prompt 80 should implement shared snapshot creation for explicit previews and
+release-control attempts, plus linked release audit events, without changing
+warning-only release behavior.
