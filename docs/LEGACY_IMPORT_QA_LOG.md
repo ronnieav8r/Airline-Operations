@@ -55,3 +55,30 @@ Results:
 
 Conclusion: the read-only import staging diagnostic is ready. No mutation,
 parser, upload, staging-row write, or operational import behavior exists.
+
+## Prompt 99: Import Batch Metadata QA
+
+Scope: validate the metadata-only `/internal/import-batches` workflow added in
+Prompt 98.
+
+Results:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+- Local route smoke returned 200 for `/internal/import-batches`,
+  `/internal/import-staging-readiness`, `/`, `/operations-control`,
+  `/aircraft`, `/api/health`, `/flights`, `/crew`, and `/scheduling`.
+- Browser QA created a metadata-only import batch.
+- Browser QA edited the batch source-system metadata.
+- Browser QA added source metadata.
+- Browser QA confirmed `/internal/import-staging-readiness` reflected the new
+  batch and source.
+- `/api/health` confirmed local metadata-only counts:
+  `importBatches = 2`, `importSources = 2`, `importStagingRows = 0`,
+  `importValidationFindings = 0`, and `importMappingDecisions = 0`.
+
+Conclusion: the metadata workflow is working and remains bounded to
+`ImportBatch` and `ImportSource`. No parser, upload, dry-run, staging-row,
+finding, mapping-decision, review/apply, or operational import behavior exists.

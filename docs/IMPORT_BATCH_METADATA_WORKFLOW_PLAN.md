@@ -113,6 +113,11 @@ It does not create staging rows, validation findings, mapping decisions, parser
 execution, file uploads, dry-run execution, review/apply workflow, or
 operational writes.
 
+Prompt 99 QA status: complete. Local QA confirmed batch creation, batch edit,
+source metadata creation, diagnostic count updates, and zero staging rows,
+validation findings, and mapping decisions. Results are recorded in
+`docs/LEGACY_IMPORT_QA_LOG.md`.
+
 ## Prompt 99 Target
 
 Prompt 99 should validate:

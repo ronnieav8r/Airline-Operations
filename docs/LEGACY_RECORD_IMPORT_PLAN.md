@@ -178,6 +178,10 @@ docs/IMPORT_BATCH_METADATA_WORKFLOW_PLAN.md
 Prompt 98 status: complete. `/internal/import-batches` now supports
 metadata-only batch create/edit and source metadata creation.
 
+Prompt 99 status: complete. Local QA confirmed metadata-only batch/source
+workflow behavior and verified staging rows, findings, and mapping decisions
+remain zero after metadata writes.
+
 ```text
 Prompt 90: Legacy import staging schema foundation
 ```

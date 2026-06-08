@@ -134,6 +134,10 @@ from this diagnostic page.
 Prompt 98 implementation status: complete. The diagnostic now links to the
 metadata-only `/internal/import-batches` workflow.
 
+Prompt 99 QA status: complete. Local QA confirmed diagnostic counts update
+after metadata-only batch/source writes and still show zero staging rows,
+validation findings, and mapping decisions.
+
 ## Deferred
 
 - Import batch creation UI.

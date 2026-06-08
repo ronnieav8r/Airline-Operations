@@ -146,6 +146,7 @@ It has:
 102. Import staging diagnostic QA.
 103. Import batch metadata planning.
 104. Import batch metadata foundation.
+105. Import batch metadata QA.
 
 ## Current Data Model Boundaries
 
@@ -378,6 +379,11 @@ add `ImportSource` metadata. `/internal/import-staging-readiness` links to it.
 The workflow does not add file uploads, parser execution, staging-row writes,
 dry-run execution, review/apply workflow, operational writes, auth/signatures,
 destructive cleanup, provider integrations, or source-specific mapping code.
+
+Import batch metadata QA is complete. Local QA confirmed metadata-only batch
+creation, batch edit, source metadata creation, diagnostic updates, route
+health, and zero staging rows/findings/mapping decisions after the workflow.
+Results are recorded in `docs/LEGACY_IMPORT_QA_LOG.md`.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -820,14 +826,14 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 99: Import Batch Metadata QA
+Prompt 100: Next Import Workflow Planning
 ```
 
 Scope:
 
-- Validate metadata-only batch create/edit and source metadata creation.
-- Confirm diagnostic counts update.
-- Keep it QA/docs-only unless a defect is found.
+- Decide whether to continue with staging-row creation planning, import dry-run
+  execution planning, or pause import work and return to operational workflows.
+- Keep it planning/docs-only.
 - Do not add parser code, importer execution, file uploads, staging-row writes,
   dry-run execution, review/apply workflow, or operational writes.
 - Do not add importer execution, file uploads, operational writes,

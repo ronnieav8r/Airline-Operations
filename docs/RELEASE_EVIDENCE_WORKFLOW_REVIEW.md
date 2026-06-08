@@ -743,3 +743,13 @@ Next recommended slice:
 ```text
 Prompt 99: Import Batch Metadata QA
 ```
+
+## Prompt 99 Status
+
+Implementation status: complete.
+
+Local QA confirmed metadata-only batch creation, batch edit, source metadata
+creation, diagnostic reflection, route health, and zero staging rows/findings/
+mapping decisions after metadata writes.
+
+Stop after Prompt 99 unless a new plan is approved.
