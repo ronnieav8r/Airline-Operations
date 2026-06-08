@@ -165,6 +165,13 @@ Enum FlightLocatingStatus {
   OVERDUE
 }
 
+Enum DispatchPackageStatus {
+  DRAFT
+  READY
+  REVIEWED
+  VOIDED
+}
+
 Table "Operator" {
   "id" text [pk]
   "name" text [not null]
@@ -509,6 +516,12 @@ Table "DispatchPackage" {
   "weatherBriefingId" text
   "notamSnapshotId" text
   "flightPlanReferenceId" text
+  "status" DispatchPackageStatus [not null, default: 'DRAFT']
+  "readyAt" timestamp
+  "reviewedAt" timestamp
+  "reviewedById" text
+  "voidedAt" timestamp
+  "reviewNotes" text
   "performanceData" jsonb
   "createdById" text
   "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
@@ -518,6 +531,8 @@ Table "DispatchPackage" {
     "weatherBriefingId"
     "notamSnapshotId"
     "flightPlanReferenceId"
+    "status"
+    "reviewedById"
     "createdById"
   }
 }
@@ -877,3 +892,4 @@ Ref: "DispatchPackage"."weatherBriefingId" > "WeatherBriefingSnapshot"."id"
 Ref: "DispatchPackage"."notamSnapshotId" > "NotamSnapshot"."id"
 Ref: "DispatchPackage"."flightPlanReferenceId" > "FlightPlanReference"."id"
 Ref: "DispatchPackage"."createdById" > "User"."id"
+Ref: "DispatchPackage"."reviewedById" > "User"."id"

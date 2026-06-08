@@ -213,6 +213,13 @@ enum FlightLocatingStatus {
   OVERDUE
 }
 
+enum DispatchPackageStatus {
+  DRAFT
+  READY
+  REVIEWED
+  VOIDED
+}
+
 enum ReleaseAuthorityClass {
   PART_91_BASELINE
   PART_91K_FRACTIONAL
@@ -405,6 +412,7 @@ model User {
   calculatedWeightBalanceRuns WeightBalanceRun[]         @relation("WeightBalanceCalculatedBy")
   approvedWeightBalanceRuns   WeightBalanceRun[]         @relation("WeightBalanceApprovedBy")
   dispatchPackagesCreated     DispatchPackage[]          @relation("DispatchPackageCreatedBy")
+  dispatchPackagesReviewed    DispatchPackage[]          @relation("DispatchPackageReviewedBy")
   reportedDiscrepancies       Discrepancy[]              @relation("DiscrepancyReportedBy")
   authorizedDeferrals         Deferral[]                 @relation("DeferralAuthorizedBy")
   approvedMaintenanceEvents   MaintenanceEvent[]         @relation("MaintenanceEventApprovedBy")
@@ -1153,6 +1161,12 @@ model DispatchPackage {
   notamSnapshotId       String?
   flightPlanReferenceId String?
   performanceData       Json?
+  status                DispatchPackageStatus    @default(DRAFT)
+  readyAt               DateTime?
+  reviewedAt            DateTime?
+  reviewedById          String?
+  voidedAt              DateTime?
+  reviewNotes           String?
   createdById           String?
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
@@ -1161,11 +1175,14 @@ model DispatchPackage {
   notamSnapshot         NotamSnapshot?           @relation(fields: [notamSnapshotId], references: [id], onDelete: SetNull)
   flightPlanReference   FlightPlanReference?     @relation(fields: [flightPlanReferenceId], references: [id], onDelete: SetNull)
   createdBy             User?                    @relation("DispatchPackageCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  reviewedBy            User?                    @relation("DispatchPackageReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
 
+  @@index([status])
   @@index([weatherBriefingId])
   @@index([notamSnapshotId])
   @@index([flightPlanReferenceId])
   @@index([createdById])
+  @@index([reviewedById])
 }
 
 model CrewSchedule {

@@ -75,3 +75,16 @@ criteria.
 Prompt 75 should add the additive schema fields and first manual status
 actions. It should not add dispatch release authority, hard blockers, provider
 integrations, file uploads, or auth.
+
+## Prompt 75 Implementation Status
+
+Implementation status: complete.
+
+`DispatchPackage` now has additive review-state fields and the dispatch page
+supports Mark Ready, Mark Reviewed, and Void actions. READY uses the same
+required manual evidence as warning-only dispatch readiness. REVIEWED is a
+workflow state only, not a legal signature. Voided packages are ignored by
+dispatch readiness warnings, but release actions remain warning-only and
+unchanged.
+
+Prompt 76 should be a QA/docs slice for the new dispatch review-state workflow.

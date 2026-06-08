@@ -459,6 +459,12 @@ Table "DispatchPackage" {
   "weatherBriefingId" text
   "notamSnapshotId" text
   "flightPlanReferenceId" text
+  "status" text
+  "readyAt" timestamp
+  "reviewedAt" timestamp
+  "reviewedById" text
+  "voidedAt" timestamp
+  "reviewNotes" text
   "performanceData" jsonb
   "createdById" text
   "createdAt" timestamp
@@ -547,3 +553,4 @@ Ref: "DispatchPackage"."weatherBriefingId" > "WeatherBriefingSnapshot"."id"
 Ref: "DispatchPackage"."notamSnapshotId" > "NotamSnapshot"."id"
 Ref: "DispatchPackage"."flightPlanReferenceId" > "FlightPlanReference"."id"
 Ref: "DispatchPackage"."createdById" > "User"."id"
+Ref: "DispatchPackage"."reviewedById" > "User"."id"

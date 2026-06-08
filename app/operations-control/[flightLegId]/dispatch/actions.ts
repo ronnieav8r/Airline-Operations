@@ -1,6 +1,6 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import { DispatchPackageStatus, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -21,6 +21,13 @@ type ManualDispatchInput = {
   flightPlanStatus: string | null;
   routeText: string | null;
   performanceNotes: string | null;
+};
+
+type DispatchCompleteness = {
+  affectedStationCodes: string | null;
+  externalReference: string | null;
+  routeSummary: string | null;
+  routeText: string | null;
 };
 
 function getOptionalText(formData: FormData, key: string): string | null {
@@ -114,6 +121,69 @@ function performanceData(input: ManualDispatchInput): Prisma.InputJsonObject {
   };
 }
 
+function dispatchCompletenessErrors(dispatch: DispatchCompleteness): string[] {
+  const errors: string[] = [];
+
+  if (!dispatch.routeSummary) {
+    errors.push("Weather route summary is required before ready.");
+  }
+
+  if (!dispatch.affectedStationCodes) {
+    errors.push("NOTAM affected station codes are required before ready.");
+  }
+
+  if (!dispatch.externalReference) {
+    errors.push("Flight-plan external reference is required before ready.");
+  }
+
+  if (!dispatch.routeText) {
+    errors.push("Flight-plan route text is required before ready.");
+  }
+
+  return errors;
+}
+
+function inputCompleteness(input: ManualDispatchInput): DispatchCompleteness {
+  return {
+    affectedStationCodes: input.affectedStationCodes,
+    externalReference: input.externalReference,
+    routeSummary: input.routeSummary,
+    routeText: input.routeText,
+  };
+}
+
+async function getDispatchPackageForAction(flightLegId: string) {
+  const dispatch = await prisma.dispatchPackage.findUnique({
+    where: { flightLegId },
+    select: {
+      id: true,
+      status: true,
+      weatherBriefing: {
+        select: {
+          routeSummary: true,
+        },
+      },
+      notamSnapshot: {
+        select: {
+          affectedStationCodes: true,
+        },
+      },
+      flightPlanReference: {
+        select: {
+          externalReference: true,
+          routeText: true,
+        },
+      },
+    },
+  });
+
+  if (!dispatch) {
+    throw new DispatchPackageWorkflowError("Dispatch package was not found.");
+  }
+
+  return dispatch;
+}
+
 function revalidateDispatchPaths(flightLegId: string) {
   revalidatePath("/operations-control");
   revalidatePath(`/operations-control/${flightLegId}`);
@@ -129,6 +199,18 @@ export async function saveManualDispatchPackageAction(flightLegId: string, formD
 
     await prisma.$transaction(async (tx) => {
       await ensureFlightLegExists(tx, flightLegId);
+      const existingDispatch = await tx.dispatchPackage.findUnique({
+        where: { flightLegId },
+        select: {
+          readyAt: true,
+          status: true,
+        },
+      });
+      const savedEvidenceComplete = dispatchCompletenessErrors(inputCompleteness(input)).length === 0;
+      const nextStatus =
+        existingDispatch?.status === DispatchPackageStatus.READY && savedEvidenceComplete
+          ? DispatchPackageStatus.READY
+          : DispatchPackageStatus.DRAFT;
 
       const [weatherBriefing, notamSnapshot, flightPlanReference] = await Promise.all([
         tx.weatherBriefingSnapshot.upsert({
@@ -195,6 +277,12 @@ export async function saveManualDispatchPackageAction(flightLegId: string, formD
           notamSnapshotId: notamSnapshot.id,
           flightPlanReferenceId: flightPlanReference.id,
           performanceData: performanceData(input),
+          status: nextStatus,
+          readyAt:
+            nextStatus === DispatchPackageStatus.READY ? existingDispatch?.readyAt ?? new Date() : null,
+          reviewedAt: null,
+          reviewedById: null,
+          voidedAt: null,
         },
         create: {
           flightLegId,
@@ -202,8 +290,86 @@ export async function saveManualDispatchPackageAction(flightLegId: string, formD
           notamSnapshotId: notamSnapshot.id,
           flightPlanReferenceId: flightPlanReference.id,
           performanceData: performanceData(input),
+          status: DispatchPackageStatus.DRAFT,
         },
       });
+    });
+  } catch (error) {
+    redirect(`/operations-control/${flightLegId}/dispatch?error=${encodeError(error)}`);
+  }
+
+  revalidateDispatchPaths(flightLegId);
+  redirect(`/operations-control/${flightLegId}/dispatch`);
+}
+
+export async function markDispatchPackageReadyAction(flightLegId: string) {
+  try {
+    const dispatch = await getDispatchPackageForAction(flightLegId);
+    const errors = dispatchCompletenessErrors({
+      affectedStationCodes: dispatch.notamSnapshot?.affectedStationCodes ?? null,
+      externalReference: dispatch.flightPlanReference?.externalReference ?? null,
+      routeSummary: dispatch.weatherBriefing?.routeSummary ?? null,
+      routeText: dispatch.flightPlanReference?.routeText ?? null,
+    });
+
+    if (errors.length > 0) {
+      throw new DispatchPackageWorkflowError(errors.join(" "));
+    }
+
+    await prisma.dispatchPackage.update({
+      where: { id: dispatch.id },
+      data: {
+        status: DispatchPackageStatus.READY,
+        readyAt: new Date(),
+        reviewedAt: null,
+        reviewedById: null,
+        voidedAt: null,
+      },
+    });
+  } catch (error) {
+    redirect(`/operations-control/${flightLegId}/dispatch?error=${encodeError(error)}`);
+  }
+
+  revalidateDispatchPaths(flightLegId);
+  redirect(`/operations-control/${flightLegId}/dispatch`);
+}
+
+export async function markDispatchPackageReviewedAction(flightLegId: string, formData: FormData) {
+  try {
+    const dispatch = await getDispatchPackageForAction(flightLegId);
+
+    if (dispatch.status !== DispatchPackageStatus.READY) {
+      throw new DispatchPackageWorkflowError("Only READY dispatch packages can be reviewed.");
+    }
+
+    await prisma.dispatchPackage.update({
+      where: { id: dispatch.id },
+      data: {
+        status: DispatchPackageStatus.REVIEWED,
+        reviewedAt: new Date(),
+        reviewedById: null,
+        reviewNotes: getOptionalText(formData, "reviewNotes"),
+        voidedAt: null,
+      },
+    });
+  } catch (error) {
+    redirect(`/operations-control/${flightLegId}/dispatch?error=${encodeError(error)}`);
+  }
+
+  revalidateDispatchPaths(flightLegId);
+  redirect(`/operations-control/${flightLegId}/dispatch`);
+}
+
+export async function voidDispatchPackageAction(flightLegId: string) {
+  try {
+    const dispatch = await getDispatchPackageForAction(flightLegId);
+
+    await prisma.dispatchPackage.update({
+      where: { id: dispatch.id },
+      data: {
+        status: DispatchPackageStatus.VOIDED,
+        voidedAt: new Date(),
+      },
     });
   } catch (error) {
     redirect(`/operations-control/${flightLegId}/dispatch?error=${encodeError(error)}`);

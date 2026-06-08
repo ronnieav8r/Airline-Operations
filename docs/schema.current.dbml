@@ -220,6 +220,13 @@ Enum FlightLocatingStatus {
   OVERDUE
 }
 
+Enum DispatchPackageStatus {
+  DRAFT
+  READY
+  REVIEWED
+  VOIDED
+}
+
 Enum ReleaseAuthorityClass {
   PART_91_BASELINE
   PART_91K_FRACTIONAL
@@ -972,6 +979,12 @@ Table DispatchPackage {
   weatherBriefingId varchar
   notamSnapshotId varchar
   flightPlanReferenceId varchar
+  status DispatchPackageStatus [not null, default: "DRAFT"]
+  readyAt timestamp
+  reviewedAt timestamp
+  reviewedById varchar
+  voidedAt timestamp
+  reviewNotes text
   performanceData jsonb
   createdById varchar
   createdAt timestamp [not null]
@@ -981,6 +994,8 @@ Table DispatchPackage {
     weatherBriefingId
     notamSnapshotId
     flightPlanReferenceId
+    status
+    reviewedById
     createdById
   }
 }
@@ -1231,6 +1246,7 @@ Ref: DispatchPackage.weatherBriefingId > WeatherBriefingSnapshot.id
 Ref: DispatchPackage.notamSnapshotId > NotamSnapshot.id
 Ref: DispatchPackage.flightPlanReferenceId > FlightPlanReference.id
 Ref: DispatchPackage.createdById > User.id
+Ref: DispatchPackage.reviewedById > User.id
 Ref: CrewSchedule.crewMemberId > CrewMember.id
 Ref: CrewSchedule.stationId > Station.id
 Ref: CrewFlightLog.crewMemberId > CrewMember.id

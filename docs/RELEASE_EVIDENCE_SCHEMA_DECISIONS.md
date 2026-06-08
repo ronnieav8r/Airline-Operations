@@ -116,6 +116,13 @@ fields directly to `DispatchPackage`. Review remains a workflow state, not a
 legal signature or FlightLeg release. Review history/audit tables remain
 deferred until auth and audit policy exist.
 
+Updated transition note: dispatch package review-state foundation is
+implemented. `DispatchPackage` now has additive `DRAFT`, `READY`, `REVIEWED`,
+and `VOIDED` status plus ready/review/void timestamps, nullable reviewer link,
+and review notes. Review remains informational workflow state. Auth/roles,
+legal signatures, review audit history, provider integrations, file uploads,
+`ReleasePackage`, and hard release blocking remain deferred.
+
 Updated transition note: release readiness guardrails planning is complete. The
 first guardrail implementation should be a warning-only checklist on the
 FlightLeg detail page. It should not block release actions, mutate evidence,

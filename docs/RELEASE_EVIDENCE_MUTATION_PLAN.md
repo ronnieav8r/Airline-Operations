@@ -856,3 +856,22 @@ Prompt 75 should add additive dispatch package status/review fields and manual
 Mark Ready, Mark Reviewed, and Void actions. Keep release behavior
 warning-only. Do not add provider integrations, file uploads, auth/signatures,
 hard blocking, `ReleasePackage`, or release-action changes.
+
+Implementation status: complete.
+
+Prompt 75 added additive `DispatchPackageStatus` and lightweight dispatch
+review fields to `DispatchPackage`, plus manual Mark Ready, Mark Reviewed, and
+Void actions under the dispatch workflow. READY requires the same complete
+manual evidence used by warning-only dispatch readiness. REVIEWED requires
+READY and records `reviewedAt`; reviewer identity remains null until auth
+exists. VOIDED packages no longer count as dispatch-ready in readiness
+messages, but release actions remain warning-only and unchanged.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 76: Dispatch Package Review State QA
+```
+
+Prompt 76 should validate the new dispatch status workflow and document the
+results. Keep it QA/docs only unless a defect is found.

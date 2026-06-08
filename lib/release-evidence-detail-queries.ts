@@ -242,6 +242,7 @@ const releaseEvidenceDetailSelect = {
   dispatchPackage: {
     select: {
       performanceData: true,
+      status: true,
       weatherBriefing: {
         select: {
           provider: true,

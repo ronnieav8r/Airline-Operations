@@ -314,3 +314,23 @@ Prompt 75: Dispatch Package Review State Foundation
 
 Prompt 75 should implement the additive schema fields and manual status actions
 under the existing dispatch workflow.
+
+## Prompt 75 Status
+
+Implementation status: complete.
+
+Dispatch package review state is implemented. The dispatch workflow now shows
+package status and supports Mark Ready, Mark Reviewed, and Void actions. READY
+requires complete manual dispatch evidence. REVIEWED requires READY and records
+review time while keeping reviewer identity null until auth exists. VOIDED
+packages are treated as not dispatch-ready in warning-only readiness, but
+release actions remain unchanged.
+
+Next recommended slice:
+
+```text
+Prompt 76: Dispatch Package Review State QA
+```
+
+Prompt 76 should validate the dispatch review-state workflow and keep the
+slice QA/docs only unless a defect is found.

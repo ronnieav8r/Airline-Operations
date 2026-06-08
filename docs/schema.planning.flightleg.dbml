@@ -120,6 +120,13 @@ Enum FlightLocatingStatus {
   OVERDUE
 }
 
+Enum DispatchPackageStatus {
+  DRAFT
+  READY
+  REVIEWED
+  VOIDED
+}
+
 Enum AircraftStatus {
   AVAILABLE
   RESERVED
@@ -689,6 +696,12 @@ Table DispatchPackage {
   weatherBriefingId varchar
   notamSnapshotId varchar
   flightPlanReferenceId varchar
+  status DispatchPackageStatus [not null, default: "DRAFT"]
+  readyAt timestamp
+  reviewedAt timestamp
+  reviewedById varchar
+  voidedAt timestamp
+  reviewNotes text
   performanceData jsonb
   createdById varchar
   createdAt timestamp [not null]
@@ -1030,6 +1043,7 @@ Ref: DispatchPackage.weatherBriefingId > WeatherBriefingSnapshot.id
 Ref: DispatchPackage.notamSnapshotId > NotamSnapshot.id
 Ref: DispatchPackage.flightPlanReferenceId > FlightPlanReference.id
 Ref: DispatchPackage.createdById > User.id
+Ref: DispatchPackage.reviewedById > User.id
 Ref: FlightPlanReference.flightLegId > FlightLeg.id
 Ref: Manifest.flightLegId > FlightLeg.id
 Ref: Manifest.lockedById > User.id

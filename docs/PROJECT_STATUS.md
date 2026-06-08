@@ -122,6 +122,7 @@ It has:
 78. Locating freshness evidence panel update.
 79. Locating freshness QA.
 80. Dispatch package review state planning.
+81. Dispatch package review state foundation.
 
 ## Current Data Model Boundaries
 
@@ -198,6 +199,13 @@ to add lightweight status fields directly to `DispatchPackage`: `DRAFT`,
 signature or FlightLeg release. Auth/roles, review audit history, file uploads,
 provider integrations, `ReleasePackage`, hard blocking, and release-action
 changes remain deferred.
+
+Dispatch package review state foundation is implemented. The manual dispatch
+workflow now tracks `DRAFT`, `READY`, `REVIEWED`, and `VOIDED` status, supports
+Mark Ready, Mark Reviewed, and Void actions, and records ready/review/void
+timestamps. `reviewedById` remains null until auth exists. Voided dispatch
+packages no longer count as dispatch-ready in warning-only readiness, but
+release actions remain available and unchanged.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -640,19 +648,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 75: Dispatch Package Review State Foundation
+Prompt 76: Dispatch Package Review State QA
 ```
 
 Scope:
 
-- Add additive dispatch package status/review fields and enum.
-- Add Mark Ready, Mark Reviewed, and Void actions under
-  `/operations-control/[flightLegId]/dispatch`.
-- Require complete manual dispatch evidence before READY.
-- Require READY before REVIEWED.
-- Keep release behavior warning-only and do not add provider integrations, file
-  uploads, auth/signatures, hard blocking, `ReleasePackage`, or release-action
-  changes.
+- Validate incomplete package Ready rejection.
+- Validate complete package Ready, Reviewed, reset-to-DRAFT on edit, and Void.
+- Confirm dispatch page, FlightLeg detail, Release Evidence Action Panel,
+  `/api/health`, and main routes still load.
+- Keep the slice QA/docs only unless a defect is found.
 
 Deferred follow-up to keep on the roadmap:
 

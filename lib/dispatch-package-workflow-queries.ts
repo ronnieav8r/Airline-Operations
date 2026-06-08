@@ -20,7 +20,12 @@ const dispatchPackageWorkflowSelect = {
     select: {
       id: true,
       performanceData: true,
+      readyAt: true,
+      reviewedAt: true,
+      reviewNotes: true,
+      status: true,
       updatedAt: true,
+      voidedAt: true,
       weatherBriefing: {
         select: {
           id: true,

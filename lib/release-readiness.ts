@@ -1,5 +1,6 @@
 import {
   AirworthinessReleaseStatus,
+  DispatchPackageStatus,
   FlightLocatingStatus,
   ManifestStatus,
   Prisma,
@@ -117,7 +118,8 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
     (locating.status === FlightLocatingStatus.FILED ||
       locating.status === FlightLocatingStatus.ACTIVE ||
       locating.status === FlightLocatingStatus.CLOSED);
-  const dispatchReady = !!dispatch && !!weather && !!notam && !!flightPlan;
+  const dispatchNotVoided = dispatch?.status !== DispatchPackageStatus.VOIDED;
+  const dispatchReady = !!dispatch && dispatchNotVoided && !!weather && !!notam && !!flightPlan;
   const weatherReady = !!weather?.routeSummary;
   const notamReady = !!notam?.affectedStationCodes;
   const flightPlanReady = !!flightPlan?.externalReference && !!flightPlan.routeText;
@@ -246,13 +248,16 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
         hasWeather: !!weather,
         hasNotam: !!notam,
         hasFlightPlan: !!flightPlan,
+        status: dispatch?.status ?? null,
       },
       evidenceRefType: dispatch ? "DispatchPackage" : undefined,
       href: `/operations-control/${detail.id}/dispatch`,
       label: "Dispatch package",
       message: dispatchReady
         ? "Dispatch package links weather, NOTAM, and flight-plan evidence."
-        : "Needs a dispatch package linked to weather, NOTAM, and flight-plan evidence.",
+        : dispatch?.status === DispatchPackageStatus.VOIDED
+          ? "Dispatch package is voided."
+          : "Needs a dispatch package linked to weather, NOTAM, and flight-plan evidence.",
       readinessCategory: "dispatch",
       ready: dispatchReady,
       ruleKey: "dispatchPackage.current.missing",
