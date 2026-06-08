@@ -310,6 +310,12 @@ export default async function AircraftPage() {
                         </Link>
                         <Link
                           className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                          href={`/aircraft/${item.id}/crew`}
+                        >
+                          Crew
+                        </Link>
+                        <Link
+                          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                           href={`/aircraft/${item.id}/airworthiness`}
                         >
                           Airworthiness
@@ -421,6 +427,12 @@ export default async function AircraftPage() {
                           href={`/aircraft/${item.id}/airworthiness`}
                         >
                           Manage airworthiness
+                        </Link>
+                        <Link
+                          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                          href={`/aircraft/${item.id}/crew`}
+                        >
+                          Manage crew
                         </Link>
                       </div>
                     </div>

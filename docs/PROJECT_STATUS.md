@@ -826,21 +826,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 114: Aircraft Crew Assignment Foundation
+Prompt 115: Aircraft Crew Assignment QA
 ```
 
 Scope:
 
-- Add `/aircraft/[aircraftId]/crew` as the first aircraft-block crew assignment
-  write surface.
-- Keep `AircraftCrewAssignment` as the active coverage source of truth.
-- Keep `CrewLegAssignment` as a FlightLeg snapshot/evidence table, resynced
-  after aircraft-block crew changes.
-- Warn, but do not block, for missing/expired qualifications and CPT/FO gaps.
-- Keep the broader Crew Scheduling module, duty/rest, time off/vacation,
-  imports, leg-specific crew overrides, auth/signatures, hard release blocking,
-  schema changes, provider integrations, file uploads, AI behavior, and new
-  release policy deferred.
+- Validate the Prompt 114 aircraft crew assignment foundation.
+- Confirm `/aircraft/[aircraftId]/crew` renders current and future crew blocks.
+- Confirm create, limited edit, and relieve/end update aircraft-block coverage.
+- Confirm affected future `CrewLegAssignment` snapshots resync.
+- Confirm warnings display but do not block saves.
+- Keep Prompt 115 QA/docs-only unless a defect is found.
 
 Recommended app-development follow-up chain:
 
@@ -935,6 +931,13 @@ create/edit/end `AircraftCrewAssignment` rows, resync affected future
 `CrewLegAssignment` snapshots, and keep qualification and coverage issues
 warning-only. Full Crew Scheduling, duty/rest, time-off/vacation, imports, and
 leg-specific crew overrides remain deferred.
+
+Prompt 114 is complete. `/aircraft/[aircraftId]/crew` now supports
+aircraft-block crew assignment create, limited edit, and Relieve Now actions.
+The workflow keeps qualification and coverage issues warning-only, resyncs
+affected future `CrewLegAssignment` snapshots, and leaves full Crew Scheduling,
+duty/rest, imports, auth/signatures, hard release blocking, and leg-specific
+crew override behavior deferred.
 
 Deferred follow-up to keep on the roadmap:
 

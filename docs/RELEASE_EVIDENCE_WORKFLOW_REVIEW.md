@@ -48,15 +48,15 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 114 should implement the first aircraft-block crew assignment workflow
-selected by Prompt 113.
+Prompt 115 should validate the aircraft-block crew assignment workflow
+implemented by Prompt 114.
 
 Minimum behavior:
 
-- Add `/aircraft/[aircraftId]/crew`.
-- Create, edit, and end/relieve `AircraftCrewAssignment` rows.
-- Resync affected future `CrewLegAssignment` snapshots.
-- Keep qualification and coverage issues warning-only.
+- Confirm `/aircraft/[aircraftId]/crew` renders current and future crew blocks.
+- Confirm create, limited edit, and relieve/end behavior.
+- Confirm affected future `CrewLegAssignment` snapshots resync.
+- Confirm qualification and coverage issues remain warning-only.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
   file uploads, imports, leg-specific crew overrides, duty/rest enforcement,
   Crew Scheduling imports, automatic snapshots, AI behavior, or
@@ -139,6 +139,16 @@ to create, edit, and end/relieve `AircraftCrewAssignment` rows, then resync
 affected future `CrewLegAssignment` snapshots. Qualification and coverage
 issues remain warning-only. Full Crew Scheduling, duty/rest, vacation/time-off,
 schedule imports, and leg-specific crew overrides remain deferred.
+
+## Prompt 114 Status
+
+Implementation status: complete.
+
+`/aircraft/[aircraftId]/crew` now provides the first aircraft-block crew
+assignment write workflow. It supports create, limited edit, and Relieve Now
+actions for `AircraftCrewAssignment`, displays warning-only qualification and
+CPT/FO coverage signals, and resyncs affected future `CrewLegAssignment`
+snapshots. Current coverage APIs still use aircraft-block crew resolution.
 
 ## Prompt 101 Status
 
