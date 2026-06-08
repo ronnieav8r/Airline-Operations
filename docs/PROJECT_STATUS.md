@@ -119,6 +119,7 @@ It has:
 75. Legacy record import planning.
 76. Manual Flight Locating position history foundation.
 77. Manual Flight Locating position history QA.
+78. Locating freshness evidence panel update.
 
 ## Current Data Model Boundaries
 
@@ -176,6 +177,12 @@ position report creation, parent locating record creation when missing, newest
 reported position summary synchronization, older-report non-overwrite behavior,
 health counts, route smoke checks, and browser rendering. Results are recorded
 in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
+
+Locating freshness evidence panel update is implemented. The Release Evidence
+Action Panel now includes latest manual position report summary and age on the
+Flight locating card when available. An `ACTIVE` locating record with no
+position report is shown as needing attention in the panel only. Release
+readiness and release actions remain warning-only and unchanged.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -618,17 +625,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 72: Locating Freshness Evidence Panel Update
+Prompt 73: Locating Freshness QA
 ```
 
 Scope:
 
-- Update the Release Evidence Action Panel locating card to summarize position
-  report freshness.
-- Show latest position report age/summary when available.
-- Keep status warning-only and do not add automatic overdue rules, hard
-  blocking, provider integrations, auth/signatures, file uploads, or
-  release-action changes.
+- Validate the Release Evidence Action Panel locating freshness display.
+- Confirm latest position summary/age appears when a report exists.
+- Confirm active locating with no position report shows needs attention in the
+  panel only.
+- Confirm release readiness and release actions remain unchanged.
 
 Deferred follow-up to keep on the roadmap:
 

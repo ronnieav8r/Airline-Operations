@@ -51,6 +51,28 @@ function toDateTimeLabel(value: Date | null): string {
   }).format(value);
 }
 
+function positionReportFreshnessLabel(reportedAt: Date, now: Date): string {
+  const diffMs = now.getTime() - reportedAt.getTime();
+
+  if (diffMs < 0) {
+    return `reported ${toDateTimeLabel(reportedAt)}`;
+  }
+
+  const diffMinutes = Math.floor(diffMs / 60000);
+
+  if (diffMinutes < 60) {
+    return `${Math.max(diffMinutes, 0)} minute(s) ago`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+
+  if (diffHours < 48) {
+    return `${diffHours} hour(s) ago`;
+  }
+
+  return `${Math.floor(diffHours / 24)} day(s) ago`;
+}
+
 function formatJson(value: unknown): string {
   if (!value) {
     return "No snapshot captured.";
@@ -289,6 +311,14 @@ function ReleaseEvidenceActionPanel({
     !!latestUsableWeightBalanceRun &&
     (latestUsableWeightBalanceRun.status === WeightBalanceStatus.CALCULATED ||
       latestUsableWeightBalanceRun.status === WeightBalanceStatus.APPROVED);
+  const latestPositionReport = locating?.positionReports[0] ?? null;
+  const locatingFreshnessMessage = latestPositionReport
+    ? `Latest position ${latestPositionReport.positionSummary}, ${positionReportFreshnessLabel(
+        latestPositionReport.reportedAt,
+        now,
+      )}.`
+    : "No position report has been recorded.";
+  const locatingFreshnessWarning = locating?.status === FlightLocatingStatus.ACTIVE && !latestPositionReport;
   const locatingReady =
     !!locating &&
     (locating.status === FlightLocatingStatus.FILED ||
@@ -341,9 +371,13 @@ function ReleaseEvidenceActionPanel({
         <EvidenceActionCard
           href={`/operations-control/${detail.id}/locating`}
           label="Flight locating"
-          message={locating ? `Locating status is ${locating.status}.` : "No locating record has been created."}
-          status={locatingReady ? "Ready" : locating ? "Needs attention" : "Missing"}
-          tone={locatingReady ? "good" : locating ? "warn" : "missing"}
+          message={
+            locating
+              ? `Locating status is ${locating.status}. ${locatingFreshnessMessage}`
+              : "No locating record has been created."
+          }
+          status={locatingReady && !locatingFreshnessWarning ? "Ready" : locating ? "Needs attention" : "Missing"}
+          tone={locatingReady && !locatingFreshnessWarning ? "good" : locating ? "warn" : "missing"}
         />
         <EvidenceActionCard
           href={`/operations-control/${detail.id}/dispatch`}

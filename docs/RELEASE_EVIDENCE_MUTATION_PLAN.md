@@ -798,3 +798,20 @@ latest position report freshness and summary when available. Keep release
 behavior warning-only. Do not add automatic overdue rules, hard blocking,
 provider integrations, auth/signatures, file uploads, or release-action
 changes.
+
+Implementation status: complete.
+
+Prompt 72 updated the FlightLeg detail Release Evidence Action Panel locating
+card to show latest manual position report summary and freshness when
+available. `ACTIVE` locating records without a position report now show as
+needs attention in the panel only. Release readiness and release actions remain
+unchanged.
+
+Recommended next release evidence slice:
+
+```text
+Prompt 73: Locating Freshness QA
+```
+
+Prompt 73 should validate the locating freshness panel display and confirm
+release readiness and release actions remain warning-only and unchanged.

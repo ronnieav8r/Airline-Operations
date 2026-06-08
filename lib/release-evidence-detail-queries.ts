@@ -227,6 +227,16 @@ const releaseEvidenceDetailSelect = {
       closedAt: true,
       overdueAt: true,
       notes: true,
+      positionReports: {
+        orderBy: [{ reportedAt: "desc" }, { createdAt: "desc" }],
+        take: 1,
+        select: {
+          id: true,
+          reportedAt: true,
+          positionSummary: true,
+          source: true,
+        },
+      },
     },
   },
   dispatchPackage: {

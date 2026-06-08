@@ -261,3 +261,21 @@ Prompt 72: Locating Freshness Evidence Panel Update
 Prompt 72 should update the Release Evidence Action Panel locating card to show
 latest position report freshness and summary while keeping release behavior
 warning-only.
+
+## Prompt 72 Status
+
+Implementation status: complete.
+
+The Release Evidence Action Panel locating card now shows latest position
+report summary and freshness when available. `ACTIVE` locating with no position
+report is surfaced as needs attention in the panel only. Release readiness and
+release actions remain unchanged.
+
+Next recommended slice:
+
+```text
+Prompt 73: Locating Freshness QA
+```
+
+Prompt 73 should validate the panel states and keep the slice QA/docs only
+unless a defect is found.
