@@ -207,3 +207,14 @@ Ambiguity stop conditions:
 - Auth/signature attribution.
 - Legal MEL/CDL interpretation.
 - Provider integrations.
+
+## Prompt 93 Status
+
+Prompt 93 planned dry-run mapping for this source packet. The durable mapping
+plan is:
+
+```text
+docs/AIRCRAFT_MAINTENANCE_IMPORT_DRY_RUN_MAPPING_PLAN.md
+```
+
+No dry-run execution or staging-row creation was implemented.

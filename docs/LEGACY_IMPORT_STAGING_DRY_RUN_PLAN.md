@@ -66,6 +66,12 @@ Prompt 92 status: complete. The first-domain source format is planned in:
 docs/AIRCRAFT_MAINTENANCE_IMPORT_SOURCE_FORMAT_PLAN.md
 ```
 
+Prompt 93 status: complete. The first-domain dry-run mapping plan is:
+
+```text
+docs/AIRCRAFT_MAINTENANCE_IMPORT_DRY_RUN_MAPPING_PLAN.md
+```
+
 ## First Import Domain
 
 The first domain remains aircraft maintenance and airworthiness history:

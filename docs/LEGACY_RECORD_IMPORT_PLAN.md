@@ -141,6 +141,15 @@ releases. The durable source-format plan is:
 docs/AIRCRAFT_MAINTENANCE_IMPORT_SOURCE_FORMAT_PLAN.md
 ```
 
+Prompt 93 status: complete. The aircraft maintenance dry-run mapping plan
+defines target labels, idempotency direction, validation finding codes,
+recommended validation statuses, and stop conditions for maintenance events,
+discrepancies, deferrals, and airworthiness releases. The durable plan is:
+
+```text
+docs/AIRCRAFT_MAINTENANCE_IMPORT_DRY_RUN_MAPPING_PLAN.md
+```
+
 ```text
 Prompt 90: Legacy import staging schema foundation
 ```

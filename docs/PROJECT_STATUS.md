@@ -140,6 +140,7 @@ It has:
 96. Legacy import staging schema foundation.
 97. Legacy import staging schema QA.
 98. Aircraft maintenance import source format planning.
+99. Aircraft maintenance import dry-run mapping planning.
 
 ## Current Data Model Boundaries
 
@@ -328,6 +329,14 @@ identity, maintenance events, discrepancies, deferrals, and aircraft
 airworthiness releases. Actual parser code, file uploads, staging-row writes,
 operational writes, review/apply workflow, auth/signatures, destructive
 cleanup, provider integrations, and source-specific mapping remain deferred.
+
+Aircraft maintenance import dry-run mapping planning is complete. The future
+dry-run should map source rows to staging candidates, validation findings, and
+mapping decisions for `MaintenanceEvent`, `Discrepancy`, `Deferral`, and
+`AirworthinessRelease` without operational writes. Parser code, importer
+execution, file uploads, staging-row writes, review/apply routes,
+auth/signatures, destructive cleanup, provider integrations, and source-specific
+mapping code remain deferred.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -770,13 +779,12 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 93: Aircraft Maintenance Import Dry-Run Mapping Planning
+Prompt 94: Import Staging Read-Only Diagnostic Planning
 ```
 
 Scope:
 
-- Plan dry-run mapping from the source packet into staging candidates and
-  validation findings.
+- Plan a read-only internal diagnostic for import staging batches and counts.
 - Keep it planning/docs-only.
 - Do not add parser code, importer execution, file uploads, staging-row writes,
   or operational writes.

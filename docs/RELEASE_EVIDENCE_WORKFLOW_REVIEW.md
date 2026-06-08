@@ -627,3 +627,28 @@ Prompt 93: Aircraft Maintenance Import Dry-Run Mapping Planning
 
 Prompt 93 should plan how those source rows become staging candidates and
 validation findings without implementing importer execution.
+
+## Prompt 93 Status
+
+Implementation status: complete.
+
+Aircraft maintenance import dry-run mapping planning is complete. The plan
+defines future target labels, validation finding codes, validation status
+policy, idempotency direction, batch summary shape, and stop conditions for
+maintenance events, discrepancies, deferrals, and aircraft airworthiness
+releases. It does not implement dry-run execution or staging writes.
+
+Durable plan:
+
+```text
+docs/AIRCRAFT_MAINTENANCE_IMPORT_DRY_RUN_MAPPING_PLAN.md
+```
+
+Next recommended slice:
+
+```text
+Prompt 94: Import Staging Read-Only Diagnostic Planning
+```
+
+Prompt 94 should plan a hidden read-only staging diagnostic route without
+adding parser/import execution or staging mutations.
