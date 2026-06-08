@@ -264,6 +264,55 @@ enum ReleaseAuditEventType {
   RELEASE_VOIDED
 }
 
+enum ImportDomain {
+  AIRCRAFT_MAINTENANCE_AIRWORTHINESS
+  FLIGHTLEG_HISTORY
+  CREW_COMPLIANCE
+  MANIFEST_HISTORY
+  DISPATCH_RELEASE_EVIDENCE
+}
+
+enum ImportBatchStatus {
+  DRAFT
+  STAGED
+  VALIDATED
+  REVIEW_READY
+  APPROVED
+  REJECTED
+  APPLIED
+  VOIDED
+}
+
+enum ImportSourceType {
+  CSV
+  XLSX
+  JSON
+  PDF_REFERENCE
+  MANUAL_REFERENCE
+  OTHER
+}
+
+enum ImportValidationStatus {
+  PENDING
+  ACCEPTED
+  WARNING
+  REJECTED
+  DUPLICATE
+}
+
+enum ImportFindingSeverity {
+  INFO
+  WARN
+  ERROR
+}
+
+enum ImportMappingDecisionStatus {
+  PROPOSED
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
+}
+
 model Operator {
   id                    String                     @id @default(cuid())
   name                  String
@@ -421,6 +470,9 @@ model User {
   authoredReleaseOverrides    ReleaseOverride[]          @relation("ReleaseOverrideActor")
   approvedReleaseOverrides    ReleaseOverride[]          @relation("ReleaseOverrideApprover")
   releaseAuditEvents          ReleaseAuditEvent[]        @relation("ReleaseAuditEventActor")
+  importBatchesCreated        ImportBatch[]              @relation("ImportBatchCreatedBy")
+  importBatchesReviewed       ImportBatch[]              @relation("ImportBatchReviewedBy")
+  importMappingDecisions      ImportMappingDecision[]    @relation("ImportMappingDecisionDecidedBy")
 }
 
 model UserProfile {
@@ -950,6 +1002,106 @@ model ReleaseAuditEvent {
   @@index([overrideId])
   @@index([eventType])
   @@index([actorUserId])
+}
+
+model ImportBatch {
+  id             String             @id @default(cuid())
+  importDomain   ImportDomain
+  status         ImportBatchStatus  @default(DRAFT)
+  sourceSystem   String?
+  batchKey       String?            @unique
+  summary        Json?
+  notes          String?
+  createdById    String?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  createdBy      User?              @relation("ImportBatchCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  reviewedBy     User?              @relation("ImportBatchReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  sources        ImportSource[]
+  stagingRows    ImportStagingRow[]
+
+  @@index([importDomain, status])
+  @@index([sourceSystem])
+  @@index([createdById])
+  @@index([reviewedById])
+}
+
+model ImportSource {
+  id          String             @id @default(cuid())
+  batchId     String
+  sourceName  String
+  sourceType  ImportSourceType
+  sourceHash  String?
+  notes       String?
+  createdAt   DateTime           @default(now())
+  batch       ImportBatch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  stagingRows ImportStagingRow[]
+
+  @@index([batchId])
+  @@index([sourceType])
+  @@index([sourceHash])
+}
+
+model ImportStagingRow {
+  id                String                     @id @default(cuid())
+  batchId           String
+  sourceId          String?
+  sourceRowNumber   Int?
+  sourceExternalId  String?
+  idempotencyKey    String                     @unique
+  rawRow            Json
+  mappedTargetType  String?
+  mappedTargetKey   String?
+  validationStatus  ImportValidationStatus     @default(PENDING)
+  validationSummary Json?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  batch             ImportBatch                @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  source            ImportSource?              @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  findings          ImportValidationFinding[]
+  mappingDecisions  ImportMappingDecision[]
+
+  @@index([batchId, validationStatus])
+  @@index([sourceId])
+  @@index([sourceExternalId])
+  @@index([mappedTargetType, mappedTargetKey])
+}
+
+model ImportValidationFinding {
+  id           String                @id @default(cuid())
+  stagingRowId String
+  severity     ImportFindingSeverity
+  code         String
+  message      String
+  fieldName    String?
+  details      Json?
+  createdAt    DateTime              @default(now())
+  stagingRow   ImportStagingRow      @relation(fields: [stagingRowId], references: [id], onDelete: Cascade)
+
+  @@index([stagingRowId])
+  @@index([severity])
+  @@index([code])
+}
+
+model ImportMappingDecision {
+  id           String                      @id @default(cuid())
+  stagingRowId String
+  decision     ImportMappingDecisionStatus @default(PROPOSED)
+  targetType   String
+  targetId     String?
+  reason       String?
+  decidedById  String?
+  decidedAt    DateTime?
+  createdAt    DateTime                    @default(now())
+  stagingRow   ImportStagingRow            @relation(fields: [stagingRowId], references: [id], onDelete: Cascade)
+  decidedBy    User?                       @relation("ImportMappingDecisionDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([stagingRowId])
+  @@index([decision])
+  @@index([targetType, targetId])
+  @@index([decidedById])
 }
 
 model AircraftAssignment {

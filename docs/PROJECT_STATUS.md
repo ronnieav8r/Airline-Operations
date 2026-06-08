@@ -137,6 +137,7 @@ It has:
 93. Legacy import staging/dry-run planning.
 94. Next slice planning.
 95. Legacy import staging schema planning.
+96. Legacy import staging schema foundation.
 
 ## Current Data Model Boundaries
 
@@ -304,6 +305,14 @@ findings, and mapping decisions only. The staging tables should not hold
 operational foreign keys yet, and no importer execution, file uploads,
 operational writes, auth/signatures, destructive cleanup, or provider
 integrations should be added.
+
+Legacy import staging schema foundation is implemented. The schema now has
+additive staging-only tables for import batches, sources, staged rows,
+validation findings, and mapping decisions, plus `/api/health` counts and DBML
+updates. These tables are empty by default and do not perform imports. Importer
+execution, parser code, file uploads, operational writes, review/apply routes,
+auth/signatures, destructive cleanup, provider integrations, and source-specific
+mapping remain deferred.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -746,14 +755,14 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 90: Legacy Import Staging Schema Foundation
+Prompt 91: Legacy Import Staging Schema QA
 ```
 
 Scope:
 
-- Add the planned import staging enums and tables additively.
-- Add health counts and DBML updates.
-- Keep it schema/diagnostic-only.
+- Validate the additive import staging schema and health counts.
+- Confirm local migration and build checks pass.
+- Keep it QA/docs-only unless a schema defect is found.
 - Do not add importer execution, file uploads, operational writes,
   auth/signatures, destructive cleanup, or provider integrations.
 

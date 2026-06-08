@@ -8,6 +8,11 @@ This document defines the additive import staging schema planned for the legacy
 record import lane. The purpose is to create a safe database holding area for
 future dry-run validation before any operational write workflow exists.
 
+Prompt 90 implementation status: complete. The tables below now exist as an
+additive Prisma migration. No importer execution, parser code, file uploads,
+operational writes, review/apply workflow, auth/signatures, destructive
+cleanup, or provider integrations were added.
+
 ## Boundary
 
 The staging schema is not an importer. It should not parse files, upload files,
@@ -131,6 +136,8 @@ No auth, signatures, or role checks exist yet.
 
 ## Prompt 90 Implementation Scope
 
+Implementation status: complete.
+
 Prompt 90 should:
 
 - Add the enums and models additively in Prisma.
@@ -140,7 +147,7 @@ Prompt 90 should:
 - Keep seed/import execution empty unless only zero-row table creation is
   needed by migration.
 
-Prompt 90 must not:
+Prompt 90 did not:
 
 - Create importer execution code.
 - Add file upload or storage.

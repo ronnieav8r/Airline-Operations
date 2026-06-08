@@ -558,3 +558,23 @@ Prompt 90: Legacy Import Staging Schema Foundation
 
 Prompt 90 should implement the additive staging schema, health counts, and DBML
 updates only.
+
+## Prompt 90 Status
+
+Implementation status: complete.
+
+The additive import staging schema foundation is implemented. It adds staging
+tables for import batches, sources, raw staged rows, validation findings, and
+mapping decisions, plus health counts and DBML updates. It does not add
+importer execution, parser code, file uploads, operational writes,
+auth/signatures, destructive cleanup, provider integrations, or source-specific
+mapping.
+
+Next recommended slice:
+
+```text
+Prompt 91: Legacy Import Staging Schema QA
+```
+
+Prompt 91 should validate the schema, migration, zero-count health diagnostics,
+and unchanged app routes.

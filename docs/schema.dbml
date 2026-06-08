@@ -1,7 +1,7 @@
 // AeroOps Center database schema
 // Source of truth for visual ERD work in dbdiagram.io.
 // Generated from the live Render Postgres schema on 2026-06-03.
-// Updated locally for the additive FlightLeg and release-evidence foundations on 2026-06-06.
+// Updated locally for additive FlightLeg, release-evidence, and import-staging foundations through 2026-06-08.
 
 Project AeroOps_Render_DB {
   database_type: "PostgreSQL"
@@ -170,6 +170,55 @@ Enum DispatchPackageStatus {
   READY
   REVIEWED
   VOIDED
+}
+
+Enum ImportDomain {
+  AIRCRAFT_MAINTENANCE_AIRWORTHINESS
+  FLIGHTLEG_HISTORY
+  CREW_COMPLIANCE
+  MANIFEST_HISTORY
+  DISPATCH_RELEASE_EVIDENCE
+}
+
+Enum ImportBatchStatus {
+  DRAFT
+  STAGED
+  VALIDATED
+  REVIEW_READY
+  APPROVED
+  REJECTED
+  APPLIED
+  VOIDED
+}
+
+Enum ImportSourceType {
+  CSV
+  XLSX
+  JSON
+  PDF_REFERENCE
+  MANUAL_REFERENCE
+  OTHER
+}
+
+Enum ImportValidationStatus {
+  PENDING
+  ACCEPTED
+  WARNING
+  REJECTED
+  DUPLICATE
+}
+
+Enum ImportFindingSeverity {
+  INFO
+  WARN
+  ERROR
+}
+
+Enum ImportMappingDecisionStatus {
+  PROPOSED
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
 }
 
 Table "Operator" {
@@ -553,6 +602,103 @@ Table "FlightRelease" {
   }
 }
 
+Table "ImportBatch" {
+  "id" text [pk]
+  "importDomain" ImportDomain [not null]
+  "status" ImportBatchStatus [not null, default: 'DRAFT']
+  "sourceSystem" text
+  "batchKey" text [unique]
+  "summary" jsonb
+  "notes" text
+  "createdById" text
+  "reviewedById" text
+  "reviewedAt" timestamp
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("importDomain", "status")
+    "sourceSystem"
+    "createdById"
+    "reviewedById"
+  }
+}
+
+Table "ImportSource" {
+  "id" text [pk]
+  "batchId" text [not null]
+  "sourceName" text [not null]
+  "sourceType" ImportSourceType [not null]
+  "sourceHash" text
+  "notes" text
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    "batchId"
+    "sourceType"
+    "sourceHash"
+  }
+}
+
+Table "ImportStagingRow" {
+  "id" text [pk]
+  "batchId" text [not null]
+  "sourceId" text
+  "sourceRowNumber" int
+  "sourceExternalId" text
+  "idempotencyKey" text [not null, unique]
+  "rawRow" jsonb [not null]
+  "mappedTargetType" text
+  "mappedTargetKey" text
+  "validationStatus" ImportValidationStatus [not null, default: 'PENDING']
+  "validationSummary" jsonb
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  "updatedAt" timestamp [not null]
+
+  Indexes {
+    ("batchId", "validationStatus")
+    "sourceId"
+    "sourceExternalId"
+    ("mappedTargetType", "mappedTargetKey")
+  }
+}
+
+Table "ImportValidationFinding" {
+  "id" text [pk]
+  "stagingRowId" text [not null]
+  "severity" ImportFindingSeverity [not null]
+  "code" text [not null]
+  "message" text [not null]
+  "fieldName" text
+  "details" jsonb
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    "stagingRowId"
+    "severity"
+    "code"
+  }
+}
+
+Table "ImportMappingDecision" {
+  "id" text [pk]
+  "stagingRowId" text [not null]
+  "decision" ImportMappingDecisionStatus [not null, default: 'PROPOSED']
+  "targetType" text [not null]
+  "targetId" text
+  "reason" text
+  "decidedById" text
+  "decidedAt" timestamp
+  "createdAt" timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    "stagingRowId"
+    "decision"
+    ("targetType", "targetId")
+    "decidedById"
+  }
+}
+
 Table "User" {
   "id" text [pk]
   "email" text [not null, unique]
@@ -859,6 +1005,14 @@ Ref: "OperationalControlRecord"."authorityRevisionId" > "AuthorityRevision"."id"
 Ref: "OperationalControlRecord"."createdById" > "User"."id"
 Ref: "FlightRelease"."operationalControlRecordId" > "OperationalControlRecord"."id"
 Ref: "FlightRelease"."releasedById" > "User"."id"
+Ref: "ImportBatch"."createdById" > "User"."id"
+Ref: "ImportBatch"."reviewedById" > "User"."id"
+Ref: "ImportSource"."batchId" > "ImportBatch"."id"
+Ref: "ImportStagingRow"."batchId" > "ImportBatch"."id"
+Ref: "ImportStagingRow"."sourceId" > "ImportSource"."id"
+Ref: "ImportValidationFinding"."stagingRowId" > "ImportStagingRow"."id"
+Ref: "ImportMappingDecision"."stagingRowId" > "ImportStagingRow"."id"
+Ref: "ImportMappingDecision"."decidedById" > "User"."id"
 Ref: "TripOrMission"."operatorId" > "Operator"."id"
 Ref: "FlightLeg"."legacyFlightId" > "Flight"."id"
 Ref: "FlightLeg"."tripOrMissionId" > "TripOrMission"."id"

@@ -1,7 +1,7 @@
 // AeroOps Center visual ERD
 // Paste this file into dbdiagram.io when you want the diagram view.
 // Keep docs/schema.dbml as the fuller maintained schema reference.
-// Updated locally for the additive FlightLeg and release-evidence foundations on 2026-06-06.
+// Updated locally for additive FlightLeg, release-evidence, and import-staging foundations through 2026-06-08.
 
 Project AeroOps_Render_DB {
   database_type: "PostgreSQL"
@@ -482,6 +482,70 @@ Table "FlightRelease" {
   "updatedAt" timestamp
 }
 
+Table "ImportBatch" {
+  "id" text [pk]
+  "importDomain" text
+  "status" text
+  "sourceSystem" text
+  "batchKey" text
+  "summary" jsonb
+  "notes" text
+  "createdById" text
+  "reviewedById" text
+  "reviewedAt" timestamp
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "ImportSource" {
+  "id" text [pk]
+  "batchId" text
+  "sourceName" text
+  "sourceType" text
+  "sourceHash" text
+  "notes" text
+  "createdAt" timestamp
+}
+
+Table "ImportStagingRow" {
+  "id" text [pk]
+  "batchId" text
+  "sourceId" text
+  "sourceRowNumber" int
+  "sourceExternalId" text
+  "idempotencyKey" text
+  "rawRow" jsonb
+  "mappedTargetType" text
+  "mappedTargetKey" text
+  "validationStatus" text
+  "validationSummary" jsonb
+  "createdAt" timestamp
+  "updatedAt" timestamp
+}
+
+Table "ImportValidationFinding" {
+  "id" text [pk]
+  "stagingRowId" text
+  "severity" text
+  "code" text
+  "message" text
+  "fieldName" text
+  "details" jsonb
+  "createdAt" timestamp
+}
+
+Table "ImportMappingDecision" {
+  "id" text [pk]
+  "stagingRowId" text
+  "decision" text
+  "targetType" text
+  "targetId" text
+  "reason" text
+  "decidedById" text
+  "decidedAt" timestamp
+  "createdAt" timestamp
+}
+
 Ref: "UserProfile"."userId" > "User"."id"
 Ref: "Aircraft"."homeStationId" > "Station"."id"
 Ref: "Flight"."aircraftId" > "Aircraft"."id"
@@ -520,6 +584,14 @@ Ref: "OperationalControlRecord"."authorityRevisionId" > "AuthorityRevision"."id"
 Ref: "OperationalControlRecord"."createdById" > "User"."id"
 Ref: "FlightRelease"."operationalControlRecordId" > "OperationalControlRecord"."id"
 Ref: "FlightRelease"."releasedById" > "User"."id"
+Ref: "ImportBatch"."createdById" > "User"."id"
+Ref: "ImportBatch"."reviewedById" > "User"."id"
+Ref: "ImportSource"."batchId" > "ImportBatch"."id"
+Ref: "ImportStagingRow"."batchId" > "ImportBatch"."id"
+Ref: "ImportStagingRow"."sourceId" > "ImportSource"."id"
+Ref: "ImportValidationFinding"."stagingRowId" > "ImportStagingRow"."id"
+Ref: "ImportMappingDecision"."stagingRowId" > "ImportStagingRow"."id"
+Ref: "ImportMappingDecision"."decidedById" > "User"."id"
 Ref: "TripOrMission"."operatorId" > "Operator"."id"
 Ref: "FlightLeg"."legacyFlightId" > "Flight"."id"
 Ref: "FlightLeg"."tripOrMissionId" > "TripOrMission"."id"

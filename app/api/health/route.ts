@@ -42,6 +42,11 @@ export async function GET() {
       releaseReadinessFindingCount,
       releaseOverrideCount,
       releaseAuditEventCount,
+      importBatchCount,
+      importSourceCount,
+      importStagingRowCount,
+      importValidationFindingCount,
+      importMappingDecisionCount,
     ] = await Promise.all([
       prisma.station.count(),
       prisma.aircraft.count(),
@@ -79,6 +84,11 @@ export async function GET() {
       prisma.releaseReadinessFinding.count(),
       prisma.releaseOverride.count(),
       prisma.releaseAuditEvent.count(),
+      prisma.importBatch.count(),
+      prisma.importSource.count(),
+      prisma.importStagingRow.count(),
+      prisma.importValidationFinding.count(),
+      prisma.importMappingDecision.count(),
     ]);
 
     return NextResponse.json({
@@ -121,6 +131,11 @@ export async function GET() {
         releaseReadinessFindings: releaseReadinessFindingCount,
         releaseOverrides: releaseOverrideCount,
         releaseAuditEvents: releaseAuditEventCount,
+        importBatches: importBatchCount,
+        importSources: importSourceCount,
+        importStagingRows: importStagingRowCount,
+        importValidationFindings: importValidationFindingCount,
+        importMappingDecisions: importMappingDecisionCount,
       },
     });
   } catch (error) {

@@ -48,6 +48,10 @@ Prompt 90 should add the planned tables additively only. It should not add
 importer execution, parser code, file uploads, operational writes, review/apply
 routes, auth/signatures, destructive cleanup, or provider integrations.
 
+Prompt 90 status: complete. Additive staging schema tables now exist, and
+`/api/health` exposes their counts. The tables are empty by default and remain
+staging-only.
+
 ## First Import Domain
 
 The first domain remains aircraft maintenance and airworthiness history:

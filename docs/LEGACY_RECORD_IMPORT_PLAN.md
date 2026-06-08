@@ -123,12 +123,18 @@ docs/LEGACY_IMPORT_STAGING_SCHEMA_PLAN.md
 Prompt 90 should implement only the staging tables, migration, health counts,
 and DBML updates. It should not add importer execution or operational writes.
 
+Prompt 90 status: complete. The staging tables now exist as additive schema
+only. Import execution, source parsing, file uploads, operational writes,
+review/apply workflow, auth/signatures, and source-specific mapping remain
+deferred.
+
 ```text
 Prompt 90: Legacy import staging schema foundation
 ```
 
-Add non-production import staging tables or files if needed. Do not write into
-operational tables yet unless the planning slice proves staging is unnecessary.
+Add non-production import staging tables. Do not write into operational tables.
+
+Implementation status: complete for staging tables only.
 
 ```text
 Prompt X+2: Aircraft maintenance history import

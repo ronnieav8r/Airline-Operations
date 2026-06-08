@@ -1,5 +1,5 @@
 // AeroOps Center current-state DBML
-// Last updated: 2026-06-07
+// Last updated: 2026-06-08
 // Scope: mirrors the Prisma schema currently implemented in this repo.
 // Important: Flight remains the table read by some current UI/API paths.
 // FlightLeg is now implemented as an additive future operational anchor bridged
@@ -7,7 +7,8 @@
 // FlightLeg. Airworthiness foundation tables now attach to Aircraft and
 // optionally FlightLeg. Release-policy foundation tables exist for future
 // blocking, override, snapshot, and audit workflows, but current release actions
-// remain warning-only.
+// remain warning-only. Import staging foundation tables exist for future
+// dry-run legacy imports, but no importer execution or operational writes exist.
 
 Project AeroOps_Current_State {
   database_type: "PostgreSQL"
@@ -269,6 +270,55 @@ Enum ReleaseAuditEventType {
   RELEASE_COMPLETED
   RELEASE_CANCELLED
   RELEASE_VOIDED
+}
+
+Enum ImportDomain {
+  AIRCRAFT_MAINTENANCE_AIRWORTHINESS
+  FLIGHTLEG_HISTORY
+  CREW_COMPLIANCE
+  MANIFEST_HISTORY
+  DISPATCH_RELEASE_EVIDENCE
+}
+
+Enum ImportBatchStatus {
+  DRAFT
+  STAGED
+  VALIDATED
+  REVIEW_READY
+  APPROVED
+  REJECTED
+  APPLIED
+  VOIDED
+}
+
+Enum ImportSourceType {
+  CSV
+  XLSX
+  JSON
+  PDF_REFERENCE
+  MANUAL_REFERENCE
+  OTHER
+}
+
+Enum ImportValidationStatus {
+  PENDING
+  ACCEPTED
+  WARNING
+  REJECTED
+  DUPLICATE
+}
+
+Enum ImportFindingSeverity {
+  INFO
+  WARN
+  ERROR
+}
+
+Enum ImportMappingDecisionStatus {
+  PROPOSED
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
 }
 
 Table Operator {
@@ -705,6 +755,103 @@ Table ReleaseAuditEvent {
     overrideId
     eventType
     actorUserId
+  }
+}
+
+Table ImportBatch {
+  id varchar [pk]
+  importDomain ImportDomain [not null]
+  status ImportBatchStatus [not null, default: "DRAFT"]
+  sourceSystem varchar
+  batchKey varchar [unique]
+  summary json
+  notes text
+  createdById varchar
+  reviewedById varchar
+  reviewedAt timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (importDomain, status)
+    sourceSystem
+    createdById
+    reviewedById
+  }
+}
+
+Table ImportSource {
+  id varchar [pk]
+  batchId varchar [not null]
+  sourceName varchar [not null]
+  sourceType ImportSourceType [not null]
+  sourceHash varchar
+  notes text
+  createdAt timestamp [not null]
+
+  indexes {
+    batchId
+    sourceType
+    sourceHash
+  }
+}
+
+Table ImportStagingRow {
+  id varchar [pk]
+  batchId varchar [not null]
+  sourceId varchar
+  sourceRowNumber int
+  sourceExternalId varchar
+  idempotencyKey varchar [not null, unique]
+  rawRow json [not null]
+  mappedTargetType varchar
+  mappedTargetKey varchar
+  validationStatus ImportValidationStatus [not null, default: "PENDING"]
+  validationSummary json
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (batchId, validationStatus)
+    sourceId
+    sourceExternalId
+    (mappedTargetType, mappedTargetKey)
+  }
+}
+
+Table ImportValidationFinding {
+  id varchar [pk]
+  stagingRowId varchar [not null]
+  severity ImportFindingSeverity [not null]
+  code varchar [not null]
+  message text [not null]
+  fieldName varchar
+  details json
+  createdAt timestamp [not null]
+
+  indexes {
+    stagingRowId
+    severity
+    code
+  }
+}
+
+Table ImportMappingDecision {
+  id varchar [pk]
+  stagingRowId varchar [not null]
+  decision ImportMappingDecisionStatus [not null, default: "PROPOSED"]
+  targetType varchar [not null]
+  targetId varchar
+  reason text
+  decidedById varchar
+  decidedAt timestamp
+  createdAt timestamp [not null]
+
+  indexes {
+    stagingRowId
+    decision
+    (targetType, targetId)
+    decidedById
   }
 }
 
@@ -1295,3 +1442,11 @@ Ref: ReleaseAuditEvent.flightReleaseId > FlightRelease.id
 Ref: ReleaseAuditEvent.snapshotId > ReleaseReadinessSnapshot.id
 Ref: ReleaseAuditEvent.overrideId > ReleaseOverride.id
 Ref: ReleaseAuditEvent.actorUserId > User.id
+Ref: ImportBatch.createdById > User.id
+Ref: ImportBatch.reviewedById > User.id
+Ref: ImportSource.batchId > ImportBatch.id
+Ref: ImportStagingRow.batchId > ImportBatch.id
+Ref: ImportStagingRow.sourceId > ImportSource.id
+Ref: ImportValidationFinding.stagingRowId > ImportStagingRow.id
+Ref: ImportMappingDecision.stagingRowId > ImportStagingRow.id
+Ref: ImportMappingDecision.decidedById > User.id

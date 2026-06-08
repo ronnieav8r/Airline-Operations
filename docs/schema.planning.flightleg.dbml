@@ -1,9 +1,10 @@
 // AeroOps Center planning DBML
-// Last updated: 2026-06-07
+// Last updated: 2026-06-08
 // Scope: target data model direction. The initial FlightLeg foundation is now
 // implemented additively. Release evidence, first airworthiness foundation,
-// and release-policy foundation tables are now implemented; deeper crew
-// compliance and safety tables remain planning-only.
+// release-policy, and import-staging foundation tables are now implemented;
+// deeper crew compliance, safety, and import-apply workflows remain
+// planning-only.
 
 Project AeroOps_Planning_FlightLeg {
   database_type: "PostgreSQL"
@@ -102,6 +103,55 @@ Enum ReleaseAuditEventType {
   RELEASE_COMPLETED
   RELEASE_CANCELLED
   RELEASE_VOIDED
+}
+
+Enum ImportDomain {
+  AIRCRAFT_MAINTENANCE_AIRWORTHINESS
+  FLIGHTLEG_HISTORY
+  CREW_COMPLIANCE
+  MANIFEST_HISTORY
+  DISPATCH_RELEASE_EVIDENCE
+}
+
+Enum ImportBatchStatus {
+  DRAFT
+  STAGED
+  VALIDATED
+  REVIEW_READY
+  APPROVED
+  REJECTED
+  APPLIED
+  VOIDED
+}
+
+Enum ImportSourceType {
+  CSV
+  XLSX
+  JSON
+  PDF_REFERENCE
+  MANUAL_REFERENCE
+  OTHER
+}
+
+Enum ImportValidationStatus {
+  PENDING
+  ACCEPTED
+  WARNING
+  REJECTED
+  DUPLICATE
+}
+
+Enum ImportFindingSeverity {
+  INFO
+  WARN
+  ERROR
+}
+
+Enum ImportMappingDecisionStatus {
+  PROPOSED
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
 }
 
 Enum ManifestStatus {
@@ -689,6 +739,73 @@ Table ReleaseAuditEvent {
   createdAt timestamp [not null]
 }
 
+// Legacy import staging. These tables are implemented as a staging foundation.
+// Parser/upload/apply workflows and operational target writes remain deferred.
+
+Table ImportBatch {
+  id varchar [pk]
+  importDomain ImportDomain [not null]
+  status ImportBatchStatus [not null, default: "DRAFT"]
+  sourceSystem varchar
+  batchKey varchar [unique]
+  summary jsonb
+  notes text
+  createdById varchar
+  reviewedById varchar
+  reviewedAt timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table ImportSource {
+  id varchar [pk]
+  batchId varchar [not null]
+  sourceName varchar [not null]
+  sourceType ImportSourceType [not null]
+  sourceHash varchar
+  notes text
+  createdAt timestamp [not null]
+}
+
+Table ImportStagingRow {
+  id varchar [pk]
+  batchId varchar [not null]
+  sourceId varchar
+  sourceRowNumber int
+  sourceExternalId varchar
+  idempotencyKey varchar [not null, unique]
+  rawRow jsonb [not null]
+  mappedTargetType varchar
+  mappedTargetKey varchar
+  validationStatus ImportValidationStatus [not null, default: "PENDING"]
+  validationSummary jsonb
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table ImportValidationFinding {
+  id varchar [pk]
+  stagingRowId varchar [not null]
+  severity ImportFindingSeverity [not null]
+  code varchar [not null]
+  message text [not null]
+  fieldName varchar
+  details jsonb
+  createdAt timestamp [not null]
+}
+
+Table ImportMappingDecision {
+  id varchar [pk]
+  stagingRowId varchar [not null]
+  decision ImportMappingDecisionStatus [not null, default: "PROPOSED"]
+  targetType varchar [not null]
+  targetId varchar
+  reason text
+  decidedById varchar
+  decidedAt timestamp
+  createdAt timestamp [not null]
+}
+
 Table DispatchPackage {
   id varchar [pk]
   flightLegId varchar [not null, unique]
@@ -1037,6 +1154,14 @@ Ref: ReleaseAuditEvent.flightReleaseId > ReleasePackage.id
 Ref: ReleaseAuditEvent.snapshotId > ReleaseReadinessSnapshot.id
 Ref: ReleaseAuditEvent.overrideId > ReleaseOverride.id
 Ref: ReleaseAuditEvent.actorUserId > User.id
+Ref: ImportBatch.createdById > User.id
+Ref: ImportBatch.reviewedById > User.id
+Ref: ImportSource.batchId > ImportBatch.id
+Ref: ImportStagingRow.batchId > ImportBatch.id
+Ref: ImportStagingRow.sourceId > ImportSource.id
+Ref: ImportValidationFinding.stagingRowId > ImportStagingRow.id
+Ref: ImportMappingDecision.stagingRowId > ImportStagingRow.id
+Ref: ImportMappingDecision.decidedById > User.id
 Ref: DispatchPackage.flightLegId > FlightLeg.id
 Ref: DispatchPackage.releasePackageId > ReleasePackage.id
 Ref: DispatchPackage.weatherBriefingId > WeatherBriefingSnapshot.id
