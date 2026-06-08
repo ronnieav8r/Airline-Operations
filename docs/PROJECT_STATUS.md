@@ -826,19 +826,21 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 113: Next App Development Planning
+Prompt 114: Aircraft Crew Assignment Foundation
 ```
 
 Scope:
 
-- Decide the next safe app-development slice after aircraft context
-  navigation.
-- Compare crew assignment workflow planning, FlightLeg list/scheduling
-  improvements, aircraft context refinements, or the next release-evidence
-  workflow.
-- Keep Prompt 113 planning/docs-only.
-- Do not add schema, auth, hard release blocking, imports, provider
-  integrations, file uploads, AI behavior, or new release policy.
+- Add `/aircraft/[aircraftId]/crew` as the first aircraft-block crew assignment
+  write surface.
+- Keep `AircraftCrewAssignment` as the active coverage source of truth.
+- Keep `CrewLegAssignment` as a FlightLeg snapshot/evidence table, resynced
+  after aircraft-block crew changes.
+- Warn, but do not block, for missing/expired qualifications and CPT/FO gaps.
+- Keep the broader Crew Scheduling module, duty/rest, time off/vacation,
+  imports, leg-specific crew overrides, auth/signatures, hard release blocking,
+  schema changes, provider integrations, file uploads, AI behavior, and new
+  release policy deferred.
 
 Recommended app-development follow-up chain:
 
@@ -926,6 +928,13 @@ Prompt 112 is complete. Local QA confirmed `/aircraft`, the new aircraft
 context route, the existing airworthiness route, Operations Control workflow
 links, route smoke, rendered page content, and unchanged warning-only release
 behavior. Results are recorded in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
+
+Prompt 113 is complete. The selected first crew assignment write path is
+aircraft-block staffing under `/aircraft/[aircraftId]/crew`. Prompt 114 should
+create/edit/end `AircraftCrewAssignment` rows, resync affected future
+`CrewLegAssignment` snapshots, and keep qualification and coverage issues
+warning-only. Full Crew Scheduling, duty/rest, time-off/vacation, imports, and
+leg-specific crew overrides remain deferred.
 
 Deferred follow-up to keep on the roadmap:
 

@@ -18,9 +18,10 @@ FlightLeg:
 
 The current system is usable for development. FlightLeg detail now acts as a
 clearer command center, Operations Control now has a filterable workbench
-board, and the dashboard surfaces current attention items. The next
-app-development improvement should make each aircraft easier to use as an
-operational context page without adding new write behavior.
+board, the dashboard surfaces current attention items, and each aircraft has a
+read-only context page. The next app-development improvement should add the
+first controlled aircraft-block crew assignment workflow without changing
+release behavior.
 
 ## Current Workflow Map
 
@@ -47,18 +48,18 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 113 should plan the next app-development slice after aircraft context
-navigation.
+Prompt 114 should implement the first aircraft-block crew assignment workflow
+selected by Prompt 113.
 
 Minimum behavior:
 
-- Compare crew assignment workflow planning, FlightLeg list/scheduling
-  improvements, aircraft context refinements, and the next release-evidence
-  workflow.
-- Keep Prompt 113 planning/docs-only.
-- Do not add new mutation actions.
+- Add `/aircraft/[aircraftId]/crew`.
+- Create, edit, and end/relieve `AircraftCrewAssignment` rows.
+- Resync affected future `CrewLegAssignment` snapshots.
+- Keep qualification and coverage issues warning-only.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
-  file uploads, imports, overrides, automatic snapshots, AI behavior, or
+  file uploads, imports, leg-specific crew overrides, duty/rest enforcement,
+  Crew Scheduling imports, automatic snapshots, AI behavior, or
   `ReleasePackage`.
 
 Why this is the right next slice:
@@ -127,6 +128,17 @@ Local QA confirmed the aircraft fleet board, aircraft context detail route,
 airworthiness workflow route, Operations Control workflow links, route smoke,
 and rendered page content. Release behavior remains warning-only and no new
 mutations were added.
+
+## Prompt 113 Status
+
+Implementation status: complete.
+
+Prompt 113 selected aircraft-block staffing as the first controlled crew
+assignment write workflow. Prompt 114 should add `/aircraft/[aircraftId]/crew`
+to create, edit, and end/relieve `AircraftCrewAssignment` rows, then resync
+affected future `CrewLegAssignment` snapshots. Qualification and coverage
+issues remain warning-only. Full Crew Scheduling, duty/rest, vacation/time-off,
+schedule imports, and leg-specific crew overrides remain deferred.
 
 ## Prompt 101 Status
 

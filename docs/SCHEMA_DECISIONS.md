@@ -77,6 +77,12 @@ Current transition state:
   promotes leg-level crew operations.
 - Do not treat `CrewLegAssignment` as the source of truth for current pages
   until a later read-migration slice validates parity.
+- The first controlled crew assignment write workflow should mutate
+  `AircraftCrewAssignment` only, then resync affected future
+  `CrewLegAssignment` snapshots. Qualification and coverage issues are warnings
+  in this phase, not blockers.
+- The broader Crew Scheduling module remains a future lane for schedules, days
+  off, vacation/time-off, duty/rest, and schedule import/apply behavior.
 
 ## Preferred V1 Tables
 
