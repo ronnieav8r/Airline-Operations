@@ -48,15 +48,15 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 106 should validate the **Operations Control Workbench** foundation.
+Prompt 107 should plan the next app-development slice.
 
 Minimum behavior:
 
-- Confirm the board renders above the current Operations Control table.
-- Confirm grouping by release state, schedule window, and aircraft.
-- Confirm server-rendered URL filters for release status, evidence state,
-  operating part, and aircraft.
-- Confirm board links and existing table behavior are preserved.
+- Decide the next safe product improvement after FlightLeg detail and
+  Operations Control workbench usability are improved.
+- Compare dashboard surfacing, aircraft context navigation, crew assignment
+  workflow planning, and the next release-evidence workflow.
+- Keep Prompt 107 planning/docs-only.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
   file uploads, imports, overrides, automatic snapshots, or `ReleasePackage`.
@@ -120,6 +120,15 @@ Control Records table. The board supports grouping by release state, schedule
 window, or aircraft and filters by release status, evidence state, operating
 part, and aircraft. It preserves current action links and does not change
 release or evidence workflow behavior.
+
+## Prompt 106 Status
+
+Implementation status: complete.
+
+Local QA confirmed release, schedule, and aircraft grouping modes; release,
+evidence, and combined filters; card links for Detail, Edit, Manifest, W&B,
+Locating, and Dispatch; retained Control Records table; main route smoke; and
+browser rendering. Release behavior remains warning-only.
 
 ## Deferred Alternatives
 

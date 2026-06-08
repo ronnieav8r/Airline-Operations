@@ -2,6 +2,53 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 106: Operations Control Workbench QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Workbench QA:
+
+- Confirmed default `/operations-control` returned 200.
+- Confirmed grouping URLs returned 200 for release, schedule, and aircraft.
+- Confirmed release, evidence, and combined-filter URLs returned 200.
+- Confirmed workbench controls render with grouping, release, evidence,
+  operating-part, and aircraft filters.
+- Confirmed board cards include links for Detail, Edit, Manifest, W&B,
+  Locating, and Dispatch.
+- Confirmed the existing Control Records table still renders below the board.
+
+Route smoke:
+
+- `/` returned 200.
+- `/operations-control` returned 200.
+- `/operations-control/[flightLegId]` returned 200.
+- `/flights` returned 200.
+- `/aircraft` returned 200.
+- `/crew` returned 200.
+- `/scheduling` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Browser QA:
+
+- Browser check confirmed the workbench on a combined-filter URL.
+- Browser check confirmed grouping controls, schedule grouping, evidence filter
+  state, action links, and the retained Control Records table.
+
+Notes:
+
+- Prompt 106 was QA/docs only.
+- No workflow behavior changed.
+- Release behavior remains warning-only.
+
 ## 2026-06-08 - Prompt 103: FlightLeg Detail Information Architecture QA
 
 Status: passed.

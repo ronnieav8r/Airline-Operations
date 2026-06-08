@@ -826,17 +826,17 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 106: Operations Control Workbench QA
+Prompt 107: Next App Development Planning
 ```
 
 Scope:
 
-- Validate the Prompt 105 Operations Control workbench.
-- Confirm grouping by release state, schedule window, and aircraft.
-- Confirm URL-driven filters work independently and in combination.
-- Confirm board card links preserve Detail, Edit, Manifest, W&B, Locating, and
-  Dispatch destinations.
-- Confirm the existing table still renders below the board.
+- Decide the next app-development slice after the FlightLeg detail and
+  Operations Control workbench improvements.
+- Compare safe next targets such as improved dashboard surfacing, aircraft
+  context navigation, crew assignment workflow planning, or the next
+  release-evidence workflow.
+- Keep Prompt 107 planning/docs-only.
 - Do not add schema, auth, hard release blocking, imports, provider
   integrations, file uploads, or new release policy.
 
@@ -887,6 +887,11 @@ Prompt 105 is complete. Operations Control now has a URL-driven workbench board
 above the existing table, with grouping by release state, schedule window, or
 aircraft and filters for release status, evidence state, operating part, and
 aircraft. The existing Control Records table remains below the board.
+
+Prompt 106 is complete. Local QA confirmed all workbench grouping modes,
+URL-driven filters, card action links, retained Control Records table, main
+route smoke, and browser rendering. Results are recorded in
+`docs/RELEASE_EVIDENCE_QA_LOG.md`.
 
 Deferred follow-up to keep on the roadmap:
 
