@@ -826,18 +826,19 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 112: Aircraft Context Detail QA
+Prompt 113: Next App Development Planning
 ```
 
 Scope:
 
-- Validate the Prompt 111 aircraft context detail foundation.
-- Confirm `/aircraft` still renders the fleet board and links into aircraft
-  detail pages.
-- Confirm `/aircraft/[aircraftId]` renders aircraft context sections and
-  Operations Control workflow links.
-- Confirm `/aircraft/[aircraftId]/airworthiness` still works.
-- Keep Prompt 112 QA/docs-only unless a defect is found.
+- Decide the next safe app-development slice after aircraft context
+  navigation.
+- Compare crew assignment workflow planning, FlightLeg list/scheduling
+  improvements, aircraft context refinements, or the next release-evidence
+  workflow.
+- Keep Prompt 113 planning/docs-only.
+- Do not add schema, auth, hard release blocking, imports, provider
+  integrations, file uploads, AI behavior, or new release policy.
 
 Recommended app-development follow-up chain:
 
@@ -920,6 +921,11 @@ which shows read-only aircraft identity, current/next assignment, upcoming
 FlightLegs, crew coverage, airworthiness state, discrepancies, deferrals,
 alerts, and Operations Control workflow links. The existing aircraft
 airworthiness workflow remains under `/aircraft/[aircraftId]/airworthiness`.
+
+Prompt 112 is complete. Local QA confirmed `/aircraft`, the new aircraft
+context route, the existing airworthiness route, Operations Control workflow
+links, route smoke, rendered page content, and unchanged warning-only release
+behavior. Results are recorded in `docs/RELEASE_EVIDENCE_QA_LOG.md`.
 
 Deferred follow-up to keep on the roadmap:
 

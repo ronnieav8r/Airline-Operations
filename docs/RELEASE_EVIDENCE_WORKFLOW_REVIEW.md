@@ -47,14 +47,15 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 112 should validate the aircraft context detail foundation implemented
-by Prompt 111.
+Prompt 113 should plan the next app-development slice after aircraft context
+navigation.
 
 Minimum behavior:
 
-- Confirm `/aircraft` still renders the fleet board.
-- Confirm `/aircraft/[aircraftId]` renders context sections and workflow links.
-- Confirm `/aircraft/[aircraftId]/airworthiness` still works.
+- Compare crew assignment workflow planning, FlightLeg list/scheduling
+  improvements, aircraft context refinements, and the next release-evidence
+  workflow.
+- Keep Prompt 113 planning/docs-only.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
   file uploads, imports, overrides, automatic snapshots, AI behavior, or
@@ -117,6 +118,15 @@ Aircraft cards now link to a read-only aircraft context page at
 current/next assignment, upcoming FlightLegs, crew coverage, airworthiness
 state, discrepancies, deferrals, alerts, and Operations Control workflow links.
 The aircraft-level airworthiness workflow remains unchanged.
+
+## Prompt 112 Status
+
+Implementation status: complete.
+
+Local QA confirmed the aircraft fleet board, aircraft context detail route,
+airworthiness workflow route, Operations Control workflow links, route smoke,
+and rendered page content. Release behavior remains warning-only and no new
+mutations were added.
 
 ## Prompt 101 Status
 

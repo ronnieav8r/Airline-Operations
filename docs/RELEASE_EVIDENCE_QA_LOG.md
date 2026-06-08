@@ -2,6 +2,54 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 112: Aircraft Context Detail QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Aircraft context QA:
+
+- Confirmed `/aircraft` returned 200.
+- Confirmed `/aircraft` includes Aircraft Context links.
+- Confirmed `/aircraft/[aircraftId]` returned 200 for a local aircraft.
+- Confirmed `/aircraft/[aircraftId]` renders Overview, Current Assignment,
+  Upcoming Legs, Airworthiness, Crew Coverage, Alerts, and Operations Links.
+- Confirmed `/aircraft/[aircraftId]` includes links to Operations Control
+  detail, edit, Manifest, W&B, Locating, and Dispatch when FlightLeg-backed
+  legs exist.
+- Confirmed `/aircraft/[aircraftId]/airworthiness` returned 200.
+
+Route smoke:
+
+- `/aircraft` returned 200.
+- `/aircraft/[aircraftId]` returned 200.
+- `/aircraft/[aircraftId]/airworthiness` returned 200.
+- `/operations-control` returned 200.
+- `/operations-control/[flightLegId]` returned 200.
+- `/` returned 200.
+- `/flights` returned 200.
+- `/crew` returned 200.
+- `/scheduling` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Notes:
+
+- Prompt 112 was QA/docs only.
+- The in-app browser execution tool was not available beyond reset in this
+  turn, so QA used local route and rendered-content inspection.
+- No workflow behavior changed.
+- Release behavior remains warning-only.
+- No schema, auth, hard blocking, import behavior, provider integration, file
+  upload, AI behavior, or new release policy was added.
+
 ## 2026-06-08 - Prompt 109: Dashboard Surfacing QA
 
 Status: passed.
