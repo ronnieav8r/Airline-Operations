@@ -94,6 +94,9 @@ in:
 docs/IMPORT_BATCH_METADATA_WORKFLOW_PLAN.md
 ```
 
+Prompt 98 status: complete. The metadata-only `/internal/import-batches`
+workflow is implemented and linked from the read-only staging diagnostic.
+
 ## First Import Domain
 
 The first domain remains aircraft maintenance and airworthiness history:

@@ -175,6 +175,9 @@ and editing `ImportBatch` metadata and adding `ImportSource` metadata only:
 docs/IMPORT_BATCH_METADATA_WORKFLOW_PLAN.md
 ```
 
+Prompt 98 status: complete. `/internal/import-batches` now supports
+metadata-only batch create/edit and source metadata creation.
+
 ```text
 Prompt 90: Legacy import staging schema foundation
 ```

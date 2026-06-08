@@ -3,6 +3,7 @@ import {
   ImportStagingRecentBatch,
   ImportStagingSourceSummary,
 } from "@/lib/import-staging-diagnostics";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -115,9 +116,19 @@ export default async function ImportStagingReadinessPage() {
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Internal Diagnostic
           </p>
-          <h1 className="mt-1.5 text-2xl font-semibold tracking-tight sm:text-3xl">
-            Import Staging Readiness
-          </h1>
+          <div className="mt-1.5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                Import Staging Readiness
+              </h1>
+            </div>
+            <Link
+              className="inline-flex rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50"
+              href="/internal/import-batches"
+            >
+              Manage batch metadata
+            </Link>
+          </div>
           <p className="mt-2 max-w-3xl text-sm text-zinc-600">
             Summarizes import staging counts, batch coverage, validation findings, and
             mapping decisions. This page is read-only and does not parse, stage, import,

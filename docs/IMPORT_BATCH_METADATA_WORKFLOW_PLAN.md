@@ -107,6 +107,12 @@ Prompt 98 must not add:
 - Auth/signatures.
 - Source-specific mapping code.
 
+Prompt 98 implementation status: complete. `/internal/import-batches` now
+supports metadata-only `ImportBatch` create/edit and `ImportSource` creation.
+It does not create staging rows, validation findings, mapping decisions, parser
+execution, file uploads, dry-run execution, review/apply workflow, or
+operational writes.
+
 ## Prompt 99 Target
 
 Prompt 99 should validate:

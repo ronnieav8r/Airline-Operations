@@ -131,6 +131,9 @@ Prompt 97 planning status: complete. The next workflow should add metadata-only
 `ImportBatch` and `ImportSource` setup at `/internal/import-batches`, then link
 from this diagnostic page.
 
+Prompt 98 implementation status: complete. The diagnostic now links to the
+metadata-only `/internal/import-batches` workflow.
+
 ## Deferred
 
 - Import batch creation UI.

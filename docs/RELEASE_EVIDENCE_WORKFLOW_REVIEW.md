@@ -728,3 +728,18 @@ Next recommended slice:
 ```text
 Prompt 98: Import Batch Metadata Foundation
 ```
+
+## Prompt 98 Status
+
+Implementation status: complete.
+
+The hidden `/internal/import-batches` workflow now supports metadata-only
+`ImportBatch` create/edit and `ImportSource` creation. It is linked from
+`/internal/import-staging-readiness`. It does not parse files, upload files,
+create staging rows, run dry-runs, apply imports, or write operational records.
+
+Next recommended slice:
+
+```text
+Prompt 99: Import Batch Metadata QA
+```

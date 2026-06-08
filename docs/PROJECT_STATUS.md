@@ -145,6 +145,7 @@ It has:
 101. Import staging read-only diagnostic foundation.
 102. Import staging diagnostic QA.
 103. Import batch metadata planning.
+104. Import batch metadata foundation.
 
 ## Current Data Model Boundaries
 
@@ -370,6 +371,13 @@ a hidden internal `/internal/import-batches` workflow that creates/edits
 file uploads, parser execution, staging-row writes, dry-run execution,
 review/apply workflow, operational writes, auth/signatures, destructive
 cleanup, provider integrations, or source-specific mapping code.
+
+Import batch metadata foundation is implemented. The hidden
+`/internal/import-batches` workflow can create/edit `ImportBatch` metadata and
+add `ImportSource` metadata. `/internal/import-staging-readiness` links to it.
+The workflow does not add file uploads, parser execution, staging-row writes,
+dry-run execution, review/apply workflow, operational writes, auth/signatures,
+destructive cleanup, provider integrations, or source-specific mapping code.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -812,14 +820,14 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 98: Import Batch Metadata Foundation
+Prompt 99: Import Batch Metadata QA
 ```
 
 Scope:
 
-- Implement `/internal/import-batches` for metadata-only import batches and
-  source references.
-- Link it from `/internal/import-staging-readiness`.
+- Validate metadata-only batch create/edit and source metadata creation.
+- Confirm diagnostic counts update.
+- Keep it QA/docs-only unless a defect is found.
 - Do not add parser code, importer execution, file uploads, staging-row writes,
   dry-run execution, review/apply workflow, or operational writes.
 - Do not add importer execution, file uploads, operational writes,
