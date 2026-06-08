@@ -48,18 +48,15 @@ This is a UI organization problem, not a schema or release-policy problem.
 
 ## Recommended Next Slice
 
-Prompt 102 should implement **FlightLeg Detail Information Architecture** using
-the Prompt 101 command-center plan.
+Prompt 103 should validate **FlightLeg Detail Information Architecture**.
 
 Minimum behavior:
 
-- Keep all existing workflow pages and release actions available.
-- Move Release Evidence Actions and Release Control into a clear top command
-  center.
-- Add visible section navigation for Readiness, Release History,
+- Confirm the command-center layout renders on FlightLeg detail.
+- Confirm section navigation exposes Readiness, Release History,
   Aircraft/Airworthiness, Evidence Details, and Raw Reference Data.
-- Group detailed evidence sections below the command center so the page is
-  easier to scan.
+- Confirm release actions, evidence workflow links, snapshot links, and raw
+  reference sections still render.
 - Do not add new mutation actions.
 - Do not add schema, hard blocking, auth/signatures, provider integrations,
   file uploads, imports, overrides, automatic snapshots, or `ReleasePackage`.
@@ -82,6 +79,16 @@ FlightLeg detail. Tabs and collapsible sections remain deferred. Prompt 102
 should implement the layout-only reorganization, and Prompt 103 should validate
 that release actions, evidence workflow links, snapshots, audit history, and
 warning-only behavior remain unchanged.
+
+## Prompt 102 Status
+
+Implementation status: complete.
+
+FlightLeg detail now has a top command-center area containing Release Evidence
+Actions and Release Control, followed by visible section navigation. Readiness,
+Release History, Aircraft/Airworthiness, Evidence Details, and Raw Reference
+Data are grouped as scan-friendly page sections. No data query, server action,
+release behavior, evidence workflow route, schema, or policy change was added.
 
 ## Deferred Alternatives
 

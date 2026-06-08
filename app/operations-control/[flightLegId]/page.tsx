@@ -453,6 +453,62 @@ function ReleaseEvidenceActionPanel({
   );
 }
 
+function SectionNavigation() {
+  const sections = [
+    ["#readiness", "Readiness"],
+    ["#release-history", "Release History"],
+    ["#airworthiness", "Airworthiness"],
+    ["#evidence-details", "Evidence Details"],
+    ["#raw-reference-data", "Raw Reference Data"],
+  ];
+
+  return (
+    <nav
+      aria-label="FlightLeg detail sections"
+      className="sticky top-2 z-10 rounded-md border border-zinc-200 bg-white/95 p-3 shadow-sm backdrop-blur"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          Sections
+        </span>
+        {sections.map(([href, label]) => (
+          <Link
+            className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
+            href={href}
+            key={href}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function SectionGroup({
+  children,
+  description,
+  id,
+  title,
+}: {
+  children: React.ReactNode;
+  description: string;
+  id: string;
+  title: string;
+}) {
+  return (
+    <section className="scroll-mt-24 space-y-4" id={id}>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          {title}
+        </p>
+        <p className="mt-1 max-w-3xl text-sm text-zinc-600">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 function ReleaseReadinessChecklist({ detail }: { detail: ReleaseEvidenceDetail }) {
   const items = getReleaseReadinessItems(detail);
   const readyCount = items.filter((item) => item.ready).length;
@@ -710,16 +766,18 @@ function ReleaseAuditTimeline({ detail }: { detail: ReleaseEvidenceDetail }) {
 }
 
 function SectionCard({
+  id,
   title,
   description,
   children,
 }: {
+  id?: string;
   title: string;
   description?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+    <section className="scroll-mt-24 rounded-md border border-zinc-200 bg-white p-4 shadow-sm" id={id}>
       <div>
         <h2 className="text-lg font-semibold">{title}</h2>
         {description ? <p className="mt-1 text-sm text-zinc-600">{description}</p> : null}
@@ -1177,61 +1235,101 @@ export default async function ReleaseEvidenceDetailPage({ params, searchParams }
 
         <SummaryGrid detail={detail} />
 
-        <ReleaseEvidenceActionPanel detail={detail} now={now} />
-
-        <ReleaseReadinessChecklist detail={detail} />
-
-        <RecentReleaseSnapshots detail={detail} />
-
-        <ReleaseAuditTimeline detail={detail} />
-
-        <ReleaseControlActions detail={detail} />
-
-        <SectionCard
-          title="Airworthiness"
-          description="Read-only assigned-aircraft airworthiness context. Warnings do not block release actions yet."
+        <SectionGroup
+          description="Primary evidence actions and release controls for this FlightLeg. Release actions remain warning-only."
+          id="command-center"
+          title="Command Center"
         >
-          <AirworthinessSection detail={detail} />
-        </SectionCard>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+            <ReleaseEvidenceActionPanel detail={detail} now={now} />
+            <ReleaseControlActions detail={detail} />
+          </div>
+        </SectionGroup>
 
-        <div className="grid gap-4 xl:grid-cols-2">
+        <SectionNavigation />
+
+        <SectionGroup
+          description="Live warning-only checklist and explicit preview snapshot capture."
+          id="readiness"
+          title="Readiness"
+        >
+          <ReleaseReadinessChecklist detail={detail} />
+        </SectionGroup>
+
+        <SectionGroup
+          description="Historical preview snapshots and release-control audit events for this FlightLeg."
+          id="release-history"
+          title="Release History"
+        >
+          <div className="grid gap-4 xl:grid-cols-2">
+            <RecentReleaseSnapshots detail={detail} />
+            <ReleaseAuditTimeline detail={detail} />
+          </div>
+        </SectionGroup>
+
+        <SectionGroup
+          description="Assigned-aircraft airworthiness context. Warnings do not block release actions yet."
+          id="airworthiness"
+          title="Aircraft / Airworthiness"
+        >
           <SectionCard
-            title="Manifest"
-            description="Passenger manifest snapshot attached to this FlightLeg."
+            title="Airworthiness"
+            description="Read-only assigned-aircraft airworthiness context. Warnings do not block release actions yet."
           >
-            <ManifestSection detail={detail} />
+            <AirworthinessSection detail={detail} />
           </SectionCard>
+        </SectionGroup>
 
-          <SectionCard
-            title="Weight And Balance"
-            description="Read-only W&B runs linked to this FlightLeg."
-          >
-            <WeightBalanceSection detail={detail} />
-          </SectionCard>
-        </div>
+        <SectionGroup
+          description="Detailed read-only snapshots for the manual evidence workflows attached to this FlightLeg."
+          id="evidence-details"
+          title="Evidence Details"
+        >
+          <div className="grid gap-4 xl:grid-cols-2">
+            <SectionCard
+              title="Manifest"
+              description="Passenger manifest snapshot attached to this FlightLeg."
+            >
+              <ManifestSection detail={detail} />
+            </SectionCard>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <SectionCard
-            title="Flight Locating"
-            description="Flight-following and locating status for the leg."
-          >
-            <LocatingSection detail={detail} />
-          </SectionCard>
+            <SectionCard
+              title="Weight And Balance"
+              description="Read-only W&B runs linked to this FlightLeg."
+            >
+              <WeightBalanceSection detail={detail} />
+            </SectionCard>
+          </div>
 
-          <SectionCard
-            title="Dispatch Package"
-            description="Weather, NOTAM, and flight-plan references linked to the dispatch package."
-          >
-            <DispatchSection detail={detail} />
-          </SectionCard>
-        </div>
+          <div className="grid gap-4 xl:grid-cols-2">
+            <SectionCard
+              title="Flight Locating"
+              description="Flight-following and locating status for the leg."
+            >
+              <LocatingSection detail={detail} />
+            </SectionCard>
 
-        <SectionCard
-          title="Captured Snapshots"
+            <SectionCard
+              title="Dispatch Package"
+              description="Weather, NOTAM, and flight-plan references linked to the dispatch package."
+            >
+              <DispatchSection detail={detail} />
+            </SectionCard>
+          </div>
+        </SectionGroup>
+
+        <SectionGroup
           description="Raw demo snapshot payloads. Provider integrations remain deferred."
+          id="raw-reference-data"
+          title="Raw Reference Data"
         >
-          <SnapshotSection detail={detail} />
-        </SectionCard>
+          <SectionCard
+            title="Captured Snapshots"
+            description="Raw demo snapshot payloads. Provider integrations remain deferred."
+          >
+            <SnapshotSection detail={detail} />
+          </SectionCard>
+        </SectionGroup>
       </div>
     </main>
   );

@@ -826,21 +826,18 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 102: FlightLeg Detail Information Architecture Foundation
+Prompt 103: FlightLeg Detail Information Architecture QA
 ```
 
 Scope:
 
-- Implement the Prompt 101 command-center layout for
-  `/operations-control/[flightLegId]`.
-- Move Release Evidence Actions and Release Control into a clear top command
-  center.
-- Add visible section navigation for Readiness, Release History,
-  Aircraft/Airworthiness, Evidence Details, and Raw Reference Data.
-- Preserve all existing routes, evidence workflow links, release actions,
-  snapshots, audit behavior, and warning-only release behavior.
-- Do not add schema, auth, hard release blocking, imports, provider
-  integrations, file uploads, or new release policy.
+- Validate the Prompt 102 FlightLeg detail command-center layout.
+- Confirm the page still renders with complete, partial, and missing evidence
+  states.
+- Confirm Release Control actions appear near the top and remain warning-only.
+- Confirm evidence workflow links, snapshot links, and aircraft airworthiness
+  links still route correctly.
+- Confirm no workflow behavior changes were introduced.
 
 Recommended app-development follow-up chain:
 
@@ -868,6 +865,11 @@ Scope:
 Prompt 101 is complete. The selected FlightLeg detail information architecture
 is a compact command-center plus section navigation. Prompt 102 should
 implement this as a layout-only change, and Prompt 103 should validate it.
+
+Prompt 102 is complete. FlightLeg detail now groups Release Evidence Actions
+and Release Control into a top command center, adds visible section navigation,
+and groups readiness, release history, aircraft/airworthiness, evidence
+details, and raw reference data without changing release behavior.
 
 Deferred follow-up to keep on the roadmap:
 
