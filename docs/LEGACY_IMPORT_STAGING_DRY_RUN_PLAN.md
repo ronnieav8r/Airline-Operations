@@ -79,6 +79,10 @@ in:
 docs/IMPORT_STAGING_DIAGNOSTIC_PLAN.md
 ```
 
+Prompt 95 status: complete. The hidden read-only route
+`/internal/import-staging-readiness` now summarizes staging table diagnostics
+without mutation controls.
+
 ## First Import Domain
 
 The first domain remains aircraft maintenance and airworthiness history:

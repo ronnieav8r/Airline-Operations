@@ -142,6 +142,7 @@ It has:
 98. Aircraft maintenance import source format planning.
 99. Aircraft maintenance import dry-run mapping planning.
 100. Import staging read-only diagnostic planning.
+101. Import staging read-only diagnostic foundation.
 
 ## Current Data Model Boundaries
 
@@ -346,6 +347,14 @@ coverage, validation-status summaries, finding summaries, and mapping-decision
 summaries. It must not add import execution, parser code, file uploads,
 staging mutations, operational writes, auth/signatures, destructive cleanup,
 provider integrations, or source-specific mapping code.
+
+Import staging read-only diagnostic foundation is implemented. The hidden
+`/internal/import-staging-readiness` page summarizes import staging counts,
+batch coverage, row validation coverage, findings, mapping decisions, recent
+batches, recent sources, and empty-state guidance. It is read-only and does not
+add parser/import execution, file uploads, staging mutations, operational
+writes, review/apply routes, auth/signatures, destructive cleanup, provider
+integrations, or source-specific mapping code.
 
 ADS-B / external tracking is planned as a future provider-neutral integration.
 External observations should become attributed position reports later, not the
@@ -788,14 +797,14 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 95: Import Staging Read-Only Diagnostic Foundation
+Prompt 96: Import Staging Diagnostic QA
 ```
 
 Scope:
 
-- Implement `/internal/import-staging-readiness` as a read-only page.
-- Show empty-state staging diagnostics and aggregate counts.
-- Keep it read-only.
+- Validate `/internal/import-staging-readiness`.
+- Confirm empty-state diagnostics render while staging tables are empty.
+- Keep it QA/docs-only unless a diagnostic defect is found.
 - Do not add parser code, importer execution, file uploads, staging-row writes,
   or operational writes.
 - Do not add importer execution, file uploads, operational writes,

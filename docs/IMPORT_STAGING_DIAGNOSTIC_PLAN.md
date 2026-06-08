@@ -116,6 +116,12 @@ Minimum behavior:
 - Show batch, row, finding, and mapping decision summaries when data exists.
 - Keep all import behavior read-only.
 
+Prompt 95 implementation status: complete. The route now exists and reads
+staging aggregate data only. No parser/import execution, file upload,
+staging-row write, operational write, review/apply route, auth/signature,
+destructive cleanup, provider integration, or source-specific mapping code was
+added.
+
 ## Deferred
 
 - Import batch creation UI.

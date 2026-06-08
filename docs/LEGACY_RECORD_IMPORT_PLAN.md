@@ -161,6 +161,10 @@ The planned diagnostic should inspect staging counts and summaries only. It
 must not add import execution, parser code, file uploads, staging mutations, or
 operational writes.
 
+Prompt 95 status: complete. The hidden read-only
+`/internal/import-staging-readiness` diagnostic now exists and reads staging
+aggregates only.
+
 ```text
 Prompt 90: Legacy import staging schema foundation
 ```

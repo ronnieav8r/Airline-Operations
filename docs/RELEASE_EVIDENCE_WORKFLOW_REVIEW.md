@@ -669,3 +669,21 @@ docs/IMPORT_STAGING_DIAGNOSTIC_PLAN.md
 ```
 
 Stop after Prompt 94 unless a new plan is approved.
+
+## Prompt 95 Status
+
+Implementation status: complete.
+
+The hidden read-only `/internal/import-staging-readiness` diagnostic now
+summarizes import staging counts, batch coverage, row validation coverage,
+findings, mapping decisions, recent batches, recent sources, and empty-state
+guidance. It does not add importer execution or mutation behavior.
+
+Next recommended slice:
+
+```text
+Prompt 96: Import Staging Diagnostic QA
+```
+
+Prompt 96 should validate the diagnostic and keep the slice QA/docs-only unless
+a defect is found.
