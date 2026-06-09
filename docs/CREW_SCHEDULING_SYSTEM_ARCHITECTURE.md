@@ -197,3 +197,7 @@ Prompt 139 implementation status: complete. The schedule period list and detail
 routes now expose the additive scheduling foundation for admin review without
 adding schedule writes, publishing actions, request review, or aircraft
 assignment automation.
+
+Prompt 140 QA status: complete. The schedule period admin surface renders
+locally, planner navigation reaches it, crew detail links remain available, and
+the implementation remains read-only.

@@ -1142,16 +1142,22 @@ Prompt 138 is complete. The selected read-only admin surface is
 Prompt 139 is complete. The read-only schedule period admin list and detail
 pages are implemented under `/crew/scheduling/periods`.
 
-Preferred next slice:
+Prompt 140 is complete. Local QA confirmed the schedule period list/detail
+routes, planner navigation, crew detail links, health counts, validation, build,
+and unchanged read-only behavior. The Prompt 136-140 crew scheduling schema and
+read-only admin surface chain is complete.
+
+Preferred next step:
 
 ```text
-Prompt 140: Schedule Period Read-Only Admin Surface QA
+Planning session for the next Crew Scheduling implementation chain
 ```
 
 Scope:
 
-- Validate schedule period list/detail rendering, planner navigation, crew
-  detail links, health counts, and unchanged workflow behavior.
+- Decide whether the next Crew Scheduling chain should focus on schedule-period
+  create/edit, rotation-pattern admin, request/bid workflow planning, or
+  improved planner surfacing.
 - Keep schedule writes, time-off writes, duty/rest enforcement, assignment
   automation, auth/signatures, hard release blocking, imports, provider
   integrations, and positioning/logistics implementation behind separate

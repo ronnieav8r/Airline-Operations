@@ -186,6 +186,10 @@ Prompt 139 implementation status: complete. The read-only schedule period list
 and detail pages now expose the schema foundation without adding writes or
 publishing actions.
 
+Prompt 140 QA status: complete. Local validation, route smoke, and browser QA
+confirmed the read-only schedule period admin surface and unchanged planner
+behavior.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

@@ -366,3 +366,8 @@ admin surface is read-only under `/crew/scheduling/periods`; do not add schedule
 writes, publish/finalize actions, crew portal/auth behavior, duty/rest
 enforcement, assignment automation, or positioning logistics until separately
 planned.
+
+Prompt 140 QA confirmed the read-only schedule-period admin routes render
+against the additive scheduling schema. The schema boundary is unchanged:
+schedule-period admin visibility is allowed, but schedule publishing and
+schedule mutation workflows remain deferred.

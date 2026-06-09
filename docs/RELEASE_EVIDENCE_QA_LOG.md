@@ -2,6 +2,49 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-09 - Prompt 140: Schedule Period Read-Only Admin Surface QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Route/API smoke:
+
+- `/crew/scheduling/periods` returned 200.
+- `/crew/scheduling/periods/[periodId]` returned 200 for seeded period
+  `Demo Current Month`.
+- `/crew/scheduling` returned 200.
+- `/crew` returned 200.
+- `/aircraft` returned 200.
+- `/operations-control` returned 200.
+- `/` returned 200.
+- `/api/health` returned 200 and still exposed crew scheduling foundation
+  counts.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Browser QA:
+
+- The Crew Scheduling planner exposed the `Schedule periods` navigation link.
+- The schedule period list rendered the `Schedule Periods` heading and
+  read-only planning boundary.
+- The seeded `Demo Current Month` detail page rendered.
+- The detail page showed the read-only boundary, schedule entries section, and
+  crew detail links.
+
+Notes:
+
+- Prompt 140 was QA/docs only.
+- No schedule writes, publishing actions, crew request review, pattern
+  application, generated `CrewSchedule` writes, crew portal/auth, duty/rest
+  enforcement, assignment automation, positioning logistics, imports, provider
+  integrations, or coverage-source changes were added.
+
 ## 2026-06-09 - Prompt 137: Crew Scheduling Schema QA
 
 Status: passed.
