@@ -13,6 +13,14 @@ import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
 import { prisma } from "@/lib/prisma";
 
 export const CREW_SCHEDULING_WINDOW_DAYS = 7;
+export const CREW_SCHEDULING_WINDOW_DAY_OPTIONS = [1, 3, 7, 14] as const;
+
+export type CrewSchedulingWindowDays = (typeof CREW_SCHEDULING_WINDOW_DAY_OPTIONS)[number];
+
+export type CrewSchedulingPlannerOptions = {
+  windowDays?: CrewSchedulingWindowDays;
+  windowStart?: Date;
+};
 
 const crewPlannerSelect = {
   id: true,
@@ -300,11 +308,14 @@ function buildAvailabilityWarnings(
   return warnings;
 }
 
-export async function getCrewSchedulingPlannerData(): Promise<CrewSchedulingPlannerData> {
+export async function getCrewSchedulingPlannerData(
+  options: CrewSchedulingPlannerOptions = {},
+): Promise<CrewSchedulingPlannerData> {
   const now = new Date();
-  const windowStart = new Date(now);
+  const windowStart = options.windowStart ? new Date(options.windowStart) : new Date(now);
   windowStart.setHours(0, 0, 0, 0);
-  const windowEnd = addDays(now, CREW_SCHEDULING_WINDOW_DAYS);
+  const windowDays = options.windowDays ?? CREW_SCHEDULING_WINDOW_DAYS;
+  const windowEnd = addDays(windowStart, windowDays);
   const [crewMembers, flights] = await Promise.all([
     prisma.crewMember.findMany({
       orderBy: [{ employmentStatus: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
@@ -324,7 +335,7 @@ export async function getCrewSchedulingPlannerData(): Promise<CrewSchedulingPlan
           where: {
             status: { in: [TimeOffRequestStatus.PENDING, TimeOffRequestStatus.APPROVED] },
             startDate: { lt: windowEnd },
-            endDate: { gte: now },
+            endDate: { gte: windowStart },
           },
         },
       },
@@ -332,7 +343,7 @@ export async function getCrewSchedulingPlannerData(): Promise<CrewSchedulingPlan
     prisma.flight.findMany({
       where: {
         scheduledDeparture: {
-          gte: now,
+          gte: windowStart,
           lt: windowEnd,
         },
       },
@@ -354,7 +365,7 @@ export async function getCrewSchedulingPlannerData(): Promise<CrewSchedulingPlan
     );
     const schedulesInWindow = crewMember.schedules;
     const timeOffInWindow = crewMember.timeOffRequests.filter((request) =>
-      overlapsWindow(request.startDate, request.endDate, now, windowEnd),
+      overlapsWindow(request.startDate, request.endDate, windowStart, windowEnd),
     );
     const upcomingFlights = flightsWithCoverage.flatMap(({ flight, coverage }) => {
       const baseFlight = normalizeFlight(flight, coverage);

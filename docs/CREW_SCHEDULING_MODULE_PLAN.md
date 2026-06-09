@@ -136,6 +136,9 @@ counts, and warning-only availability messages.
 
 Prompt 131 planning status: complete. Prompt 132 should implement the controls
 without schema changes or schedule/time-off writes.
+Prompt 132 implementation status: complete. `/crew/scheduling` now supports
+URL-driven `date` and `days` controls while preserving filters, grouping, and
+read-only planner behavior.
 
 Warning-only conflict examples:
 

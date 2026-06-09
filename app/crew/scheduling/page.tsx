@@ -3,6 +3,8 @@ import { DutyStatus, EmploymentStatus, SeatRole, TimeOffRequestStatus } from "@p
 
 import {
   CREW_SCHEDULING_WINDOW_DAYS,
+  CREW_SCHEDULING_WINDOW_DAY_OPTIONS,
+  CrewSchedulingWindowDays,
   CrewPlannerMember,
   getCrewSchedulingPlannerData,
 } from "@/lib/crew-scheduling-planner-queries";
@@ -14,6 +16,8 @@ type CrewSchedulingSearchParams = {
   assignment?: string | string[];
   availability?: string | string[];
   base?: string | string[];
+  date?: string | string[];
+  days?: string | string[];
   duty?: string | string[];
   groupBy?: string | string[];
   timeOff?: string | string[];
@@ -44,6 +48,12 @@ type PlannerFilters = {
     | "vacation";
   groupBy: "assignment" | "availability" | "base" | "duty";
   timeOff: "all" | "none" | "overlap";
+};
+
+type PlannerWindow = {
+  date: string;
+  days: CrewSchedulingWindowDays;
+  windowStart: Date;
 };
 
 const AVAILABILITY_OPTIONS: FilterOption[] = [
@@ -91,8 +101,55 @@ function firstParam(value: string | string[] | undefined): string | null {
   return value ?? null;
 }
 
+function formatInputDate(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseInputDate(value: string | null): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(year, month - 1, day);
+
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  parsed.setHours(0, 0, 0, 0);
+  return parsed;
+}
+
 function oneOf<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
   return value && allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+function parseWindow(searchParams: CrewSchedulingSearchParams): PlannerWindow {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const requestedDate = parseInputDate(firstParam(searchParams.date));
+  const days = Number(firstParam(searchParams.days));
+  const windowDays = CREW_SCHEDULING_WINDOW_DAY_OPTIONS.includes(
+    days as CrewSchedulingWindowDays,
+  )
+    ? (days as CrewSchedulingWindowDays)
+    : CREW_SCHEDULING_WINDOW_DAYS;
+  const windowStart = requestedDate ?? today;
+
+  return {
+    date: formatInputDate(windowStart),
+    days: windowDays,
+    windowStart,
+  };
 }
 
 function parseFilters(searchParams: CrewSchedulingSearchParams): PlannerFilters {
@@ -271,10 +328,11 @@ function filterOptionLabel(options: FilterOption[], value: string): string {
 
 function activeFilterLabels(
   filters: PlannerFilters,
+  window: PlannerWindow,
   baseOptions: FilterOption[],
   aircraftOptions: FilterOption[],
 ): string[] {
-  const labels: string[] = [];
+  const labels: string[] = [`Window ${window.date} for ${window.days} day${window.days === 1 ? "" : "s"}`];
 
   if (filters.availability !== "all") {
     labels.push(filterOptionLabel(AVAILABILITY_OPTIONS, filters.availability));
@@ -330,6 +388,29 @@ function FilterSelect({
   );
 }
 
+function HiddenFilterInputs({ filters }: { filters: PlannerFilters }) {
+  return (
+    <>
+      <input name="groupBy" type="hidden" value={filters.groupBy} />
+      <input name="availability" type="hidden" value={filters.availability} />
+      <input name="duty" type="hidden" value={filters.duty} />
+      <input name="assignment" type="hidden" value={filters.assignment} />
+      <input name="timeOff" type="hidden" value={filters.timeOff} />
+      <input name="base" type="hidden" value={filters.base} />
+      <input name="aircraft" type="hidden" value={filters.aircraft} />
+    </>
+  );
+}
+
+function HiddenWindowInputs({ window }: { window: PlannerWindow }) {
+  return (
+    <>
+      <input name="date" type="hidden" value={window.date} />
+      <input name="days" type="hidden" value={window.days} />
+    </>
+  );
+}
+
 function buildBaseOptions(crewMembers: CrewPlannerMember[]): FilterOption[] {
   const stationCodes = Array.from(
     new Set(crewMembers.map((crewMember) => crewMember.baseStation.code)),
@@ -356,6 +437,36 @@ function buildAircraftOptions(crewMembers: CrewPlannerMember[]): FilterOption[] 
       .sort(([, firstTail], [, secondTail]) => firstTail.localeCompare(secondTail))
       .map(([id, tailNumber]) => ({ label: tailNumber, value: id })),
   ];
+}
+
+function buildPlannerHref({
+  filters,
+  overrides,
+  window,
+}: {
+  filters: PlannerFilters;
+  overrides: Partial<PlannerFilters & Pick<PlannerWindow, "date" | "days">>;
+  window: PlannerWindow;
+}): string {
+  const params = new URLSearchParams();
+  const next = {
+    ...filters,
+    date: window.date,
+    days: window.days,
+    ...overrides,
+  };
+
+  params.set("date", next.date);
+  params.set("days", String(next.days));
+  params.set("groupBy", next.groupBy);
+  params.set("availability", next.availability);
+  params.set("duty", next.duty);
+  params.set("assignment", next.assignment);
+  params.set("timeOff", next.timeOff);
+  params.set("base", next.base);
+  params.set("aircraft", next.aircraft);
+
+  return `/crew/scheduling?${params.toString()}`;
 }
 
 function buildCrewGroups(
@@ -410,14 +521,23 @@ function buildCrewGroups(
 }
 
 export default async function CrewSchedulingPage({ searchParams }: PageProps) {
-  const data = await getCrewSchedulingPlannerData();
-  const filters = parseFilters(await searchParams);
+  const queryParams = await searchParams;
+  const window = parseWindow(queryParams);
+  const data = await getCrewSchedulingPlannerData({
+    windowDays: window.days,
+    windowStart: window.windowStart,
+  });
+  const filters = parseFilters(queryParams);
   const filteredCrewMembers = filterCrewMembers(data.crewMembers, filters);
   const baseOptions = buildBaseOptions(data.crewMembers);
   const aircraftOptions = buildAircraftOptions(data.crewMembers);
-  const activeFilters = activeFilterLabels(filters, baseOptions, aircraftOptions);
+  const activeFilters = activeFilterLabels(filters, window, baseOptions, aircraftOptions);
   const crewGroups = buildCrewGroups(filteredCrewMembers, data.crewMembers, filters.groupBy);
   const windowLabel = `${toDate(data.windowStart)} - ${toDate(data.windowEnd)}`;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -465,6 +585,97 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
+              <h2 className="text-lg font-semibold">Planning window</h2>
+              <p className="text-sm text-zinc-600">
+                Choose the date and window length for read-only schedule,
+                time-off, and coverage context.
+              </p>
+            </div>
+            <Link
+              className="text-sm font-semibold text-sky-700 hover:text-sky-900"
+              href="/crew/scheduling"
+            >
+              Reset planner
+            </Link>
+          </div>
+          <form className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5" method="GET">
+            <HiddenFilterInputs filters={filters} />
+            <label className="block sm:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Start date
+              </span>
+              <input
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm"
+                defaultValue={window.date}
+                name="date"
+                type="date"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Window
+              </span>
+              <select
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm"
+                defaultValue={String(window.days)}
+                name="days"
+              >
+                {CREW_SCHEDULING_WINDOW_DAY_OPTIONS.map((days) => (
+                  <option key={days} value={days}>
+                    {days} day{days === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-end">
+              <button
+                className="w-full rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+                type="submit"
+              >
+                Apply window
+              </button>
+            </div>
+          </form>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+            <Link
+              className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-zinc-700 hover:bg-zinc-100"
+              href={buildPlannerHref({
+                filters,
+                overrides: { date: formatInputDate(today) },
+                window,
+              })}
+            >
+              Today
+            </Link>
+            <Link
+              className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-zinc-700 hover:bg-zinc-100"
+              href={buildPlannerHref({
+                filters,
+                overrides: { date: formatInputDate(tomorrow) },
+                window,
+              })}
+            >
+              Tomorrow
+            </Link>
+            {[1, 3, 7, 14].map((days) => (
+              <Link
+                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-zinc-700 hover:bg-zinc-100"
+                href={buildPlannerHref({
+                  filters,
+                  overrides: { days: days as CrewSchedulingWindowDays },
+                  window,
+                })}
+                key={days}
+              >
+                {days} day{days === 1 ? "" : "s"}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
               <h2 className="text-lg font-semibold">Planner filters</h2>
               <p className="text-sm text-zinc-600">
                 URL-driven filters for the read-only availability planner.
@@ -478,6 +689,7 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
             </Link>
           </div>
           <form className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-7" method="GET">
+            <HiddenWindowInputs window={window} />
             <FilterSelect
               label="Grouping"
               name="groupBy"
@@ -535,7 +747,7 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
             <p className="text-sm text-zinc-500">Planning window</p>
             <p className="mt-2 text-sm font-semibold text-zinc-900">{windowLabel}</p>
             <p className="mt-1 text-xs text-zinc-500">
-              {CREW_SCHEDULING_WINDOW_DAYS} days
+              {window.days} day{window.days === 1 ? "" : "s"}
             </p>
           </article>
           <article className="rounded-md border border-zinc-200 bg-white p-4">

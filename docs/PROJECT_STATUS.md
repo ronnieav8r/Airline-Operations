@@ -178,6 +178,7 @@ It has:
 134. Crew member context page foundation.
 135. Crew member context page QA.
 136. Crew planner date/window controls planning.
+137. Crew planner date/window controls foundation.
 
 ## Current Data Model Boundaries
 
@@ -245,6 +246,10 @@ workflow behavior.
 
 Crew planner date/window controls planning is complete. Prompt 132 should add
 URL-driven `date` and `days` controls to the read-only crew planner.
+
+Crew planner date/window controls foundation is complete. `/crew/scheduling`
+now supports URL-driven planning windows while preserving filters, grouping,
+crew cards, and read-only behavior.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -904,14 +909,13 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 132: Crew Planner Date/Window Controls Foundation
+Prompt 133: Crew Planner Date/Window Controls QA
 ```
 
 Scope:
 
-- Implement URL-driven `date=YYYY-MM-DD` and `days=1|3|7|14` controls for
-  `/crew/scheduling`.
-- Preserve existing filters, grouping, planner cards, and crew detail links.
+- Validate default and query-param planner windows.
+- Confirm filters, grouping, planner cards, and crew detail links still work.
 - Do not add schema, schedule writes, time-off writes, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports, or
   provider integrations.
@@ -1101,17 +1105,21 @@ Prompt 131 is complete. The selected crew planner window policy is
 URL-driven `date=YYYY-MM-DD` and `days=1|3|7|14`, defaulting to today plus 7
 days.
 
+Prompt 132 is complete. `/crew/scheduling` now has planner window controls,
+shortcut links, and query-driven schedule/time-off/coverage windows while
+remaining read-only.
+
 Preferred next slice:
 
 ```text
-Prompt 132: Crew Planner Date/Window Controls Foundation
+Prompt 133: Crew Planner Date/Window Controls QA
 ```
 
 Scope:
 
-- Implement date/window controls on `/crew/scheduling`.
-- Apply the selected window to schedule blocks, time-off overlap, upcoming
-  coverage, summary counts, and warning-only availability messages.
+- Validate date/window query behavior and combinations with filters/grouping.
+- Confirm no schedule, time-off, assignment, duty/rest, or release behavior
+  changed.
 - Keep schedule writes, time-off writes, duty/rest enforcement, assignment
   automation, auth/signatures, hard release blocking, imports, and provider
   integrations behind a separate plan.
