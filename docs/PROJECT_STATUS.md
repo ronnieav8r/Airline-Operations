@@ -1157,17 +1157,21 @@ time-off request creation, approve/deny/cancel review actions, approved-request
 cancellation, and warning-only conflict visibility without schema, schedule, or
 assignment side effects.
 
+Prompt 143 is complete. Local QA confirmed create, approve, deny, and cancel
+workflows, `reviewedAt` updates, route smoke, and that only `TimeOffRequest`
+rows changed.
+
 Preferred next slice:
 
 ```text
-Prompt 143: Time-Off Request Workflow QA
+Prompt 144: Time-Off Queue Filters Foundation
 ```
 
 Scope:
 
-- Validate create, approve, deny, and cancel workflows.
-- Confirm `reviewedAt` changes and planner/crew detail time-off visibility.
-- Confirm no schedule or assignment tables are mutated by review actions.
+- Add URL filters to `/crew/scheduling/time-off` for status, crew member,
+  request type, and date window.
+- Preserve create/review/cancel behavior.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind

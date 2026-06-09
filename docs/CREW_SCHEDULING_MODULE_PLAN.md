@@ -206,6 +206,10 @@ Prompt 142 implementation status: complete. `/crew/scheduling/time-off` now
 supports ops/admin `TimeOffRequest` creation and review with warning-only
 conflict visibility and no schedule or assignment side effects.
 
+Prompt 143 QA status: complete. Local workflow QA confirmed create, approve,
+deny, and cancel behavior, reviewed timestamps, route smoke, and no schedule or
+assignment side effects.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

@@ -2,6 +2,51 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-09 - Prompt 143: Time-Off Request Workflow QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Workflow QA:
+
+- Created three local QA time-off requests through `/crew/scheduling/time-off`.
+- Approved one request and confirmed status `APPROVED` plus `reviewedAt`.
+- Denied one request and confirmed status `DENIED` plus `reviewedAt`.
+- Cancelled one pending request and confirmed status `CANCELLED` plus
+  `reviewedAt`.
+
+Side-effect check:
+
+- `timeOffRequests` changed from 1 to 4.
+- `crewSchedules` stayed 3.
+- `crewScheduleEntries` stayed 3.
+- `aircraftCrewAssignments` stayed 5.
+- `crewLegAssignments` stayed 13.
+
+Route/API smoke:
+
+- `/crew/scheduling/time-off` returned 200.
+- `/crew/scheduling` returned 200.
+- `/crew/[crewMemberId]` returned 200.
+- `/crew` returned 200.
+- `/aircraft` returned 200.
+- `/operations-control` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Notes:
+
+- Prompt 143 was QA/docs only.
+- No schedule, schedule-entry, aircraft-assignment, crew-leg-assignment,
+  release, auth, duty/rest, import, provider, or positioning behavior changed.
+
 ## 2026-06-09 - Prompt 140: Schedule Period Read-Only Admin Surface QA
 
 Status: passed.
