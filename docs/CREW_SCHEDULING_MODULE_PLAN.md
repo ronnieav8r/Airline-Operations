@@ -210,6 +210,10 @@ Prompt 143 QA status: complete. Local workflow QA confirmed create, approve,
 deny, and cancel behavior, reviewed timestamps, route smoke, and no schedule or
 assignment side effects.
 
+Prompt 144 implementation status: complete. `/crew/scheduling/time-off` now
+supports URL-driven queue filters for status, crew member, request type, and
+date window while preserving create/review actions.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

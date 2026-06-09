@@ -7,6 +7,7 @@ import {
 } from "@/app/crew/scheduling/time-off/actions";
 import {
   TimeOffWorkflowData,
+  TimeOffWorkflowFilters,
   TimeOffWorkflowRequest,
   getTimeOffWorkflowData,
 } from "@/lib/time-off-workflow-queries";
@@ -15,7 +16,12 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   searchParams: Promise<{
+    crewMember?: string | string[];
     error?: string | string[];
+    from?: string | string[];
+    requestType?: string | string[];
+    status?: string | string[];
+    to?: string | string[];
   }>;
 };
 
@@ -40,6 +46,117 @@ function firstSearchParam(value: string | string[] | undefined): string | null {
   }
 
   return value ?? null;
+}
+
+function formatInputDate(value: Date | null): string {
+  if (!value) {
+    return "";
+  }
+
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseInputDate(value: string | null): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(year, month - 1, day);
+
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  parsed.setHours(0, 0, 0, 0);
+  return parsed;
+}
+
+function addDays(value: Date, days: number): Date {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function oneOf<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
+  return value && allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+function parseFilters(queryParams: Awaited<PageProps["searchParams"]>): TimeOffWorkflowFilters {
+  const fromDate = parseInputDate(firstSearchParam(queryParams.from));
+  const toDate = parseInputDate(firstSearchParam(queryParams.to));
+
+  return {
+    crewMemberId: firstSearchParam(queryParams.crewMember) ?? "all",
+    fromDate,
+    requestType: oneOf(
+      firstSearchParam(queryParams.requestType),
+      ["all", ...REQUEST_TYPES] as const,
+      "all",
+    ),
+    status: oneOf(
+      firstSearchParam(queryParams.status),
+      ["all", ...STATUS_ORDER] as const,
+      "all",
+    ),
+    toDate: toDate ? addDays(toDate, 1) : null,
+  };
+}
+
+function buildTimeOffHref(filters: TimeOffWorkflowFilters): string {
+  const params = new URLSearchParams();
+
+  if (filters.status !== "all") {
+    params.set("status", filters.status);
+  }
+  if (filters.crewMemberId !== "all") {
+    params.set("crewMember", filters.crewMemberId);
+  }
+  if (filters.requestType !== "all") {
+    params.set("requestType", filters.requestType);
+  }
+  if (filters.fromDate) {
+    params.set("from", formatInputDate(filters.fromDate));
+  }
+  if (filters.toDate) {
+    params.set("to", formatInputDate(addDays(filters.toDate, -1)));
+  }
+
+  const query = params.toString();
+  return query ? `/crew/scheduling/time-off?${query}` : "/crew/scheduling/time-off";
+}
+
+function activeFilterLabels(
+  filters: TimeOffWorkflowFilters,
+  crewOptions: TimeOffWorkflowData["filterCrewOptions"],
+): string[] {
+  const labels: string[] = [];
+
+  if (filters.status !== "all") {
+    labels.push(`Status ${formatStatus(filters.status)}`);
+  }
+  if (filters.crewMemberId !== "all") {
+    labels.push(crewOptions.find((crewMember) => crewMember.id === filters.crewMemberId)?.label ?? "Selected crew");
+  }
+  if (filters.requestType !== "all") {
+    labels.push(`Type ${formatStatus(filters.requestType)}`);
+  }
+  if (filters.fromDate) {
+    labels.push(`From ${formatInputDate(filters.fromDate)}`);
+  }
+  if (filters.toDate) {
+    labels.push(`To ${formatInputDate(addDays(filters.toDate, -1))}`);
+  }
+
+  return labels.length > 0 ? labels : ["All requests"];
 }
 
 function toDateTime(value: Date | null): string {
@@ -133,16 +250,19 @@ function DateTimeField({ label, name }: { label: string; name: string }) {
 function ReviewButton({
   label,
   requestId,
+  returnTo,
   status,
   variant = "primary",
 }: {
   label: string;
   requestId: string;
+  returnTo: string;
   status: TimeOffRequestStatus;
   variant?: "primary" | "secondary";
 }) {
   return (
     <form action={reviewTimeOffRequestAction.bind(null, requestId, status)}>
+      <input name="returnTo" type="hidden" value={returnTo} />
       <button
         className={
           variant === "primary"
@@ -178,7 +298,7 @@ function ConflictWarnings({ request }: { request: TimeOffWorkflowRequest }) {
   );
 }
 
-function RequestCard({ request }: { request: TimeOffWorkflowRequest }) {
+function RequestCard({ request, returnTo }: { request: TimeOffWorkflowRequest; returnTo: string }) {
   return (
     <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -216,17 +336,20 @@ function RequestCard({ request }: { request: TimeOffWorkflowRequest }) {
               <ReviewButton
                 label="Approve"
                 requestId={request.id}
+                returnTo={returnTo}
                 status={TimeOffRequestStatus.APPROVED}
               />
               <ReviewButton
                 label="Deny"
                 requestId={request.id}
+                returnTo={returnTo}
                 status={TimeOffRequestStatus.DENIED}
                 variant="secondary"
               />
               <ReviewButton
                 label="Cancel"
                 requestId={request.id}
+                returnTo={returnTo}
                 status={TimeOffRequestStatus.CANCELLED}
                 variant="secondary"
               />
@@ -236,6 +359,7 @@ function RequestCard({ request }: { request: TimeOffWorkflowRequest }) {
             <ReviewButton
               label="Cancel approved"
               requestId={request.id}
+              returnTo={returnTo}
               status={TimeOffRequestStatus.CANCELLED}
               variant="secondary"
             />
@@ -248,9 +372,12 @@ function RequestCard({ request }: { request: TimeOffWorkflowRequest }) {
 }
 
 export default async function TimeOffWorkflowPage({ searchParams }: PageProps) {
-  const data = await getTimeOffWorkflowData();
   const queryParams = await searchParams;
+  const filters = parseFilters(queryParams);
+  const data = await getTimeOffWorkflowData(filters);
   const error = firstSearchParam(queryParams.error);
+  const returnTo = buildTimeOffHref(filters);
+  const activeFilters = activeFilterLabels(filters, data.filterCrewOptions);
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -311,8 +438,119 @@ export default async function TimeOffWorkflowPage({ searchParams }: PageProps) {
         </section>
 
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Queue filters</h2>
+              <p className="text-sm text-zinc-600">
+                Filter the request queue without changing workflow behavior.
+              </p>
+            </div>
+            <Link
+              className="text-sm font-semibold text-sky-700 hover:text-sky-900"
+              href="/crew/scheduling/time-off"
+            >
+              Reset filters
+            </Link>
+          </div>
+          <form className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-5" method="GET">
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Status
+              </span>
+              <select
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm"
+                defaultValue={filters.status}
+                name="status"
+              >
+                <option value="all">All statuses</option>
+                {STATUS_ORDER.map((status) => (
+                  <option key={status} value={status}>
+                    {formatStatus(status)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Crew member
+              </span>
+              <select
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm"
+                defaultValue={filters.crewMemberId}
+                name="crewMember"
+              >
+                <option value="all">All crew</option>
+                {data.filterCrewOptions.map((crewMember) => (
+                  <option key={crewMember.id} value={crewMember.id}>
+                    {crewMember.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Type
+              </span>
+              <select
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm"
+                defaultValue={filters.requestType}
+                name="requestType"
+              >
+                <option value="all">All types</option>
+                {REQUEST_TYPES.map((requestType) => (
+                  <option key={requestType} value={requestType}>
+                    {formatStatus(requestType)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                From
+              </span>
+              <input
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm"
+                defaultValue={formatInputDate(filters.fromDate)}
+                name="from"
+                type="date"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                To
+              </span>
+              <input
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm"
+                defaultValue={filters.toDate ? formatInputDate(addDays(filters.toDate, -1)) : ""}
+                name="to"
+                type="date"
+              />
+            </label>
+            <div className="md:col-span-2 lg:col-span-5">
+              <button
+                className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+                type="submit"
+              >
+                Apply filters
+              </button>
+            </div>
+          </form>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {activeFilters.map((label) => (
+              <span
+                className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-semibold text-zinc-700"
+                key={label}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
           <h2 className="text-lg font-semibold">Create time-off request</h2>
           <form action={createTimeOffRequestAction} className="mt-4 grid gap-4 lg:grid-cols-2">
+            <input name="returnTo" type="hidden" value={returnTo} />
             <CrewMemberSelect crewOptions={data.crewOptions} />
             <RequestTypeSelect />
             <DateTimeField label="Start date/time" name="startDate" />
@@ -355,7 +593,7 @@ export default async function TimeOffWorkflowPage({ searchParams }: PageProps) {
             ) : (
               <div className="mt-3 grid gap-3">
                 {data.requestsByStatus[status].map((request) => (
-                  <RequestCard key={request.id} request={request} />
+                  <RequestCard key={request.id} request={request} returnTo={returnTo} />
                 ))}
               </div>
             )}

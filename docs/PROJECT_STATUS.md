@@ -1161,17 +1161,20 @@ Prompt 143 is complete. Local QA confirmed create, approve, deny, and cancel
 workflows, `reviewedAt` updates, route smoke, and that only `TimeOffRequest`
 rows changed.
 
+Prompt 144 is complete. `/crew/scheduling/time-off` now supports URL-driven
+filters for status, crew member, request type, and date window, with active
+filter summary, reset link, and safe return to filtered views after actions.
+
 Preferred next slice:
 
 ```text
-Prompt 144: Time-Off Queue Filters Foundation
+Prompt 145: Time-Off Queue Filters QA
 ```
 
 Scope:
 
-- Add URL filters to `/crew/scheduling/time-off` for status, crew member,
-  request type, and date window.
-- Preserve create/review/cancel behavior.
+- Validate filters alone and combined.
+- Confirm create/review/cancel behavior still works from filtered views.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind

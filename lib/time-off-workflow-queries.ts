@@ -2,6 +2,7 @@ import {
   EmploymentStatus,
   Prisma,
   TimeOffRequestStatus,
+  TimeOffRequestType,
 } from "@prisma/client";
 
 import { resolveFlightCoverage } from "@/lib/crew-resolution";
@@ -46,8 +47,20 @@ export type TimeOffWorkflowData = {
     id: string;
     label: string;
   }>;
+  filterCrewOptions: Array<{
+    id: string;
+    label: string;
+  }>;
   requestsByStatus: Record<TimeOffRequestStatus, TimeOffWorkflowRequest[]>;
   summary: Record<TimeOffRequestStatus, number>;
+};
+
+export type TimeOffWorkflowFilters = {
+  crewMemberId: string;
+  fromDate: Date | null;
+  requestType: TimeOffRequestType | "all";
+  status: TimeOffRequestStatus | "all";
+  toDate: Date | null;
 };
 
 function addDays(value: Date, days: number): Date {
@@ -192,8 +205,29 @@ async function getTimeOffConflictWarnings(
   return warnings;
 }
 
-export async function getTimeOffWorkflowData(): Promise<TimeOffWorkflowData> {
-  const [crewMembers, requests] = await Promise.all([
+export async function getTimeOffWorkflowData(
+  filters: TimeOffWorkflowFilters = {
+    crewMemberId: "all",
+    fromDate: null,
+    requestType: "all",
+    status: "all",
+    toDate: null,
+  },
+): Promise<TimeOffWorkflowData> {
+  const requestWhere: Prisma.TimeOffRequestWhereInput = {
+    crewMemberId: filters.crewMemberId === "all" ? undefined : filters.crewMemberId,
+    requestType: filters.requestType === "all" ? undefined : filters.requestType,
+    status: filters.status === "all" ? undefined : filters.status,
+  };
+
+  if (filters.fromDate || filters.toDate) {
+    requestWhere.AND = [
+      filters.toDate ? { startDate: { lt: filters.toDate } } : {},
+      filters.fromDate ? { endDate: { gt: filters.fromDate } } : {},
+    ];
+  }
+
+  const [activeCrewMembers, allCrewMembers, requests] = await Promise.all([
     prisma.crewMember.findMany({
       where: { employmentStatus: EmploymentStatus.ACTIVE },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
@@ -204,7 +238,17 @@ export async function getTimeOffWorkflowData(): Promise<TimeOffWorkflowData> {
         lastName: true,
       },
     }),
+    prisma.crewMember.findMany({
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: {
+        id: true,
+        employeeNumber: true,
+        firstName: true,
+        lastName: true,
+      },
+    }),
     prisma.timeOffRequest.findMany({
+      where: requestWhere,
       orderBy: [{ startDate: "desc" }, { createdAt: "desc" }],
       select: timeOffRequestSelect,
     }),
@@ -227,7 +271,11 @@ export async function getTimeOffWorkflowData(): Promise<TimeOffWorkflowData> {
   }
 
   return {
-    crewOptions: crewMembers.map((crewMember) => ({
+    crewOptions: activeCrewMembers.map((crewMember) => ({
+      id: crewMember.id,
+      label: crewLabel(crewMember),
+    })),
+    filterCrewOptions: allCrewMembers.map((crewMember) => ({
       id: crewMember.id,
       label: crewLabel(crewMember),
     })),

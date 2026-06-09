@@ -98,6 +98,16 @@ function encodeError(error: unknown): string {
   return encodeURIComponent("Time-off workflow failed.");
 }
 
+function getSafeReturnTo(formData: FormData): string {
+  const returnTo = getOptionalText(formData, "returnTo");
+
+  if (!returnTo || !returnTo.startsWith("/crew/scheduling/time-off")) {
+    return "/crew/scheduling/time-off";
+  }
+
+  return returnTo;
+}
+
 async function ensureActiveCrewMember(tx: Prisma.TransactionClient, crewMemberId: string) {
   const crewMember = await tx.crewMember.findUnique({
     where: { id: crewMemberId },
@@ -166,6 +176,7 @@ function revalidateTimeOffWorkflowPaths(crewMemberId?: string) {
 
 export async function createTimeOffRequestAction(formData: FormData) {
   let crewMemberId: string | undefined;
+  const returnTo = getSafeReturnTo(formData);
 
   try {
     const input = parseRequestInput(formData);
@@ -189,14 +200,16 @@ export async function createTimeOffRequestAction(formData: FormData) {
   }
 
   revalidateTimeOffWorkflowPaths(crewMemberId);
-  redirect("/crew/scheduling/time-off");
+  redirect(returnTo);
 }
 
 export async function reviewTimeOffRequestAction(
   requestId: string,
   nextStatus: TimeOffRequestStatus,
+  formData: FormData,
 ) {
   let crewMemberId: string | undefined;
+  const returnTo = getSafeReturnTo(formData);
 
   try {
     if (
@@ -223,5 +236,5 @@ export async function reviewTimeOffRequestAction(
   }
 
   revalidateTimeOffWorkflowPaths(crewMemberId);
-  redirect("/crew/scheduling/time-off");
+  redirect(returnTo);
 }
