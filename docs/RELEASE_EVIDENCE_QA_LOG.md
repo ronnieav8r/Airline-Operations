@@ -2,6 +2,47 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 123: Crew Scheduling Planner Filters QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Planner filter QA:
+
+- Confirmed default `/crew/scheduling` returned 200.
+- Confirmed `/crew/scheduling?availability=caution` returned 200.
+- Confirmed `/crew/scheduling?assignment=assigned` returned 200.
+- Confirmed `/crew/scheduling?timeOff=overlap` returned 200.
+- Confirmed `/crew/scheduling?duty=on_duty` returned 200.
+- Confirmed a combined filter URL returned 200.
+- Confirmed the planner renders filter controls, active-filter summary,
+  apply control, reset link, and crew availability cards.
+
+Route smoke:
+
+- `/crew` returned 200.
+- `/aircraft` returned 200.
+- `/operations-control` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Notes:
+
+- Prompt 123 was QA/docs only.
+- Filters are read-only and URL-driven.
+- No schema, schedule mutation, time-off mutation, aircraft-assignment
+  mutation, CrewLegAssignment mutation, duty/rest enforcement, auth/signatures,
+  release blocking, imports, provider integrations, file uploads, or
+  coverage-source changes were added.
+- `AircraftCrewAssignment` remains the operational coverage source.
+
 ## 2026-06-08 - Prompt 121: Crew Availability Hints QA
 
 Status: passed.

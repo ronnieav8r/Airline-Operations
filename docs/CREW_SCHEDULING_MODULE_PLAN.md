@@ -87,6 +87,9 @@ assigned aircraft.
 Prompt 122 implementation status: complete. Filters are read-only and do not
 change schedule, time-off, assignment, release, or coverage behavior.
 
+Prompt 123 QA status: complete. Default and filtered planner URLs render
+locally, and the filter controls remain read-only.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

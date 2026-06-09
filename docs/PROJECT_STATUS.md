@@ -169,6 +169,7 @@ It has:
 125. Crew availability hints on aircraft assignment workflow.
 126. Crew availability hints QA.
 127. Crew Scheduling planner filters foundation.
+128. Crew Scheduling planner filters QA.
 
 ## Current Data Model Boundaries
 
@@ -868,15 +869,15 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 123: Crew Scheduling Planner Filters QA
+Prompt 124: Crew Scheduling Planner Grouping Foundation
 ```
 
 Scope:
 
-- Validate default and filtered `/crew/scheduling` URLs.
-- Confirm filters work alone and in combination.
-- Confirm aircraft crew workflow links still route correctly.
-- Update QA/status docs only unless a defect is found.
+- Add URL-driven `groupBy=availability|base|assignment|duty`.
+- Group the filtered crew list into visible sections.
+- Preserve the filter bar, summary cards, crew cards, and warning-only
+  messaging.
 
 Recent completed app-development chain:
 
@@ -1023,17 +1024,21 @@ availability, duty status, assignment state, time-off overlap, base station,
 and assigned aircraft. The planner shows filtered counts, active filters, and a
 resettable empty state without changing write behavior.
 
+Prompt 123 is complete. Local QA confirmed default and filtered planner URLs,
+filter controls, active-filter summary, reset link, route smoke, validation,
+lint, and build.
+
 Preferred next slice:
 
 ```text
-Prompt 123: Crew Scheduling Planner Filters QA
+Prompt 124: Crew Scheduling Planner Grouping Foundation
 ```
 
 Scope:
 
-- Validate default and filtered planner URLs.
-- Confirm filters work independently and together.
-- Confirm route smoke and browser rendering.
+- Add URL-driven grouping to `/crew/scheduling`.
+- Default grouping should be by availability.
+- Preserve existing filters and read-only planner behavior.
 
 Deferred follow-up to keep on the roadmap:
 
