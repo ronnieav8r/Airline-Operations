@@ -1131,17 +1131,20 @@ Prompt 136 is complete. Additive crew scheduling schema tables now exist, local
 seed creates demo scheduling foundation rows, and `/api/health` reports counts
 for the new tables.
 
+Prompt 137 is complete. Local QA confirmed the crew scheduling schema
+foundation migration, seed data, health counts, validation, build, and existing
+route availability.
+
 Preferred next slice:
 
 ```text
-Prompt 137: Crew Scheduling Schema QA
+Prompt 138: Schedule Period Read-Only Admin Surface Planning
 ```
 
 Scope:
 
-- Validate the additive scheduling migration, local seed, health counts, and
-  unchanged current crew/operations routes.
-- Document QA results.
+- Plan the first read-only admin surface for schedule periods.
+- Do not add UI implementation until Prompt 139.
 - Keep schedule writes, time-off writes, duty/rest enforcement, assignment
   automation, auth/signatures, hard release blocking, imports, provider
   integrations, and positioning/logistics implementation behind separate

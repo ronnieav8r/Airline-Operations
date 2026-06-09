@@ -2,6 +2,46 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-09 - Prompt 137: Crew Scheduling Schema QA
+
+Status: passed.
+
+Validation:
+
+- `npm run db:local:up` passed.
+- `npm run db:local:migrate` passed.
+- `npm run db:local:seed` passed.
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Schema foundation counts:
+
+- `crewSchedulePeriods`: 1.
+- `crewScheduleRequests`: 1.
+- `crewRotationPatterns`: 1.
+- `crewRotationPatternDays`: 14.
+- `crewScheduleEntries`: 3.
+
+Route/API smoke:
+
+- `/crew/scheduling` returned 200.
+- `/crew` returned 200.
+- `/crew/[crewMemberId]` returned 200.
+- `/aircraft` returned 200.
+- `/operations-control` returned 200.
+- `/api/health` returned 200 and exposed the new scheduling counts.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Notes:
+
+- Prompt 137 was QA/docs only.
+- No schedule writes, publishing actions, crew portal/auth, duty/rest
+  enforcement, assignment automation, positioning logistics, imports, provider
+  integrations, or coverage-source changes were added.
+
 ## 2026-06-08 - Prompt 133: Crew Planner Date/Window Controls QA
 
 Status: passed.

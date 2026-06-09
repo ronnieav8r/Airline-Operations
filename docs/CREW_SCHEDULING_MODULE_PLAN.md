@@ -170,6 +170,9 @@ Prompt 136 implementation status: complete. The additive schema foundation is
 in place and local demo seed data creates a period, pattern, period request,
 pattern day rows, and draft schedule entries.
 
+Prompt 137 QA status: complete. Local migrate, seed, validation, build, health
+counts, and route smoke passed for the additive schema foundation.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
