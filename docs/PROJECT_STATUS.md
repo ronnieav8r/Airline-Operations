@@ -177,6 +177,7 @@ It has:
 133. Crew member context page planning.
 134. Crew member context page foundation.
 135. Crew member context page QA.
+136. Crew planner date/window controls planning.
 
 ## Current Data Model Boundaries
 
@@ -241,6 +242,9 @@ assignment, and Operations Control where applicable.
 Crew member context page QA is complete. Local validation confirmed crew
 detail rendering, cross-links from crew surfaces, and unchanged aircraft crew
 workflow behavior.
+
+Crew planner date/window controls planning is complete. Prompt 132 should add
+URL-driven `date` and `days` controls to the read-only crew planner.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -900,13 +904,14 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 131: Crew Planner Date/Window Controls Planning
+Prompt 132: Crew Planner Date/Window Controls Foundation
 ```
 
 Scope:
 
-- Plan URL-driven date/window controls for the read-only crew planner.
-- Keep `/crew/[crewMemberId]` and `/crew/scheduling` read-only.
+- Implement URL-driven `date=YYYY-MM-DD` and `days=1|3|7|14` controls for
+  `/crew/scheduling`.
+- Preserve existing filters, grouping, planner cards, and crew detail links.
 - Do not add schema, schedule writes, time-off writes, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports, or
   provider integrations.
@@ -1092,17 +1097,21 @@ Prompt 130 is complete. QA confirmed the crew detail route, cross-links from
 crew roster, planner, and aircraft crew workflow surfaces, route smoke, and
 unchanged workflow behavior.
 
+Prompt 131 is complete. The selected crew planner window policy is
+URL-driven `date=YYYY-MM-DD` and `days=1|3|7|14`, defaulting to today plus 7
+days.
+
 Preferred next slice:
 
 ```text
-Prompt 131: Crew Planner Date/Window Controls Planning
+Prompt 132: Crew Planner Date/Window Controls Foundation
 ```
 
 Scope:
 
-- Plan date/window controls for `/crew/scheduling`.
-- Decide how Prompt 132 should apply the selected planning window to planner
-  summaries and cards.
+- Implement date/window controls on `/crew/scheduling`.
+- Apply the selected window to schedule blocks, time-off overlap, upcoming
+  coverage, summary counts, and warning-only availability messages.
 - Keep schedule writes, time-off writes, duty/rest enforcement, assignment
   automation, auth/signatures, hard release blocking, imports, and provider
   integrations behind a separate plan.

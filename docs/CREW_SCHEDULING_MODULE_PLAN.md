@@ -126,6 +126,17 @@ assignments, schedule, time off, and upcoming FlightLeg coverage context.
 Prompt 130 QA status: complete. Crew detail routes and cross-links render
 locally with no workflow behavior changes.
 
+## Prompt 131 Planner Date/Window Controls
+
+The next planner usability slice should add URL-driven planning window controls
+to `/crew/scheduling`. The selected policy is `date=YYYY-MM-DD` plus
+`days=1|3|7|14`, defaulting to today and 7 days. The selected window should
+drive schedule blocks, time-off overlap, upcoming FlightLeg coverage, summary
+counts, and warning-only availability messages.
+
+Prompt 131 planning status: complete. Prompt 132 should implement the controls
+without schema changes or schedule/time-off writes.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
