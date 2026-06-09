@@ -139,6 +139,8 @@ without schema changes or schedule/time-off writes.
 Prompt 132 implementation status: complete. `/crew/scheduling` now supports
 URL-driven `date` and `days` controls while preserving filters, grouping, and
 read-only planner behavior.
+Prompt 133 QA status: complete. Default and query-param planner windows render
+locally with filters, grouping, shortcuts, and crew detail links intact.
 
 Warning-only conflict examples:
 

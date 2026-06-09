@@ -179,6 +179,7 @@ It has:
 135. Crew member context page QA.
 136. Crew planner date/window controls planning.
 137. Crew planner date/window controls foundation.
+138. Crew planner date/window controls QA.
 
 ## Current Data Model Boundaries
 
@@ -250,6 +251,9 @@ URL-driven `date` and `days` controls to the read-only crew planner.
 Crew planner date/window controls foundation is complete. `/crew/scheduling`
 now supports URL-driven planning windows while preserving filters, grouping,
 crew cards, and read-only behavior.
+
+Crew planner date/window controls QA is complete. The Prompt 128-133 chain is
+complete and stopped as planned.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -909,13 +913,12 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 133: Crew Planner Date/Window Controls QA
+Next planning session
 ```
 
 Scope:
 
-- Validate default and query-param planner windows.
-- Confirm filters, grouping, planner cards, and crew detail links still work.
+- Choose the next small app-development slice.
 - Do not add schema, schedule writes, time-off writes, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports, or
   provider integrations.
@@ -1109,17 +1112,20 @@ Prompt 132 is complete. `/crew/scheduling` now has planner window controls,
 shortcut links, and query-driven schedule/time-off/coverage windows while
 remaining read-only.
 
+Prompt 133 is complete. QA confirmed default and query-param planner windows,
+date/day shortcut links, filters, grouping, crew detail links, route smoke, and
+unchanged read-only behavior.
+
 Preferred next slice:
 
 ```text
-Prompt 133: Crew Planner Date/Window Controls QA
+Next planning session
 ```
 
 Scope:
 
-- Validate date/window query behavior and combinations with filters/grouping.
-- Confirm no schedule, time-off, assignment, duty/rest, or release behavior
-  changed.
+- Choose the next small app-development slice after crew member context and
+  planner date/window controls.
 - Keep schedule writes, time-off writes, duty/rest enforcement, assignment
   automation, auth/signatures, hard release blocking, imports, and provider
   integrations behind a separate plan.

@@ -2,6 +2,51 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 133: Crew Planner Date/Window Controls QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Route smoke:
+
+- `/crew/scheduling` returned 200.
+- `/crew/scheduling?days=1` returned 200.
+- `/crew/scheduling?days=14` returned 200.
+- `/crew/scheduling?groupBy=base&days=3` returned 200.
+- `/crew/scheduling?date=2026-06-09&days=7&availability=all&groupBy=availability`
+  returned 200.
+- `/crew` returned 200.
+- `/crew/[crewMemberId]` returned 200.
+- `/aircraft` returned 200.
+- `/operations-control` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Browser QA:
+
+- Planner window controls rendered.
+- Apply-window control rendered.
+- Today shortcut rendered.
+- 14-day shortcut rendered.
+- Planner filters remained visible.
+- Crew detail links remained visible.
+
+Notes:
+
+- Prompt 133 was QA/docs only.
+- Date/window controls are read-only planner visibility controls.
+- No schema, schedule mutation, time-off mutation, aircraft-assignment
+  mutation, `CrewLegAssignment` mutation, duty/rest enforcement,
+  auth/signatures, release blocking, imports, provider integrations, file
+  uploads, or coverage-source changes were added.
+
 ## 2026-06-08 - Prompt 130: Crew Member Context Page QA
 
 Status: passed.
