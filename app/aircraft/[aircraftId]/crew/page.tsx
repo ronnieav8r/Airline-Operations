@@ -1,4 +1,4 @@
-import { SeatRole } from "@prisma/client";
+import { DutyStatus, EmploymentStatus, SeatRole } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -62,6 +62,43 @@ function assignmentTimingBadgeClasses(timing: AircraftCrewWorkflowAssignment["ti
   }
 
   return "border-sky-200 bg-sky-50 text-sky-700";
+}
+
+function formatStatus(value: string): string {
+  return value.replaceAll("_", " ");
+}
+
+function availabilityBadgeClasses(status: AircraftCrewMemberOption["availabilityStatus"]): string {
+  if (status === "CLEAR") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  if (status === "UNAVAILABLE") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  return "border-amber-200 bg-amber-50 text-amber-700";
+}
+
+function dutyBadgeClasses(status: DutyStatus): string {
+  if (status === DutyStatus.ON_DUTY || status === DutyStatus.RESERVE) {
+    return "border-blue-200 bg-blue-50 text-blue-700";
+  }
+  if (status === DutyStatus.SICK || status === DutyStatus.VACATION) {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  if (status === DutyStatus.TRAINING || status === DutyStatus.OFF_DUTY) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  return "border-zinc-200 bg-zinc-50 text-zinc-600";
+}
+
+function employmentBadgeClasses(status: EmploymentStatus): string {
+  if (status === EmploymentStatus.ACTIVE) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  if (status === EmploymentStatus.ON_LEAVE) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  return "border-zinc-200 bg-zinc-50 text-zinc-600";
 }
 
 function Field({
@@ -186,6 +223,88 @@ function WarningPanel({
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function AvailabilityHintPanel({ crewOptions }: { crewOptions: AircraftCrewMemberOption[] }) {
+  const warnings = crewOptions.filter((crewMember) => crewMember.availabilityWarnings.length > 0);
+
+  return (
+    <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="font-semibold">Crew availability hints are warning-only.</p>
+          <p className="mt-1">
+            Use this context before creating an aircraft-block assignment. The save
+            rules are unchanged and the full planner remains read-only.
+          </p>
+        </div>
+        <Link
+          className="rounded-md border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-sky-800 hover:bg-sky-100"
+          href="/crew/scheduling"
+        >
+          Full crew planner
+        </Link>
+      </div>
+
+      <div className="mt-3 grid gap-2 lg:grid-cols-2">
+        {crewOptions.map((crewMember) => (
+          <article
+            className="rounded-md border border-zinc-200 bg-white p-3 text-zinc-800"
+            key={crewMember.id}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold">
+                {crewMember.firstName} {crewMember.lastName}
+              </span>
+              <span
+                className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${availabilityBadgeClasses(
+                  crewMember.availabilityStatus,
+                )}`}
+              >
+                {crewMember.availabilityStatus}
+              </span>
+              <span
+                className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${employmentBadgeClasses(
+                  crewMember.employmentStatus,
+                )}`}
+              >
+                {formatStatus(crewMember.employmentStatus)}
+              </span>
+              <span
+                className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${dutyBadgeClasses(
+                  crewMember.dutyStatus,
+                )}`}
+              >
+                {formatStatus(crewMember.dutyStatus)}
+              </span>
+            </div>
+            {crewMember.availabilityWarnings.length === 0 ? (
+              <p className="mt-2 text-xs text-zinc-500">
+                No schedule, time-off, duty, or assignment availability warnings found.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-1 text-xs text-amber-900">
+                {crewMember.availabilityWarnings.slice(0, 3).map((warning) => (
+                  <li
+                    className="rounded-md border border-amber-200 bg-amber-50 p-2"
+                    key={warning}
+                  >
+                    {warning}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        ))}
+      </div>
+
+      {warnings.length === 0 ? (
+        <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-800">
+          No crew availability warnings found for active crew options.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -441,6 +560,9 @@ export default async function AircraftCrewWorkflowPage({
           </p>
           <div className="mt-4">
             <AssignmentForm action={createAction} crewOptions={data.crewOptions} mode="CREATE" />
+          </div>
+          <div className="mt-4">
+            <AvailabilityHintPanel crewOptions={data.crewOptions} />
           </div>
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             <WarningPanel crewOptions={data.crewOptions} seatRole={WorkflowSeatRole.CPT} />

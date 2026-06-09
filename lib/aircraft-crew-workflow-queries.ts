@@ -4,6 +4,7 @@ import {
   EmploymentStatus,
   Prisma,
   SeatRole,
+  TimeOffRequestStatus,
 } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -108,6 +109,54 @@ const crewMemberOptionSelect = {
       expiresAt: true,
     },
   },
+  assignments: {
+    where: {
+      isActive: true,
+    },
+    select: {
+      id: true,
+      aircraftId: true,
+      seatRole: true,
+      startsAt: true,
+      endsAt: true,
+      aircraft: {
+        select: {
+          id: true,
+          tailNumber: true,
+          type: true,
+        },
+      },
+    },
+    orderBy: [{ startsAt: "asc" }],
+  },
+  schedules: {
+    select: {
+      id: true,
+      date: true,
+      dutyStatus: true,
+      startsAt: true,
+      endsAt: true,
+      station: {
+        select: {
+          code: true,
+        },
+      },
+    },
+    orderBy: [{ date: "asc" }, { startsAt: "asc" }],
+  },
+  timeOffRequests: {
+    where: {
+      status: { in: [TimeOffRequestStatus.PENDING, TimeOffRequestStatus.APPROVED] },
+    },
+    select: {
+      id: true,
+      requestType: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+    },
+    orderBy: [{ startDate: "asc" }],
+  },
 } satisfies Prisma.CrewMemberSelect;
 
 type AircraftCrewWorkflowPayload = Prisma.AircraftGetPayload<{
@@ -130,6 +179,8 @@ export type AircraftCrewWorkflowLeg =
   };
 
 export type AircraftCrewMemberOption = CrewMemberOptionPayload & {
+  availabilityStatus: "CLEAR" | "CAUTION" | "UNAVAILABLE";
+  availabilityWarnings: string[];
   label: string;
   warningsBySeatRole: Partial<Record<SeatRole, string[]>>;
 };
@@ -150,11 +201,27 @@ export type AircraftCrewWorkflowData = Omit<
 };
 
 const REQUIRED_COCKPIT_ROLES: SeatRole[] = [SeatRole.CPT, SeatRole.FO];
+const AVAILABILITY_WINDOW_DAYS = 7;
 
 export const editableSeatRoles = Object.values(SeatRole);
 
 function crewMemberLabel(crewMember: CrewMemberOptionPayload): string {
   return `${crewMember.firstName} ${crewMember.lastName} (#${crewMember.employeeNumber})`;
+}
+
+function addDays(value: Date, days: number): Date {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function overlapsWindow(
+  start: Date,
+  end: Date | null,
+  windowStart: Date,
+  windowEnd: Date,
+): boolean {
+  return start < windowEnd && (!end || end >= windowStart);
 }
 
 function qualificationWarningsForSeatRole(
@@ -221,10 +288,72 @@ function normalizeCrewOption(
   crewMember: CrewMemberOptionPayload,
   aircraftType: AircraftType,
   now: Date,
+  windowEnd: Date,
+  currentAircraftId: string,
 ): AircraftCrewMemberOption {
+  const currentAssignments = crewMember.assignments.filter((assignment) =>
+    overlapsWindow(assignment.startsAt, assignment.endsAt, now, windowEnd),
+  );
+  const otherAircraftAssignments = currentAssignments.filter(
+    (assignment) => assignment.aircraftId !== currentAircraftId,
+  );
+  const schedulesInWindow = crewMember.schedules.filter((schedule) =>
+    overlapsWindow(schedule.startsAt ?? schedule.date, schedule.endsAt, now, windowEnd),
+  );
+  const timeOffInWindow = crewMember.timeOffRequests.filter((request) =>
+    overlapsWindow(request.startDate, request.endDate, now, windowEnd),
+  );
+  const availabilityWarnings: string[] = [];
+
+  if (crewMember.employmentStatus !== EmploymentStatus.ACTIVE) {
+    availabilityWarnings.push(`Employment status is ${crewMember.employmentStatus}.`);
+  }
+
+  if (
+    crewMember.dutyStatus === DutyStatus.SICK ||
+    crewMember.dutyStatus === DutyStatus.VACATION
+  ) {
+    availabilityWarnings.push(`Current duty status is ${crewMember.dutyStatus}.`);
+  } else if (
+    crewMember.dutyStatus === DutyStatus.TRAINING ||
+    crewMember.dutyStatus === DutyStatus.OFF_DUTY
+  ) {
+    availabilityWarnings.push(`Current duty status should be reviewed: ${crewMember.dutyStatus}.`);
+  }
+
+  if (schedulesInWindow.length === 0) {
+    availabilityWarnings.push("No CrewSchedule block in the next 7 days.");
+  }
+
+  if (timeOffInWindow.length > 0) {
+    availabilityWarnings.push("Pending or approved time off overlaps the next 7 days.");
+  }
+
+  if (otherAircraftAssignments.length > 0) {
+    availabilityWarnings.push(
+      `Already assigned to ${otherAircraftAssignments
+        .map((assignment) => assignment.aircraft.tailNumber)
+        .join(", ")} in the next 7 days.`,
+    );
+  }
+
+  const availabilityStatus =
+    crewMember.employmentStatus !== EmploymentStatus.ACTIVE ||
+    crewMember.dutyStatus === DutyStatus.SICK ||
+    crewMember.dutyStatus === DutyStatus.VACATION
+      ? "UNAVAILABLE"
+      : availabilityWarnings.length > 0
+        ? "CAUTION"
+        : "CLEAR";
+
   return {
     ...crewMember,
-    label: crewMemberLabel(crewMember),
+    availabilityStatus,
+    availabilityWarnings,
+    label:
+      availabilityStatus === "CLEAR"
+        ? crewMemberLabel(crewMember)
+        : `${crewMemberLabel(crewMember)} - ${availabilityStatus}`,
     warningsBySeatRole: Object.fromEntries(
       editableSeatRoles.map((seatRole) => [
         seatRole,
@@ -251,6 +380,9 @@ export async function getAircraftCrewWorkflowData(
   aircraftId: string,
 ): Promise<AircraftCrewWorkflowData | null> {
   const now = new Date();
+  const windowStart = new Date(now);
+  windowStart.setHours(0, 0, 0, 0);
+  const windowEnd = addDays(now, AVAILABILITY_WINDOW_DAYS);
   const [aircraft, crewMembers] = await Promise.all([
     prisma.aircraft.findUnique({
       where: { id: aircraftId },
@@ -261,7 +393,26 @@ export async function getAircraftCrewWorkflowData(
         employmentStatus: EmploymentStatus.ACTIVE,
       },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-      select: crewMemberOptionSelect,
+      select: {
+        ...crewMemberOptionSelect,
+        schedules: {
+          ...crewMemberOptionSelect.schedules,
+          where: {
+            date: {
+              gte: windowStart,
+              lt: windowEnd,
+            },
+          },
+        },
+        timeOffRequests: {
+          ...crewMemberOptionSelect.timeOffRequests,
+          where: {
+            status: { in: [TimeOffRequestStatus.PENDING, TimeOffRequestStatus.APPROVED] },
+            startDate: { lt: windowEnd },
+            endDate: { gte: now },
+          },
+        },
+      },
     }),
   ]);
 
@@ -285,7 +436,7 @@ export async function getAircraftCrewWorkflowData(
     ...aircraft,
     assignments,
     crewOptions: crewMembers.map((crewMember) =>
-      normalizeCrewOption(crewMember, aircraft.type, now),
+      normalizeCrewOption(crewMember, aircraft.type, now, windowEnd, aircraft.id),
     ),
     upcomingLegs,
     summary: {

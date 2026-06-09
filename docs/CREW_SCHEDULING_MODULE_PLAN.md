@@ -68,6 +68,16 @@ Prompt 118 implementation status: complete. The planner is read-only, uses
 existing crew schedule, time-off, aircraft-block assignment, and coverage data,
 and keeps all staffing changes under `/aircraft/[aircraftId]/crew`.
 
+## Prompt 120 Availability Hints Target
+
+The aircraft crew assignment workflow now surfaces read-only availability hints
+near the create assignment form. These hints use existing schedule, time-off,
+duty/employment, active assignment, and qualification context.
+
+Prompt 120 implementation status: complete. Availability hints do not block
+saves and do not replace `AircraftCrewAssignment` as the operational coverage
+source.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

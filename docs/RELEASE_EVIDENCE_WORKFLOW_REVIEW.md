@@ -200,6 +200,15 @@ planning boundary and crew availability sections, exposes links to
 `/aircraft/[aircraftId]/crew`, and leaves the main app routes healthy.
 `AircraftCrewAssignment` remains the operational coverage source.
 
+## Prompt 120 Status
+
+Implementation status: complete.
+
+`/aircraft/[aircraftId]/crew` now includes warning-only availability hints near
+the create assignment form. The hints surface existing schedule, time-off,
+duty/employment, active-assignment, and qualification context, and link back to
+the full `/crew/scheduling` planner. Assignment save behavior is unchanged.
+
 ## Prompt 101 Status
 
 Implementation status: complete.

@@ -166,6 +166,7 @@ It has:
 122. Crew Scheduling module planning.
 123. Crew Scheduling read-only planner board.
 124. Crew Scheduling planner QA.
+125. Crew availability hints on aircraft assignment workflow.
 
 ## Current Data Model Boundaries
 
@@ -197,6 +198,11 @@ schedule blocks, time-off overlaps, duty/employment status, current
 aircraft-block assignments, upcoming FlightLeg coverage, and warning-only
 planning conflicts. It does not create assignments or replace
 `AircraftCrewAssignment` as coverage truth.
+
+The aircraft crew assignment workflow at `/aircraft/[aircraftId]/crew` now
+shows warning-only crew availability hints near the create assignment form.
+These hints use existing schedule, time-off, duty/employment,
+active-assignment, and qualification context without changing save behavior.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -856,16 +862,15 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 120: Crew Availability Hints On Aircraft Assignment Workflow
+Prompt 121: Crew Availability Hints QA
 ```
 
 Scope:
 
-- Add read-only availability hints to `/aircraft/[aircraftId]/crew`.
-- Use existing crew schedule, time-off, duty/employment, qualification, and
-  active-assignment context.
-- Keep hints warning-only and non-blocking.
-- Do not add schema or change aircraft-block assignment behavior.
+- Validate the aircraft crew assignment availability hints.
+- Confirm create/edit/relieve behavior remains unchanged.
+- Confirm the full crew planner link routes correctly.
+- Confirm no schema, blocking behavior, or coverage-source changes.
 
 Recent completed app-development chain:
 
@@ -996,19 +1001,24 @@ Prompt 119 is complete. Local QA confirmed `/crew/scheduling` renders the
 planner, planning boundary, crew availability section, and aircraft crew
 workflow links. Route smoke, browser QA, validation, lint, and build passed.
 
+Prompt 120 is complete. `/aircraft/[aircraftId]/crew` now shows warning-only
+availability hints near the create assignment form and adds availability status
+to crew selector labels. Hints use existing schedule, time-off,
+duty/employment, active-assignment, and qualification context without changing
+assignment save behavior.
+
 Preferred next slice:
 
 ```text
-Prompt 120: Crew Availability Hints On Aircraft Assignment Workflow
+Prompt 121: Crew Availability Hints QA
 ```
 
 Scope:
 
-- Add availability hints to the aircraft crew assignment workflow.
-- Help the user choose a crew member by surfacing warning-only schedule,
-  time-off, duty/employment, qualification, and active-assignment context.
-- Link back to `/crew/scheduling` for full planner context.
-- Keep saves warning-only; do not block assignment actions.
+- Validate availability hints render on `/aircraft/[aircraftId]/crew`.
+- Confirm the create form, edit form, and Relieve Now controls still render.
+- Confirm the full crew planner link works.
+- Confirm no save rules changed.
 
 Deferred follow-up to keep on the roadmap:
 
