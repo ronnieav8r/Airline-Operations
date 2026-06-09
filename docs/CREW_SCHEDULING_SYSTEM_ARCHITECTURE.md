@@ -207,3 +207,8 @@ use existing `TimeOffRequest` rows for ops/admin request entry and review at
 `/crew/scheduling/time-off`. It is intentionally separate from
 `CrewScheduleRequest`, which remains the future period-scoped bid/preference
 model. Approving time off must not write schedule rows or aircraft assignments.
+
+Prompt 142 implementation status: complete. The first time-off workflow now
+updates only `TimeOffRequest` and keeps conflict checks warning-only. Planner
+and crew context pages continue to treat time off as availability context, not
+coverage truth.

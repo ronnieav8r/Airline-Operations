@@ -174,6 +174,9 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
                 <Link className="text-sky-700 hover:text-sky-900" href="/crew/scheduling">
                   Crew planner
                 </Link>
+                <Link className="text-sky-700 hover:text-sky-900" href="/crew/scheduling/time-off">
+                  Time off
+                </Link>
               </div>
               <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Crew Member Context

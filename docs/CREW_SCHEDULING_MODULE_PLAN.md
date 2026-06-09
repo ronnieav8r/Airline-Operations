@@ -202,6 +202,10 @@ ops/admin `TimeOffRequest` workflow without schema changes, crew self-service,
 schedule writes, assignment automation, duty/rest enforcement, or release
 behavior changes.
 
+Prompt 142 implementation status: complete. `/crew/scheduling/time-off` now
+supports ops/admin `TimeOffRequest` creation and review with warning-only
+conflict visibility and no schedule or assignment side effects.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

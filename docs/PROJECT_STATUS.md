@@ -1152,18 +1152,22 @@ ops/admin `TimeOffRequest` workflow at `/crew/scheduling/time-off`, with create
 plus approve/deny/cancel review actions, warning-only conflicts, and no schedule
 or assignment side effects.
 
+Prompt 142 is complete. `/crew/scheduling/time-off` now supports ops/admin
+time-off request creation, approve/deny/cancel review actions, approved-request
+cancellation, and warning-only conflict visibility without schema, schedule, or
+assignment side effects.
+
 Preferred next slice:
 
 ```text
-Prompt 142: Time-Off Request Workflow Foundation
+Prompt 143: Time-Off Request Workflow QA
 ```
 
 Scope:
 
-- Implement `/crew/scheduling/time-off` for ops/admin `TimeOffRequest` create
-  and review.
-- Add navigation from crew scheduling, crew roster, and crew detail pages.
-- Keep conflict checks warning-only.
+- Validate create, approve, deny, and cancel workflows.
+- Confirm `reviewedAt` changes and planner/crew detail time-off visibility.
+- Confirm no schedule or assignment tables are mutated by review actions.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind

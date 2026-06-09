@@ -379,3 +379,8 @@ preferences, swaps, and pattern requests. Approving or cancelling time off must
 not create or mutate `CrewSchedule`, `CrewScheduleEntry`,
 `AircraftCrewAssignment`, `CrewLegAssignment`, release records, or release
 readiness behavior.
+
+The first time-off workflow is now implemented without schema changes. It
+creates and reviews `TimeOffRequest` rows only. Any future desire for review
+notes, cancellation reasons, approval history, or period linkage should be
+planned as a separate additive schema slice.
