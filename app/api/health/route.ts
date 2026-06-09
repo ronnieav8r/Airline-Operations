@@ -47,6 +47,11 @@ export async function GET() {
       importStagingRowCount,
       importValidationFindingCount,
       importMappingDecisionCount,
+      crewSchedulePeriodCount,
+      crewScheduleRequestCount,
+      crewRotationPatternCount,
+      crewRotationPatternDayCount,
+      crewScheduleEntryCount,
     ] = await Promise.all([
       prisma.station.count(),
       prisma.aircraft.count(),
@@ -89,6 +94,11 @@ export async function GET() {
       prisma.importStagingRow.count(),
       prisma.importValidationFinding.count(),
       prisma.importMappingDecision.count(),
+      prisma.crewSchedulePeriod.count(),
+      prisma.crewScheduleRequest.count(),
+      prisma.crewRotationPattern.count(),
+      prisma.crewRotationPatternDay.count(),
+      prisma.crewScheduleEntry.count(),
     ]);
 
     return NextResponse.json({
@@ -136,6 +146,11 @@ export async function GET() {
         importStagingRows: importStagingRowCount,
         importValidationFindings: importValidationFindingCount,
         importMappingDecisions: importMappingDecisionCount,
+        crewSchedulePeriods: crewSchedulePeriodCount,
+        crewScheduleRequests: crewScheduleRequestCount,
+        crewRotationPatterns: crewRotationPatternCount,
+        crewRotationPatternDays: crewRotationPatternDayCount,
+        crewScheduleEntries: crewScheduleEntryCount,
       },
     });
   } catch (error) {

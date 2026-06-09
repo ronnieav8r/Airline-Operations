@@ -1,5 +1,5 @@
 // AeroOps Center current-state DBML
-// Last updated: 2026-06-08
+// Last updated: 2026-06-09
 // Scope: mirrors the Prisma schema currently implemented in this repo.
 // Important: Flight remains the table read by some current UI/API paths.
 // FlightLeg is now implemented as an additive future operational anchor bridged
@@ -9,6 +9,8 @@
 // blocking, override, snapshot, and audit workflows, but current release actions
 // remain warning-only. Import staging foundation tables exist for future
 // dry-run legacy imports, but no importer execution or operational writes exist.
+// Crew scheduling foundation tables now exist beside CrewSchedule for future
+// schedule periods, requests, rotation templates, and schedule entries.
 
 Project AeroOps_Current_State {
   database_type: "PostgreSQL"
@@ -161,6 +163,36 @@ Enum TimeOffRequestStatus {
   PENDING
   APPROVED
   DENIED
+  CANCELLED
+}
+
+Enum CrewSchedulePeriodStatus {
+  BID_OPEN
+  DRAFTING
+  PUBLISHED
+  ARCHIVED
+}
+
+Enum CrewScheduleRequestType {
+  TIME_OFF
+  PREFERRED_WORK_DAYS
+  PREFERRED_OFF_DAYS
+  PATTERN_REQUEST
+  SWAP_REQUEST
+  GENERAL_NOTE
+}
+
+Enum CrewScheduleRequestStatus {
+  SUBMITTED
+  APPROVED
+  DENIED
+  WITHDRAWN
+}
+
+Enum CrewScheduleEntryStatus {
+  DRAFT
+  PUBLISHED
+  SUPERSEDED
   CANCELLED
 }
 
@@ -1227,6 +1259,133 @@ Table CrewSchedule {
   }
 }
 
+Table CrewSchedulePeriod {
+  id varchar [pk]
+  periodKey varchar [not null, unique]
+  name varchar [not null]
+  status CrewSchedulePeriodStatus [not null, default: "BID_OPEN"]
+  startsAt timestamp [not null]
+  endsAt timestamp [not null]
+  bidOpenAt timestamp
+  bidCloseAt timestamp
+  publishedAt timestamp
+  archivedAt timestamp
+  createdById varchar
+  publishedById varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (status, startsAt)
+    (startsAt, endsAt)
+    createdById
+    publishedById
+  }
+}
+
+Table CrewScheduleRequest {
+  id varchar [pk]
+  periodId varchar [not null]
+  crewMemberId varchar [not null]
+  requestType CrewScheduleRequestType [not null]
+  status CrewScheduleRequestStatus [not null, default: "SUBMITTED"]
+  startDate timestamp
+  endDate timestamp
+  preferredDutyStatus DutyStatus
+  requestedPatternId varchar
+  requestedSwapCrewMemberId varchar
+  submittedById varchar
+  reviewedById varchar
+  reviewedAt timestamp
+  requestNotes text
+  reviewNotes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (periodId, status)
+    (crewMemberId, createdAt)
+    (requestType, status)
+    (startDate, endDate)
+    requestedPatternId
+    requestedSwapCrewMemberId
+    submittedById
+    reviewedById
+  }
+}
+
+Table CrewRotationPattern {
+  id varchar [pk]
+  patternKey varchar [not null, unique]
+  name varchar [not null]
+  description text
+  cycleLengthDays int [not null]
+  isActive boolean [not null, default: true]
+  createdById varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    isActive
+    createdById
+  }
+}
+
+Table CrewRotationPatternDay {
+  id varchar [pk]
+  patternId varchar [not null]
+  dayNumber int [not null]
+  dutyStatus DutyStatus [not null]
+  stationId varchar
+  startsAtMinutes int
+  endsAtMinutes int
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (patternId, dayNumber) [unique]
+    patternId
+    stationId
+  }
+}
+
+Table CrewScheduleEntry {
+  id varchar [pk]
+  periodId varchar [not null]
+  crewMemberId varchar [not null]
+  stationId varchar
+  sourceRequestId varchar
+  rotationPatternId varchar
+  generatedCrewScheduleId varchar
+  status CrewScheduleEntryStatus [not null, default: "DRAFT"]
+  date timestamp [not null]
+  dutyStatus DutyStatus [not null]
+  startsAt timestamp
+  endsAt timestamp
+  publishedAt timestamp
+  createdById varchar
+  publishedById varchar
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (periodId, crewMemberId, date, dutyStatus) [unique]
+    (periodId, status)
+    (crewMemberId, date)
+    (date, status)
+    stationId
+    sourceRequestId
+    rotationPatternId
+    generatedCrewScheduleId
+    createdById
+    publishedById
+  }
+}
+
 Table CrewFlightLog {
   id varchar [pk]
   crewMemberId varchar [not null]
@@ -1396,6 +1555,25 @@ Ref: DispatchPackage.createdById > User.id
 Ref: DispatchPackage.reviewedById > User.id
 Ref: CrewSchedule.crewMemberId > CrewMember.id
 Ref: CrewSchedule.stationId > Station.id
+Ref: CrewSchedulePeriod.createdById > User.id
+Ref: CrewSchedulePeriod.publishedById > User.id
+Ref: CrewScheduleRequest.periodId > CrewSchedulePeriod.id
+Ref: CrewScheduleRequest.crewMemberId > CrewMember.id
+Ref: CrewScheduleRequest.requestedPatternId > CrewRotationPattern.id
+Ref: CrewScheduleRequest.requestedSwapCrewMemberId > CrewMember.id
+Ref: CrewScheduleRequest.submittedById > User.id
+Ref: CrewScheduleRequest.reviewedById > User.id
+Ref: CrewRotationPattern.createdById > User.id
+Ref: CrewRotationPatternDay.patternId > CrewRotationPattern.id
+Ref: CrewRotationPatternDay.stationId > Station.id
+Ref: CrewScheduleEntry.periodId > CrewSchedulePeriod.id
+Ref: CrewScheduleEntry.crewMemberId > CrewMember.id
+Ref: CrewScheduleEntry.stationId > Station.id
+Ref: CrewScheduleEntry.sourceRequestId > CrewScheduleRequest.id
+Ref: CrewScheduleEntry.rotationPatternId > CrewRotationPattern.id
+Ref: CrewScheduleEntry.generatedCrewScheduleId > CrewSchedule.id
+Ref: CrewScheduleEntry.createdById > User.id
+Ref: CrewScheduleEntry.publishedById > User.id
 Ref: CrewFlightLog.crewMemberId > CrewMember.id
 Ref: CrewFlightLog.flightId > Flight.id
 Ref: FlightPassenger.flightId > Flight.id

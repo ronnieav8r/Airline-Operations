@@ -156,6 +156,36 @@ enum TimeOffRequestStatus {
   CANCELLED
 }
 
+enum CrewSchedulePeriodStatus {
+  BID_OPEN
+  DRAFTING
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CrewScheduleRequestType {
+  TIME_OFF
+  PREFERRED_WORK_DAYS
+  PREFERRED_OFF_DAYS
+  PATTERN_REQUEST
+  SWAP_REQUEST
+  GENERAL_NOTE
+}
+
+enum CrewScheduleRequestStatus {
+  SUBMITTED
+  APPROVED
+  DENIED
+  WITHDRAWN
+}
+
+enum CrewScheduleEntryStatus {
+  DRAFT
+  PUBLISHED
+  SUPERSEDED
+  CANCELLED
+}
+
 enum IdDocumentType {
   PASSPORT
   DRIVERS_LICENSE
@@ -473,6 +503,13 @@ model User {
   importBatchesCreated        ImportBatch[]              @relation("ImportBatchCreatedBy")
   importBatchesReviewed       ImportBatch[]              @relation("ImportBatchReviewedBy")
   importMappingDecisions      ImportMappingDecision[]    @relation("ImportMappingDecisionDecidedBy")
+  crewSchedulePeriodsCreated  CrewSchedulePeriod[]       @relation("CrewSchedulePeriodCreatedBy")
+  crewSchedulePeriodsPublished CrewSchedulePeriod[]      @relation("CrewSchedulePeriodPublishedBy")
+  crewScheduleRequestsSubmitted CrewScheduleRequest[]    @relation("CrewScheduleRequestSubmittedBy")
+  crewScheduleRequestsReviewed CrewScheduleRequest[]     @relation("CrewScheduleRequestReviewedBy")
+  crewRotationPatternsCreated CrewRotationPattern[]      @relation("CrewRotationPatternCreatedBy")
+  crewScheduleEntriesCreated  CrewScheduleEntry[]        @relation("CrewScheduleEntryCreatedBy")
+  crewScheduleEntriesPublished CrewScheduleEntry[]       @relation("CrewScheduleEntryPublishedBy")
 }
 
 model UserProfile {
@@ -509,6 +546,8 @@ model Station {
   flightLegDepartures FlightLeg[]    @relation("FlightLegDepartureStation")
   flightLegArrivals   FlightLeg[]    @relation("FlightLegArrivalStation")
   crewSchedules       CrewSchedule[]
+  crewRotationPatternDays CrewRotationPatternDay[]
+  crewScheduleEntries CrewScheduleEntry[]
 }
 
 model Aircraft {
@@ -624,6 +663,9 @@ model CrewMember {
   qualifications   CrewQualification[]
   assignments      AircraftCrewAssignment[]
   schedules        CrewSchedule[]
+  scheduleRequests CrewScheduleRequest[]
+  scheduleEntries  CrewScheduleEntry[]
+  requestedSwapScheduleRequests CrewScheduleRequest[] @relation("CrewScheduleRequestSwapCrewMember")
   flightLogs       CrewFlightLog[]
   legAssignments   CrewLegAssignment[]
   timeOffRequests  TimeOffRequest[]
@@ -1350,9 +1392,152 @@ model CrewSchedule {
   updatedAt    DateTime   @updatedAt
   crewMember   CrewMember @relation(fields: [crewMemberId], references: [id], onDelete: Cascade)
   station      Station?   @relation(fields: [stationId], references: [id], onDelete: SetNull)
+  scheduleEntries CrewScheduleEntry[]
 
   @@index([crewMemberId, date])
   @@index([date])
+}
+
+model CrewSchedulePeriod {
+  id             String                   @id @default(cuid())
+  periodKey      String                   @unique
+  name           String
+  status         CrewSchedulePeriodStatus @default(BID_OPEN)
+  startsAt       DateTime
+  endsAt         DateTime
+  bidOpenAt      DateTime?
+  bidCloseAt     DateTime?
+  publishedAt    DateTime?
+  archivedAt     DateTime?
+  createdById    String?
+  publishedById  String?
+  notes          String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  createdBy      User?                    @relation("CrewSchedulePeriodCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  publishedBy    User?                    @relation("CrewSchedulePeriodPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  requests       CrewScheduleRequest[]
+  scheduleEntries CrewScheduleEntry[]
+
+  @@index([status, startsAt])
+  @@index([startsAt, endsAt])
+  @@index([createdById])
+  @@index([publishedById])
+}
+
+model CrewScheduleRequest {
+  id                    String                    @id @default(cuid())
+  periodId              String
+  crewMemberId          String
+  requestType           CrewScheduleRequestType
+  status                CrewScheduleRequestStatus @default(SUBMITTED)
+  startDate             DateTime?
+  endDate               DateTime?
+  preferredDutyStatus   DutyStatus?
+  requestedPatternId    String?
+  requestedSwapCrewMemberId String?
+  submittedById         String?
+  reviewedById          String?
+  reviewedAt            DateTime?
+  requestNotes          String?
+  reviewNotes           String?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  period                CrewSchedulePeriod        @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  crewMember            CrewMember                @relation(fields: [crewMemberId], references: [id], onDelete: Cascade)
+  requestedPattern      CrewRotationPattern?      @relation(fields: [requestedPatternId], references: [id], onDelete: SetNull)
+  requestedSwapCrewMember CrewMember?             @relation("CrewScheduleRequestSwapCrewMember", fields: [requestedSwapCrewMemberId], references: [id], onDelete: SetNull)
+  submittedBy           User?                     @relation("CrewScheduleRequestSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedBy            User?                     @relation("CrewScheduleRequestReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  scheduleEntries       CrewScheduleEntry[]
+
+  @@index([periodId, status])
+  @@index([crewMemberId, createdAt])
+  @@index([requestType, status])
+  @@index([startDate, endDate])
+  @@index([requestedPatternId])
+  @@index([requestedSwapCrewMemberId])
+  @@index([submittedById])
+  @@index([reviewedById])
+}
+
+model CrewRotationPattern {
+  id              String                   @id @default(cuid())
+  patternKey      String                   @unique
+  name            String
+  description     String?
+  cycleLengthDays Int
+  isActive        Boolean                  @default(true)
+  createdById     String?
+  notes           String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  createdBy       User?                    @relation("CrewRotationPatternCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  days            CrewRotationPatternDay[]
+  requests        CrewScheduleRequest[]
+  scheduleEntries CrewScheduleEntry[]
+
+  @@index([isActive])
+  @@index([createdById])
+}
+
+model CrewRotationPatternDay {
+  id              String              @id @default(cuid())
+  patternId       String
+  dayNumber       Int
+  dutyStatus      DutyStatus
+  stationId       String?
+  startsAtMinutes Int?
+  endsAtMinutes   Int?
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  pattern         CrewRotationPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
+  station         Station?            @relation(fields: [stationId], references: [id], onDelete: SetNull)
+
+  @@unique([patternId, dayNumber])
+  @@index([patternId])
+  @@index([stationId])
+}
+
+model CrewScheduleEntry {
+  id                    String                  @id @default(cuid())
+  periodId              String
+  crewMemberId          String
+  stationId             String?
+  sourceRequestId       String?
+  rotationPatternId     String?
+  generatedCrewScheduleId String?
+  status                CrewScheduleEntryStatus @default(DRAFT)
+  date                  DateTime
+  dutyStatus            DutyStatus
+  startsAt              DateTime?
+  endsAt                DateTime?
+  publishedAt           DateTime?
+  createdById           String?
+  publishedById         String?
+  notes                 String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  period                CrewSchedulePeriod      @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  crewMember            CrewMember              @relation(fields: [crewMemberId], references: [id], onDelete: Cascade)
+  station               Station?                @relation(fields: [stationId], references: [id], onDelete: SetNull)
+  sourceRequest         CrewScheduleRequest?    @relation(fields: [sourceRequestId], references: [id], onDelete: SetNull)
+  rotationPattern       CrewRotationPattern?    @relation(fields: [rotationPatternId], references: [id], onDelete: SetNull)
+  generatedCrewSchedule CrewSchedule?           @relation(fields: [generatedCrewScheduleId], references: [id], onDelete: SetNull)
+  createdBy             User?                   @relation("CrewScheduleEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  publishedBy           User?                   @relation("CrewScheduleEntryPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+
+  @@unique([periodId, crewMemberId, date, dutyStatus])
+  @@index([periodId, status])
+  @@index([crewMemberId, date])
+  @@index([date, status])
+  @@index([stationId])
+  @@index([sourceRequestId])
+  @@index([rotationPatternId])
+  @@index([generatedCrewScheduleId])
+  @@index([createdById])
+  @@index([publishedById])
 }
 
 model CrewFlightLog {

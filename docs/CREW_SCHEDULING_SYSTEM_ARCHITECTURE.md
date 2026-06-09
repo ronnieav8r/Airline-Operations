@@ -128,6 +128,11 @@ add:
 The first schema implementation must be additive. It should not replace
 `CrewSchedule`, alter aircraft assignment behavior, or add schedule writes.
 
+Prompt 136 implementation status: complete. The additive schema foundation now
+exists with `CrewSchedulePeriod`, `CrewScheduleRequest`,
+`CrewRotationPattern`, `CrewRotationPatternDay`, and `CrewScheduleEntry`.
+Current planner reads still use existing `CrewSchedule`.
+
 ## Aircraft Assignment Integration
 
 Published schedules should feed aircraft assignment by showing available and

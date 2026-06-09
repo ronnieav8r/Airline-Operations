@@ -1127,18 +1127,21 @@ existing `CrewSchedule` table for current planner reads and add future
 schedule-building tables beside it for periods, requests, rotation patterns,
 pattern days, and schedule entries.
 
+Prompt 136 is complete. Additive crew scheduling schema tables now exist, local
+seed creates demo scheduling foundation rows, and `/api/health` reports counts
+for the new tables.
+
 Preferred next slice:
 
 ```text
-Prompt 136: Crew Scheduling Additive Schema Foundation
+Prompt 137: Crew Scheduling Schema QA
 ```
 
 Scope:
 
-- Implement additive Prisma enums/models for schedule periods, unified
-  requests, rotation pattern templates, pattern days, and schedule entries.
-- Add safe local seed/demo rows and health counts if straightforward.
-- Do not add UI or writes beyond seed/demo data.
+- Validate the additive scheduling migration, local seed, health counts, and
+  unchanged current crew/operations routes.
+- Document QA results.
 - Keep schedule writes, time-off writes, duty/rest enforcement, assignment
   automation, auth/signatures, hard release blocking, imports, provider
   integrations, and positioning/logistics implementation behind separate

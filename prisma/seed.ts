@@ -10,6 +10,10 @@ import {
   AircraftType,
   DeferralStatus,
   DiscrepancyStatus,
+  CrewScheduleEntryStatus,
+  CrewSchedulePeriodStatus,
+  CrewScheduleRequestStatus,
+  CrewScheduleRequestType,
   DutyStatus,
   EmploymentStatus,
   AuthorityStatus,
@@ -744,6 +748,148 @@ async function seedAirworthinessFoundation() {
   }
 }
 
+async function seedCrewSchedulingFoundation({
+  anchor,
+  cabinAttendantOneId,
+  captainOneId,
+  captainTwoId,
+  firstOfficerOneId,
+  opsUserId,
+  stationByCode,
+}: {
+  anchor: Date;
+  cabinAttendantOneId: string;
+  captainOneId: string;
+  captainTwoId: string;
+  firstOfficerOneId: string;
+  opsUserId: string;
+  stationByCode: Record<string, { id: string }>;
+}) {
+  const periodStart = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), 1, 0, 0, 0));
+  const periodEnd = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 1, 0, 0, 0));
+  const period = await prisma.crewSchedulePeriod.upsert({
+    where: { periodKey: "demo-current-month" },
+    create: {
+      periodKey: "demo-current-month",
+      name: "Demo Current Month",
+      status: CrewSchedulePeriodStatus.DRAFTING,
+      startsAt: periodStart,
+      endsAt: periodEnd,
+      bidOpenAt: addDays(periodStart, -14),
+      bidCloseAt: addDays(periodStart, -2),
+      createdById: opsUserId,
+      notes: "Seeded demo crew scheduling period for future schedule-building workflows.",
+    },
+    update: {
+      name: "Demo Current Month",
+      status: CrewSchedulePeriodStatus.DRAFTING,
+      startsAt: periodStart,
+      endsAt: periodEnd,
+      bidOpenAt: addDays(periodStart, -14),
+      bidCloseAt: addDays(periodStart, -2),
+      createdById: opsUserId,
+      notes: "Seeded demo crew scheduling period for future schedule-building workflows.",
+    },
+  });
+
+  const pattern = await prisma.crewRotationPattern.upsert({
+    where: { patternKey: "demo-7-on-7-off" },
+    create: {
+      patternKey: "demo-7-on-7-off",
+      name: "Demo 7 on / 7 off",
+      description: "Seven scheduled duty days followed by seven off-duty days.",
+      cycleLengthDays: 14,
+      createdById: opsUserId,
+      notes: "Seeded pattern template; applying patterns remains deferred.",
+    },
+    update: {
+      name: "Demo 7 on / 7 off",
+      description: "Seven scheduled duty days followed by seven off-duty days.",
+      cycleLengthDays: 14,
+      isActive: true,
+      createdById: opsUserId,
+      notes: "Seeded pattern template; applying patterns remains deferred.",
+    },
+  });
+
+  await prisma.crewRotationPatternDay.deleteMany({
+    where: { patternId: pattern.id },
+  });
+  await prisma.crewRotationPatternDay.createMany({
+    data: Array.from({ length: 14 }, (_value, index) => {
+      const dayNumber = index + 1;
+      const isDutyDay = dayNumber <= 7;
+
+      return {
+        patternId: pattern.id,
+        dayNumber,
+        dutyStatus: isDutyDay ? DutyStatus.ON_DUTY : DutyStatus.OFF_DUTY,
+        stationId: isDutyDay ? stationByCode.TEB.id : null,
+        startsAtMinutes: isDutyDay ? 8 * 60 : null,
+        endsAtMinutes: isDutyDay ? 18 * 60 : null,
+        notes: isDutyDay ? "Demo duty day." : "Demo off day.",
+      };
+    }),
+  });
+
+  const request = await prisma.crewScheduleRequest.create({
+    data: {
+      periodId: period.id,
+      crewMemberId: cabinAttendantOneId,
+      requestType: CrewScheduleRequestType.TIME_OFF,
+      status: CrewScheduleRequestStatus.SUBMITTED,
+      startDate: addDays(anchor, 7),
+      endDate: addDays(anchor, 11),
+      submittedById: opsUserId,
+      requestNotes: "Seeded period-scoped request mirroring future crew bid behavior.",
+    },
+  });
+
+  await prisma.crewScheduleEntry.createMany({
+    data: [
+      {
+        periodId: period.id,
+        crewMemberId: captainOneId,
+        stationId: stationByCode.TEB.id,
+        rotationPatternId: pattern.id,
+        status: CrewScheduleEntryStatus.DRAFT,
+        date: anchor,
+        dutyStatus: DutyStatus.ON_DUTY,
+        startsAt: addHours(anchor, -2),
+        endsAt: addHours(anchor, 8),
+        createdById: opsUserId,
+        notes: "Seeded draft schedule entry beside current CrewSchedule.",
+      },
+      {
+        periodId: period.id,
+        crewMemberId: firstOfficerOneId,
+        stationId: stationByCode.TEB.id,
+        rotationPatternId: pattern.id,
+        status: CrewScheduleEntryStatus.DRAFT,
+        date: anchor,
+        dutyStatus: DutyStatus.ON_DUTY,
+        startsAt: addHours(anchor, -2),
+        endsAt: addHours(anchor, 8),
+        createdById: opsUserId,
+        notes: "Seeded draft schedule entry beside current CrewSchedule.",
+      },
+      {
+        periodId: period.id,
+        crewMemberId: captainTwoId,
+        stationId: stationByCode.HPN.id,
+        sourceRequestId: request.id,
+        status: CrewScheduleEntryStatus.DRAFT,
+        date: addDays(anchor, 1),
+        dutyStatus: DutyStatus.RESERVE,
+        startsAt: addHours(addDays(anchor, 1), 1),
+        endsAt: addHours(addDays(anchor, 1), 9),
+        createdById: opsUserId,
+        notes: "Seeded draft reserve entry for schedule-period admin preview.",
+      },
+    ],
+  });
+}
+
 async function main() {
   const now = new Date();
   const anchor = new Date(
@@ -789,6 +935,11 @@ async function main() {
   await prisma.flightPassenger.deleteMany();
   await prisma.passenger.deleteMany();
   await prisma.crewFlightLog.deleteMany();
+  await prisma.crewScheduleEntry.deleteMany();
+  await prisma.crewScheduleRequest.deleteMany();
+  await prisma.crewRotationPatternDay.deleteMany();
+  await prisma.crewRotationPattern.deleteMany();
+  await prisma.crewSchedulePeriod.deleteMany();
   await prisma.crewSchedule.deleteMany();
   await prisma.aircraftCrewAssignment.deleteMany();
   await prisma.crewQualification.deleteMany();
@@ -1472,6 +1623,16 @@ async function main() {
       reason: "Family travel",
       requestedById: opsUser.id,
     },
+  });
+
+  await seedCrewSchedulingFoundation({
+    anchor,
+    cabinAttendantOneId: cabinAttendantOne.id,
+    captainOneId: captainOne.id,
+    captainTwoId: captainTwo.id,
+    firstOfficerOneId: firstOfficerOne.id,
+    opsUserId: opsUser.id,
+    stationByCode,
   });
 
   await prisma.alert.createMany({

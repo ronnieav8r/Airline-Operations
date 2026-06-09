@@ -214,6 +214,10 @@ writes, time-off review, schedule publishing, auth, assignment automation,
 duty/rest enforcement, positioning logistics, imports, or provider
 integrations.
 
+Prompt 136 implementation is complete. The new scheduling tables exist beside
+`CrewSchedule`. Existing planner and aircraft assignment behavior should remain
+unchanged until later read/write workflow slices explicitly migrate behavior.
+
 ## Qualification Rule
 
 Model qualifications by crew member, aircraft type, and seat role.

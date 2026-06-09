@@ -166,6 +166,10 @@ Prompt 135 planning status: complete. Prompt 136 should implement additive
 schema only, with no UI, writes, publishing workflow, auth, duty/rest
 enforcement, assignment automation, or positioning logistics.
 
+Prompt 136 implementation status: complete. The additive schema foundation is
+in place and local demo seed data creates a period, pattern, period request,
+pattern day rows, and draft schedule entries.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
