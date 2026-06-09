@@ -168,6 +168,7 @@ It has:
 124. Crew Scheduling planner QA.
 125. Crew availability hints on aircraft assignment workflow.
 126. Crew availability hints QA.
+127. Crew Scheduling planner filters foundation.
 
 ## Current Data Model Boundaries
 
@@ -204,6 +205,10 @@ The aircraft crew assignment workflow at `/aircraft/[aircraftId]/crew` now
 shows warning-only crew availability hints near the create assignment form.
 These hints use existing schedule, time-off, duty/employment,
 active-assignment, and qualification context without changing save behavior.
+
+The crew scheduling planner at `/crew/scheduling` now has URL-driven filters
+for availability, duty status, assignment state, time-off overlap, base station,
+and assigned aircraft. Filters are read-only and do not change coverage truth.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -863,16 +868,15 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Next planning session
+Prompt 123: Crew Scheduling Planner Filters QA
 ```
 
 Scope:
 
-- Decide the next crew/operations workflow slice after the crew scheduling
-  planner and availability hints.
-- Keep `AircraftCrewAssignment` as coverage truth.
-- Avoid schema, duty/rest enforcement, auth/signatures, release blocking, or
-  automated recommendations unless explicitly planned first.
+- Validate default and filtered `/crew/scheduling` URLs.
+- Confirm filters work alone and in combination.
+- Confirm aircraft crew workflow links still route correctly.
+- Update QA/status docs only unless a defect is found.
 
 Recent completed app-development chain:
 
@@ -1014,18 +1018,22 @@ link, crew selector status context, create assignment form, Relieve Now, and
 Edit assignment controls render. Validation, lint, build, route smoke, and
 browser checks passed.
 
+Prompt 122 is complete. `/crew/scheduling` now has URL-driven filters for
+availability, duty status, assignment state, time-off overlap, base station,
+and assigned aircraft. The planner shows filtered counts, active filters, and a
+resettable empty state without changing write behavior.
+
 Preferred next slice:
 
 ```text
-Next planning session
+Prompt 123: Crew Scheduling Planner Filters QA
 ```
 
 Scope:
 
-- Choose the next small crew/operations workflow slice.
-- Do not continue into duty/rest enforcement, schedule writes, automated
-  recommendations, auth/signatures, hard release blocking, imports, or provider
-  integrations without a new plan.
+- Validate default and filtered planner URLs.
+- Confirm filters work independently and together.
+- Confirm route smoke and browser rendering.
 
 Deferred follow-up to keep on the roadmap:
 

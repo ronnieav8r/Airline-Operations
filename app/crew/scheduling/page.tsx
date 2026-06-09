@@ -9,6 +9,115 @@ import {
 
 export const dynamic = "force-dynamic";
 
+type CrewSchedulingSearchParams = {
+  aircraft?: string | string[];
+  assignment?: string | string[];
+  availability?: string | string[];
+  base?: string | string[];
+  duty?: string | string[];
+  timeOff?: string | string[];
+};
+
+type PageProps = {
+  searchParams: Promise<CrewSchedulingSearchParams>;
+};
+
+type FilterOption = {
+  label: string;
+  value: string;
+};
+
+type PlannerFilters = {
+  aircraft: string;
+  assignment: "all" | "assigned" | "unassigned";
+  availability: "all" | "clear" | "caution" | "unavailable";
+  base: string;
+  duty:
+    | "all"
+    | "deadheading"
+    | "off_duty"
+    | "on_duty"
+    | "reserve"
+    | "sick"
+    | "training"
+    | "vacation";
+  timeOff: "all" | "none" | "overlap";
+};
+
+const AVAILABILITY_OPTIONS: FilterOption[] = [
+  { label: "All availability", value: "all" },
+  { label: "Clear", value: "clear" },
+  { label: "Caution", value: "caution" },
+  { label: "Unavailable warning", value: "unavailable" },
+];
+
+const DUTY_OPTIONS: FilterOption[] = [
+  { label: "All duty states", value: "all" },
+  { label: "On duty", value: "on_duty" },
+  { label: "Reserve", value: "reserve" },
+  { label: "Off duty", value: "off_duty" },
+  { label: "Vacation", value: "vacation" },
+  { label: "Sick", value: "sick" },
+  { label: "Training", value: "training" },
+  { label: "Deadheading", value: "deadheading" },
+];
+
+const ASSIGNMENT_OPTIONS: FilterOption[] = [
+  { label: "All assignment states", value: "all" },
+  { label: "Assigned now", value: "assigned" },
+  { label: "Unassigned now", value: "unassigned" },
+];
+
+const TIME_OFF_OPTIONS: FilterOption[] = [
+  { label: "All time-off states", value: "all" },
+  { label: "Overlapping time off", value: "overlap" },
+  { label: "No overlapping time off", value: "none" },
+];
+
+function firstParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
+function oneOf<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
+  return value && allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+function parseFilters(searchParams: CrewSchedulingSearchParams): PlannerFilters {
+  return {
+    aircraft: firstParam(searchParams.aircraft) ?? "all",
+    assignment: oneOf(
+      firstParam(searchParams.assignment),
+      ["all", "assigned", "unassigned"] as const,
+      "all",
+    ),
+    availability: oneOf(
+      firstParam(searchParams.availability),
+      ["all", "clear", "caution", "unavailable"] as const,
+      "all",
+    ),
+    base: firstParam(searchParams.base) ?? "all",
+    duty: oneOf(
+      firstParam(searchParams.duty),
+      [
+        "all",
+        "deadheading",
+        "off_duty",
+        "on_duty",
+        "reserve",
+        "sick",
+        "training",
+        "vacation",
+      ] as const,
+      "all",
+    ),
+    timeOff: oneOf(firstParam(searchParams.timeOff), ["all", "none", "overlap"] as const, "all"),
+  };
+}
+
 function toDate(value: Date): string {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -92,8 +201,155 @@ function availabilityLabel(crewMember: CrewPlannerMember): string {
   return "Review warnings";
 }
 
-export default async function CrewSchedulingPage() {
+function availabilityFilterValue(crewMember: CrewPlannerMember): PlannerFilters["availability"] {
+  if (crewMember.availabilityWarnings.length === 0) {
+    return "clear";
+  }
+  if (
+    crewMember.employmentStatus !== EmploymentStatus.ACTIVE ||
+    crewMember.dutyStatus === DutyStatus.SICK ||
+    crewMember.dutyStatus === DutyStatus.VACATION
+  ) {
+    return "unavailable";
+  }
+  return "caution";
+}
+
+function dutyFilterValue(status: DutyStatus): PlannerFilters["duty"] {
+  return status.toLowerCase() as PlannerFilters["duty"];
+}
+
+function filterCrewMembers(
+  crewMembers: CrewPlannerMember[],
+  filters: PlannerFilters,
+): CrewPlannerMember[] {
+  return crewMembers.filter((crewMember) => {
+    const matchesAvailability =
+      filters.availability === "all" || availabilityFilterValue(crewMember) === filters.availability;
+    const matchesDuty = filters.duty === "all" || dutyFilterValue(crewMember.dutyStatus) === filters.duty;
+    const matchesAssignment =
+      filters.assignment === "all" ||
+      (filters.assignment === "assigned" && crewMember.currentAssignments.length > 0) ||
+      (filters.assignment === "unassigned" && crewMember.currentAssignments.length === 0);
+    const matchesTimeOff =
+      filters.timeOff === "all" ||
+      (filters.timeOff === "overlap" && crewMember.timeOffInWindow.length > 0) ||
+      (filters.timeOff === "none" && crewMember.timeOffInWindow.length === 0);
+    const matchesBase = filters.base === "all" || crewMember.baseStation.code === filters.base;
+    const matchesAircraft =
+      filters.aircraft === "all" ||
+      crewMember.currentAssignments.some((assignment) => assignment.aircraft.id === filters.aircraft);
+
+    return (
+      matchesAvailability &&
+      matchesDuty &&
+      matchesAssignment &&
+      matchesTimeOff &&
+      matchesBase &&
+      matchesAircraft
+    );
+  });
+}
+
+function filterOptionLabel(options: FilterOption[], value: string): string {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function activeFilterLabels(
+  filters: PlannerFilters,
+  baseOptions: FilterOption[],
+  aircraftOptions: FilterOption[],
+): string[] {
+  const labels: string[] = [];
+
+  if (filters.availability !== "all") {
+    labels.push(filterOptionLabel(AVAILABILITY_OPTIONS, filters.availability));
+  }
+  if (filters.duty !== "all") {
+    labels.push(filterOptionLabel(DUTY_OPTIONS, filters.duty));
+  }
+  if (filters.assignment !== "all") {
+    labels.push(filterOptionLabel(ASSIGNMENT_OPTIONS, filters.assignment));
+  }
+  if (filters.timeOff !== "all") {
+    labels.push(filterOptionLabel(TIME_OFF_OPTIONS, filters.timeOff));
+  }
+  if (filters.base !== "all") {
+    labels.push(`Base ${filterOptionLabel(baseOptions, filters.base)}`);
+  }
+  if (filters.aircraft !== "all") {
+    labels.push(`Aircraft ${filterOptionLabel(aircraftOptions, filters.aircraft)}`);
+  }
+
+  return labels;
+}
+
+function FilterSelect({
+  label,
+  name,
+  options,
+  value,
+}: {
+  label: string;
+  name: keyof PlannerFilters;
+  options: FilterOption[];
+  value: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        {label}
+      </span>
+      <select
+        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm"
+        defaultValue={value}
+        name={name}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function buildBaseOptions(crewMembers: CrewPlannerMember[]): FilterOption[] {
+  const stationCodes = Array.from(
+    new Set(crewMembers.map((crewMember) => crewMember.baseStation.code)),
+  ).sort();
+
+  return [
+    { label: "All bases", value: "all" },
+    ...stationCodes.map((code) => ({ label: code, value: code })),
+  ];
+}
+
+function buildAircraftOptions(crewMembers: CrewPlannerMember[]): FilterOption[] {
+  const aircraftById = new Map<string, string>();
+
+  for (const crewMember of crewMembers) {
+    for (const assignment of crewMember.currentAssignments) {
+      aircraftById.set(assignment.aircraft.id, assignment.aircraft.tailNumber);
+    }
+  }
+
+  return [
+    { label: "All aircraft", value: "all" },
+    ...Array.from(aircraftById.entries())
+      .sort(([, firstTail], [, secondTail]) => firstTail.localeCompare(secondTail))
+      .map(([id, tailNumber]) => ({ label: tailNumber, value: id })),
+  ];
+}
+
+export default async function CrewSchedulingPage({ searchParams }: PageProps) {
   const data = await getCrewSchedulingPlannerData();
+  const filters = parseFilters(await searchParams);
+  const filteredCrewMembers = filterCrewMembers(data.crewMembers, filters);
+  const baseOptions = buildBaseOptions(data.crewMembers);
+  const aircraftOptions = buildAircraftOptions(data.crewMembers);
+  const activeFilters = activeFilterLabels(filters, baseOptions, aircraftOptions);
   const windowLabel = `${toDate(data.windowStart)} - ${toDate(data.windowEnd)}`;
 
   return (
@@ -137,6 +393,68 @@ export default async function CrewSchedulingPage() {
             This page helps decide who appears available. It does not assign crew,
             replace aircraft-block staffing, enforce duty/rest, or block release actions.
           </p>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Planner filters</h2>
+              <p className="text-sm text-zinc-600">
+                URL-driven filters for the read-only availability planner.
+              </p>
+            </div>
+            <Link
+              className="text-sm font-semibold text-sky-700 hover:text-sky-900"
+              href="/crew/scheduling"
+            >
+              Reset filters
+            </Link>
+          </div>
+          <form className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6" method="GET">
+            <FilterSelect
+              label="Availability"
+              name="availability"
+              options={AVAILABILITY_OPTIONS}
+              value={filters.availability}
+            />
+            <FilterSelect label="Duty" name="duty" options={DUTY_OPTIONS} value={filters.duty} />
+            <FilterSelect
+              label="Assignment"
+              name="assignment"
+              options={ASSIGNMENT_OPTIONS}
+              value={filters.assignment}
+            />
+            <FilterSelect
+              label="Time off"
+              name="timeOff"
+              options={TIME_OFF_OPTIONS}
+              value={filters.timeOff}
+            />
+            <FilterSelect label="Base" name="base" options={baseOptions} value={filters.base} />
+            <FilterSelect
+              label="Aircraft"
+              name="aircraft"
+              options={aircraftOptions}
+              value={filters.aircraft}
+            />
+            <div className="sm:col-span-2 lg:col-span-6">
+              <button
+                className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+                type="submit"
+              >
+                Apply filters
+              </button>
+            </div>
+          </form>
+          <div className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">
+            Showing {filteredCrewMembers.length} of {data.crewMembers.length} crew member
+            {data.crewMembers.length === 1 ? "" : "s"}.
+            {activeFilters.length === 0 ? (
+              <span className="ml-1 text-zinc-500">No active filters.</span>
+            ) : (
+              <span className="ml-1">Active filters: {activeFilters.join(" | ")}.</span>
+            )}
+          </div>
         </section>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
@@ -195,9 +513,22 @@ export default async function CrewSchedulingPage() {
             <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               No crew members found.
             </p>
+          ) : filteredCrewMembers.length === 0 ? (
+            <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-semibold">No crew match the active filters.</p>
+              <p className="mt-1">
+                Adjust the planner filters or return to the full crew scheduling view.
+              </p>
+              <Link
+                className="mt-3 inline-flex font-semibold text-amber-950 underline underline-offset-2"
+                href="/crew/scheduling"
+              >
+                Reset planner filters
+              </Link>
+            </div>
           ) : (
             <div className="mt-4 grid gap-4">
-              {data.crewMembers.map((crewMember) => (
+              {filteredCrewMembers.map((crewMember) => (
                 <article
                   className="rounded-md border border-zinc-200 bg-white p-4"
                   key={crewMember.id}

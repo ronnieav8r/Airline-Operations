@@ -78,6 +78,15 @@ Prompt 120 implementation status: complete. Availability hints do not block
 saves and do not replace `AircraftCrewAssignment` as the operational coverage
 source.
 
+## Prompt 122 Planner Filters
+
+The crew scheduling planner now supports URL-driven filters for availability,
+duty status, current assignment state, time-off overlap, base station, and
+assigned aircraft.
+
+Prompt 122 implementation status: complete. Filters are read-only and do not
+change schedule, time-off, assignment, release, or coverage behavior.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
