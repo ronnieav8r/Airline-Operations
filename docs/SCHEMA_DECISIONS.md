@@ -371,3 +371,11 @@ Prompt 140 QA confirmed the read-only schedule-period admin routes render
 against the additive scheduling schema. The schema boundary is unchanged:
 schedule-period admin visibility is allowed, but schedule publishing and
 schedule mutation workflows remain deferred.
+
+Time-off workflow planning is complete. The first workflow should use existing
+`TimeOffRequest` records directly for ops/admin absence request entry and
+review. `CrewScheduleRequest` remains reserved for future period-scoped bids,
+preferences, swaps, and pattern requests. Approving or cancelling time off must
+not create or mutate `CrewSchedule`, `CrewScheduleEntry`,
+`AircraftCrewAssignment`, `CrewLegAssignment`, release records, or release
+readiness behavior.

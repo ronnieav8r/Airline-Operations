@@ -201,3 +201,9 @@ assignment automation.
 Prompt 140 QA status: complete. The schedule period admin surface renders
 locally, planner navigation reaches it, crew detail links remain available, and
 the implementation remains read-only.
+
+Prompt 141 planning status: complete. The first time-off write workflow should
+use existing `TimeOffRequest` rows for ops/admin request entry and review at
+`/crew/scheduling/time-off`. It is intentionally separate from
+`CrewScheduleRequest`, which remains the future period-scoped bid/preference
+model. Approving time off must not write schedule rows or aircraft assignments.

@@ -1147,21 +1147,27 @@ routes, planner navigation, crew detail links, health counts, validation, build,
 and unchanged read-only behavior. The Prompt 136-140 crew scheduling schema and
 read-only admin surface chain is complete.
 
-Preferred next step:
+Prompt 141 is complete. The first time-off write workflow is planned as an
+ops/admin `TimeOffRequest` workflow at `/crew/scheduling/time-off`, with create
+plus approve/deny/cancel review actions, warning-only conflicts, and no schedule
+or assignment side effects.
+
+Preferred next slice:
 
 ```text
-Planning session for the next Crew Scheduling implementation chain
+Prompt 142: Time-Off Request Workflow Foundation
 ```
 
 Scope:
 
-- Decide whether the next Crew Scheduling chain should focus on schedule-period
-  create/edit, rotation-pattern admin, request/bid workflow planning, or
-  improved planner surfacing.
-- Keep schedule writes, time-off writes, duty/rest enforcement, assignment
-  automation, auth/signatures, hard release blocking, imports, provider
-  integrations, and positioning/logistics implementation behind separate
-  plans.
+- Implement `/crew/scheduling/time-off` for ops/admin `TimeOffRequest` create
+  and review.
+- Add navigation from crew scheduling, crew roster, and crew detail pages.
+- Keep conflict checks warning-only.
+- Keep schedule writes, crew self-service time-off, duty/rest enforcement,
+  assignment automation, auth/signatures, hard release blocking, imports,
+  provider integrations, and positioning/logistics implementation behind
+  separate plans.
 
 Deferred follow-up to keep on the roadmap:
 

@@ -190,6 +190,18 @@ Prompt 140 QA status: complete. Local validation, route smoke, and browser QA
 confirmed the read-only schedule period admin surface and unchanged planner
 behavior.
 
+## Prompt 141 Time-Off Request Workflow Planning
+
+The first time-off workflow should use the existing `TimeOffRequest` table
+directly. It should live at `/crew/scheduling/time-off`, serve ops/admin users
+only until auth exists, and support create plus review actions for approve,
+deny, and cancel.
+
+Prompt 141 planning status: complete. Prompt 142 should implement the
+ops/admin `TimeOffRequest` workflow without schema changes, crew self-service,
+schedule writes, assignment automation, duty/rest enforcement, or release
+behavior changes.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
@@ -201,7 +213,7 @@ Warning-only conflict examples:
 ## Deferred Work
 
 - Crew schedule create/edit workflow.
-- Time-off request create/edit/review workflow.
+- Crew self-service time-off request workflow.
 - Schedule period create/edit/publish workflow.
 - Crew bid/request create/review workflow.
 - Rotation pattern create/edit/apply workflow.
