@@ -2,6 +2,54 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 121: Crew Availability Hints QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Availability hint QA:
+
+- Confirmed `/aircraft/[aircraftId]/crew` returned 200 for local aircraft
+  `cmq5vzoo90009v8v410i2ir6h`.
+- Confirmed the page renders `Crew availability hints are warning-only`.
+- Confirmed the page includes the `Full crew planner` link to
+  `/crew/scheduling`.
+- Confirmed the crew selector includes availability status context.
+- Confirmed the existing create assignment form still renders.
+- Confirmed existing `Relieve now` and `Edit assignment` controls still render.
+
+Route smoke:
+
+- `/aircraft/[aircraftId]/crew` returned 200.
+- `/crew/scheduling` returned 200.
+- `/crew` returned 200.
+- `/aircraft` returned 200.
+- `/operations-control` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Browser QA:
+
+- Browser check confirmed availability hints, full planner link, create
+  assignment form, Relieve Now control, Edit assignment control, and
+  availability status text in the crew selector.
+
+Notes:
+
+- Prompt 121 was QA/docs only.
+- No schema, save-rule, crew schedule mutation, time-off mutation,
+  aircraft-assignment mutation, duty/rest enforcement, release blocking,
+  auth/signatures, imports, provider integrations, file uploads, or
+  coverage-source changes were added.
+- `AircraftCrewAssignment` remains the operational coverage source.
+
 ## 2026-06-08 - Prompt 119: Crew Scheduling Planner QA
 
 Status: passed.

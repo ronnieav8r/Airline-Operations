@@ -167,6 +167,7 @@ It has:
 123. Crew Scheduling read-only planner board.
 124. Crew Scheduling planner QA.
 125. Crew availability hints on aircraft assignment workflow.
+126. Crew availability hints QA.
 
 ## Current Data Model Boundaries
 
@@ -862,15 +863,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 121: Crew Availability Hints QA
+Next planning session
 ```
 
 Scope:
 
-- Validate the aircraft crew assignment availability hints.
-- Confirm create/edit/relieve behavior remains unchanged.
-- Confirm the full crew planner link routes correctly.
-- Confirm no schema, blocking behavior, or coverage-source changes.
+- Decide the next crew/operations workflow slice after the crew scheduling
+  planner and availability hints.
+- Keep `AircraftCrewAssignment` as coverage truth.
+- Avoid schema, duty/rest enforcement, auth/signatures, release blocking, or
+  automated recommendations unless explicitly planned first.
 
 Recent completed app-development chain:
 
@@ -1007,18 +1009,23 @@ to crew selector labels. Hints use existing schedule, time-off,
 duty/employment, active-assignment, and qualification context without changing
 assignment save behavior.
 
+Prompt 121 is complete. Local QA confirmed availability hints, full planner
+link, crew selector status context, create assignment form, Relieve Now, and
+Edit assignment controls render. Validation, lint, build, route smoke, and
+browser checks passed.
+
 Preferred next slice:
 
 ```text
-Prompt 121: Crew Availability Hints QA
+Next planning session
 ```
 
 Scope:
 
-- Validate availability hints render on `/aircraft/[aircraftId]/crew`.
-- Confirm the create form, edit form, and Relieve Now controls still render.
-- Confirm the full crew planner link works.
-- Confirm no save rules changed.
+- Choose the next small crew/operations workflow slice.
+- Do not continue into duty/rest enforcement, schedule writes, automated
+  recommendations, auth/signatures, hard release blocking, imports, or provider
+  integrations without a new plan.
 
 Deferred follow-up to keep on the roadmap:
 

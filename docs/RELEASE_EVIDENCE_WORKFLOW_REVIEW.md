@@ -209,6 +209,16 @@ the create assignment form. The hints surface existing schedule, time-off,
 duty/employment, active-assignment, and qualification context, and link back to
 the full `/crew/scheduling` planner. Assignment save behavior is unchanged.
 
+## Prompt 121 Status
+
+Implementation status: QA complete.
+
+Local QA confirmed the aircraft crew assignment workflow renders the
+availability hints panel, full planner link, create assignment form, Relieve
+Now control, Edit assignment control, and availability status in the crew
+selector. Assignment save behavior and coverage-source boundaries remain
+unchanged.
+
 ## Prompt 101 Status
 
 Implementation status: complete.
