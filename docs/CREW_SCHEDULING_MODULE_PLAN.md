@@ -90,6 +90,14 @@ change schedule, time-off, assignment, release, or coverage behavior.
 Prompt 123 QA status: complete. Default and filtered planner URLs render
 locally, and the filter controls remain read-only.
 
+## Prompt 124 Planner Grouping
+
+The crew scheduling planner now supports URL-driven grouping by availability,
+base, current assignment state, or duty status. Grouping is applied after
+active filters and does not change planner data sources or workflow behavior.
+
+Prompt 124 implementation status: complete.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

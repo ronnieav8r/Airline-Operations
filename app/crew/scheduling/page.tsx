@@ -15,6 +15,7 @@ type CrewSchedulingSearchParams = {
   availability?: string | string[];
   base?: string | string[];
   duty?: string | string[];
+  groupBy?: string | string[];
   timeOff?: string | string[];
 };
 
@@ -41,6 +42,7 @@ type PlannerFilters = {
     | "sick"
     | "training"
     | "vacation";
+  groupBy: "assignment" | "availability" | "base" | "duty";
   timeOff: "all" | "none" | "overlap";
 };
 
@@ -72,6 +74,13 @@ const TIME_OFF_OPTIONS: FilterOption[] = [
   { label: "All time-off states", value: "all" },
   { label: "Overlapping time off", value: "overlap" },
   { label: "No overlapping time off", value: "none" },
+];
+
+const GROUP_OPTIONS: FilterOption[] = [
+  { label: "Group by availability", value: "availability" },
+  { label: "Group by base", value: "base" },
+  { label: "Group by assignment", value: "assignment" },
+  { label: "Group by duty", value: "duty" },
 ];
 
 function firstParam(value: string | string[] | undefined): string | null {
@@ -113,6 +122,11 @@ function parseFilters(searchParams: CrewSchedulingSearchParams): PlannerFilters 
         "vacation",
       ] as const,
       "all",
+    ),
+    groupBy: oneOf(
+      firstParam(searchParams.groupBy),
+      ["assignment", "availability", "base", "duty"] as const,
+      "availability",
     ),
     timeOff: oneOf(firstParam(searchParams.timeOff), ["all", "none", "overlap"] as const, "all"),
   };
@@ -280,6 +294,7 @@ function activeFilterLabels(
   if (filters.aircraft !== "all") {
     labels.push(`Aircraft ${filterOptionLabel(aircraftOptions, filters.aircraft)}`);
   }
+  labels.push(filterOptionLabel(GROUP_OPTIONS, filters.groupBy));
 
   return labels;
 }
@@ -343,6 +358,57 @@ function buildAircraftOptions(crewMembers: CrewPlannerMember[]): FilterOption[] 
   ];
 }
 
+function buildCrewGroups(
+  crewMembers: CrewPlannerMember[],
+  allCrewMembers: CrewPlannerMember[],
+  groupBy: PlannerFilters["groupBy"],
+): Array<{
+  key: string;
+  label: string;
+  members: CrewPlannerMember[];
+}> {
+  if (groupBy === "assignment") {
+    const groups = [
+      { key: "assigned", label: "Assigned now", members: [] as CrewPlannerMember[] },
+      { key: "unassigned", label: "Unassigned now", members: [] as CrewPlannerMember[] },
+    ];
+
+    for (const crewMember of crewMembers) {
+      groups[crewMember.currentAssignments.length > 0 ? 0 : 1].members.push(crewMember);
+    }
+
+    return groups;
+  }
+
+  if (groupBy === "base") {
+    const baseCodes = Array.from(new Set(allCrewMembers.map((crewMember) => crewMember.baseStation.code))).sort();
+
+    return baseCodes.map((baseCode) => ({
+      key: baseCode,
+      label: `Base ${baseCode}`,
+      members: crewMembers.filter((crewMember) => crewMember.baseStation.code === baseCode),
+    }));
+  }
+
+  if (groupBy === "duty") {
+    return DUTY_OPTIONS.filter((option) => option.value !== "all").map((option) => ({
+      key: option.value,
+      label: option.label,
+      members: crewMembers.filter(
+        (crewMember) => dutyFilterValue(crewMember.dutyStatus) === option.value,
+      ),
+    }));
+  }
+
+  return AVAILABILITY_OPTIONS.filter((option) => option.value !== "all").map((option) => ({
+    key: option.value,
+    label: option.label,
+    members: crewMembers.filter(
+      (crewMember) => availabilityFilterValue(crewMember) === option.value,
+    ),
+  }));
+}
+
 export default async function CrewSchedulingPage({ searchParams }: PageProps) {
   const data = await getCrewSchedulingPlannerData();
   const filters = parseFilters(await searchParams);
@@ -350,6 +416,7 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
   const baseOptions = buildBaseOptions(data.crewMembers);
   const aircraftOptions = buildAircraftOptions(data.crewMembers);
   const activeFilters = activeFilterLabels(filters, baseOptions, aircraftOptions);
+  const crewGroups = buildCrewGroups(filteredCrewMembers, data.crewMembers, filters.groupBy);
   const windowLabel = `${toDate(data.windowStart)} - ${toDate(data.windowEnd)}`;
 
   return (
@@ -410,7 +477,13 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
               Reset filters
             </Link>
           </div>
-          <form className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6" method="GET">
+          <form className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-7" method="GET">
+            <FilterSelect
+              label="Grouping"
+              name="groupBy"
+              options={GROUP_OPTIONS}
+              value={filters.groupBy}
+            />
             <FilterSelect
               label="Availability"
               name="availability"
@@ -437,7 +510,7 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
               options={aircraftOptions}
               value={filters.aircraft}
             />
-            <div className="sm:col-span-2 lg:col-span-6">
+            <div className="sm:col-span-2 lg:col-span-7">
               <button
                 className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
                 type="submit"
@@ -527,186 +600,206 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
               </Link>
             </div>
           ) : (
-            <div className="mt-4 grid gap-4">
-              {filteredCrewMembers.map((crewMember) => (
-                <article
-                  className="rounded-md border border-zinc-200 bg-white p-4"
-                  key={crewMember.id}
-                >
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="mt-4 grid gap-5">
+              {crewGroups.map((group) => (
+                <section className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={group.key}>
+                  <div className="flex flex-col gap-1 border-b border-zinc-200 pb-2 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-semibold text-zinc-950">
-                          {crewMember.firstName} {crewMember.lastName}
-                        </h3>
-                        <span className="text-xs text-zinc-500">
-                          #{crewMember.employeeNumber}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm text-zinc-600">
-                        Base {crewMember.baseStation.code} - {crewMember.baseStation.city}
+                      <h3 className="text-base font-semibold text-zinc-950">{group.label}</h3>
+                      <p className="text-sm text-zinc-600">
+                        {group.members.length} crew member{group.members.length === 1 ? "" : "s"}
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <span
-                        className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${employmentBadgeClasses(
-                          crewMember.employmentStatus,
-                        )}`}
-                      >
-                        {formatStatus(crewMember.employmentStatus)}
-                      </span>
-                      <span
-                        className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${dutyBadgeClasses(
-                          crewMember.dutyStatus,
-                        )}`}
-                      >
-                        {formatStatus(crewMember.dutyStatus)}
-                      </span>
-                      <span
-                        className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${availabilityBadgeClasses(
-                          crewMember,
-                        )}`}
-                      >
-                        {availabilityLabel(crewMember)}
-                      </span>
-                    </div>
                   </div>
-
-                  {crewMember.availabilityWarnings.length > 0 ? (
-                    <ul className="mt-3 grid gap-2 text-sm text-amber-900 lg:grid-cols-2">
-                      {crewMember.availabilityWarnings.map((warning) => (
-                        <li
-                          className="rounded-md border border-amber-200 bg-amber-50 p-2"
-                          key={warning}
+                  {group.members.length === 0 ? (
+                    <p className="mt-3 rounded-md border border-zinc-200 bg-white p-3 text-sm text-zinc-500">
+                      No crew in this group after active filters.
+                    </p>
+                  ) : (
+                    <div className="mt-3 grid gap-4">
+                      {group.members.map((crewMember) => (
+                        <article
+                          className="rounded-md border border-zinc-200 bg-white p-4"
+                          key={crewMember.id}
                         >
-                          {warning}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-
-                  <div className="mt-4 grid gap-3 xl:grid-cols-4">
-                    <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                      <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                        Schedule Blocks
-                      </h4>
-                      {crewMember.schedulesInWindow.length === 0 ? (
-                        <p className="mt-2 text-sm text-zinc-600">
-                          No schedule block in this window.
-                        </p>
-                      ) : (
-                        <ul className="mt-2 space-y-2 text-sm">
-                          {crewMember.schedulesInWindow.map((schedule) => (
-                            <li key={schedule.id}>
-                              <div className="font-medium text-zinc-900">
-                                {toDate(schedule.date)} | {formatStatus(schedule.dutyStatus)}
+                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-lg font-semibold text-zinc-950">
+                                  {crewMember.firstName} {crewMember.lastName}
+                                </h3>
+                                <span className="text-xs text-zinc-500">
+                                  #{crewMember.employeeNumber}
+                                </span>
                               </div>
-                              <div className="text-xs text-zinc-500">
-                                {schedule.startsAt ? toDateTime(schedule.startsAt) : "No start"} -{" "}
-                                {schedule.endsAt ? toDateTime(schedule.endsAt) : "No end"} |{" "}
-                                {schedule.station?.code ?? "No station"}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-
-                    <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                      <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                        Time Off
-                      </h4>
-                      {crewMember.timeOffInWindow.length === 0 ? (
-                        <p className="mt-2 text-sm text-zinc-600">No overlapping time off.</p>
-                      ) : (
-                        <ul className="mt-2 space-y-2 text-sm">
-                          {crewMember.timeOffInWindow.map((request) => (
-                            <li key={request.id}>
+                              <p className="mt-1 text-sm text-zinc-600">
+                                Base {crewMember.baseStation.code} - {crewMember.baseStation.city}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
                               <span
-                                className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${timeOffBadgeClasses(
-                                  request.status,
+                                className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${employmentBadgeClasses(
+                                  crewMember.employmentStatus,
                                 )}`}
                               >
-                                {formatStatus(request.status)}
+                                {formatStatus(crewMember.employmentStatus)}
                               </span>
-                              <div className="mt-1 text-zinc-900">
-                                {formatStatus(request.requestType)}
-                              </div>
-                              <div className="text-xs text-zinc-500">
-                                {toDate(request.startDate)} - {toDate(request.endDate)}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-
-                    <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                      <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                        Aircraft Assignment
-                      </h4>
-                      {crewMember.currentAssignments.length === 0 ? (
-                        <p className="mt-2 text-sm text-zinc-600">
-                          No current aircraft-block assignment.
-                        </p>
-                      ) : (
-                        <ul className="mt-2 space-y-2 text-sm">
-                          {crewMember.currentAssignments.map((assignment) => (
-                            <li key={assignment.id}>
-                              <div className="font-medium text-zinc-900">
-                                {formatRoleLabel(assignment.seatRole)} on{" "}
-                                {assignment.aircraft.tailNumber}
-                              </div>
-                              <div className="text-xs text-zinc-500">
-                                {assignment.aircraft.type.replaceAll("_", "-")} | since{" "}
-                                {toDateTime(assignment.startsAt)}
-                              </div>
-                              <Link
-                                className="mt-1 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
-                                href={`/aircraft/${assignment.aircraft.id}/crew`}
+                              <span
+                                className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${dutyBadgeClasses(
+                                  crewMember.dutyStatus,
+                                )}`}
                               >
-                                Manage aircraft crew
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
+                                {formatStatus(crewMember.dutyStatus)}
+                              </span>
+                              <span
+                                className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${availabilityBadgeClasses(
+                                  crewMember,
+                                )}`}
+                              >
+                                {availabilityLabel(crewMember)}
+                              </span>
+                            </div>
+                          </div>
 
-                    <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                      <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                        Upcoming Coverage
-                      </h4>
-                      {crewMember.upcomingFlights.length === 0 ? (
-                        <p className="mt-2 text-sm text-zinc-600">
-                          No upcoming covered FlightLegs in this window.
-                        </p>
-                      ) : (
-                        <ul className="mt-2 space-y-2 text-sm">
-                          {crewMember.upcomingFlights.slice(0, 4).map((flight) => (
-                            <li key={`${flight.id}-${crewMember.id}`}>
-                              <div className="font-medium text-zinc-900">
-                                {flight.flightNumber} | {flight.route}
-                              </div>
-                              <div className="text-xs text-zinc-500">
-                                {toDateTime(flight.scheduledDeparture)} | {flight.tailNumber} |{" "}
-                                {flight.seatRoles.map(formatRoleLabel).join(", ")}
-                              </div>
-                              {flight.flightLegId ? (
-                                <Link
-                                  className="mt-1 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
-                                  href={`/operations-control/${flight.flightLegId}`}
+                          {crewMember.availabilityWarnings.length > 0 ? (
+                            <ul className="mt-3 grid gap-2 text-sm text-amber-900 lg:grid-cols-2">
+                              {crewMember.availabilityWarnings.map((warning) => (
+                                <li
+                                  className="rounded-md border border-amber-200 bg-amber-50 p-2"
+                                  key={warning}
                                 >
-                                  Operations detail
-                                </Link>
-                              ) : null}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                                  {warning}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+
+                          <div className="mt-4 grid gap-3 xl:grid-cols-4">
+                            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                Schedule Blocks
+                              </h4>
+                              {crewMember.schedulesInWindow.length === 0 ? (
+                                <p className="mt-2 text-sm text-zinc-600">
+                                  No schedule block in this window.
+                                </p>
+                              ) : (
+                                <ul className="mt-2 space-y-2 text-sm">
+                                  {crewMember.schedulesInWindow.map((schedule) => (
+                                    <li key={schedule.id}>
+                                      <div className="font-medium text-zinc-900">
+                                        {toDate(schedule.date)} | {formatStatus(schedule.dutyStatus)}
+                                      </div>
+                                      <div className="text-xs text-zinc-500">
+                                        {schedule.startsAt ? toDateTime(schedule.startsAt) : "No start"} -{" "}
+                                        {schedule.endsAt ? toDateTime(schedule.endsAt) : "No end"} |{" "}
+                                        {schedule.station?.code ?? "No station"}
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+
+                            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                Time Off
+                              </h4>
+                              {crewMember.timeOffInWindow.length === 0 ? (
+                                <p className="mt-2 text-sm text-zinc-600">No overlapping time off.</p>
+                              ) : (
+                                <ul className="mt-2 space-y-2 text-sm">
+                                  {crewMember.timeOffInWindow.map((request) => (
+                                    <li key={request.id}>
+                                      <span
+                                        className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${timeOffBadgeClasses(
+                                          request.status,
+                                        )}`}
+                                      >
+                                        {formatStatus(request.status)}
+                                      </span>
+                                      <div className="mt-1 text-zinc-900">
+                                        {formatStatus(request.requestType)}
+                                      </div>
+                                      <div className="text-xs text-zinc-500">
+                                        {toDate(request.startDate)} - {toDate(request.endDate)}
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+
+                            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                Aircraft Assignment
+                              </h4>
+                              {crewMember.currentAssignments.length === 0 ? (
+                                <p className="mt-2 text-sm text-zinc-600">
+                                  No current aircraft-block assignment.
+                                </p>
+                              ) : (
+                                <ul className="mt-2 space-y-2 text-sm">
+                                  {crewMember.currentAssignments.map((assignment) => (
+                                    <li key={assignment.id}>
+                                      <div className="font-medium text-zinc-900">
+                                        {formatRoleLabel(assignment.seatRole)} on{" "}
+                                        {assignment.aircraft.tailNumber}
+                                      </div>
+                                      <div className="text-xs text-zinc-500">
+                                        {assignment.aircraft.type.replaceAll("_", "-")} | since{" "}
+                                        {toDateTime(assignment.startsAt)}
+                                      </div>
+                                      <Link
+                                        className="mt-1 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
+                                        href={`/aircraft/${assignment.aircraft.id}/crew`}
+                                      >
+                                        Manage aircraft crew
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+
+                            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                Upcoming Coverage
+                              </h4>
+                              {crewMember.upcomingFlights.length === 0 ? (
+                                <p className="mt-2 text-sm text-zinc-600">
+                                  No upcoming covered FlightLegs in this window.
+                                </p>
+                              ) : (
+                                <ul className="mt-2 space-y-2 text-sm">
+                                  {crewMember.upcomingFlights.slice(0, 4).map((flight) => (
+                                    <li key={`${flight.id}-${crewMember.id}`}>
+                                      <div className="font-medium text-zinc-900">
+                                        {flight.flightNumber} | {flight.route}
+                                      </div>
+                                      <div className="text-xs text-zinc-500">
+                                        {toDateTime(flight.scheduledDeparture)} | {flight.tailNumber} |{" "}
+                                        {flight.seatRoles.map(formatRoleLabel).join(", ")}
+                                      </div>
+                                      {flight.flightLegId ? (
+                                        <Link
+                                          className="mt-1 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
+                                          href={`/operations-control/${flight.flightLegId}`}
+                                        >
+                                          Operations detail
+                                        </Link>
+                                      ) : null}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      ))}
                     </div>
-                  </div>
-                </article>
+                  )}
+                </section>
               ))}
             </div>
           )}

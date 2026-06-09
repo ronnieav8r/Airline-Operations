@@ -170,6 +170,7 @@ It has:
 126. Crew availability hints QA.
 127. Crew Scheduling planner filters foundation.
 128. Crew Scheduling planner filters QA.
+129. Crew Scheduling planner grouping foundation.
 
 ## Current Data Model Boundaries
 
@@ -210,6 +211,10 @@ active-assignment, and qualification context without changing save behavior.
 The crew scheduling planner at `/crew/scheduling` now has URL-driven filters
 for availability, duty status, assignment state, time-off overlap, base station,
 and assigned aircraft. Filters are read-only and do not change coverage truth.
+
+The crew scheduling planner also supports URL-driven grouping by availability,
+base, assignment state, or duty status. Grouping is applied after filters and
+does not change workflow behavior.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -869,15 +874,15 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 124: Crew Scheduling Planner Grouping Foundation
+Prompt 125: Crew Scheduling Planner Grouping QA
 ```
 
 Scope:
 
-- Add URL-driven `groupBy=availability|base|assignment|duty`.
-- Group the filtered crew list into visible sections.
-- Preserve the filter bar, summary cards, crew cards, and warning-only
-  messaging.
+- Validate all grouping modes.
+- Validate grouping combined with filters.
+- Confirm no data source, coverage-source, or save behavior changed.
+- Update QA/status docs only unless a defect is found.
 
 Recent completed app-development chain:
 
@@ -1028,17 +1033,22 @@ Prompt 123 is complete. Local QA confirmed default and filtered planner URLs,
 filter controls, active-filter summary, reset link, route smoke, validation,
 lint, and build.
 
+Prompt 124 is complete. `/crew/scheduling` now supports URL-driven grouping by
+availability, base, assignment state, or duty status. Grouping preserves active
+filters, crew cards, summary cards, warning-only messaging, and aircraft crew
+workflow links.
+
 Preferred next slice:
 
 ```text
-Prompt 124: Crew Scheduling Planner Grouping Foundation
+Prompt 125: Crew Scheduling Planner Grouping QA
 ```
 
 Scope:
 
-- Add URL-driven grouping to `/crew/scheduling`.
-- Default grouping should be by availability.
-- Preserve existing filters and read-only planner behavior.
+- Validate all grouping modes and grouped filtered URLs.
+- Confirm route smoke and browser rendering.
+- Keep the slice QA/docs only unless a defect is found.
 
 Deferred follow-up to keep on the roadmap:
 
