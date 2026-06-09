@@ -2,6 +2,44 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 130: Crew Member Context Page QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Route smoke:
+
+- `/crew` returned 200 and rendered `Crew detail` links.
+- `/crew/scheduling` returned 200 and rendered `Crew detail` links.
+- `/crew/[crewMemberId]` returned 200 and rendered crew context markers.
+- `/aircraft/[aircraftId]/crew` returned 200 and rendered `Crew detail` links.
+- `/operations-control` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Browser QA:
+
+- Crew roster and crew planner showed links into crew detail.
+- Crew detail showed the warning-only availability section.
+- Aircraft crew workflow preserved the assignment workflow and showed crew
+  detail links.
+
+Notes:
+
+- Prompt 130 was QA/docs only.
+- No schema, schedule mutation, time-off mutation, aircraft-assignment
+  behavior change, `CrewLegAssignment` mutation, duty/rest enforcement,
+  auth/signatures, release blocking, imports, provider integrations, file
+  uploads, or coverage-source changes were added.
+- `AircraftCrewAssignment` remains the operational coverage source.
+
 ## 2026-06-08 - Prompt 127: Crew Planner Cross-Link QA
 
 Status: passed.

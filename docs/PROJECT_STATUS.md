@@ -176,6 +176,7 @@ It has:
 132. Crew planner cross-link QA.
 133. Crew member context page planning.
 134. Crew member context page foundation.
+135. Crew member context page QA.
 
 ## Current Data Model Boundaries
 
@@ -236,6 +237,10 @@ time-off behavior.
 Crew member context page foundation is complete. The new detail route is
 read-only and links back to roster, planner, aircraft context, aircraft crew
 assignment, and Operations Control where applicable.
+
+Crew member context page QA is complete. Local validation confirmed crew
+detail rendering, cross-links from crew surfaces, and unchanged aircraft crew
+workflow behavior.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -895,14 +900,13 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 130: Crew Member Context Page QA
+Prompt 131: Crew Planner Date/Window Controls Planning
 ```
 
 Scope:
 
-- Validate `/crew/[crewMemberId]` rendering and cross-links from crew roster,
-  crew planner, and aircraft crew workflow surfaces.
-- Confirm no workflow behavior changed.
+- Plan URL-driven date/window controls for the read-only crew planner.
+- Keep `/crew/[crewMemberId]` and `/crew/scheduling` read-only.
 - Do not add schema, schedule writes, time-off writes, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports, or
   provider integrations.
@@ -1084,16 +1088,21 @@ context page with availability warnings, qualifications, current
 aircraft-block assignments, schedule blocks, time off, upcoming FlightLeg
 coverage, and workflow navigation links.
 
+Prompt 130 is complete. QA confirmed the crew detail route, cross-links from
+crew roster, planner, and aircraft crew workflow surfaces, route smoke, and
+unchanged workflow behavior.
+
 Preferred next slice:
 
 ```text
-Prompt 130: Crew Member Context Page QA
+Prompt 131: Crew Planner Date/Window Controls Planning
 ```
 
 Scope:
 
-- Validate the read-only crew member detail page and new cross-links.
-- Confirm aircraft crew assignment actions remain unchanged.
+- Plan date/window controls for `/crew/scheduling`.
+- Decide how Prompt 132 should apply the selected planning window to planner
+  summaries and cards.
 - Keep schedule writes, time-off writes, duty/rest enforcement, assignment
   automation, auth/signatures, hard release blocking, imports, and provider
   integrations behind a separate plan.

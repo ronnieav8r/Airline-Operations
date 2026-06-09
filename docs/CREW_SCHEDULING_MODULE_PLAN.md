@@ -123,6 +123,8 @@ cross-links without changing coverage truth or adding schedule/time-off writes.
 Prompt 129 implementation status: complete. `/crew/[crewMemberId]` now shows
 read-only crew identity, availability, qualifications, current aircraft-block
 assignments, schedule, time off, and upcoming FlightLeg coverage context.
+Prompt 130 QA status: complete. Crew detail routes and cross-links render
+locally with no workflow behavior changes.
 
 Warning-only conflict examples:
 
