@@ -580,6 +580,12 @@ export default async function CrewPage() {
                           Base {crewMember.baseStation.code} - {crewMember.baseStation.city}
                           {crewMember.email ? ` | ${crewMember.email}` : ""}
                         </p>
+                        <Link
+                          className="mt-2 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
+                          href={`/crew/${crewMember.id}`}
+                        >
+                          Crew detail
+                        </Link>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <span

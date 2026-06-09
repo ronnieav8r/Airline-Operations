@@ -175,6 +175,7 @@ It has:
 131. Crew planner cross-link polish.
 132. Crew planner cross-link QA.
 133. Crew member context page planning.
+134. Crew member context page foundation.
 
 ## Current Data Model Boundaries
 
@@ -231,6 +232,10 @@ Crew member context page planning is complete. Prompt 129 should add a
 read-only `/crew/[crewMemberId]` page and links from roster, planner, and
 aircraft crew workflow surfaces without changing assignment, schedule, or
 time-off behavior.
+
+Crew member context page foundation is complete. The new detail route is
+read-only and links back to roster, planner, aircraft context, aircraft crew
+assignment, and Operations Control where applicable.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -890,15 +895,14 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 129: Crew Member Context Page Foundation
+Prompt 130: Crew Member Context Page QA
 ```
 
 Scope:
 
-- Add read-only `/crew/[crewMemberId]`.
-- Link roster, planner, and aircraft crew workflow surfaces into the crew
-  detail page.
-- Preserve `AircraftCrewAssignment` as operational coverage truth.
+- Validate `/crew/[crewMemberId]` rendering and cross-links from crew roster,
+  crew planner, and aircraft crew workflow surfaces.
+- Confirm no workflow behavior changed.
 - Do not add schema, schedule writes, time-off writes, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports, or
   provider integrations.
@@ -1075,16 +1079,21 @@ Prompt 128 is complete. The selected direction is a read-only crew member
 context page at `/crew/[crewMemberId]` with links from the crew roster, crew
 planner, and aircraft crew workflow surfaces.
 
+Prompt 129 is complete. `/crew/[crewMemberId]` now provides a read-only crew
+context page with availability warnings, qualifications, current
+aircraft-block assignments, schedule blocks, time off, upcoming FlightLeg
+coverage, and workflow navigation links.
+
 Preferred next slice:
 
 ```text
-Prompt 129: Crew Member Context Page Foundation
+Prompt 130: Crew Member Context Page QA
 ```
 
 Scope:
 
-- Implement the read-only crew member detail page.
-- Add cross-links into the detail page from existing crew surfaces.
+- Validate the read-only crew member detail page and new cross-links.
+- Confirm aircraft crew assignment actions remain unchanged.
 - Keep schedule writes, time-off writes, duty/rest enforcement, assignment
   automation, auth/signatures, hard release blocking, imports, and provider
   integrations behind a separate plan.

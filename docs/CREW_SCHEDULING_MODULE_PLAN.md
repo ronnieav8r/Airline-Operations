@@ -120,6 +120,10 @@ assignments, and upcoming FlightLeg coverage.
 Prompt 128 planning status: complete. Prompt 129 should implement the page and
 cross-links without changing coverage truth or adding schedule/time-off writes.
 
+Prompt 129 implementation status: complete. `/crew/[crewMemberId]` now shows
+read-only crew identity, availability, qualifications, current aircraft-block
+assignments, schedule, time off, and upcoming FlightLeg coverage context.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
