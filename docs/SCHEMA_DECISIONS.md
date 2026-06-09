@@ -177,6 +177,27 @@ Future Crew Scheduling automation may suggest or prefill aircraft-block
 assignment changes, but it should not silently apply them. Actual coverage
 changes should remain explicit `AircraftCrewAssignment` mutations.
 
+Prompt 134 expands Crew Scheduling into a full internal AeroOps module. The
+long-term scheduling architecture uses flexible schedule periods, first-class
+crew bids/requests, reusable rotation pattern templates, and a
+`BID_OPEN -> DRAFTING -> PUBLISHED -> ARCHIVED` lifecycle. Published schedules
+remain recommendation/availability context only and must not auto-create
+`AircraftCrewAssignment` rows.
+
+Current schema support is intentionally shallow:
+
+- `CrewSchedule` can represent individual schedule blocks, but it has no
+  schedule period, draft/published state, bid linkage, pattern source, or
+  finalization workflow.
+- `TimeOffRequest` can support basic time-off requests, but not broader
+  period-scoped bid/request workflows, schedule preferences, pattern requests,
+  or swaps.
+- Crew positioning/logistics is deferred to a later module and should not be
+  added until separately planned.
+
+The next schema-oriented crew slice should be Prompt 135: Crew Scheduling
+Schema Foundation Planning.
+
 ## Qualification Rule
 
 Model qualifications by crew member, aircraft type, and seat role.
@@ -208,6 +229,10 @@ Do not build these into the initial schema unless a later prompt explicitly asks
 - Trip/pairing model
 - Flight-level crew overrides
 - Maintenance tracking
+- Crew schedule periods
+- Crew bid/request workflow
+- Rotation pattern templates
+- Crew positioning/logistics
 - File uploads for qualification documents
 - Full audit log
 - Advanced reports

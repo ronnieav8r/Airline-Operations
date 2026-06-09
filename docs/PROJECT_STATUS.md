@@ -1116,19 +1116,27 @@ Prompt 133 is complete. QA confirmed default and query-param planner windows,
 date/day shortcut links, filters, grouping, crew detail links, route smoke, and
 unchanged read-only behavior.
 
+Prompt 134 is complete. Crew Scheduling is now planned as a full internal
+AeroOps scheduling module with flexible periods, crew bids/requests, rotation
+patterns, and a `BID_OPEN -> DRAFTING -> PUBLISHED -> ARCHIVED` lifecycle.
+Published schedules remain recommendation/availability context only;
+`AircraftCrewAssignment` remains the operational coverage source.
+
 Preferred next slice:
 
 ```text
-Next planning session
+Prompt 135: Crew Scheduling Schema Foundation Planning
 ```
 
 Scope:
 
-- Choose the next small app-development slice after crew member context and
-  planner date/window controls.
+- Plan additive schema for schedule periods, bids/requests, pattern templates,
+  draft/published schedule rows, and publication metadata.
+- Do not implement schema until Prompt 136.
 - Keep schedule writes, time-off writes, duty/rest enforcement, assignment
-  automation, auth/signatures, hard release blocking, imports, and provider
-  integrations behind a separate plan.
+  automation, auth/signatures, hard release blocking, imports, provider
+  integrations, and positioning/logistics implementation behind separate
+  plans.
 
 Deferred follow-up to keep on the roadmap:
 

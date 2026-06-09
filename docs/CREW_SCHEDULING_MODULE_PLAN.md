@@ -1,6 +1,6 @@
 # Crew Scheduling Module Plan
 
-Last updated: 2026-06-08
+Last updated: 2026-06-09
 
 ## Summary
 
@@ -11,6 +11,10 @@ decisions.
 
 Crew Scheduling is not the active flight coverage source. Flight coverage
 continues to come from `AircraftCrewAssignment`.
+
+The broader architecture is now documented in
+`docs/CREW_SCHEDULING_SYSTEM_ARCHITECTURE.md`. Crew Scheduling remains an
+AeroOps module, not a separate app.
 
 ## Source-Of-Truth Boundary
 
@@ -142,6 +146,15 @@ read-only planner behavior.
 Prompt 133 QA status: complete. Default and query-param planner windows render
 locally with filters, grouping, shortcuts, and crew detail links intact.
 
+## Prompt 134 System Architecture
+
+Crew Scheduling is now planned as a full internal scheduling module with
+flexible schedule periods, first-class crew bids/requests, reusable rotation
+patterns, and a `BID_OPEN -> DRAFTING -> PUBLISHED -> ARCHIVED` lifecycle.
+
+Prompt 134 planning status: complete. The next safe chain is schema-first:
+plan the additive scheduling schema before adding schedule-period UI or writes.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
@@ -154,6 +167,9 @@ Warning-only conflict examples:
 
 - Crew schedule create/edit workflow.
 - Time-off request create/edit/review workflow.
+- Schedule period schema and admin workflow.
+- Crew bid/request schema and workflow.
+- Rotation pattern schema and workflow.
 - Duty/rest legal enforcement.
 - Schedule import/apply workflow.
 - Pairing/trip construction.
