@@ -163,7 +163,15 @@ export default async function AircraftPage() {
                 Read-only aircraft status, crew blocks, and upcoming flight context.
               </p>
             </div>
-            <div className="text-sm text-zinc-500">Live Prisma read at {toDateTime(now)}</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                href="/crew/scheduling?groupBy=assignment"
+              >
+                Crew planner
+              </Link>
+              <span className="text-sm text-zinc-500">Live Prisma read at {toDateTime(now)}</span>
+            </div>
           </div>
         </header>
 
@@ -312,7 +320,13 @@ export default async function AircraftPage() {
                           className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                           href={`/aircraft/${item.id}/crew`}
                         >
-                          Crew
+                          Manage crew
+                        </Link>
+                        <Link
+                          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                          href={`/crew/scheduling?aircraft=${item.id}&assignment=assigned`}
+                        >
+                          Crew planner
                         </Link>
                         <Link
                           className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
@@ -433,6 +447,12 @@ export default async function AircraftPage() {
                           href={`/aircraft/${item.id}/crew`}
                         >
                           Manage crew
+                        </Link>
+                        <Link
+                          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                          href={`/crew/scheduling?aircraft=${item.id}&assignment=assigned`}
+                        >
+                          Crew planner
                         </Link>
                       </div>
                     </div>

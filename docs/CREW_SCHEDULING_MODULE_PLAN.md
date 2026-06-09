@@ -100,6 +100,14 @@ Prompt 124 implementation status: complete.
 Prompt 125 QA status: complete. All grouping modes render locally and remain
 read-only.
 
+## Prompt 126 Cross-Link Polish
+
+Crew and aircraft surfaces now include consistent shortcut links into the
+read-only crew planner. Aircraft-specific pages use aircraft-filtered planner
+URLs where practical.
+
+Prompt 126 implementation status: complete. Links are navigation-only.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

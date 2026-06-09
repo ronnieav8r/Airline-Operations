@@ -390,6 +390,10 @@ export default async function AircraftContextPage({ params }: PageProps) {
             </div>
             <div className="flex flex-wrap gap-2">
               <ActionLink href="/operations-control" label="Operations Control" />
+              <ActionLink
+                href={`/crew/scheduling?aircraft=${aircraft.id}&assignment=assigned`}
+                label="Crew planner"
+              />
               <ActionLink href={`/aircraft/${aircraft.id}/crew`} label="Crew assignment" />
               <ActionLink
                 href={`/aircraft/${aircraft.id}/airworthiness`}
@@ -654,6 +658,10 @@ export default async function AircraftContextPage({ params }: PageProps) {
         >
           <div className="flex flex-wrap gap-2">
             <ActionLink href="/operations-control" label="Operations Control" primary />
+            <ActionLink
+              href={`/crew/scheduling?aircraft=${aircraft.id}&assignment=assigned`}
+              label="Crew planner"
+            />
             <ActionLink href={`/aircraft/${aircraft.id}/crew`} label="Crew assignment" />
             <ActionLink href={`/aircraft/${aircraft.id}/airworthiness`} label="Airworthiness" />
             <ActionLink href="/scheduling" label="Scheduling" />

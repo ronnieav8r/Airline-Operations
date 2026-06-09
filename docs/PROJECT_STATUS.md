@@ -172,6 +172,7 @@ It has:
 128. Crew Scheduling planner filters QA.
 129. Crew Scheduling planner grouping foundation.
 130. Crew Scheduling planner grouping QA.
+131. Crew planner cross-link polish.
 
 ## Current Data Model Boundaries
 
@@ -216,6 +217,10 @@ and assigned aircraft. Filters are read-only and do not change coverage truth.
 The crew scheduling planner also supports URL-driven grouping by availability,
 base, assignment state, or duty status. Grouping is applied after filters and
 does not change workflow behavior.
+
+Crew and aircraft surfaces now include consistent shortcut links into the
+read-only crew planner. Aircraft pages use aircraft-filtered planner URLs where
+helpful, while aircraft crew assignment remains the explicit staffing workflow.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -875,16 +880,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 126: Crew Planner Cross-Link Polish
+Prompt 127: Crew Planner Cross-Link QA
 ```
 
 Scope:
 
-- Add planner shortcut links from `/crew`, `/aircraft`,
-  `/aircraft/[aircraftId]`, and `/aircraft/[aircraftId]/crew`.
-- Use filtered planner URLs where helpful.
-- Add consistent “Crew planner” and “Manage aircraft crew” links without
-  changing workflows.
+- Validate all new shortcut links route correctly.
+- Browser-check `/crew/scheduling`, `/crew`, `/aircraft`, and one aircraft
+  detail/crew page.
+- Confirm route smoke for Operations Control and diagnostics.
+- Update QA/status docs and stop after Prompt 127.
 
 Recent completed app-development chain:
 
@@ -1044,17 +1049,22 @@ Prompt 125 is complete. Local QA confirmed all grouping modes, grouped filtered
 URLs, empty group handling, route smoke, browser rendering, validation, lint,
 and build.
 
+Prompt 126 is complete. `/crew`, `/aircraft`, `/aircraft/[aircraftId]`, and
+`/aircraft/[aircraftId]/crew` now include consistent navigation links into the
+read-only crew planner. Aircraft-specific links use filtered planner URLs where
+helpful.
+
 Preferred next slice:
 
 ```text
-Prompt 126: Crew Planner Cross-Link Polish
+Prompt 127: Crew Planner Cross-Link QA
 ```
 
 Scope:
 
-- Add consistent planner shortcuts and aircraft crew workflow links across crew
-  and aircraft context surfaces.
-- Keep links read-only/navigation-only.
+- Validate all new cross-links.
+- Browser-check crew and aircraft surfaces.
+- Stop after Prompt 127.
 
 Deferred follow-up to keep on the roadmap:
 

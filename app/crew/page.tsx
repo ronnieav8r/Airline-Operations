@@ -490,7 +490,13 @@ export default async function CrewPage() {
                 className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                 href="/crew/scheduling"
               >
-                Crew scheduling
+                Crew planner
+              </Link>
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                href="/crew/scheduling?assignment=assigned"
+              >
+                Assigned crew
               </Link>
               <span className="text-sm text-zinc-500">
                 Upcoming coverage window: {UPCOMING_WINDOW_DAYS} days
