@@ -2,6 +2,46 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 127: Crew Planner Cross-Link QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Cross-link QA:
+
+- Confirmed `/crew` returned 200 and renders `Crew planner`.
+- Confirmed `/crew/scheduling` returned 200.
+- Confirmed `/aircraft` returned 200 and renders `Crew planner`.
+- Confirmed `/aircraft/[aircraftId]` returned 200 and renders aircraft-filtered
+  `Crew planner` links.
+- Confirmed `/aircraft/[aircraftId]/crew` returned 200 and renders `Crew
+  planner`.
+- Confirmed browser QA found filtered crew planner links and aircraft crew
+  assignment links on aircraft context.
+
+Route smoke:
+
+- `/operations-control` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Notes:
+
+- Prompt 127 was QA/docs only.
+- Cross-links are navigation-only.
+- No schema, schedule mutation, time-off mutation, aircraft-assignment
+  mutation, CrewLegAssignment mutation, duty/rest enforcement, auth/signatures,
+  release blocking, imports, provider integrations, file uploads, or
+  coverage-source changes were added.
+- `AircraftCrewAssignment` remains the operational coverage source.
+
 ## 2026-06-08 - Prompt 125: Crew Scheduling Planner Grouping QA
 
 Status: passed.

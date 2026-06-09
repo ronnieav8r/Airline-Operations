@@ -173,6 +173,7 @@ It has:
 129. Crew Scheduling planner grouping foundation.
 130. Crew Scheduling planner grouping QA.
 131. Crew planner cross-link polish.
+132. Crew planner cross-link QA.
 
 ## Current Data Model Boundaries
 
@@ -221,6 +222,9 @@ does not change workflow behavior.
 Crew and aircraft surfaces now include consistent shortcut links into the
 read-only crew planner. Aircraft pages use aircraft-filtered planner URLs where
 helpful, while aircraft crew assignment remains the explicit staffing workflow.
+
+Crew planner cross-link QA is complete. The Prompt 122-127 chain is complete
+and stopped as planned.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -880,16 +884,15 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 127: Crew Planner Cross-Link QA
+Next planning session
 ```
 
 Scope:
 
-- Validate all new shortcut links route correctly.
-- Browser-check `/crew/scheduling`, `/crew`, `/aircraft`, and one aircraft
-  detail/crew page.
-- Confirm route smoke for Operations Control and diagnostics.
-- Update QA/status docs and stop after Prompt 127.
+- Choose the next app-development slice after crew planner usability.
+- Do not continue into schedule writes, time-off writes, duty/rest enforcement,
+  assignment automation, auth/signatures, hard release blocking, imports, or
+  provider integrations without a new plan.
 
 Recent completed app-development chain:
 
@@ -1054,17 +1057,23 @@ Prompt 126 is complete. `/crew`, `/aircraft`, `/aircraft/[aircraftId]`, and
 read-only crew planner. Aircraft-specific links use filtered planner URLs where
 helpful.
 
+Prompt 127 is complete. Local QA confirmed all new planner links render and
+route correctly, aircraft-specific planner links use filtered URLs, aircraft
+crew workflow links remain available, and Operations Control plus diagnostics
+still load.
+
 Preferred next slice:
 
 ```text
-Prompt 127: Crew Planner Cross-Link QA
+Next planning session
 ```
 
 Scope:
 
-- Validate all new cross-links.
-- Browser-check crew and aircraft surfaces.
-- Stop after Prompt 127.
+- Choose the next small app-development slice.
+- Keep future schedule writes, time-off writes, duty/rest enforcement,
+  assignment automation, auth/signatures, hard release blocking, imports, and
+  provider integrations behind a separate plan.
 
 Deferred follow-up to keep on the roadmap:
 

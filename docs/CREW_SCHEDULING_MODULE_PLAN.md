@@ -107,6 +107,8 @@ read-only crew planner. Aircraft-specific pages use aircraft-filtered planner
 URLs where practical.
 
 Prompt 126 implementation status: complete. Links are navigation-only.
+Prompt 127 QA status: complete. Cross-links render locally and route to the
+expected planner and aircraft crew workflow surfaces.
 
 Warning-only conflict examples:
 
