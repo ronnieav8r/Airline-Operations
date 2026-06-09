@@ -110,6 +110,16 @@ Prompt 126 implementation status: complete. Links are navigation-only.
 Prompt 127 QA status: complete. Cross-links render locally and route to the
 expected planner and aircraft crew workflow surfaces.
 
+## Prompt 128 Crew Member Context Page
+
+The next crew usability slice adds a read-only `/crew/[crewMemberId]` context
+page. This page should consolidate one crew member's roster identity,
+availability, qualifications, schedule blocks, time off, current aircraft-block
+assignments, and upcoming FlightLeg coverage.
+
+Prompt 128 planning status: complete. Prompt 129 should implement the page and
+cross-links without changing coverage truth or adding schedule/time-off writes.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

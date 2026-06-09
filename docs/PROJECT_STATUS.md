@@ -174,6 +174,7 @@ It has:
 130. Crew Scheduling planner grouping QA.
 131. Crew planner cross-link polish.
 132. Crew planner cross-link QA.
+133. Crew member context page planning.
 
 ## Current Data Model Boundaries
 
@@ -225,6 +226,11 @@ helpful, while aircraft crew assignment remains the explicit staffing workflow.
 
 Crew planner cross-link QA is complete. The Prompt 122-127 chain is complete
 and stopped as planned.
+
+Crew member context page planning is complete. Prompt 129 should add a
+read-only `/crew/[crewMemberId]` page and links from roster, planner, and
+aircraft crew workflow surfaces without changing assignment, schedule, or
+time-off behavior.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -884,15 +890,18 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Next planning session
+Prompt 129: Crew Member Context Page Foundation
 ```
 
 Scope:
 
-- Choose the next app-development slice after crew planner usability.
-- Do not continue into schedule writes, time-off writes, duty/rest enforcement,
+- Add read-only `/crew/[crewMemberId]`.
+- Link roster, planner, and aircraft crew workflow surfaces into the crew
+  detail page.
+- Preserve `AircraftCrewAssignment` as operational coverage truth.
+- Do not add schema, schedule writes, time-off writes, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports, or
-  provider integrations without a new plan.
+  provider integrations.
 
 Recent completed app-development chain:
 
@@ -1062,18 +1071,23 @@ route correctly, aircraft-specific planner links use filtered URLs, aircraft
 crew workflow links remain available, and Operations Control plus diagnostics
 still load.
 
+Prompt 128 is complete. The selected direction is a read-only crew member
+context page at `/crew/[crewMemberId]` with links from the crew roster, crew
+planner, and aircraft crew workflow surfaces.
+
 Preferred next slice:
 
 ```text
-Next planning session
+Prompt 129: Crew Member Context Page Foundation
 ```
 
 Scope:
 
-- Choose the next small app-development slice.
-- Keep future schedule writes, time-off writes, duty/rest enforcement,
-  assignment automation, auth/signatures, hard release blocking, imports, and
-  provider integrations behind a separate plan.
+- Implement the read-only crew member detail page.
+- Add cross-links into the detail page from existing crew surfaces.
+- Keep schedule writes, time-off writes, duty/rest enforcement, assignment
+  automation, auth/signatures, hard release blocking, imports, and provider
+  integrations behind a separate plan.
 
 Deferred follow-up to keep on the roadmap:
 
