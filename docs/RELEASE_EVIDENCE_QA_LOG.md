@@ -2,6 +2,52 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 119: Crew Scheduling Planner QA
+
+Status: passed.
+
+Local database:
+
+- `npm run db:local:up` passed.
+- `npm run db:local:migrate` passed with no pending migrations.
+- `npm run db:local:seed` passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed after build regenerated the new route type map.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Planner QA:
+
+- Confirmed `/crew/scheduling` returned 200.
+- Confirmed the planner renders `Crew Availability Planner`.
+- Confirmed the planner renders the `Planning boundary` message.
+- Confirmed the planner renders the `Crew availability` section.
+- Confirmed the planner shows aircraft crew workflow links for actual staffing
+  changes.
+- Confirmed browser QA found five links to `/aircraft/[aircraftId]/crew`.
+
+Route smoke:
+
+- `/crew/scheduling` returned 200.
+- `/crew` returned 200.
+- `/scheduling` returned 200.
+- `/aircraft` returned 200.
+- `/operations-control` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Notes:
+
+- Prompt 119 was QA/docs only.
+- No schema, crew schedule mutation, time-off mutation, aircraft assignment
+  mutation, CrewLegAssignment mutation, duty/rest enforcement, auth/signatures,
+  release blocking, imports, provider integrations, or file uploads were added.
+- `AircraftCrewAssignment` remains the operational coverage source.
+
 ## 2026-06-08 - Prompt 116: Aircraft Crew Assignment Runtime QA
 
 Status: passed.

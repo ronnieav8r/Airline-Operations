@@ -191,6 +191,15 @@ assignments, upcoming FlightLeg coverage, and warning-only planning conflicts.
 The page links to aircraft crew assignment workflows for actual staffing
 changes and does not add mutations or release behavior changes.
 
+## Prompt 119 Status
+
+Implementation status: QA complete.
+
+Local QA confirmed `/crew/scheduling` renders the read-only planner, shows the
+planning boundary and crew availability sections, exposes links to
+`/aircraft/[aircraftId]/crew`, and leaves the main app routes healthy.
+`AircraftCrewAssignment` remains the operational coverage source.
+
 ## Prompt 101 Status
 
 Implementation status: complete.
