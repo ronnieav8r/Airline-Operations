@@ -1122,17 +1122,23 @@ patterns, and a `BID_OPEN -> DRAFTING -> PUBLISHED -> ARCHIVED` lifecycle.
 Published schedules remain recommendation/availability context only;
 `AircraftCrewAssignment` remains the operational coverage source.
 
+Prompt 135 is complete. The selected schema direction is additive: keep the
+existing `CrewSchedule` table for current planner reads and add future
+schedule-building tables beside it for periods, requests, rotation patterns,
+pattern days, and schedule entries.
+
 Preferred next slice:
 
 ```text
-Prompt 135: Crew Scheduling Schema Foundation Planning
+Prompt 136: Crew Scheduling Additive Schema Foundation
 ```
 
 Scope:
 
-- Plan additive schema for schedule periods, bids/requests, pattern templates,
-  draft/published schedule rows, and publication metadata.
-- Do not implement schema until Prompt 136.
+- Implement additive Prisma enums/models for schedule periods, unified
+  requests, rotation pattern templates, pattern days, and schedule entries.
+- Add safe local seed/demo rows and health counts if straightforward.
+- Do not add UI or writes beyond seed/demo data.
 - Keep schedule writes, time-off writes, duty/rest enforcement, assignment
   automation, auth/signatures, hard release blocking, imports, provider
   integrations, and positioning/logistics implementation behind separate

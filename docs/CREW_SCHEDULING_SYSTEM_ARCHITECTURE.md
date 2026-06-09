@@ -111,19 +111,22 @@ should not create `AircraftCrewAssignment` rows.
 The current `CrewSchedule` model can represent a single block, but it has no
 period, publication, request, or pattern context.
 
-Future schema should likely add:
+Prompt 135 selected an additive schema foundation that keeps `CrewSchedule` in
+place and adds richer schedule-building tables beside it. Future schema should
+add:
 
-- Schedule period model.
-- Schedule period status enum.
-- Crew bid/request model.
-- Request type/status enums.
-- Rotation pattern model.
-- Draft schedule row or schedule-entry model.
-- Optional link from finalized schedule rows to generated `CrewSchedule`
+- `CrewSchedulePeriod`.
+- `CrewScheduleRequest`.
+- `CrewRotationPattern`.
+- `CrewRotationPatternDay`.
+- `CrewScheduleEntry`.
+- Lifecycle/request/entry status enums.
+- Optional link from finalized schedule entries to generated `CrewSchedule`
   records.
 - Publish/finalization metadata.
 
-The exact table names should be decided in Prompt 135 before schema changes.
+The first schema implementation must be additive. It should not replace
+`CrewSchedule`, alter aircraft assignment behavior, or add schedule writes.
 
 ## Aircraft Assignment Integration
 

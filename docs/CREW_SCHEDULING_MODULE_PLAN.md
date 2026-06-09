@@ -155,6 +155,17 @@ patterns, and a `BID_OPEN -> DRAFTING -> PUBLISHED -> ARCHIVED` lifecycle.
 Prompt 134 planning status: complete. The next safe chain is schema-first:
 plan the additive scheduling schema before adding schedule-period UI or writes.
 
+## Prompt 135 Schema Foundation Planning
+
+The selected schema direction is additive. Keep existing `CrewSchedule` as the
+current simple planner/availability row, and add richer future tables beside
+it: `CrewSchedulePeriod`, `CrewScheduleRequest`, `CrewRotationPattern`,
+`CrewRotationPatternDay`, and `CrewScheduleEntry`.
+
+Prompt 135 planning status: complete. Prompt 136 should implement additive
+schema only, with no UI, writes, publishing workflow, auth, duty/rest
+enforcement, assignment automation, or positioning logistics.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

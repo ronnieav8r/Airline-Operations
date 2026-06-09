@@ -195,8 +195,24 @@ Current schema support is intentionally shallow:
 - Crew positioning/logistics is deferred to a later module and should not be
   added until separately planned.
 
-The next schema-oriented crew slice should be Prompt 135: Crew Scheduling
-Schema Foundation Planning.
+Prompt 135 selected the first additive scheduling schema direction. Keep
+existing `CrewSchedule` as the current simple planner/availability row and add
+new future schedule-building tables beside it:
+
+- `CrewSchedulePeriod`
+- `CrewScheduleRequest`
+- `CrewRotationPattern`
+- `CrewRotationPatternDay`
+- `CrewScheduleEntry`
+
+Use additive enums for schedule period lifecycle, request status, and schedule
+entry status. Published schedule entries remain recommendation/availability
+context only and must not auto-create `AircraftCrewAssignment` rows.
+
+Prompt 136 should implement this schema foundation only. Do not add schedule
+writes, time-off review, schedule publishing, auth, assignment automation,
+duty/rest enforcement, positioning logistics, imports, or provider
+integrations.
 
 ## Qualification Rule
 
