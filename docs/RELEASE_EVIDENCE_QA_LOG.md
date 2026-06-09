@@ -2,6 +2,51 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-08 - Prompt 125: Crew Scheduling Planner Grouping QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Planner grouping QA:
+
+- Confirmed `/crew/scheduling?groupBy=availability` returned 200.
+- Confirmed `/crew/scheduling?groupBy=base` returned 200.
+- Confirmed `/crew/scheduling?groupBy=assignment` returned 200.
+- Confirmed `/crew/scheduling?groupBy=duty` returned 200.
+- Confirmed grouping combined with active filters returned 200.
+- Confirmed the page renders the grouping selector, grouped sections,
+  empty-group state, planner filters, and crew availability cards.
+
+Route smoke:
+
+- `/crew` returned 200.
+- `/aircraft` returned 200.
+- `/operations-control` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Browser QA:
+
+- Browser check confirmed `Group by duty`, empty group messaging, planner
+  filters, crew availability section, and seven select controls.
+
+Notes:
+
+- Prompt 125 was QA/docs only.
+- Grouping is read-only and URL-driven.
+- No schema, schedule mutation, time-off mutation, aircraft-assignment
+  mutation, CrewLegAssignment mutation, duty/rest enforcement, auth/signatures,
+  release blocking, imports, provider integrations, file uploads, or
+  coverage-source changes were added.
+- `AircraftCrewAssignment` remains the operational coverage source.
+
 ## 2026-06-08 - Prompt 123: Crew Scheduling Planner Filters QA
 
 Status: passed.

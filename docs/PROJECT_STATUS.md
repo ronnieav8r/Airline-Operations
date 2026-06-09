@@ -171,6 +171,7 @@ It has:
 127. Crew Scheduling planner filters foundation.
 128. Crew Scheduling planner filters QA.
 129. Crew Scheduling planner grouping foundation.
+130. Crew Scheduling planner grouping QA.
 
 ## Current Data Model Boundaries
 
@@ -874,15 +875,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 125: Crew Scheduling Planner Grouping QA
+Prompt 126: Crew Planner Cross-Link Polish
 ```
 
 Scope:
 
-- Validate all grouping modes.
-- Validate grouping combined with filters.
-- Confirm no data source, coverage-source, or save behavior changed.
-- Update QA/status docs only unless a defect is found.
+- Add planner shortcut links from `/crew`, `/aircraft`,
+  `/aircraft/[aircraftId]`, and `/aircraft/[aircraftId]/crew`.
+- Use filtered planner URLs where helpful.
+- Add consistent “Crew planner” and “Manage aircraft crew” links without
+  changing workflows.
 
 Recent completed app-development chain:
 
@@ -1038,17 +1040,21 @@ availability, base, assignment state, or duty status. Grouping preserves active
 filters, crew cards, summary cards, warning-only messaging, and aircraft crew
 workflow links.
 
+Prompt 125 is complete. Local QA confirmed all grouping modes, grouped filtered
+URLs, empty group handling, route smoke, browser rendering, validation, lint,
+and build.
+
 Preferred next slice:
 
 ```text
-Prompt 125: Crew Scheduling Planner Grouping QA
+Prompt 126: Crew Planner Cross-Link Polish
 ```
 
 Scope:
 
-- Validate all grouping modes and grouped filtered URLs.
-- Confirm route smoke and browser rendering.
-- Keep the slice QA/docs only unless a defect is found.
+- Add consistent planner shortcuts and aircraft crew workflow links across crew
+  and aircraft context surfaces.
+- Keep links read-only/navigation-only.
 
 Deferred follow-up to keep on the roadmap:
 

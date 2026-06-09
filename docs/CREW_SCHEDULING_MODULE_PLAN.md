@@ -97,6 +97,8 @@ base, current assignment state, or duty status. Grouping is applied after
 active filters and does not change planner data sources or workflow behavior.
 
 Prompt 124 implementation status: complete.
+Prompt 125 QA status: complete. All grouping modes render locally and remain
+read-only.
 
 Warning-only conflict examples:
 
