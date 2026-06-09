@@ -5,6 +5,7 @@ import {
   ReleaseStatus,
   SeatRole,
 } from "@prisma/client";
+import Link from "next/link";
 
 import {
   getSchedulingData,
@@ -194,7 +195,15 @@ export default async function SchedulingPage() {
                 coverage, release status, and active operational alerts.
               </p>
             </div>
-            <div className="text-sm text-zinc-500">{schedule.windowLabel}</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                href="/crew/scheduling"
+              >
+                Crew scheduling
+              </Link>
+              <span className="text-sm text-zinc-500">{schedule.windowLabel}</span>
+            </div>
           </div>
         </header>
 

@@ -18,10 +18,10 @@ FlightLeg:
 
 The current system is usable for development. FlightLeg detail now acts as a
 clearer command center, Operations Control now has a filterable workbench
-board, the dashboard surfaces current attention items, and each aircraft has a
-read-only context page. Aircraft-block crew assignment writes are now locally
-validated. The next crew workflow improvement should add a read-only crew
-availability planner without changing coverage truth or release behavior.
+board, the dashboard surfaces current attention items, each aircraft has a
+read-only context page, and Crew Scheduling now has a read-only availability
+planner. Aircraft-block crew assignment writes are locally validated and remain
+the operational coverage source.
 
 ## Current Workflow Map
 
@@ -180,6 +180,16 @@ staffing record used by flight coverage. `CrewSchedule` and `TimeOffRequest`
 provide availability context only. The next implementation should add a
 read-only `/crew/scheduling` planner board and link users to the aircraft crew
 assignment workflow for actual staffing changes.
+
+## Prompt 118 Status
+
+Implementation status: complete.
+
+`/crew/scheduling` now shows read-only crew availability context, schedule
+blocks, time-off overlaps, duty/employment status, current aircraft-block
+assignments, upcoming FlightLeg coverage, and warning-only planning conflicts.
+The page links to aircraft crew assignment workflows for actual staffing
+changes and does not add mutations or release behavior changes.
 
 ## Prompt 101 Status
 

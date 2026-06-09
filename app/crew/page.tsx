@@ -7,6 +7,7 @@ import {
   FlightStatus,
   SeatRole,
 } from "@prisma/client";
+import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
 import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
@@ -484,8 +485,16 @@ export default async function CrewPage() {
                 Read-only roster, qualification, assignment, and upcoming coverage context.
               </p>
             </div>
-            <div className="text-sm text-zinc-500">
-              Upcoming coverage window: {UPCOMING_WINDOW_DAYS} days
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                href="/crew/scheduling"
+              >
+                Crew scheduling
+              </Link>
+              <span className="text-sm text-zinc-500">
+                Upcoming coverage window: {UPCOMING_WINDOW_DAYS} days
+              </span>
             </div>
           </div>
         </header>

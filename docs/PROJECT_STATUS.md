@@ -164,6 +164,7 @@ It has:
 120. Aircraft crew assignment QA.
 121. Aircraft crew assignment runtime QA.
 122. Crew Scheduling module planning.
+123. Crew Scheduling read-only planner board.
 
 ## Current Data Model Boundaries
 
@@ -189,6 +190,12 @@ Crew Scheduling is planned as a crew availability and planning module, not as
 the active coverage source. `CrewSchedule` and `TimeOffRequest` describe
 availability context; `AircraftCrewAssignment` remains the operational staffing
 record that flights inherit.
+
+Crew Scheduling now has a read-only planner at `/crew/scheduling`. It surfaces
+schedule blocks, time-off overlaps, duty/employment status, current
+aircraft-block assignments, upcoming FlightLeg coverage, and warning-only
+planning conflicts. It does not create assignments or replace
+`AircraftCrewAssignment` as coverage truth.
 
 FlightLeg detail now has minimal release controls for `FlightRelease` status:
 mark released, cancel release, and void release. These actions do not mutate
@@ -848,17 +855,16 @@ Then verify the changed routes and `/api/health`.
 Preferred next slice:
 
 ```text
-Prompt 118: Crew Scheduling Read-Only Planner Board
+Prompt 119: Crew Scheduling Planner QA
 ```
 
 Scope:
 
-- Add read-only `/crew/scheduling`.
-- Show crew availability by day/window, schedule blocks, time off, duty status,
-  current aircraft-block assignments, and upcoming FlightLeg coverage.
-- Surface warning-only planning conflicts.
-- Link to `/aircraft/[aircraftId]/crew` for actual staffing changes.
-- Do not add schema or mutations.
+- Validate `/crew/scheduling` renders crew availability, schedule blocks,
+  time-off context, current aircraft-block assignments, upcoming FlightLeg
+  coverage, and warning-only planning conflicts.
+- Confirm links route to `/aircraft/[aircraftId]/crew`.
+- Confirm no schema, mutations, release behavior, or coverage-source changes.
 
 Recent completed app-development chain:
 
@@ -979,6 +985,11 @@ crew availability and planning system. It does not replace
 surfaces should show availability, time off, duty/training/reserve context, and
 warning-only conflicts, then link to aircraft-block assignment workflows for
 actual staffing changes.
+
+Prompt 118 is complete. `/crew/scheduling` now provides a read-only crew
+availability planner with schedule, time-off, duty/employment,
+aircraft-block assignment, upcoming coverage, and warning-only conflict
+context. Actual staffing changes remain under `/aircraft/[aircraftId]/crew`.
 
 Preferred next slice:
 

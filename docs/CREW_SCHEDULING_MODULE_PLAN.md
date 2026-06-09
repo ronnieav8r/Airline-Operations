@@ -51,8 +51,7 @@ Flights inherit crew from `AircraftCrewAssignment` at scheduled departure.
 
 ## Prompt 118 Read-Only Planner Target
 
-The first implementation should add a read-only `/crew/scheduling` planner
-board.
+The first implementation adds a read-only `/crew/scheduling` planner board.
 
 Minimum display:
 
@@ -64,6 +63,10 @@ Minimum display:
   assignments.
 - Warning-only availability conflicts.
 - Links to `/aircraft/[aircraftId]/crew` for actual assignment changes.
+
+Prompt 118 implementation status: complete. The planner is read-only, uses
+existing crew schedule, time-off, aircraft-block assignment, and coverage data,
+and keeps all staffing changes under `/aircraft/[aircraftId]/crew`.
 
 Warning-only conflict examples:
 
