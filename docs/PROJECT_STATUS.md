@@ -1165,16 +1165,21 @@ Prompt 144 is complete. `/crew/scheduling/time-off` now supports URL-driven
 filters for status, crew member, request type, and date window, with active
 filter summary, reset link, and safe return to filtered views after actions.
 
-Preferred next slice:
+Prompt 145 is complete. Local QA confirmed default and filtered time-off queue
+routes, browser filter controls, filtered create/review/cancel return behavior,
+validation, route smoke, and unchanged schedule/assignment side effects. The
+Prompt 142-145 time-off workflow chain is complete.
+
+Preferred next step:
 
 ```text
-Prompt 145: Time-Off Queue Filters QA
+Planning session for the next Crew Scheduling workflow chain
 ```
 
 Scope:
 
-- Validate filters alone and combined.
-- Confirm create/review/cancel behavior still works from filtered views.
+- Decide whether to focus next on schedule-period create/edit, rotation-pattern
+  admin, schedule request/bid workflow, or time-off workflow enhancements.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind

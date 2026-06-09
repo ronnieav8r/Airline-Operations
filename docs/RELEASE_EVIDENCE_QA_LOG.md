@@ -2,6 +2,62 @@
 
 This log records local QA results for release-evidence workflows.
 
+## 2026-06-09 - Prompt 145: Time-Off Queue Filters QA
+
+Status: passed.
+
+Validation:
+
+- `npm run prisma:validate` passed.
+- `npm run typecheck` passed after route metadata regeneration.
+- `npm run lint` passed.
+- `npm run build` passed.
+
+Filter QA:
+
+- `/crew/scheduling/time-off` returned 200.
+- `/crew/scheduling/time-off?status=APPROVED` returned 200.
+- `/crew/scheduling/time-off?requestType=VACATION` returned 200.
+- `/crew/scheduling/time-off?crewMember=[crewMemberId]` returned 200.
+- Combined status, crew member, request type, and date-window filter returned
+  200.
+- Browser QA confirmed the filter form, active-filter summary, and reset link.
+
+Filtered workflow QA:
+
+- Created three local QA requests from a filtered queue URL.
+- Confirmed create actions returned to the filtered URL.
+- Approved, denied, and cancelled requests from the filtered queue.
+- Confirmed review actions returned to the filtered URL.
+- Confirmed statuses and `reviewedAt` values in the local database.
+
+Side-effect check:
+
+- `timeOffRequests` changed from 4 to 7.
+- `crewSchedules` stayed 3.
+- `crewScheduleEntries` stayed 3.
+- `aircraftCrewAssignments` stayed 5.
+- `crewLegAssignments` stayed 13.
+
+Route/API smoke:
+
+- `/crew/scheduling/time-off` returned 200.
+- Filtered `/crew/scheduling/time-off` variants returned 200.
+- `/crew/scheduling` returned 200.
+- `/crew/[crewMemberId]` returned 200.
+- `/crew` returned 200.
+- `/aircraft` returned 200.
+- `/operations-control` returned 200.
+- `/api/health` returned 200.
+- `/internal/flightleg-parity` returned 200.
+- `/internal/flightleg-write-readiness` returned 200.
+
+Notes:
+
+- Prompt 145 was QA/docs only.
+- No schedule, schedule-entry, aircraft-assignment, crew-leg-assignment,
+  release, auth, duty/rest, import, provider, or positioning behavior changed.
+
 ## 2026-06-09 - Prompt 143: Time-Off Request Workflow QA
 
 Status: passed.

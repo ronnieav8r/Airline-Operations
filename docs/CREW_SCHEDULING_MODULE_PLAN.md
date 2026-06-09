@@ -214,6 +214,10 @@ Prompt 144 implementation status: complete. `/crew/scheduling/time-off` now
 supports URL-driven queue filters for status, crew member, request type, and
 date window while preserving create/review actions.
 
+Prompt 145 QA status: complete. Filter routes, combined filters, filtered
+create/review return behavior, route smoke, validation, and no side-effect
+checks passed.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
