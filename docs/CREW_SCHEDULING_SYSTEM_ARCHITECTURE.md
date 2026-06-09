@@ -192,3 +192,8 @@ Prompt 140: Schedule Period Read-Only Admin Surface QA
 Prompt 138 planning status: complete. The selected first admin surface is
 read-only `/crew/scheduling/periods` plus `/crew/scheduling/periods/[periodId]`
 for period context, requests, patterns, and schedule entries.
+
+Prompt 139 implementation status: complete. The schedule period list and detail
+routes now expose the additive scheduling foundation for admin review without
+adding schedule writes, publishing actions, request review, or aircraft
+assignment automation.

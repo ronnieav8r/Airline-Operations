@@ -355,3 +355,14 @@ Airworthiness additive schema foundation is now implemented. The new
 airworthiness tables have local seed data, a gated demo backfill, health counts,
 and DBML coverage. Do not add airworthiness mutation, component tracking, or
 hard release blocking until a follow-up planning slice approves it.
+
+Crew Scheduling now has an additive schema foundation beside the existing
+`CrewSchedule` table. `CrewSchedulePeriod`, `CrewScheduleRequest`,
+`CrewRotationPattern`, `CrewRotationPatternDay`, and `CrewScheduleEntry` support
+future bid/request, pattern, draft, and published-schedule workflows, while
+`CrewSchedule` remains the current planner availability row and
+`AircraftCrewAssignment` remains the operational coverage source. The first
+admin surface is read-only under `/crew/scheduling/periods`; do not add schedule
+writes, publish/finalize actions, crew portal/auth behavior, duty/rest
+enforcement, assignment automation, or positioning logistics until separately
+planned.

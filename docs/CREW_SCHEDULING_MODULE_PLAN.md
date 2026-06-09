@@ -182,6 +182,10 @@ The first admin surface for the new schema foundation should be read-only. Use
 Prompt 138 planning status: complete. Prompt 139 should implement read-only
 pages only.
 
+Prompt 139 implementation status: complete. The read-only schedule period list
+and detail pages now expose the schema foundation without adding writes or
+publishing actions.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
@@ -194,9 +198,9 @@ Warning-only conflict examples:
 
 - Crew schedule create/edit workflow.
 - Time-off request create/edit/review workflow.
-- Schedule period schema and admin workflow.
-- Crew bid/request schema and workflow.
-- Rotation pattern schema and workflow.
+- Schedule period create/edit/publish workflow.
+- Crew bid/request create/review workflow.
+- Rotation pattern create/edit/apply workflow.
 - Duty/rest legal enforcement.
 - Schedule import/apply workflow.
 - Pairing/trip construction.
