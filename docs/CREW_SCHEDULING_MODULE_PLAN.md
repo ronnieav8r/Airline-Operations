@@ -173,6 +173,15 @@ pattern day rows, and draft schedule entries.
 Prompt 137 QA status: complete. Local migrate, seed, validation, build, health
 counts, and route smoke passed for the additive schema foundation.
 
+## Prompt 138 Schedule Period Admin Surface Planning
+
+The first admin surface for the new schema foundation should be read-only. Use
+`/crew/scheduling/periods` for period list/summary and
+`/crew/scheduling/periods/[periodId]` for period detail.
+
+Prompt 138 planning status: complete. Prompt 139 should implement read-only
+pages only.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

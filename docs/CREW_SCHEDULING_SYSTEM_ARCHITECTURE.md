@@ -188,3 +188,7 @@ Prompt 138: Schedule Period Read-Only Admin Surface Planning
 Prompt 139: Schedule Period Read-Only Admin Surface Foundation
 Prompt 140: Schedule Period Read-Only Admin Surface QA
 ```
+
+Prompt 138 planning status: complete. The selected first admin surface is
+read-only `/crew/scheduling/periods` plus `/crew/scheduling/periods/[periodId]`
+for period context, requests, patterns, and schedule entries.
