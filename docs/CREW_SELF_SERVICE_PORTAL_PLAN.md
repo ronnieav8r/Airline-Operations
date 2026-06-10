@@ -42,6 +42,12 @@ The next portal slice can allow a crew member to submit their own
 `CrewScheduleRequest` and `TimeOffRequest` rows. Submission must be scoped to
 the linked crew member and must not approve, deny, publish, or assign.
 
+Prompt 196 implementation status: complete. `/crew/portal` now lets linked
+crew users submit their own `TimeOffRequest` rows with `PENDING` status and
+their own `CrewScheduleRequest` rows with `SUBMITTED` status. Admin/ops review
+remains required. Crew users still cannot approve, publish, assign aircraft, or
+write logistics records.
+
 ## Explicit Non-Goals
 
 - Crew users cannot approve requests.

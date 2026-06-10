@@ -2,6 +2,7 @@ import {
   AssignmentStatus,
   CrewComplianceRecordStatus,
   CrewScheduleEntryStatus,
+  CrewSchedulePeriodStatus,
   CrewScheduleRequestStatus,
   DutyStatus,
   EmploymentStatus,
@@ -314,6 +315,23 @@ export type CrewMemberContextData = CrewMemberContextPayload & {
 };
 
 export type CrewPortalData = CrewMemberContextData & {
+  requestOptions: {
+    activeCrewMembers: Array<{
+      employeeNumber: string;
+      firstName: string;
+      id: string;
+      lastName: string;
+    }>;
+    activePatterns: Array<{
+      id: string;
+      name: string;
+    }>;
+    schedulePeriods: Array<{
+      id: string;
+      name: string;
+      periodKey: string;
+    }>;
+  };
   scheduleRequests: Array<{
     endDate: Date | null;
     id: string;
@@ -671,12 +689,54 @@ export async function getCrewPortalData(userId: string): Promise<CrewPortalData 
     }),
   ]);
 
+  const [schedulePeriods, activePatterns, activeCrewMembers] = await Promise.all([
+    prisma.crewSchedulePeriod.findMany({
+      where: {
+        status: {
+          in: [CrewSchedulePeriodStatus.BID_OPEN, CrewSchedulePeriodStatus.DRAFTING],
+        },
+      },
+      orderBy: [{ startsAt: "asc" }],
+      select: {
+        id: true,
+        periodKey: true,
+        name: true,
+      },
+    }),
+    prisma.crewRotationPattern.findMany({
+      where: { isActive: true },
+      orderBy: [{ name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+      },
+    }),
+    prisma.crewMember.findMany({
+      where: {
+        employmentStatus: EmploymentStatus.ACTIVE,
+        id: { not: linkedCrewMember.id },
+      },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: {
+        id: true,
+        employeeNumber: true,
+        firstName: true,
+        lastName: true,
+      },
+    }),
+  ]);
+
   if (!context) {
     return null;
   }
 
   return {
     ...context,
+    requestOptions: {
+      activeCrewMembers,
+      activePatterns,
+      schedulePeriods,
+    },
     scheduleRequests,
   };
 }

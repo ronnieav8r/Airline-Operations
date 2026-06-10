@@ -1,6 +1,17 @@
-import { CrewScheduleEntryStatus, TimeOffRequestStatus, UserRole } from "@prisma/client";
+import {
+  CrewScheduleEntryStatus,
+  CrewScheduleRequestType,
+  DutyStatus,
+  TimeOffRequestStatus,
+  TimeOffRequestType,
+  UserRole,
+} from "@prisma/client";
 import Link from "next/link";
 
+import {
+  submitCrewPortalScheduleRequestAction,
+  submitCrewPortalTimeOffRequestAction,
+} from "@/app/crew/portal/actions";
 import { requireRole } from "@/lib/auth/guards";
 import {
   CREW_MEMBER_CONTEXT_WINDOW_DAYS,
@@ -9,6 +20,21 @@ import {
 } from "@/lib/crew-member-context-queries";
 
 export const dynamic = "force-dynamic";
+
+type PageProps = {
+  searchParams: Promise<{
+    error?: string | string[];
+    submitted?: string | string[];
+  }>;
+};
+
+function firstSearchParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
 
 function toDate(value: Date | null): string {
   if (!value) {
@@ -73,6 +99,122 @@ function Section({
   );
 }
 
+function TimeOffRequestForm() {
+  return (
+    <form action={submitCrewPortalTimeOffRequestAction} className="grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+      <label className="block">
+        <span className="text-sm font-medium text-zinc-700">Request type</span>
+        <select className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="requestType" required>
+          {Object.values(TimeOffRequestType).map((type) => (
+            <option key={type} value={type}>
+              {formatStatus(type)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">Start date/time</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="startDate" required type="datetime-local" />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">End date/time</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="endDate" required type="datetime-local" />
+        </label>
+      </div>
+      <label className="block">
+        <span className="text-sm font-medium text-zinc-700">Reason / notes</span>
+        <textarea className="mt-1 min-h-20 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="reason" />
+      </label>
+      <button className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800" type="submit">
+        Submit time-off request
+      </button>
+    </form>
+  );
+}
+
+function ScheduleRequestForm({ crew }: { crew: CrewPortalData }) {
+  return (
+    <form action={submitCrewPortalScheduleRequestAction} className="grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">Schedule period</span>
+          <select className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="periodId" required>
+            <option value="">Select period</option>
+            {crew.requestOptions.schedulePeriods.map((period) => (
+              <option key={period.id} value={period.id}>
+                {period.name} ({period.periodKey})
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">Request type</span>
+          <select className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="requestType" required>
+            {Object.values(CrewScheduleRequestType).map((type) => (
+              <option key={type} value={type}>
+                {formatStatus(type)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">Start date</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="startDate" type="date" />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">End date</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="endDate" type="date" />
+        </label>
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">Preferred duty</span>
+          <select className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="preferredDutyStatus">
+            <option value="">No preference</option>
+            {Object.values(DutyStatus).map((status) => (
+              <option key={status} value={status}>
+                {formatStatus(status)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">Requested pattern</span>
+          <select className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="requestedPatternId">
+            <option value="">No pattern</option>
+            {crew.requestOptions.activePatterns.map((pattern) => (
+              <option key={pattern.id} value={pattern.id}>
+                {pattern.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">Swap crew member</span>
+          <select className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="requestedSwapCrewMemberId">
+            <option value="">No swap</option>
+            {crew.requestOptions.activeCrewMembers.map((crewMember) => (
+              <option key={crewMember.id} value={crewMember.id}>
+                {crewMember.firstName} {crewMember.lastName} #{crewMember.employeeNumber}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label className="block">
+        <span className="text-sm font-medium text-zinc-700">Request notes</span>
+        <textarea className="mt-1 min-h-20 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm" name="requestNotes" />
+      </label>
+      <button className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800" type="submit">
+        Submit schedule request
+      </button>
+    </form>
+  );
+}
+
 function SetupRequired({ email }: { email: string }) {
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -112,8 +254,11 @@ function SummaryCards({ crew }: { crew: CrewPortalData }) {
   );
 }
 
-export default async function CrewPortalPage() {
+export default async function CrewPortalPage({ searchParams }: PageProps) {
   const currentUser = await requireRole([UserRole.CREW]);
+  const queryParams = await searchParams;
+  const error = firstSearchParam(queryParams.error);
+  const submitted = firstSearchParam(queryParams.submitted);
   const crew = await getCrewPortalData(currentUser.id);
 
   if (!crew) {
@@ -156,6 +301,18 @@ export default async function CrewPortalPage() {
           </p>
         </section>
 
+        {error ? (
+          <section className="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            {decodeURIComponent(error)}
+          </section>
+        ) : null}
+
+        {submitted ? (
+          <section className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+            {submitted === "time-off" ? "Time-off request submitted." : "Schedule request submitted."}
+          </section>
+        ) : null}
+
         <SummaryCards crew={crew} />
 
         <div className="grid gap-4 lg:grid-cols-2">
@@ -175,12 +332,16 @@ export default async function CrewPortalPage() {
             )}
           </Section>
 
-          <Section eyebrow="Prompt 196 placeholder" title="Request Submission">
-            <p className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
-              Crew request submission is planned next. This placeholder will
-              become the entry point for schedule requests and time-off requests
-              scoped to this crew member only.
-            </p>
+          <Section eyebrow="Crew self-service" title="Request Submission">
+            <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+              These forms submit requests for your linked crew profile only.
+              Admin/ops review is still required before anything is approved or
+              used for scheduling.
+            </div>
+            <div className="mt-3 grid gap-3" id="request-submission">
+              <TimeOffRequestForm />
+              <ScheduleRequestForm crew={crew} />
+            </div>
           </Section>
         </div>
 

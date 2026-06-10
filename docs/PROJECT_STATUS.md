@@ -1434,18 +1434,25 @@ assignments, edit compliance records, or write logistics. Static validation
 passed; DB-backed workflow/browser smoke remains pending because Docker Desktop
 was unavailable.
 
+Prompt 196 is complete. `/crew/portal` now lets linked `CREW` users submit
+their own time-off requests and schedule requests. Time-off submissions are
+created as `PENDING`; schedule requests are created as `SUBMITTED`; admin/ops
+review remains required. Crew users still cannot approve requests, publish
+schedules, create schedule entries automatically, change aircraft assignments,
+or write logistics records. Static validation passed; DB-backed workflow/browser
+smoke remains pending because Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 196: Crew request submission
+Prompt 197: Crew portal QA
 ```
 
 Scope:
 
-- Let crew submit their own `CrewScheduleRequest` and `TimeOffRequest` rows.
-- Scope submissions to the linked crew member only.
-- Do not allow crew approval, publishing, assignment changes, or logistics
-  writes.
+- Verify crew portal shell and request submission behavior.
+- Confirm linked-crew scoping.
+- Confirm no approval, publishing, assignment, or logistics side effects.
 
 Deferred follow-up to keep on the roadmap:
 

@@ -171,6 +171,11 @@ Prompt 195 implementation status: complete. The read-only `/crew/portal` shell
 is in place for linked `CREW` users and exposes crew profile, schedule, request,
 time-off, assignment, coverage, and warning context without adding mutations.
 
+Prompt 196 implementation status: complete. The portal now supports linked crew
+users submitting their own time-off and schedule requests. Submissions remain
+review inputs only; crew users cannot approve requests, publish schedules,
+change assignments, or write logistics.
+
 ## Validation Standard
 
 For every implementation slice:
