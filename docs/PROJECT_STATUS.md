@@ -1482,16 +1482,23 @@ logistics schema, read surfaces, and ops/admin create/edit workflow. Results
 are recorded in `docs/CREW_LOGISTICS_QA_LOG.md`. DB-backed route/workflow smoke
 remains pending because Docker Desktop was unavailable.
 
+Prompt 203 is complete for static validation. Crew, aircraft, planner,
+assignment, and logistics surfaces now have navigation links between crew
+detail, logistics management, aircraft context, aircraft crew workflow, and
+filtered planner views. This is navigation-only polish; no data model,
+mutation, booking, schedule, assignment, release, or duty/rest behavior
+changed.
+
 Preferred next step:
 
 ```text
-Prompt 203: Cross-link polish
+Prompt 204: Macro scaffolding QA pass
 ```
 
 Scope:
 
-- Add small navigation polish between crew scheduling, aircraft assignment,
-  crew detail, logistics, and portal surfaces.
+- Run a macro QA/status pass across auth, FlightLeg cutover, ReleasePackage,
+  crew compliance, scheduling lifecycle, self-service, and logistics.
 - No booking, expense, assignment, schedule, release, or duty/rest behavior
   changes.
 

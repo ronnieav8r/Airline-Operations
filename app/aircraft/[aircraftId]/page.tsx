@@ -315,6 +315,11 @@ function CrewAssignmentCard({
       ) : (
         <p className="mt-2 text-xs text-emerald-700">Matching qualification on file.</p>
       )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <ActionLink href={`/crew/${assignment.crewMember.id}`} label="Crew detail" />
+        <ActionLink href={`/crew/${assignment.crewMember.id}/logistics`} label="Manage logistics" />
+        <ActionLink href={`/crew/scheduling?aircraft=${aircraft.id}&assignment=assigned`} label="Planner" />
+      </div>
     </article>
   );
 }

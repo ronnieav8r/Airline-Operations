@@ -264,6 +264,12 @@ function AvailabilityHintPanel({ crewOptions }: { crewOptions: AircraftCrewMembe
               >
                 Crew detail
               </Link>
+              <Link
+                className="text-xs font-semibold text-sky-700 hover:text-sky-900"
+                href={`/crew/${crewMember.id}/logistics`}
+              >
+                Logistics
+              </Link>
               <span
                 className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${availabilityBadgeClasses(
                   crewMember.availabilityStatus,
@@ -447,6 +453,12 @@ function AssignmentCard({
             href={`/crew/${assignment.crewMember.id}`}
           >
             Crew detail
+          </Link>
+          <Link
+            className="ml-3 mt-2 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
+            href={`/crew/${assignment.crewMember.id}/logistics`}
+          >
+            Manage logistics
           </Link>
           <p className="mt-2 text-sm text-zinc-600">
             Starts {toDateTime(assignment.startsAt)}

@@ -592,6 +592,12 @@ export default async function CrewPage() {
                         >
                           Crew detail
                         </Link>
+                        <Link
+                          className="ml-3 mt-2 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
+                          href={`/crew/${crewMember.id}/logistics`}
+                        >
+                          Manage logistics
+                        </Link>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <span

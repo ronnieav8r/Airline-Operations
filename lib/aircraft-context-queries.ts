@@ -43,6 +43,7 @@ const aircraftContextSelect = {
       notes: true,
       crewMember: {
         select: {
+          id: true,
           firstName: true,
           lastName: true,
           employeeNumber: true,

@@ -184,6 +184,7 @@ async function getLogisticsPageData(crewMemberId: string) {
             toStationId: true,
             aircraft: {
               select: {
+                id: true,
                 tailNumber: true,
               },
             },
@@ -570,6 +571,25 @@ export default async function CrewLogisticsPage({ params, searchParams }: PagePr
                         stations={stations}
                       />
                     </div>
+                    {need.aircraft ? (
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+                        <Link className="text-sky-700 hover:text-sky-900" href={`/aircraft/${need.aircraft.id}`}>
+                          Aircraft context
+                        </Link>
+                        <Link
+                          className="text-sky-700 hover:text-sky-900"
+                          href={`/aircraft/${need.aircraft.id}/crew`}
+                        >
+                          Aircraft crew
+                        </Link>
+                        <Link
+                          className="text-sky-700 hover:text-sky-900"
+                          href={`/crew/scheduling?aircraft=${need.aircraft.id}&assignment=assigned`}
+                        >
+                          Planner filter
+                        </Link>
+                      </div>
+                    ) : null}
                   </details>
                 );
               })}

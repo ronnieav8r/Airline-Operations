@@ -214,6 +214,13 @@ schema, read surfaces, and create/edit workflow. Results are recorded in
 `docs/CREW_LOGISTICS_QA_LOG.md`. DB-backed route/workflow smoke remains pending
 because Docker Desktop was unavailable.
 
+Prompt 203 implementation status: complete for static validation. Crew,
+aircraft, planner, assignment, and logistics surfaces now have small cross-link
+polish so operators can move between crew detail, logistics management,
+aircraft context, aircraft crew workflow, and filtered planner views. No data
+model, mutation, booking, schedule, assignment, release, or duty/rest behavior
+changed.
+
 ## Validation Standard
 
 For every implementation slice:

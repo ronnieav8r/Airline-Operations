@@ -97,3 +97,8 @@ gates, and unchanged schedule/assignment behavior.
 Prompt 202 QA status: partial pass. Static validation passed and results are
 recorded in `docs/CREW_LOGISTICS_QA_LOG.md`. DB-backed route/workflow smoke
 remains pending because Docker Desktop was unavailable.
+
+Prompt 203 cross-link status: complete for static validation. Crew, aircraft,
+planner, assignment, and logistics surfaces now link to each other where useful
+without changing logistics, schedule, aircraft assignment, release, booking,
+expense, or duty/rest behavior.
