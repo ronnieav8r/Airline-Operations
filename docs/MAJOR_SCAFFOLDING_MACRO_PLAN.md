@@ -180,6 +180,11 @@ Prompt 197 QA status: partial pass. Static validation passed for the crew
 portal shell and request submission workflow. DB-backed runtime smoke remains
 pending because Docker Desktop was unavailable.
 
+Prompt 198 planning status: complete. Crew Logistics should start with
+additive crew location and travel-need records only. Booking integrations,
+expenses, automated positioning, duty/rest enforcement, and assignment
+automation remain deferred.
+
 ## Validation Standard
 
 For every implementation slice:

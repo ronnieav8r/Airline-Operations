@@ -1448,17 +1448,23 @@ linked-crew scoping, time-off submission, schedule request submission, and no
 approval/publish/assignment/logistics side effects remain pending because
 Docker Desktop was unavailable.
 
+Prompt 198 is complete. Crew Logistics planning is documented in
+`docs/CREW_LOGISTICS_PLAN.md`. The selected first scope is additive crew
+location and travel-need tracking only. Booking integrations, expenses,
+automatic positioning, duty/rest hard enforcement, crew-created logistics
+records, and aircraft assignment automation remain deferred.
+
 Preferred next step:
 
 ```text
-Prompt 198: Crew logistics planning
+Prompt 199: Logistics schema foundation
 ```
 
 Scope:
 
-- Plan crew location and travel-need data boundaries.
-- Keep airline booking, hotel booking, and expenses deferred.
-- Decide route/context for first logistics surfaces.
+- Add additive logistics schema models/enums only.
+- Seed/demo data and read/write UI wait for later prompts.
+- No booking, expense, assignment, or duty/rest behavior changes.
 
 Deferred follow-up to keep on the roadmap:
 
