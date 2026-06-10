@@ -151,3 +151,9 @@ deferred.
 - Legal e-signatures.
 - Fine-grained permission tables.
 - Shared multi-tenant SaaS user membership.
+
+## Prompt 164 QA Status
+
+Prompt 164 static QA is complete. Prisma validation, typecheck, lint, build,
+and non-login server-action guard coverage passed. Local runtime/database auth
+workflow QA is pending because Docker Desktop was unavailable.

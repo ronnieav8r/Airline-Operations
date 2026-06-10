@@ -1238,24 +1238,22 @@ email/password credentials, HttpOnly DB-backed sessions, expanded operational
 roles, mutation-first route/action protection, and user attribution through
 existing nullable user fields.
 
-Prompt 163 is complete. Existing server-action mutation workflows now require
-authenticated operational roles, and direct writes populate existing nullable
-user-attribution fields where available. Read-route lock-down, crew portal
-self-service scoping, signatures, password reset, MFA, and provider auth remain
-deferred.
+Prompt 164 is complete as static QA. Prisma validation, typecheck, lint, build,
+and non-login server-action guard coverage passed for the local auth foundation.
+Local database/browser auth workflow QA remains pending because Docker Desktop
+was unavailable in this environment.
 
 Preferred next step:
 
 ```text
-Prompt 164: Auth QA
+Prompt 165: FlightLeg Cutover Planning
 ```
 
 Scope:
 
-- QA login/logout and seeded demo credentials.
-- QA unauthenticated mutation protection.
-- QA allowed operational roles across existing write workflows.
-- Confirm existing read pages and warning-first release behavior still work.
+- Inventory remaining legacy `Flight` reads/writes.
+- Define FlightLeg primary-read cutover order.
+- Define parity and rollback criteria before implementation.
 
 Deferred follow-up to keep on the roadmap:
 
