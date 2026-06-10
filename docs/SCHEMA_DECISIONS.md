@@ -46,6 +46,11 @@ primary operational anchor. Do not drop `Flight`, `FlightPassenger`,
 `CrewFlightLog`, or `/api/flights/[id]` compatibility paths in the current
 chain.
 
+ReleasePackage planning is complete in `docs/RELEASEPACKAGE_PLAN.md`.
+`ReleasePackage` should be additive and wrap the existing `FlightRelease`.
+`FlightRelease` remains the release decision/status record until a later
+decision-complete transition.
+
 ## Updated Long-Term Direction
 
 The current schema is a v1 operations foundation, not the final regulatory data model.

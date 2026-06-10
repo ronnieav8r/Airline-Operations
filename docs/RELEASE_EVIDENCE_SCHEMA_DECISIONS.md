@@ -12,8 +12,10 @@ Operations Control read through FlightLeg-backed helpers with legacy `Flight`
 fallbacks. Existing release records remain in `FlightRelease`, attached to
 `OperationalControlRecord`.
 
-Do not replace `FlightRelease` yet. A new `ReleasePackage` should wait until the
-release workflow transition is planned separately.
+Do not replace `FlightRelease` yet. ReleasePackage transition planning is now
+complete in `docs/RELEASEPACKAGE_PLAN.md`: the package should be additive and
+wrap the existing `FlightRelease` rather than replacing it in the first
+implementation.
 
 Mutation planning now lives in `docs/RELEASE_EVIDENCE_MUTATION_PLAN.md`. The
 chosen first write workflow is manifest mutation because it can use the current

@@ -1238,22 +1238,23 @@ email/password credentials, HttpOnly DB-backed sessions, expanded operational
 roles, mutation-first route/action protection, and user attribution through
 existing nullable user fields.
 
-Prompt 168 is complete as static QA. Prisma validation, typecheck, lint, and
-build passed for the FlightLeg read/API cutover foundation. Runtime route/API
-smoke remains pending because Docker Desktop was unavailable.
+Prompt 169 is complete as planning. `ReleasePackage` is defined as an additive
+release packet/bundle around the current `FlightRelease`; it does not replace
+`FlightRelease`, hard-block release actions, add signatures, or add provider
+integrations in the first implementation.
 
 Preferred next step:
 
 ```text
-Prompt 169: ReleasePackage Planning
+Prompt 170: ReleasePackage Additive Schema Foundation
 ```
 
 Scope:
 
-- Define ReleasePackage as an additive wrapper around current FlightRelease.
-- Define evidence-package contents and capture policy.
-- Keep hard release blocking, signatures, file uploads, and provider
-  integrations deferred.
+- Add ReleasePackage header and evidence-link tables additively.
+- Link to FlightLeg, OperationalControlRecord, FlightRelease, and optional
+  readiness snapshot.
+- Do not change current FlightRelease actions or add hard blocking.
 
 Deferred follow-up to keep on the roadmap:
 

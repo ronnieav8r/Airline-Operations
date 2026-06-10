@@ -23,6 +23,10 @@ until later workflow slices.
 
 `FlightRelease` remains the operational FlightLeg release record.
 
+`ReleasePackage` is now planned separately as an additive release packet around
+`FlightRelease`. It should not change hard-blocking behavior or replace
+`FlightRelease` in the first schema slice.
+
 `AirworthinessRelease` remains aircraft maintenance airworthiness release state.
 It can be an input to FlightLeg readiness, but it is not the operational release
 record.
