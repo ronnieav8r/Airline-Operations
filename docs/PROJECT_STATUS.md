@@ -1344,19 +1344,25 @@ finalization workflow: publish eligible `CrewScheduleEntry` rows, create or
 update linked `CrewSchedule` bridge rows, and mark the period published without
 mutating aircraft assignments or hard-enforcing duty/rest.
 
+Prompt 183 is complete. `/crew/scheduling/periods/[periodId]` now has a
+protected Publish Period action for admin/ops users. Publishing marks eligible
+schedule entries and the period `PUBLISHED`, creates or updates linked
+`CrewSchedule` bridge rows idempotently, and keeps aircraft assignments
+unchanged. Static validation passed; DB-backed workflow/browser QA remains
+pending because Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 183: Schedule publish foundation
+Prompt 184: Schedule publish QA
 ```
 
 Scope:
 
-- Add a protected publish action on schedule period detail.
-- Mark eligible entries and the period `PUBLISHED`.
-- Create/update linked `CrewSchedule` bridge rows idempotently.
-- Keep published schedules as availability/planning context only.
-- Do not auto-create aircraft assignments or add duty/rest hard enforcement.
+- Verify publish idempotency.
+- Verify generated `CrewSchedule` bridge links.
+- Verify `/crew/scheduling` and crew detail planner visibility.
+- Verify no `AircraftCrewAssignment` mutation occurs.
 
 Deferred follow-up to keep on the roadmap:
 

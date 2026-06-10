@@ -229,3 +229,9 @@ planner compatibility.
 Publishing remains planning/availability behavior only. It must not create,
 replace, or end `AircraftCrewAssignment` rows, must not hard-enforce duty/rest,
 and must not review crew requests or apply rotation patterns.
+
+Prompt 183 implementation status: complete. Schedule periods can now be
+published from the period detail page by admin/ops users. Publishing is
+idempotent: eligible draft or already-published entries are marked
+`PUBLISHED`, linked `CrewSchedule` bridge rows are created or updated, and the
+period is marked `PUBLISHED`. Aircraft assignments remain unchanged.

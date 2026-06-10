@@ -6,6 +6,7 @@ import {
   archiveSchedulePeriodAction,
   cancelScheduleEntryAction,
   createScheduleEntryAction,
+  publishSchedulePeriodAction,
   updateScheduleEntryAction,
   updateSchedulePeriodAction,
 } from "@/app/crew/scheduling/periods/actions";
@@ -204,7 +205,7 @@ function entryWindow(entry: EntryRow): { end: Date; start: Date } {
 function rangesOverlap(firstStart: Date, firstEnd: Date, secondStart: Date, secondEnd: Date | null): boolean {
   const normalizedSecondEnd = secondEnd ?? new Date(secondStart.getTime() + 24 * 60 * 60 * 1000);
 
-  return firstStart < normalizedSecondEnd && normalizedSecondEnd > firstStart && secondStart < firstEnd;
+  return firstStart < normalizedSecondEnd && secondStart < firstEnd;
 }
 
 function scheduleEntryWarnings(entry: EntryRow, allEntries: EntryRow[]): string[] {
@@ -612,9 +613,10 @@ export default async function CrewSchedulePeriodDetailPage({ params, searchParam
         <section className="rounded-md border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
           <p className="font-semibold">Schedule-period workflow boundary</p>
           <p className="mt-1">
-            This page can edit the schedule-period container and draft schedule
-            entries. It does not publish schedules, generate legacy CrewSchedule rows,
-            review requests, apply patterns, or create aircraft assignments.
+            This page can edit the schedule-period container, manage draft
+            schedule entries, and publish entries into CrewSchedule availability
+            rows. It does not review requests, apply patterns, enforce duty/rest,
+            or create aircraft assignments.
           </p>
         </section>
 
@@ -654,70 +656,91 @@ export default async function CrewSchedulePeriodDetailPage({ params, searchParam
             <div>
               <h2 className="text-lg font-semibold">Edit period</h2>
               <p className="mt-1 text-sm text-zinc-600">
-                Publishing and schedule-entry generation remain deferred.
+                Publishing creates linked CrewSchedule availability rows and keeps
+                aircraft assignments unchanged.
               </p>
             </div>
-            {period.status !== CrewSchedulePeriodStatus.ARCHIVED ? (
-              <form action={archiveSchedulePeriodAction.bind(null, period.id)}>
+            <div className="flex flex-wrap gap-2">
+              {period.status !== CrewSchedulePeriodStatus.ARCHIVED &&
+              period.status !== CrewSchedulePeriodStatus.PUBLISHED ? (
+                <form action={publishSchedulePeriodAction.bind(null, period.id)}>
+                  <button
+                    className="rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800"
+                    type="submit"
+                  >
+                    Publish period
+                  </button>
+                </form>
+              ) : null}
+              {period.status !== CrewSchedulePeriodStatus.ARCHIVED ? (
+                <form action={archiveSchedulePeriodAction.bind(null, period.id)}>
+                  <button
+                    className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                    type="submit"
+                  >
+                    Archive period
+                  </button>
+                </form>
+              ) : null}
+            </div>
+          </div>
+          {period.status === CrewSchedulePeriodStatus.PUBLISHED ? (
+            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+              This period is published. This slice does not include an unpublish or
+              published-period edit workflow.
+            </div>
+          ) : (
+            <form
+              action={updateSchedulePeriodAction.bind(null, period.id)}
+              className="mt-4 grid gap-4 lg:grid-cols-2"
+            >
+              <Field defaultValue={period.periodKey} label="Period key" name="periodKey" required />
+              <Field defaultValue={period.name} label="Name" name="name" required />
+              <Field
+                defaultValue={toInputDate(period.startsAt)}
+                label="Start date"
+                name="startsAt"
+                required
+                type="date"
+              />
+              <Field
+                defaultValue={toInputDate(period.endsAt)}
+                label="End date"
+                name="endsAt"
+                required
+                type="date"
+              />
+              <Field
+                defaultValue={toInputDate(period.bidOpenAt)}
+                label="Bid open date"
+                name="bidOpenAt"
+                type="date"
+              />
+              <Field
+                defaultValue={toInputDate(period.bidCloseAt)}
+                label="Bid close date"
+                name="bidCloseAt"
+                type="date"
+              />
+              <StatusSelect defaultValue={period.status} />
+              <label className="block lg:col-span-2">
+                <span className="text-sm font-medium text-zinc-700">Notes</span>
+                <textarea
+                  className="mt-1 min-h-24 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+                  defaultValue={period.notes ?? ""}
+                  name="notes"
+                />
+              </label>
+              <div className="lg:col-span-2">
                 <button
-                  className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                  className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
                   type="submit"
                 >
-                  Archive period
+                  Save period
                 </button>
-              </form>
-            ) : null}
-          </div>
-          <form
-            action={updateSchedulePeriodAction.bind(null, period.id)}
-            className="mt-4 grid gap-4 lg:grid-cols-2"
-          >
-            <Field defaultValue={period.periodKey} label="Period key" name="periodKey" required />
-            <Field defaultValue={period.name} label="Name" name="name" required />
-            <Field
-              defaultValue={toInputDate(period.startsAt)}
-              label="Start date"
-              name="startsAt"
-              required
-              type="date"
-            />
-            <Field
-              defaultValue={toInputDate(period.endsAt)}
-              label="End date"
-              name="endsAt"
-              required
-              type="date"
-            />
-            <Field
-              defaultValue={toInputDate(period.bidOpenAt)}
-              label="Bid open date"
-              name="bidOpenAt"
-              type="date"
-            />
-            <Field
-              defaultValue={toInputDate(period.bidCloseAt)}
-              label="Bid close date"
-              name="bidCloseAt"
-              type="date"
-            />
-            <StatusSelect defaultValue={period.status} />
-            <label className="block lg:col-span-2">
-              <span className="text-sm font-medium text-zinc-700">Notes</span>
-              <textarea
-                className="mt-1 min-h-24 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-                defaultValue={period.notes ?? ""}
-                name="notes"
-              />
-            </label>
-            <div className="lg:col-span-2">
-              <button
-                className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
-                type="submit"
-              >
-                Save period
-              </button>
-            </div>
-          </form>
+              </div>
+            </form>
+          )}
         </section>
 
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
@@ -746,8 +769,9 @@ export default async function CrewSchedulePeriodDetailPage({ params, searchParam
             </div>
           </div>
           <div className="mt-4 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
-            Draft entries are availability planning only. They do not assign crew to
-            aircraft and do not create CrewSchedule bridge rows.
+            Draft entries are availability planning only. Publishing creates
+            linked CrewSchedule bridge rows for planner compatibility; it still
+            does not assign crew to aircraft.
           </div>
           <div className="mt-4 rounded-md border border-zinc-200 bg-zinc-50 p-4">
             <h3 className="text-base font-semibold text-zinc-950">Create draft entry</h3>

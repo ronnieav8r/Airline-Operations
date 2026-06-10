@@ -245,6 +245,12 @@ metadata, and create/update one linked `CrewSchedule` row per published entry.
 Publishing does not mutate aircraft assignments, does not hard-enforce
 duty/rest, and does not review crew requests.
 
+Prompt 183 implementation status: complete. `/crew/scheduling/periods/[periodId]`
+now has a protected Publish Period action for admin/ops users. Publishing
+creates or updates linked `CrewSchedule` bridge rows for eligible entries,
+marks entries and the period `PUBLISHED`, and keeps aircraft-block assignments
+unchanged.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day
@@ -317,9 +323,7 @@ Warning-only conflict examples:
 
 ## Deferred Work
 
-- Crew schedule publish/finalize workflow.
 - Crew self-service time-off request workflow.
-- Schedule period publish workflow.
 - Crew bid/request create/review workflow.
 - Rotation pattern apply workflow.
 - Duty/rest legal enforcement.
