@@ -1351,18 +1351,24 @@ schedule entries and the period `PUBLISHED`, creates or updates linked
 unchanged. Static validation passed; DB-backed workflow/browser QA remains
 pending because Docker Desktop was unavailable.
 
+Prompt 184 is complete as a partial QA pass. Static validation passed for
+schedule publishing. Runtime DB-backed checks for publish idempotency, bridge
+row creation/update, planner visibility, crew detail visibility, and unchanged
+aircraft assignment counts remain pending because Docker Desktop was
+unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 184: Schedule publish QA
+Prompt 185: Rotation pattern application planning
 ```
 
 Scope:
 
-- Verify publish idempotency.
-- Verify generated `CrewSchedule` bridge links.
-- Verify `/crew/scheduling` and crew detail planner visibility.
-- Verify no `AircraftCrewAssignment` mutation occurs.
+- Plan pattern preview/generation boundaries.
+- Keep pattern application draft-only.
+- Do not publish automatically.
+- Do not create aircraft assignments.
 
 Deferred follow-up to keep on the roadmap:
 

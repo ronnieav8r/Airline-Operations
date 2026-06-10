@@ -235,3 +235,7 @@ published from the period detail page by admin/ops users. Publishing is
 idempotent: eligible draft or already-published entries are marked
 `PUBLISHED`, linked `CrewSchedule` bridge rows are created or updated, and the
 period is marked `PUBLISHED`. Aircraft assignments remain unchanged.
+
+Prompt 184 QA status: partial pass. Static validation passed for the publish
+foundation. DB-backed idempotency, planner visibility, and no-assignment-mutation
+workflow smoke remains pending because Docker Desktop was unavailable.

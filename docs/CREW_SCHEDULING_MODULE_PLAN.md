@@ -251,6 +251,9 @@ creates or updates linked `CrewSchedule` bridge rows for eligible entries,
 marks entries and the period `PUBLISHED`, and keeps aircraft-block assignments
 unchanged.
 
+Prompt 184 QA status: partial pass. Static validation passed. DB-backed
+publish workflow smoke remains pending until Docker Desktop is available.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day
