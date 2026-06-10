@@ -1202,20 +1202,24 @@ remain planning records only and do not publish schedules, generate
 `CrewSchedule` rows, apply rotation patterns, approve requests, or mutate
 aircraft assignments.
 
+Prompt 153 is complete. `/crew/scheduling/periods/[periodId]` now supports
+manual draft `CrewScheduleEntry` create/edit/cancel with warning-only conflict
+context. It does not publish schedules, generate `CrewSchedule` rows, apply
+patterns, review requests, or mutate aircraft assignments.
+
 Preferred next step:
 
 ```text
-Prompt 153: Crew Schedule Entry Foundation
+Prompt 154: Crew Schedule Entry QA
 ```
 
 Scope:
 
-- Add draft `CrewScheduleEntry` create/edit/cancel controls to
-  `/crew/scheduling/periods/[periodId]`.
-- Display warning-only overlap/time-off/simple-schedule/aircraft-assignment
-  context without blocking valid draft saves.
-- Do not publish schedules, generate legacy `CrewSchedule` rows, apply rotation
-  patterns, approve requests, or mutate aircraft assignments.
+- Validate draft schedule-entry create/edit/cancel.
+- Confirm duplicate entries show readable errors and warning-only context does
+  not block valid saves.
+- Confirm no `CrewSchedule`, aircraft assignment, publishing, pattern
+  expansion, request review, release, auth, import, or provider side effects.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind

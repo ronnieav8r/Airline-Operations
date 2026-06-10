@@ -270,6 +270,11 @@ pending time off, existing simple schedule blocks, aircraft-block assignments,
 and qualification issues may be shown to the user, but they should not block
 valid draft-entry saves in this first workflow.
 
+Prompt 153 implementation status: complete. Schedule-period detail pages now
+support manual draft `CrewScheduleEntry` create/edit/cancel, readable duplicate
+errors, and warning-only conflict context while preserving the boundary that
+schedule entries are planning records only.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

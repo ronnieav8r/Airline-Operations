@@ -1,4 +1,4 @@
-import { CrewScheduleEntryStatus, CrewSchedulePeriodStatus, Prisma } from "@prisma/client";
+import { CrewScheduleEntryStatus, CrewSchedulePeriodStatus, EmploymentStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -93,14 +93,57 @@ const periodDetailSelect = {
       notes: true,
       crewMember: {
         select: {
+          dutyStatus: true,
           id: true,
           employeeNumber: true,
+          employmentStatus: true,
           firstName: true,
           lastName: true,
+          assignments: {
+            where: {
+              isActive: true,
+            },
+            select: {
+              id: true,
+              startsAt: true,
+              endsAt: true,
+              seatRole: true,
+              aircraft: {
+                select: {
+                  tailNumber: true,
+                },
+              },
+            },
+          },
+          qualifications: {
+            select: {
+              id: true,
+              expiresAt: true,
+            },
+          },
+          schedules: {
+            select: {
+              id: true,
+              date: true,
+              dutyStatus: true,
+              startsAt: true,
+              endsAt: true,
+            },
+          },
+          timeOffRequests: {
+            select: {
+              id: true,
+              status: true,
+              startDate: true,
+              endDate: true,
+              requestType: true,
+            },
+          },
         },
       },
       station: {
         select: {
+          id: true,
           code: true,
           city: true,
         },
@@ -127,6 +170,27 @@ const periodDetailSelect = {
   },
 } satisfies Prisma.CrewSchedulePeriodSelect;
 
+const entryWorkflowOptionsSelect = {
+  id: true,
+  periodKey: true,
+  startsAt: true,
+  endsAt: true,
+  requests: {
+    orderBy: [{ createdAt: "desc" }],
+    select: {
+      id: true,
+      requestType: true,
+      status: true,
+      crewMember: {
+        select: {
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.CrewSchedulePeriodSelect;
+
 export type CrewSchedulePeriodListItem = Prisma.CrewSchedulePeriodGetPayload<{
   select: typeof periodListSelect;
 }>;
@@ -134,6 +198,27 @@ export type CrewSchedulePeriodListItem = Prisma.CrewSchedulePeriodGetPayload<{
 export type CrewSchedulePeriodDetail = Prisma.CrewSchedulePeriodGetPayload<{
   select: typeof periodDetailSelect;
 }>;
+
+export type CrewScheduleEntryWorkflowOptions = {
+  activeCrewMembers: Array<{
+    employeeNumber: string;
+    firstName: string;
+    id: string;
+    lastName: string;
+  }>;
+  activePatterns: Array<{
+    id: string;
+    name: string;
+  }>;
+  period: Prisma.CrewSchedulePeriodGetPayload<{
+    select: typeof entryWorkflowOptionsSelect;
+  }> | null;
+  stations: Array<{
+    city: string;
+    code: string;
+    id: string;
+  }>;
+};
 
 export type CrewSchedulePeriodAdminData = {
   activePatternCount: number;
@@ -176,6 +261,51 @@ export async function getCrewSchedulePeriodDetail(
     where: { id: periodId },
     select: periodDetailSelect,
   });
+}
+
+export async function getCrewScheduleEntryWorkflowOptions(
+  periodId: string,
+): Promise<CrewScheduleEntryWorkflowOptions> {
+  const [period, activeCrewMembers, stations, activePatterns] = await Promise.all([
+    prisma.crewSchedulePeriod.findUnique({
+      where: { id: periodId },
+      select: entryWorkflowOptionsSelect,
+    }),
+    prisma.crewMember.findMany({
+      where: { employmentStatus: EmploymentStatus.ACTIVE },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: {
+        id: true,
+        employeeNumber: true,
+        firstName: true,
+        lastName: true,
+      },
+    }),
+    prisma.station.findMany({
+      where: { isActive: true },
+      orderBy: [{ code: "asc" }],
+      select: {
+        id: true,
+        code: true,
+        city: true,
+      },
+    }),
+    prisma.crewRotationPattern.findMany({
+      where: { isActive: true },
+      orderBy: [{ name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+      },
+    }),
+  ]);
+
+  return {
+    activeCrewMembers,
+    activePatterns,
+    period,
+    stations,
+  };
 }
 
 export function countEntriesByStatus(period: CrewSchedulePeriodDetail) {
