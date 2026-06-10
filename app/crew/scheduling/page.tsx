@@ -760,7 +760,7 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Planning window</p>
             <p className="mt-2 text-sm font-semibold text-zinc-900">{windowLabel}</p>
@@ -803,6 +803,12 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {data.summary.crewWithAvailabilityWarnings} /{" "}
               {data.summary.upcomingCoverageGaps}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Compliance review</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {data.summary.crewWithComplianceWarnings}
             </p>
           </article>
         </section>
@@ -916,7 +922,7 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
                             </ul>
                           ) : null}
 
-                          <div className="mt-4 grid gap-3 xl:grid-cols-5">
+                          <div className="mt-4 grid gap-3 xl:grid-cols-6">
                             <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
                               <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                                 Schedule Blocks
@@ -1038,6 +1044,28 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
                                       >
                                         Manage aircraft crew
                                       </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+
+                            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                Compliance
+                              </h4>
+                              {crewMember.complianceWarnings.length === 0 ? (
+                                <p className="mt-2 text-sm text-emerald-700">
+                                  No compliance evidence warnings.
+                                </p>
+                              ) : (
+                                <ul className="mt-2 space-y-2 text-sm text-amber-900">
+                                  {crewMember.complianceWarnings.map((warning) => (
+                                    <li
+                                      className="rounded-md border border-amber-200 bg-amber-50 p-2"
+                                      key={warning}
+                                    >
+                                      {warning}
                                     </li>
                                   ))}
                                 </ul>

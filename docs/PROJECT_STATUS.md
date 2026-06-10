@@ -1303,8 +1303,14 @@ crew compliance evidence rows for future warning/read surfaces. Static
 validation and the default gated backfill skip path passed; DB-backed seed and
 backfill smoke remains pending because Docker Desktop was unavailable.
 
-Prompt 177 should add read-only crew compliance surfaces on crew detail and
-crew planner.
+Prompt 177 is complete. Crew detail and crew scheduling planner read the new
+compliance evidence tables and display warning-only summaries. Static
+validation passed; runtime route/browser smoke remains pending because Docker
+Desktop was unavailable. No assignment, release, duty/rest, or compliance write
+behavior was added.
+
+Prompt 178 should add richer warning-only compliance context to the aircraft
+crew assignment workflow without blocking saves.
 
 Preferred next step:
 

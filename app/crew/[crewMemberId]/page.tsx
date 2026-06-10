@@ -114,6 +114,19 @@ function qualificationStatus(qualification: QualificationRow, now: Date): string
   return "Current";
 }
 
+function complianceBadgeClasses(status: string, expiresAt?: Date | null): string {
+  if (status === "EXPIRED" || status === "VOIDED") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  if (expiresAt && expiresAt < new Date()) {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  if (status === "SUPERSEDED") {
+    return "border-zinc-200 bg-zinc-50 text-zinc-600";
+  }
+  return "border-emerald-200 bg-emerald-50 text-emerald-700";
+}
+
 function flightCoverageLabel(flight: CrewMemberContextFlight): string {
   if (!flight.coverage) {
     return "No coverage data";
@@ -208,7 +221,7 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Availability</p>
             <p className="mt-2 text-sm font-semibold text-zinc-900">{availabilityLabel}</p>
@@ -241,6 +254,12 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
             <p className="text-sm text-zinc-500">Upcoming coverage</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {crewMember.upcomingFlights.length}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Compliance warnings</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {crewMember.complianceWarnings.length}
             </p>
           </article>
         </section>
@@ -291,6 +310,209 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
             )}
           </Section>
 
+          <Section eyebrow="Warning-only" title="Compliance Evidence">
+            <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+              Compliance records are evidence context only. They do not assign
+              crew, enforce duty/rest, sign releases, or block operations in
+              this slice.
+            </div>
+            {crewMember.complianceWarnings.length === 0 ? (
+              <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                No compliance warnings found from recorded evidence.
+              </p>
+            ) : (
+              <ul className="mt-3 grid gap-2 text-sm text-amber-900">
+                {crewMember.complianceWarnings.map((warning) => (
+                  <li className="rounded-md border border-amber-200 bg-amber-50 p-3" key={warning}>
+                    {warning}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+        </div>
+
+        <Section title="Crew Compliance Records">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <h3 className="text-sm font-semibold text-zinc-950">Certificates / ratings</h3>
+              {crewMember.certificates.length === 0 ? (
+                <p className="mt-2 text-sm text-zinc-600">No certificate records.</p>
+              ) : (
+                <ul className="mt-2 space-y-2 text-sm">
+                  {crewMember.certificates.map((item) => (
+                    <li key={item.id}>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${complianceBadgeClasses(
+                          item.status,
+                          item.expiresAt,
+                        )}`}
+                      >
+                        {formatStatus(item.status)}
+                      </span>
+                      <p className="mt-1 font-medium text-zinc-900">
+                        {formatStatus(item.certificateType)}
+                        {item.ratingOrEndorsement ? ` - ${item.ratingOrEndorsement}` : ""}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {item.aircraftType ? formatAircraftType(item.aircraftType) : "No aircraft type"} |{" "}
+                        {item.seatRole ? formatRoleLabel(item.seatRole) : "No seat role"} | expires{" "}
+                        {toDate(item.expiresAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <h3 className="text-sm font-semibold text-zinc-950">Medical</h3>
+              {crewMember.medicals.length === 0 ? (
+                <p className="mt-2 text-sm text-zinc-600">No medical records.</p>
+              ) : (
+                <ul className="mt-2 space-y-2 text-sm">
+                  {crewMember.medicals.map((item) => (
+                    <li key={item.id}>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${complianceBadgeClasses(
+                          item.status,
+                          item.expiresAt,
+                        )}`}
+                      >
+                        {formatStatus(item.status)}
+                      </span>
+                      <p className="mt-1 font-medium text-zinc-900">
+                        {formatStatus(item.medicalClass)}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        Issued {toDate(item.issuedAt)} | expires {toDate(item.expiresAt)}
+                      </p>
+                      {item.limitations ? <p className="text-xs text-zinc-500">{item.limitations}</p> : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <h3 className="text-sm font-semibold text-zinc-950">Training</h3>
+              {crewMember.trainingEvents.length === 0 ? (
+                <p className="mt-2 text-sm text-zinc-600">No training records.</p>
+              ) : (
+                <ul className="mt-2 space-y-2 text-sm">
+                  {crewMember.trainingEvents.map((item) => (
+                    <li key={item.id}>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${complianceBadgeClasses(
+                          item.status,
+                          item.expiresAt,
+                        )}`}
+                      >
+                        {formatStatus(item.status)}
+                      </span>
+                      <p className="mt-1 font-medium text-zinc-900">{item.programName}</p>
+                      <p className="text-xs text-zinc-500">
+                        {formatStatus(item.trainingType)} | {formatStatus(item.result)} | completed{" "}
+                        {toDate(item.completedAt)} | expires {toDate(item.expiresAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <h3 className="text-sm font-semibold text-zinc-950">Checks</h3>
+              {crewMember.checkEvents.length === 0 ? (
+                <p className="mt-2 text-sm text-zinc-600">No check records.</p>
+              ) : (
+                <ul className="mt-2 space-y-2 text-sm">
+                  {crewMember.checkEvents.map((item) => (
+                    <li key={item.id}>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${complianceBadgeClasses(
+                          item.status,
+                          item.expiresAt,
+                        )}`}
+                      >
+                        {formatStatus(item.status)}
+                      </span>
+                      <p className="mt-1 font-medium text-zinc-900">{formatStatus(item.checkType)}</p>
+                      <p className="text-xs text-zinc-500">
+                        {item.aircraftType ? formatAircraftType(item.aircraftType) : "No aircraft type"} |{" "}
+                        {item.seatRole ? formatRoleLabel(item.seatRole) : "No seat role"} |{" "}
+                        {formatStatus(item.result)} | expires {toDate(item.expiresAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <h3 className="text-sm font-semibold text-zinc-950">Recency</h3>
+              {crewMember.recencyEvents.length === 0 ? (
+                <p className="mt-2 text-sm text-zinc-600">No recency records.</p>
+              ) : (
+                <ul className="mt-2 space-y-2 text-sm">
+                  {crewMember.recencyEvents.map((item) => (
+                    <li key={item.id}>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${complianceBadgeClasses(
+                          item.status,
+                        )}`}
+                      >
+                        {formatStatus(item.status)}
+                      </span>
+                      <p className="mt-1 font-medium text-zinc-900">{formatStatus(item.recencyType)}</p>
+                      <p className="text-xs text-zinc-500">
+                        {toDate(item.eventAt)} | qty {item.quantity ?? "n/a"} | {formatStatus(item.result)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <h3 className="text-sm font-semibold text-zinc-950">Duty / rest evidence</h3>
+              <div className="mt-2 grid gap-3 text-sm md:grid-cols-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Duty</p>
+                  {crewMember.dutyPeriods.length === 0 ? (
+                    <p className="mt-1 text-zinc-600">No duty records.</p>
+                  ) : (
+                    <ul className="mt-1 space-y-1">
+                      {crewMember.dutyPeriods.map((item) => (
+                        <li key={item.id}>
+                          {formatStatus(item.status)} | {toDateTime(item.startsAt)} -{" "}
+                          {toDateTime(item.endsAt)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Rest</p>
+                  {crewMember.restPeriods.length === 0 ? (
+                    <p className="mt-1 text-zinc-600">No rest records.</p>
+                  ) : (
+                    <ul className="mt-1 space-y-1">
+                      {crewMember.restPeriods.map((item) => (
+                        <li key={item.id}>
+                          {formatStatus(item.status)} | {toDateTime(item.startsAt)} -{" "}
+                          {toDateTime(item.endsAt)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <div className="grid gap-4 lg:grid-cols-2">
           <Section title="Contact And Notes">
             <dl className="grid gap-3 text-sm">
               <div>

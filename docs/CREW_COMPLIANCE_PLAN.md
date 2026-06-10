@@ -143,3 +143,8 @@ representative compliance rows for future warnings and read surfaces, without
 adding UI or changing assignment/release behavior. Static validation and gated
 script skip-path checks passed; DB-backed seed/backfill smoke remains pending
 because Docker Desktop was unavailable.
+
+Prompt 177 implementation status: complete. Crew detail and crew planner now
+show read-only compliance evidence and compact warning summaries without adding
+writes or enforcement. Static validation passed; runtime route/browser smoke
+remains pending because Docker Desktop was unavailable.
