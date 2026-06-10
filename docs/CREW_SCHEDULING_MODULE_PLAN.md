@@ -253,6 +253,23 @@ build passed. The build includes `/crew/scheduling/patterns`. Local
 workflow/browser QA is pending because Docker Desktop was not running in the
 session.
 
+## Prompt 152 Crew Schedule Entry Planning
+
+The first `CrewScheduleEntry` workflow should be manual draft-entry management
+inside an existing schedule period. It should let ops/admin users create, edit,
+and cancel `DRAFT` entries as planning records only.
+
+Prompt 152 planning status: complete. Prompt 153 should implement draft
+schedule-entry create/edit/cancel controls on
+`/crew/scheduling/periods/[periodId]` without publishing schedules, generating
+legacy `CrewSchedule` rows, applying rotation patterns, approving requests, or
+mutating aircraft assignments.
+
+Schedule-entry conflicts remain warning-only. Overlapping entries, approved or
+pending time off, existing simple schedule blocks, aircraft-block assignments,
+and qualification issues may be shown to the user, but they should not block
+valid draft-entry saves in this first workflow.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
@@ -263,11 +280,11 @@ Warning-only conflict examples:
 
 ## Deferred Work
 
-- Crew schedule create/edit workflow.
+- Crew schedule publish/finalize workflow.
 - Crew self-service time-off request workflow.
-- Schedule period create/edit/publish workflow.
+- Schedule period publish workflow.
 - Crew bid/request create/review workflow.
-- Rotation pattern create/edit/apply workflow.
+- Rotation pattern apply workflow.
 - Duty/rest legal enforcement.
 - Schedule import/apply workflow.
 - Pairing/trip construction.

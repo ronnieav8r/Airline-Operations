@@ -212,3 +212,9 @@ Prompt 142 implementation status: complete. The first time-off workflow now
 updates only `TimeOffRequest` and keeps conflict checks warning-only. Planner
 and crew context pages continue to treat time off as availability context, not
 coverage truth.
+
+Prompt 152 planning status: complete. The first `CrewScheduleEntry` workflow
+should create and maintain manual draft schedule entries inside schedule
+periods. These entries are planning records only. They should not publish
+schedules, generate `CrewSchedule` bridge rows, apply rotation patterns,
+approve schedule requests, or mutate aircraft-block assignments.

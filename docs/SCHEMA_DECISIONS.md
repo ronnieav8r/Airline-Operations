@@ -384,3 +384,10 @@ The first time-off workflow is now implemented without schema changes. It
 creates and reviews `TimeOffRequest` rows only. Any future desire for review
 notes, cancellation reasons, approval history, or period linkage should be
 planned as a separate additive schema slice.
+
+Crew schedule-entry planning is complete. The first `CrewScheduleEntry`
+workflow should use the existing additive table for manual `DRAFT` entry
+create/edit/cancel inside a schedule period. These rows remain crew
+availability planning records only. They must not publish schedules, generate
+legacy `CrewSchedule` rows, apply rotation patterns, approve requests, or
+mutate `AircraftCrewAssignment` or `CrewLegAssignment` records.

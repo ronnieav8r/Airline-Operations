@@ -1196,19 +1196,26 @@ Prompt 151 is partial. Static validation passed for the rotation-pattern admin
 workflow, including route generation for `/crew/scheduling/patterns`, but local
 DB-backed workflow/browser QA is pending because Docker Desktop was not running.
 
+Prompt 152 is complete. The first `CrewScheduleEntry` workflow is planned as
+manual draft-entry create/edit/cancel inside a schedule period. Schedule entries
+remain planning records only and do not publish schedules, generate
+`CrewSchedule` rows, apply rotation patterns, approve requests, or mutate
+aircraft assignments.
+
 Preferred next step:
 
 ```text
-Prompt 152: Crew Schedule Entry Planning
+Prompt 153: Crew Schedule Entry Foundation
 ```
 
 Scope:
 
-- Plan the first controlled schedule-entry workflow after schedule periods and
-  rotation patterns exist.
-- Define whether Prompt 153 should create draft `CrewScheduleEntry` rows
-  manually for a schedule period, without publishing, pattern application, crew
-  self-service, or assignment automation.
+- Add draft `CrewScheduleEntry` create/edit/cancel controls to
+  `/crew/scheduling/periods/[periodId]`.
+- Display warning-only overlap/time-off/simple-schedule/aircraft-assignment
+  context without blocking valid draft saves.
+- Do not publish schedules, generate legacy `CrewSchedule` rows, apply rotation
+  patterns, approve requests, or mutate aircraft assignments.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind
