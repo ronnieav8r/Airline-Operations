@@ -137,3 +137,9 @@ Prompt 175 implementation status: complete. The schema foundation adds the
 seven additive compliance evidence tables, health counts, migration, and DBML
 updates only. Demo data, read surfaces, assignment warnings, and
 release-readiness warnings remain in later prompts.
+
+Prompt 176 implementation status: complete. Demo seed/backfill support creates
+representative compliance rows for future warnings and read surfaces, without
+adding UI or changing assignment/release behavior. Static validation and gated
+script skip-path checks passed; DB-backed seed/backfill smoke remains pending
+because Docker Desktop was unavailable.

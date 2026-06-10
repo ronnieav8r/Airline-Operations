@@ -1298,6 +1298,14 @@ only. Static validation passed; local migration smoke remains pending because
 Docker Desktop was unavailable. Seed/demo data, read surfaces, assignment
 warnings, release-readiness warnings, and QA remain in later prompts.
 
+Prompt 176 is complete. Demo seed/backfill support now creates representative
+crew compliance evidence rows for future warning/read surfaces. Static
+validation and the default gated backfill skip path passed; DB-backed seed and
+backfill smoke remains pending because Docker Desktop was unavailable.
+
+Prompt 177 should add read-only crew compliance surfaces on crew detail and
+crew planner.
+
 Preferred next step:
 
 ```text

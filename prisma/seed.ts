@@ -35,6 +35,7 @@ import {
 } from "@prisma/client";
 
 import { createPasswordHash } from "../lib/auth/password";
+import { seedCrewComplianceDemo } from "../lib/crew-compliance-demo-seed";
 import { seedDefaultReleasePolicies } from "../lib/release-policy-defaults";
 
 const prisma = new PrismaClient();
@@ -945,6 +946,13 @@ async function main() {
   await prisma.crewSchedulePeriod.deleteMany();
   await prisma.crewSchedule.deleteMany();
   await prisma.aircraftCrewAssignment.deleteMany();
+  await prisma.crewRestPeriod.deleteMany();
+  await prisma.crewDutyPeriod.deleteMany();
+  await prisma.crewRecencyEvent.deleteMany();
+  await prisma.crewCheckEvent.deleteMany();
+  await prisma.crewTrainingEvent.deleteMany();
+  await prisma.crewMedical.deleteMany();
+  await prisma.crewCertificate.deleteMany();
   await prisma.crewQualification.deleteMany();
   await prisma.timeOffRequest.deleteMany();
   await prisma.alert.deleteMany();
@@ -1658,6 +1666,8 @@ async function main() {
     opsUserId: opsUser.id,
     stationByCode,
   });
+
+  await seedCrewComplianceDemo(prisma, anchor);
 
   await prisma.alert.createMany({
     data: [
