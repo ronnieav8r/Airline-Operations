@@ -1,6 +1,7 @@
 import {
   AircraftType,
   CrewComplianceRecordStatus,
+  CrewLogisticsNeedStatus,
   DutyStatus,
   EmploymentStatus,
   Prisma,
@@ -91,6 +92,94 @@ const aircraftCrewWorkflowSelect = {
               status: true,
             },
           },
+          locationRecords: {
+            select: {
+              id: true,
+              effectiveAt: true,
+              locationText: true,
+              source: true,
+              station: {
+                select: {
+                  code: true,
+                  city: true,
+                },
+              },
+            },
+            orderBy: [{ effectiveAt: "desc" }],
+            take: 1,
+          },
+          logisticsNeeds: {
+            where: {
+              status: {
+                in: [
+                  CrewLogisticsNeedStatus.PLANNED,
+                  CrewLogisticsNeedStatus.REQUESTED,
+                  CrewLogisticsNeedStatus.BOOKED,
+                ],
+              },
+            },
+            select: {
+              id: true,
+              needType: true,
+              neededBy: true,
+              status: true,
+              fromStation: {
+                select: {
+                  code: true,
+                },
+              },
+              toStation: {
+                select: {
+                  code: true,
+                },
+              },
+            },
+            orderBy: [{ neededBy: "asc" }, { createdAt: "desc" }],
+            take: 3,
+          },
+        },
+      },
+    },
+  },
+  crewLogisticsNeeds: {
+    where: {
+      status: {
+        in: [
+          CrewLogisticsNeedStatus.PLANNED,
+          CrewLogisticsNeedStatus.REQUESTED,
+          CrewLogisticsNeedStatus.BOOKED,
+        ],
+      },
+    },
+    orderBy: [{ neededBy: "asc" }, { createdAt: "desc" }],
+    take: 8,
+    select: {
+      id: true,
+      needType: true,
+      neededBy: true,
+      notes: true,
+      status: true,
+      crewMember: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+      flightLeg: {
+        select: {
+          id: true,
+          flightNumber: true,
+        },
+      },
+      fromStation: {
+        select: {
+          code: true,
+        },
+      },
+      toStation: {
+        select: {
+          code: true,
         },
       },
     },
@@ -243,6 +332,63 @@ const crewMemberOptionSelect = {
       endDate: true,
     },
     orderBy: [{ startDate: "asc" }],
+  },
+  locationRecords: {
+    select: {
+      id: true,
+      effectiveAt: true,
+      locationText: true,
+      source: true,
+      station: {
+        select: {
+          code: true,
+          city: true,
+        },
+      },
+    },
+    orderBy: [{ effectiveAt: "desc" }],
+    take: 1,
+  },
+  logisticsNeeds: {
+    where: {
+      status: {
+        in: [
+          CrewLogisticsNeedStatus.PLANNED,
+          CrewLogisticsNeedStatus.REQUESTED,
+          CrewLogisticsNeedStatus.BOOKED,
+        ],
+      },
+    },
+    select: {
+      id: true,
+      needType: true,
+      neededBy: true,
+      status: true,
+      aircraft: {
+        select: {
+          id: true,
+          tailNumber: true,
+        },
+      },
+      flightLeg: {
+        select: {
+          id: true,
+          flightNumber: true,
+        },
+      },
+      fromStation: {
+        select: {
+          code: true,
+        },
+      },
+      toStation: {
+        select: {
+          code: true,
+        },
+      },
+    },
+    orderBy: [{ neededBy: "asc" }, { createdAt: "desc" }],
+    take: 3,
   },
 } satisfies Prisma.CrewMemberSelect;
 

@@ -302,6 +302,23 @@ function AvailabilityHintPanel({ crewOptions }: { crewOptions: AircraftCrewMembe
                 ))}
               </ul>
             )}
+            <div className="mt-2 rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs text-zinc-600">
+              <p className="font-semibold text-zinc-800">Logistics context</p>
+              <p className="mt-1">
+                Location:{" "}
+                {crewMember.locationRecords[0]?.station
+                  ? `${crewMember.locationRecords[0].station.code} - ${crewMember.locationRecords[0].station.city}`
+                  : crewMember.locationRecords[0]?.locationText ?? "No location record"}
+              </p>
+              <p>
+                Open needs: {crewMember.logisticsNeeds.length}
+                {crewMember.logisticsNeeds[0]
+                  ? ` | ${formatStatus(crewMember.logisticsNeeds[0].needType)} ${formatStatus(
+                      crewMember.logisticsNeeds[0].status,
+                    )}`
+                  : ""}
+              </p>
+            </div>
             {crewMember.complianceWarnings.length > 0 ? (
               <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
                 <p className="font-semibold">Compliance evidence review</p>
@@ -436,6 +453,14 @@ function AssignmentCard({
             <br />
             Ends {assignment.endsAt ? toDateTime(assignment.endsAt) : "open block"}
           </p>
+          <p className="mt-2 text-xs text-zinc-500">
+            Location:{" "}
+            {assignment.crewMember.locationRecords[0]?.station
+              ? `${assignment.crewMember.locationRecords[0].station.code} - ${assignment.crewMember.locationRecords[0].station.city}`
+              : assignment.crewMember.locationRecords[0]?.locationText ?? "No location record"}
+            {" | "}
+            Open logistics needs: {assignment.crewMember.logisticsNeeds.length}
+          </p>
         </div>
         {assignment.timing === "CURRENT" ? (
           <form action={relieveAction}>
@@ -547,7 +572,7 @@ export default async function AircraftCrewWorkflowPage({
           </section>
         ) : null}
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Current assignments</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
@@ -572,6 +597,61 @@ export default async function AircraftCrewWorkflowPage({
               {data.summary.upcomingLegsWithSnapshotGaps}
             </p>
           </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Open logistics needs</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {data.crewLogisticsNeeds.length}
+            </p>
+          </article>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Aircraft-linked logistics context</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Read-only travel-support context tied to this aircraft. Logistics records do
+            not create bookings, expenses, schedules, or aircraft crew assignments.
+          </p>
+          {data.crewLogisticsNeeds.length === 0 ? (
+            <p className="mt-4 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
+              No open logistics needs linked to this aircraft.
+            </p>
+          ) : (
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {data.crewLogisticsNeeds.map((need) => (
+                <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={need.id}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold text-zinc-950">
+                      {need.crewMember.firstName} {need.crewMember.lastName}
+                    </h3>
+                    <span className="rounded-full border border-zinc-300 bg-white px-2 py-0.5 text-xs font-semibold text-zinc-700">
+                      {formatStatus(need.needType)}
+                    </span>
+                    <span className="rounded-full border border-zinc-300 bg-white px-2 py-0.5 text-xs font-semibold text-zinc-700">
+                      {formatStatus(need.status)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-zinc-600">
+                    {need.fromStation?.code ?? "Origin TBD"} - {need.toStation?.code ?? "Destination TBD"}
+                    {need.neededBy ? ` | needed by ${toDateTime(need.neededBy)}` : ""}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+                    <Link className="text-sky-700 hover:text-sky-900" href={`/crew/${need.crewMember.id}`}>
+                      Crew detail
+                    </Link>
+                    {need.flightLeg ? (
+                      <Link
+                        className="text-sky-700 hover:text-sky-900"
+                        href={`/operations-control/${need.flightLeg.id}`}
+                      >
+                        {need.flightLeg.flightNumber ?? "FlightLeg"} detail
+                      </Link>
+                    ) : null}
+                  </div>
+                  {need.notes ? <p className="mt-2 text-xs text-zinc-500">{need.notes}</p> : null}
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">

@@ -221,7 +221,7 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Availability</p>
             <p className="mt-2 text-sm font-semibold text-zinc-900">{availabilityLabel}</p>
@@ -262,6 +262,12 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
               {crewMember.complianceWarnings.length}
             </p>
           </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Open logistics needs</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {crewMember.logisticsNeeds.length}
+            </p>
+          </article>
         </section>
 
         <Section eyebrow="Warning-only" title="Availability Snapshot">
@@ -283,6 +289,74 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
               ))}
             </ul>
           )}
+        </Section>
+
+        <Section eyebrow="Planning context" title="Crew Logistics">
+          <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+            Logistics records show location and travel-support context only. They do not
+            create bookings, expenses, aircraft assignments, schedule entries, or duty/rest
+            compliance decisions.
+          </div>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <h3 className="text-sm font-semibold text-zinc-950">Latest location records</h3>
+              {crewMember.locationRecords.length === 0 ? (
+                <p className="mt-2 text-sm text-zinc-600">No crew location records.</p>
+              ) : (
+                <ul className="mt-2 space-y-2 text-sm">
+                  {crewMember.locationRecords.map((location) => (
+                    <li key={location.id}>
+                      <p className="font-medium text-zinc-900">
+                        {location.station
+                          ? `${location.station.code} - ${location.station.city}`
+                          : location.locationText ?? "Location not specified"}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {formatStatus(location.source)} | effective {toDateTime(location.effectiveAt)}
+                      </p>
+                      {location.notes ? <p className="text-xs text-zinc-500">{location.notes}</p> : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <h3 className="text-sm font-semibold text-zinc-950">Open logistics needs</h3>
+              {crewMember.logisticsNeeds.length === 0 ? (
+                <p className="mt-2 text-sm text-zinc-600">No open logistics needs.</p>
+              ) : (
+                <ul className="mt-2 space-y-2 text-sm">
+                  {crewMember.logisticsNeeds.map((need) => (
+                    <li key={need.id}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-zinc-900">
+                          {formatStatus(need.needType)}
+                        </span>
+                        <span className="rounded-full border border-zinc-300 bg-white px-2 py-0.5 text-xs font-semibold text-zinc-700">
+                          {formatStatus(need.status)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {need.fromStation?.code ?? "Origin TBD"} - {need.toStation?.code ?? "Destination TBD"}
+                        {need.neededBy ? ` | needed by ${toDateTime(need.neededBy)}` : ""}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {need.aircraft ? `Aircraft ${need.aircraft.tailNumber}` : "No aircraft link"}
+                        {need.flightLeg ? ` | ${need.flightLeg.flightNumber ?? "FlightLeg"}` : ""}
+                      </p>
+                      {need.providerName || need.confirmationNumber ? (
+                        <p className="text-xs text-zinc-500">
+                          {need.providerName ?? "Provider TBD"}
+                          {need.confirmationNumber ? ` | ${need.confirmationNumber}` : ""}
+                        </p>
+                      ) : null}
+                      {need.notes ? <p className="text-xs text-zinc-500">{need.notes}</p> : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </Section>
 
         <div className="grid gap-4 lg:grid-cols-2">

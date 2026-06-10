@@ -760,7 +760,7 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-9">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Planning window</p>
             <p className="mt-2 text-sm font-semibold text-zinc-900">{windowLabel}</p>
@@ -809,6 +809,12 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
             <p className="text-sm text-zinc-500">Compliance review</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {data.summary.crewWithComplianceWarnings}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Logistics needs</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {data.summary.crewWithOpenLogisticsNeeds}
             </p>
           </article>
         </section>
@@ -922,7 +928,7 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
                             </ul>
                           ) : null}
 
-                          <div className="mt-4 grid gap-3 xl:grid-cols-6">
+                          <div className="mt-4 grid gap-3 xl:grid-cols-7">
                             <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
                               <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                                 Schedule Blocks
@@ -1044,6 +1050,47 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
                                       >
                                         Manage aircraft crew
                                       </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+
+                            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                Logistics
+                              </h4>
+                              {crewMember.locationRecords.length === 0 ? (
+                                <p className="mt-2 text-sm text-zinc-600">No location record.</p>
+                              ) : (
+                                <p className="mt-2 text-sm text-zinc-700">
+                                  {crewMember.locationRecords[0].station
+                                    ? `${crewMember.locationRecords[0].station.code} - ${crewMember.locationRecords[0].station.city}`
+                                    : crewMember.locationRecords[0].locationText ?? "Location not specified"}
+                                  <span className="block text-xs text-zinc-500">
+                                    {formatStatus(crewMember.locationRecords[0].source)} |{" "}
+                                    {toDateTime(crewMember.locationRecords[0].effectiveAt)}
+                                  </span>
+                                </p>
+                              )}
+                              {crewMember.logisticsNeeds.length === 0 ? (
+                                <p className="mt-2 text-sm text-zinc-600">No open logistics needs.</p>
+                              ) : (
+                                <ul className="mt-2 space-y-2 text-sm">
+                                  {crewMember.logisticsNeeds.map((need) => (
+                                    <li key={need.id}>
+                                      <div className="font-medium text-zinc-900">
+                                        {formatStatus(need.needType)} | {formatStatus(need.status)}
+                                      </div>
+                                      <div className="text-xs text-zinc-500">
+                                        {need.fromStation?.code ?? "Origin TBD"} -{" "}
+                                        {need.toStation?.code ?? "Destination TBD"}
+                                      </div>
+                                      <div className="text-xs text-zinc-500">
+                                        {need.neededBy ? `Needed ${toDateTime(need.neededBy)}` : "No needed-by time"}
+                                        {need.aircraft ? ` | ${need.aircraft.tailNumber}` : ""}
+                                        {need.flightLeg ? ` | ${need.flightLeg.flightNumber ?? "FlightLeg"}` : ""}
+                                      </div>
                                     </li>
                                   ))}
                                 </ul>

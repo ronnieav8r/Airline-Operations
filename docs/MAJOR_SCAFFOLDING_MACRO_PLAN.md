@@ -192,6 +192,14 @@ No logistics UI, booking provider integration, expense workflow, duty/rest
 enforcement, or aircraft assignment automation has been added. DB-backed
 runtime QA remains pending because Docker Desktop was unavailable.
 
+Prompt 200 implementation status: complete for static validation. Logistics
+read-only context now appears on crew detail, crew planner, and aircraft crew
+assignment workflow surfaces. It shows latest/recent location context and open
+travel-support needs only; no logistics writes, bookings, expenses, schedule
+mutations, aircraft assignment automation, release behavior, or duty/rest
+enforcement were added. DB-backed runtime QA remains pending because Docker
+Desktop was unavailable.
+
 ## Validation Standard
 
 For every implementation slice:

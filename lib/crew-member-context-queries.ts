@@ -1,6 +1,7 @@
 import {
   AssignmentStatus,
   CrewComplianceRecordStatus,
+  CrewLogisticsNeedStatus,
   CrewScheduleEntryStatus,
   CrewSchedulePeriodStatus,
   CrewScheduleRequestStatus,
@@ -128,6 +129,80 @@ const crewMemberContextSelect = {
       startDate: true,
       endDate: true,
       reason: true,
+    },
+  },
+  locationRecords: {
+    orderBy: [{ effectiveAt: "desc" }],
+    take: 3,
+    select: {
+      id: true,
+      effectiveAt: true,
+      locationText: true,
+      notes: true,
+      source: true,
+      station: {
+        select: {
+          code: true,
+          city: true,
+        },
+      },
+    },
+  },
+  logisticsNeeds: {
+    where: {
+      status: {
+        in: [
+          CrewLogisticsNeedStatus.PLANNED,
+          CrewLogisticsNeedStatus.REQUESTED,
+          CrewLogisticsNeedStatus.BOOKED,
+        ],
+      },
+    },
+    orderBy: [{ neededBy: "asc" }, { createdAt: "desc" }],
+    take: 5,
+    select: {
+      id: true,
+      completedAt: true,
+      confirmationNumber: true,
+      createdAt: true,
+      needType: true,
+      neededBy: true,
+      notes: true,
+      providerName: true,
+      status: true,
+      aircraft: {
+        select: {
+          id: true,
+          tailNumber: true,
+        },
+      },
+      flightLeg: {
+        select: {
+          id: true,
+          flightNumber: true,
+          scheduledDeparture: true,
+          departureStation: {
+            select: {
+              code: true,
+            },
+          },
+          arrivalStation: {
+            select: {
+              code: true,
+            },
+          },
+        },
+      },
+      fromStation: {
+        select: {
+          code: true,
+        },
+      },
+      toStation: {
+        select: {
+          code: true,
+        },
+      },
     },
   },
   certificates: {

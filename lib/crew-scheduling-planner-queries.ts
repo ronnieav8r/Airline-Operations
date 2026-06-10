@@ -1,6 +1,7 @@
 import {
   AssignmentStatus,
   CrewComplianceRecordStatus,
+  CrewLogisticsNeedStatus,
   CrewScheduleEntryStatus,
   DutyStatus,
   EmploymentStatus,
@@ -123,6 +124,62 @@ const crewPlannerSelect = {
       reason: true,
     },
     orderBy: [{ startDate: "asc" }],
+  },
+  locationRecords: {
+    select: {
+      id: true,
+      effectiveAt: true,
+      locationText: true,
+      source: true,
+      station: {
+        select: {
+          code: true,
+          city: true,
+        },
+      },
+    },
+    orderBy: [{ effectiveAt: "desc" }],
+    take: 1,
+  },
+  logisticsNeeds: {
+    where: {
+      status: {
+        in: [
+          CrewLogisticsNeedStatus.PLANNED,
+          CrewLogisticsNeedStatus.REQUESTED,
+          CrewLogisticsNeedStatus.BOOKED,
+        ],
+      },
+    },
+    select: {
+      id: true,
+      needType: true,
+      neededBy: true,
+      status: true,
+      aircraft: {
+        select: {
+          tailNumber: true,
+        },
+      },
+      flightLeg: {
+        select: {
+          id: true,
+          flightNumber: true,
+        },
+      },
+      fromStation: {
+        select: {
+          code: true,
+        },
+      },
+      toStation: {
+        select: {
+          code: true,
+        },
+      },
+    },
+    orderBy: [{ neededBy: "asc" }, { createdAt: "desc" }],
+    take: 3,
   },
   certificates: {
     select: {
@@ -270,6 +327,7 @@ export type CrewSchedulingPlannerData = {
     crewWithScheduleEntries: number;
     crewWithScheduleBlocks: number;
     crewWithTimeOff: number;
+    crewWithOpenLogisticsNeeds: number;
     upcomingCoverageGaps: number;
   };
 };
@@ -562,6 +620,9 @@ export async function getCrewSchedulingPlannerData(
       ).length,
       crewWithTimeOff: crewMembersWithPlanning.filter(
         (crewMember) => crewMember.timeOffInWindow.length > 0,
+      ).length,
+      crewWithOpenLogisticsNeeds: crewMembersWithPlanning.filter(
+        (crewMember) => crewMember.logisticsNeeds.length > 0,
       ).length,
       upcomingCoverageGaps: flightsWithCoverage.filter(
         ({ coverage }) => coverage && !coverage.isCovered,

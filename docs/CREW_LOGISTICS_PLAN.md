@@ -74,3 +74,11 @@ enforcement has been added.
 
 Prompt 200 should add read-only logistics surfaces on crew detail, crew
 planner, and aircraft crew assignment workflow.
+
+Prompt 200 read-surface status: complete for static validation. Crew detail,
+crew planner, and aircraft crew assignment now show recent crew location
+context and open logistics needs without adding create/edit actions or changing
+schedule, assignment, release, duty/rest, booking, or expense behavior.
+
+Prompt 201 should add ops/admin logistics create/edit workflow planning and
+implementation if the read-only context is acceptable.

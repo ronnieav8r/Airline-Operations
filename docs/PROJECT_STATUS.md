@@ -1462,17 +1462,23 @@ schedule rows, aircraft assignments, duty/rest enforcement, or release
 behavior. DB-backed runtime QA remains pending because Docker Desktop was
 unavailable.
 
+Prompt 200 is complete for static validation. Crew detail, crew planner, and
+aircraft crew assignment now show recent/latest crew location context and open
+logistics needs. This is read-only planning context only; no logistics
+create/edit UI, booking, expense, schedule, assignment, release, or duty/rest
+behavior was added. DB-backed runtime QA remains pending because Docker Desktop
+was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 200: Logistics read surfaces
+Prompt 201: Logistics create/edit foundation
 ```
 
 Scope:
 
-- Add read-only logistics context on crew detail, crew planner, and aircraft
-  crew assignment workflow.
-- Do not add logistics create/edit UI yet.
+- Add ops/admin create/edit workflows for crew location records and logistics
+  needs.
 - No booking, expense, assignment, schedule, release, or duty/rest behavior
   changes.
 
