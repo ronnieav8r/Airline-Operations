@@ -1238,25 +1238,24 @@ email/password credentials, HttpOnly DB-backed sessions, expanded operational
 roles, mutation-first route/action protection, and user attribution through
 existing nullable user fields.
 
-Prompt 162 is complete. The app now has local login/logout, DB-backed session
-helpers, an app-shell current-user indicator, and local/demo seed credentials.
-Broad mutation protection, role gates, signatures, password reset, MFA, and
-provider auth remain deferred.
+Prompt 163 is complete. Existing server-action mutation workflows now require
+authenticated operational roles, and direct writes populate existing nullable
+user-attribution fields where available. Read-route lock-down, crew portal
+self-service scoping, signatures, password reset, MFA, and provider auth remain
+deferred.
 
 Preferred next step:
 
 ```text
-Prompt 163: Role And Attribution Foundation
+Prompt 164: Auth QA
 ```
 
 Scope:
 
-- Add role guard helpers.
-- Protect mutation server actions.
-- Populate existing nullable user attribution fields from the current user where
-  actions become protected.
-- Keep read-route lock-down and crew portal scoping for later auth slices unless
-  needed by the protected write flow.
+- QA login/logout and seeded demo credentials.
+- QA unauthenticated mutation protection.
+- QA allowed operational roles across existing write workflows.
+- Confirm existing read pages and warning-first release behavior still work.
 
 Deferred follow-up to keep on the roadmap:
 

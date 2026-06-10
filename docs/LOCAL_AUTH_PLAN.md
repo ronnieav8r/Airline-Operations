@@ -136,6 +136,12 @@ attribution remain Prompt 163 scope.
 - Populate user attribution fields where already present.
 - Start with write protection before fully locking read routes.
 
+Prompt 163 implementation status: complete. Existing mutation server actions now
+require an authenticated role, and direct writes populate the nullable
+attribution fields already present in the schema. Broad read-route protection,
+crew portal self-service scoping, signatures, and fine-grained permissions remain
+deferred.
+
 ## Deferred
 
 - SSO or managed auth.

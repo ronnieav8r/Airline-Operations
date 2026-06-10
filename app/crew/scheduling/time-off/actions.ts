@@ -5,11 +5,13 @@ import {
   Prisma,
   TimeOffRequestStatus,
   TimeOffRequestType,
+  UserRole,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/guards";
 
 class TimeOffWorkflowError extends Error {}
 
@@ -175,6 +177,7 @@ function revalidateTimeOffWorkflowPaths(crewMemberId?: string) {
 }
 
 export async function createTimeOffRequestAction(formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
   let crewMemberId: string | undefined;
   const returnTo = getSafeReturnTo(formData);
 
@@ -192,6 +195,7 @@ export async function createTimeOffRequestAction(formData: FormData) {
           requestType: input.requestType,
           startDate: input.startDate,
           status: TimeOffRequestStatus.PENDING,
+          requestedById: currentUser.id,
         },
       });
     });
@@ -208,6 +212,7 @@ export async function reviewTimeOffRequestAction(
   nextStatus: TimeOffRequestStatus,
   formData: FormData,
 ) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
   let crewMemberId: string | undefined;
   const returnTo = getSafeReturnTo(formData);
 
@@ -227,6 +232,7 @@ export async function reviewTimeOffRequestAction(
         where: { id: requestId },
         data: {
           reviewedAt: new Date(),
+          reviewedById: currentUser.id,
           status: nextStatus,
         },
       });

@@ -1,10 +1,11 @@
 "use server";
 
-import { FlightLocatingStatus } from "@prisma/client";
+import { FlightLocatingStatus, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/guards";
 
 class FlightLocatingWorkflowError extends Error {}
 
@@ -153,6 +154,8 @@ function revalidateLocatingPaths(flightLegId: string) {
 }
 
 export async function saveFlightLocatingAction(flightLegId: string, formData: FormData) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     await ensureFlightLegExists(flightLegId);
     const input = parseLocatingInput(formData);
@@ -178,6 +181,8 @@ export async function setFlightLocatingStatusAction(
   flightLegId: string,
   status: FlightLocatingStatus,
 ) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     await ensureFlightLegExists(flightLegId);
     const now = new Date();
@@ -205,6 +210,8 @@ export async function setFlightLocatingStatusAction(
 }
 
 export async function addPositionReportAction(flightLegId: string, formData: FormData) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     await ensureFlightLegExists(flightLegId);
     const input = parsePositionReportInput(formData);

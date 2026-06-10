@@ -1,10 +1,11 @@
 "use server";
 
-import { Prisma, WeightBalanceStatus } from "@prisma/client";
+import { Prisma, UserRole, WeightBalanceStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/guards";
 
 class WeightBalanceWorkflowError extends Error {}
 
@@ -182,6 +183,8 @@ function revalidateWeightBalancePaths(flightLegId: string) {
 }
 
 export async function addWeightBalanceRunAction(flightLegId: string, formData: FormData) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     const input = parseWeightBalanceInput(formData);
     const context = await getFlightLegManifestContext(flightLegId);
@@ -211,6 +214,8 @@ export async function updateWeightBalanceRunAction(
   runId: string,
   formData: FormData,
 ) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     const input = parseWeightBalanceInput(formData);
     const [context] = await Promise.all([
@@ -240,6 +245,8 @@ export async function updateWeightBalanceRunAction(
 }
 
 export async function markWeightBalanceCalculatedAction(flightLegId: string, runId: string) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     await ensureRunBelongsToFlightLeg(flightLegId, runId);
 
@@ -259,6 +266,8 @@ export async function markWeightBalanceCalculatedAction(flightLegId: string, run
 }
 
 export async function approveWeightBalanceRunAction(flightLegId: string, runId: string) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     await ensureRunCanBeApproved(flightLegId, runId);
 
@@ -267,7 +276,7 @@ export async function approveWeightBalanceRunAction(flightLegId: string, runId: 
       data: {
         status: WeightBalanceStatus.APPROVED,
         approvedAt: new Date(),
-        approvedById: null,
+        approvedById: currentUser.id,
       },
     });
   } catch (error) {
@@ -279,6 +288,8 @@ export async function approveWeightBalanceRunAction(flightLegId: string, runId: 
 }
 
 export async function voidWeightBalanceRunAction(flightLegId: string, runId: string) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     await ensureRunBelongsToFlightLeg(flightLegId, runId);
 

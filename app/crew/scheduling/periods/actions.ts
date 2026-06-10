@@ -6,11 +6,13 @@ import {
   DutyStatus,
   EmploymentStatus,
   Prisma,
+  UserRole,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/guards";
 
 class SchedulePeriodWorkflowError extends Error {}
 class ScheduleEntryWorkflowError extends Error {}
@@ -283,6 +285,7 @@ async function validateScheduleEntryInput(periodId: string, input: ScheduleEntry
 }
 
 export async function createSchedulePeriodAction(formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
   let periodId: string | undefined;
 
   try {
@@ -291,6 +294,7 @@ export async function createSchedulePeriodAction(formData: FormData) {
       data: {
         ...input,
         archivedAt: archivedAtForStatus(input.status),
+        createdById: currentUser.id,
       },
       select: { id: true },
     });
@@ -304,6 +308,8 @@ export async function createSchedulePeriodAction(formData: FormData) {
 }
 
 export async function updateSchedulePeriodAction(periodId: string, formData: FormData) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const input = parseSchedulePeriodInput(formData);
     const currentPeriod = await prisma.crewSchedulePeriod.findUnique({
@@ -331,6 +337,8 @@ export async function updateSchedulePeriodAction(periodId: string, formData: For
 }
 
 export async function archiveSchedulePeriodAction(periodId: string) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     await prisma.crewSchedulePeriod.update({
       where: { id: periodId },
@@ -348,6 +356,8 @@ export async function archiveSchedulePeriodAction(periodId: string) {
 }
 
 export async function createScheduleEntryAction(periodId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const input = parseScheduleEntryInput(formData);
     await validateScheduleEntryInput(periodId, input);
@@ -356,6 +366,7 @@ export async function createScheduleEntryAction(periodId: string, formData: Form
         ...input,
         periodId,
         status: CrewScheduleEntryStatus.DRAFT,
+        createdById: currentUser.id,
       },
     });
   } catch (error) {
@@ -371,6 +382,8 @@ export async function updateScheduleEntryAction(
   entryId: string,
   formData: FormData,
 ) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const [input, currentEntry] = await Promise.all([
       Promise.resolve(parseScheduleEntryInput(formData)),
@@ -402,6 +415,8 @@ export async function updateScheduleEntryAction(
 }
 
 export async function cancelScheduleEntryAction(periodId: string, entryId: string) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const currentEntry = await prisma.crewScheduleEntry.findUnique({
       where: { id: entryId },

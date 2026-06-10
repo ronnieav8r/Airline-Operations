@@ -1,10 +1,11 @@
 "use server";
 
-import { ManifestStatus } from "@prisma/client";
+import { ManifestStatus, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/guards";
 
 class ManifestWorkflowError extends Error {}
 
@@ -133,6 +134,8 @@ function revalidateManifestPaths(flightLegId: string) {
 }
 
 export async function addManifestItemAction(flightLegId: string, formData: FormData) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     const input = parseManifestItemInput(formData);
     const manifest = await ensureEditableManifest(flightLegId);
@@ -167,6 +170,8 @@ export async function updateManifestItemAction(
   itemId: string,
   formData: FormData,
 ) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     const input = parseManifestItemInput(formData);
     await ensureManifestItemBelongsToFlightLeg(flightLegId, itemId);
@@ -198,6 +203,8 @@ export async function updateManifestItemAction(
 }
 
 export async function deleteManifestItemAction(flightLegId: string, itemId: string) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     await ensureManifestItemBelongsToFlightLeg(flightLegId, itemId);
     await prisma.manifestItem.delete({ where: { id: itemId } });
@@ -218,6 +225,8 @@ export async function deleteManifestItemAction(flightLegId: string, itemId: stri
 }
 
 export async function markManifestReadyAction(flightLegId: string) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     const manifest = await ensureEditableManifest(flightLegId);
 

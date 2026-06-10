@@ -6,11 +6,13 @@ import {
   FlightLegStatus,
   Prisma,
   SeatRole,
+  UserRole,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/guards";
 
 class AircraftCrewWorkflowError extends Error {}
 
@@ -318,6 +320,8 @@ export async function createAircraftCrewAssignmentAction(
   aircraftId: string,
   formData: FormData,
 ) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const input = parseAssignmentInput(formData);
 
@@ -334,6 +338,7 @@ export async function createAircraftCrewAssignmentAction(
           notes: input.notes,
           seatRole: input.seatRole,
           startsAt: input.startsAt,
+          assignedById: currentUser.id,
         },
       });
       await resyncFutureCrewLegSnapshotsForAircraft(tx, aircraftId);
@@ -351,6 +356,8 @@ export async function updateAircraftCrewAssignmentAction(
   assignmentId: string,
   formData: FormData,
 ) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const input = parseAssignmentEditInput(formData);
 
@@ -390,6 +397,8 @@ export async function relieveAircraftCrewAssignmentAction(
   aircraftId: string,
   assignmentId: string,
 ) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     await prisma.$transaction(async (tx) => {
       await ensureAssignmentBelongsToAircraft(tx, aircraftId, assignmentId);

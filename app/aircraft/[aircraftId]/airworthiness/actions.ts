@@ -7,11 +7,13 @@ import {
   MaintenanceEventStatus,
   MaintenanceEventType,
   Prisma,
+  UserRole,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/guards";
 
 class AirworthinessWorkflowError extends Error {}
 
@@ -536,6 +538,8 @@ function revalidateAirworthinessPaths(aircraftId: string) {
 }
 
 export async function createDiscrepancyAction(aircraftId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+
   try {
     const input = parseDiscrepancyInput(formData);
 
@@ -555,6 +559,7 @@ export async function createDiscrepancyAction(aircraftId: string, formData: Form
           status: input.status,
           correctiveSummary: input.correctiveSummary,
           clearedAt: input.clearedAt,
+          reportedById: currentUser.id,
         },
       });
     });
@@ -571,6 +576,8 @@ export async function updateDiscrepancyAction(
   discrepancyId: string,
   formData: FormData,
 ) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+
   try {
     const input = parseDiscrepancyInput(formData);
 
@@ -602,6 +609,8 @@ export async function updateDiscrepancyAction(
 }
 
 export async function createDeferralAction(aircraftId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+
   try {
     const input = parseDeferralInput(formData, true);
 
@@ -636,6 +645,7 @@ export async function createDeferralAction(aircraftId: string, formData: FormDat
           dueAt: input.dueAt,
           clearedAt: input.clearedAt,
           notes: input.notes,
+          authorizedById: currentUser.id,
         },
       });
 
@@ -662,6 +672,8 @@ export async function updateDeferralAction(
   deferralId: string,
   formData: FormData,
 ) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+
   try {
     const input = parseDeferralInput(formData, false);
 
@@ -716,6 +728,8 @@ export async function updateDeferralAction(
 }
 
 export async function createMaintenanceEventAction(aircraftId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+
   try {
     const input = parseMaintenanceEventInput(formData);
 
@@ -744,6 +758,8 @@ export async function createMaintenanceEventAction(aircraftId: string, formData:
           description: input.description,
           returnToServiceAt: input.returnToServiceAt,
           notes: input.notes,
+          approvedById:
+            input.status === MaintenanceEventStatus.COMPLETED ? currentUser.id : null,
         },
       });
 
@@ -762,6 +778,8 @@ export async function updateMaintenanceEventAction(
   maintenanceEventId: string,
   formData: FormData,
 ) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+
   try {
     const input = parseMaintenanceEventInput(formData);
 
@@ -791,6 +809,8 @@ export async function updateMaintenanceEventAction(
           description: input.description,
           returnToServiceAt: input.returnToServiceAt,
           notes: input.notes,
+          approvedById:
+            input.status === MaintenanceEventStatus.COMPLETED ? currentUser.id : null,
         },
       });
 
@@ -808,6 +828,8 @@ export async function createAirworthinessReleaseAction(
   aircraftId: string,
   formData: FormData,
 ) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+
   try {
     const input = parseAirworthinessReleaseInput(formData);
 
@@ -825,6 +847,8 @@ export async function createAirworthinessReleaseAction(
           releasedAt: input.releasedAt,
           expiresAt: input.expiresAt,
           releaseNotes: input.releaseNotes,
+          releasedById:
+            input.status === AirworthinessReleaseStatus.RELEASED ? currentUser.id : null,
         },
         select: {
           id: true,
@@ -848,6 +872,8 @@ export async function updateAirworthinessReleaseAction(
   airworthinessReleaseId: string,
   formData: FormData,
 ) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+
   try {
     const input = parseAirworthinessReleaseInput(formData);
 
@@ -870,6 +896,8 @@ export async function updateAirworthinessReleaseAction(
           releasedAt: input.releasedAt,
           expiresAt: input.expiresAt,
           releaseNotes: input.releaseNotes,
+          releasedById:
+            input.status === AirworthinessReleaseStatus.RELEASED ? currentUser.id : null,
         },
       });
 

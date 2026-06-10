@@ -8,11 +8,13 @@ import {
   ReleaseAuditEventType,
   ReleaseFindingStatus,
   ReleaseStatus,
+  UserRole,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/guards";
 import { getReleaseEvidenceDetail } from "@/lib/release-evidence-detail-queries";
 import {
   getReleaseSnapshotStatus,
@@ -424,7 +426,7 @@ async function syncCrewLegAssignments(
   }
 }
 
-async function createFlightLeg(input: FlightLegFormInput): Promise<string> {
+async function createFlightLeg(input: FlightLegFormInput, currentUserId: string): Promise<string> {
   return prisma.$transaction(async (tx) => {
     await validateReferences(tx, input);
     await assertNoDuplicateLegacyFlight(tx, input);
@@ -463,6 +465,7 @@ async function createFlightLeg(input: FlightLegFormInput): Promise<string> {
             aircraftId: input.aircraftId,
             status: AssignmentStatus.PLANNED,
             assignedAt: input.scheduledDeparture,
+            assignedById: currentUserId,
           },
         },
       },
@@ -478,6 +481,7 @@ async function createFlightLeg(input: FlightLegFormInput): Promise<string> {
         authorityRevisionId: input.authorityRevisionId,
         controllingEntity: input.controllingEntity,
         controlNotes: input.controlNotes,
+        createdById: currentUserId,
       },
       select: { id: true },
     });
@@ -503,7 +507,11 @@ async function createFlightLeg(input: FlightLegFormInput): Promise<string> {
   });
 }
 
-async function updateFlightLeg(flightLegId: string, input: FlightLegFormInput): Promise<string> {
+async function updateFlightLeg(
+  flightLegId: string,
+  input: FlightLegFormInput,
+  currentUserId: string,
+): Promise<string> {
   return prisma.$transaction(async (tx) => {
     await validateReferences(tx, input);
 
@@ -602,6 +610,7 @@ async function updateFlightLeg(flightLegId: string, input: FlightLegFormInput): 
         aircraftId: input.aircraftId,
         status: AssignmentStatus.PLANNED,
         assignedAt: input.scheduledDeparture,
+        assignedById: currentUserId,
       },
     });
 
@@ -616,6 +625,7 @@ async function updateFlightLeg(flightLegId: string, input: FlightLegFormInput): 
           authorityRevisionId: input.authorityRevisionId,
           controllingEntity: input.controllingEntity,
           controlNotes: input.controlNotes,
+          createdById: currentUserId,
         },
       });
 
@@ -637,6 +647,7 @@ async function updateFlightLeg(flightLegId: string, input: FlightLegFormInput): 
           authorityRevisionId: input.authorityRevisionId,
           controllingEntity: input.controllingEntity,
           controlNotes: input.controlNotes,
+          createdById: currentUserId,
         },
         select: { id: true },
       });
@@ -675,10 +686,11 @@ function revalidateFlightLegWorkflowPaths() {
 }
 
 export async function createFlightLegAction(formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
   let flightLegId: string;
 
   try {
-    flightLegId = await createFlightLeg(parseFlightLegForm(formData));
+    flightLegId = await createFlightLeg(parseFlightLegForm(formData), currentUser.id);
   } catch (error) {
     redirect(`/operations-control/new?error=${encodeError(error)}`);
   }
@@ -688,8 +700,10 @@ export async function createFlightLegAction(formData: FormData) {
 }
 
 export async function updateFlightLegAction(flightLegId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
-    await updateFlightLeg(flightLegId, parseFlightLegForm(formData));
+    await updateFlightLeg(flightLegId, parseFlightLegForm(formData), currentUser.id);
   } catch (error) {
     redirect(`/operations-control/${flightLegId}/edit?error=${encodeError(error)}`);
   }
@@ -699,7 +713,11 @@ export async function updateFlightLegAction(flightLegId: string, formData: FormD
   redirect(`/operations-control/${flightLegId}`);
 }
 
-async function setFlightLegReleaseStatus(flightLegId: string, status: ReleaseStatus) {
+async function setFlightLegReleaseStatus(
+  flightLegId: string,
+  status: ReleaseStatus,
+  currentUserId: string,
+) {
   return prisma.$transaction(async (tx) => {
     const controlRecord = await tx.operationalControlRecord.findUnique({
       where: { flightLegId },
@@ -715,11 +733,13 @@ async function setFlightLegReleaseStatus(flightLegId: string, status: ReleaseSta
       update: {
         status,
         releasedAt: status === ReleaseStatus.RELEASED ? new Date() : null,
+        releasedById: status === ReleaseStatus.RELEASED ? currentUserId : null,
       },
       create: {
         operationalControlRecordId: controlRecord.id,
         status,
         releasedAt: status === ReleaseStatus.RELEASED ? new Date() : null,
+        releasedById: status === ReleaseStatus.RELEASED ? currentUserId : null,
       },
       select: { id: true },
     });
@@ -778,6 +798,7 @@ async function createReadinessSnapshot(
   flightLegId: string,
   summaryContext: SnapshotSummaryContext,
   mode: SnapshotCaptureMode,
+  currentUserId: string,
 ): Promise<AttemptSnapshotResult> {
   try {
     const detail = await getReleaseEvidenceDetail(flightLegId);
@@ -842,6 +863,7 @@ async function createReadinessSnapshot(
         flightLegId: detail.id,
         flightReleaseId: flightRelease.id,
         policyProfileId: policyProfile.id,
+        evaluatedById: currentUserId,
         snapshotStatus,
         authorityClass: policyProfile.authorityClass,
         summary: {
@@ -892,6 +914,7 @@ async function createReadinessSnapshot(
 async function captureReleaseAttemptSnapshot(
   flightLegId: string,
   status: ReleaseStatus,
+  currentUserId: string,
 ): Promise<AttemptSnapshotResult> {
   const detail = await getReleaseEvidenceDetail(flightLegId);
   const capturedBeforeStatus = detail?.operationalControlRecord?.release?.status ?? null;
@@ -905,6 +928,7 @@ async function captureReleaseAttemptSnapshot(
       source: "release-attempt",
     },
     "best-effort",
+    currentUserId,
   );
 }
 
@@ -913,6 +937,7 @@ async function createReleaseAuditEvent(
   releaseId: string,
   status: ReleaseStatus,
   snapshot: AttemptSnapshotResult,
+  currentUserId: string,
 ) {
   await prisma.$transaction(async (tx) => {
     await tx.releaseAuditEvent.create({
@@ -921,7 +946,7 @@ async function createReleaseAuditEvent(
         flightReleaseId: releaseId,
         snapshotId: snapshot.snapshotId,
         eventType: releaseAuditEventType(status),
-        actorUserId: null,
+        actorUserId: currentUserId,
         message: releaseAuditMessage(status, snapshot),
         metadata: {
           attemptedAction: releaseAttemptAction(status),
@@ -935,14 +960,14 @@ async function createReleaseAuditEvent(
   });
 }
 
-async function runReleaseAction(flightLegId: string, status: ReleaseStatus) {
+async function runReleaseAction(flightLegId: string, status: ReleaseStatus, currentUserId: string) {
   let attemptSnapshot: AttemptSnapshotResult;
   let release: { id: string };
 
   try {
-    attemptSnapshot = await captureReleaseAttemptSnapshot(flightLegId, status);
-    release = await setFlightLegReleaseStatus(flightLegId, status);
-    await createReleaseAuditEvent(flightLegId, release.id, status, attemptSnapshot);
+    attemptSnapshot = await captureReleaseAttemptSnapshot(flightLegId, status, currentUserId);
+    release = await setFlightLegReleaseStatus(flightLegId, status, currentUserId);
+    await createReleaseAuditEvent(flightLegId, release.id, status, attemptSnapshot, currentUserId);
   } catch (error) {
     redirect(`/operations-control/${flightLegId}?releaseError=${encodeError(error)}`);
   }
@@ -953,20 +978,30 @@ async function runReleaseAction(flightLegId: string, status: ReleaseStatus) {
 }
 
 export async function markFlightLegReleasedAction(flightLegId: string) {
-  await runReleaseAction(flightLegId, ReleaseStatus.RELEASED);
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
+  await runReleaseAction(flightLegId, ReleaseStatus.RELEASED, currentUser.id);
 }
 
 export async function cancelFlightLegReleaseAction(flightLegId: string) {
-  await runReleaseAction(flightLegId, ReleaseStatus.CANCELLED);
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
+  await runReleaseAction(flightLegId, ReleaseStatus.CANCELLED, currentUser.id);
 }
 
 export async function voidFlightLegReleaseAction(flightLegId: string) {
-  await runReleaseAction(flightLegId, ReleaseStatus.VOIDED);
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
+  await runReleaseAction(flightLegId, ReleaseStatus.VOIDED, currentUser.id);
 }
 
 export async function captureReleasePreviewSnapshotAction(flightLegId: string) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
-    await createReadinessSnapshot(flightLegId, { source: "explicit-preview" }, "strict");
+    await createReadinessSnapshot(
+      flightLegId,
+      { source: "explicit-preview" },
+      "strict",
+      currentUser.id,
+    );
   } catch (error) {
     redirect(`/operations-control/${flightLegId}?snapshotError=${encodeError(error)}`);
   }

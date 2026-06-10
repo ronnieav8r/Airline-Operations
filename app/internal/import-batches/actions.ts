@@ -1,10 +1,11 @@
 "use server";
 
-import { ImportDomain, ImportSourceType, Prisma } from "@prisma/client";
+import { ImportDomain, ImportSourceType, Prisma, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/guards";
 
 class ImportMetadataError extends Error {}
 
@@ -81,6 +82,8 @@ function revalidateImportMetadataPaths() {
 }
 
 export async function createImportBatchAction(formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     await prisma.importBatch.create({
       data: {
@@ -88,6 +91,7 @@ export async function createImportBatchAction(formData: FormData) {
         sourceSystem: getRequiredText(formData, "sourceSystem", "Source system"),
         batchKey: getOptionalText(formData, "batchKey"),
         notes: getOptionalText(formData, "notes"),
+        createdById: currentUser.id,
       },
     });
   } catch (error) {
@@ -99,6 +103,8 @@ export async function createImportBatchAction(formData: FormData) {
 }
 
 export async function updateImportBatchAction(batchId: string, formData: FormData) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const existing = await prisma.importBatch.findUnique({
       where: { id: batchId },
@@ -127,6 +133,8 @@ export async function updateImportBatchAction(batchId: string, formData: FormDat
 }
 
 export async function createImportSourceAction(formData: FormData) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const batchId = getRequiredText(formData, "batchId", "Import batch");
     const batch = await prisma.importBatch.findUnique({

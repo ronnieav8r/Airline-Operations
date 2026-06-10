@@ -1,10 +1,11 @@
 "use server";
 
-import { DutyStatus, Prisma } from "@prisma/client";
+import { DutyStatus, Prisma, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/guards";
 
 class RotationPatternWorkflowError extends Error {}
 
@@ -193,9 +194,16 @@ function revalidatePatternPaths() {
 }
 
 export async function createRotationPatternAction(formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const input = parsePatternInput(formData);
-    await prisma.crewRotationPattern.create({ data: input });
+    await prisma.crewRotationPattern.create({
+      data: {
+        ...input,
+        createdById: currentUser.id,
+      },
+    });
   } catch (error) {
     redirect(`/crew/scheduling/patterns?error=${encodeError(error)}`);
   }
@@ -205,6 +213,8 @@ export async function createRotationPatternAction(formData: FormData) {
 }
 
 export async function updateRotationPatternAction(patternId: string, formData: FormData) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const input = parsePatternInput(formData);
     await prisma.crewRotationPattern.update({
@@ -220,6 +230,8 @@ export async function updateRotationPatternAction(patternId: string, formData: F
 }
 
 export async function toggleRotationPatternActiveAction(patternId: string, isActive: boolean) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     await prisma.crewRotationPattern.update({
       where: { id: patternId },
@@ -234,6 +246,8 @@ export async function toggleRotationPatternActiveAction(patternId: string, isAct
 }
 
 export async function createRotationPatternDayAction(patternId: string, formData: FormData) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const input = parsePatternDayInput(formData);
     await prisma.$transaction(async (tx) => {
@@ -258,6 +272,8 @@ export async function updateRotationPatternDayAction(
   dayId: string,
   formData: FormData,
 ) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const input = parsePatternDayInput(formData);
     await prisma.$transaction(async (tx) => {
@@ -285,6 +301,8 @@ export async function updateRotationPatternDayAction(
 }
 
 export async function deleteRotationPatternDayAction(patternId: string, dayId: string) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
   try {
     const day = await prisma.crewRotationPatternDay.findUnique({
       where: { id: dayId },

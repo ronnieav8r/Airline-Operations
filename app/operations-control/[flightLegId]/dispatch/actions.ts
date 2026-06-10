@@ -1,10 +1,11 @@
 "use server";
 
-import { DispatchPackageStatus, Prisma } from "@prisma/client";
+import { DispatchPackageStatus, Prisma, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/guards";
 
 class DispatchPackageWorkflowError extends Error {}
 
@@ -192,6 +193,8 @@ function revalidateDispatchPaths(flightLegId: string) {
 }
 
 export async function saveManualDispatchPackageAction(flightLegId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     const input = parseManualDispatchInput(flightLegId, formData);
     const weatherSnapshotKey = `manual-weather-${flightLegId}`;
@@ -291,6 +294,7 @@ export async function saveManualDispatchPackageAction(flightLegId: string, formD
           flightPlanReferenceId: flightPlanReference.id,
           performanceData: performanceData(input),
           status: DispatchPackageStatus.DRAFT,
+          createdById: currentUser.id,
         },
       });
     });
@@ -303,6 +307,8 @@ export async function saveManualDispatchPackageAction(flightLegId: string, formD
 }
 
 export async function markDispatchPackageReadyAction(flightLegId: string) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     const dispatch = await getDispatchPackageForAction(flightLegId);
     const errors = dispatchCompletenessErrors({
@@ -335,6 +341,8 @@ export async function markDispatchPackageReadyAction(flightLegId: string) {
 }
 
 export async function markDispatchPackageReviewedAction(flightLegId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     const dispatch = await getDispatchPackageForAction(flightLegId);
 
@@ -347,7 +355,7 @@ export async function markDispatchPackageReviewedAction(flightLegId: string, for
       data: {
         status: DispatchPackageStatus.REVIEWED,
         reviewedAt: new Date(),
-        reviewedById: null,
+        reviewedById: currentUser.id,
         reviewNotes: getOptionalText(formData, "reviewNotes"),
         voidedAt: null,
       },
@@ -361,6 +369,8 @@ export async function markDispatchPackageReviewedAction(flightLegId: string, for
 }
 
 export async function voidDispatchPackageAction(flightLegId: string) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+
   try {
     const dispatch = await getDispatchPackageForAction(flightLegId);
 
