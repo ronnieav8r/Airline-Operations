@@ -39,6 +39,13 @@ plus DB-backed session primitives. The app should populate existing nullable
 user attribution fields only after the relevant route/action is protected.
 Attribution is not a legal signature.
 
+FlightLeg cutover planning is complete in `docs/FLIGHTLEG_CUTOVER_PLAN.md`.
+Legacy `Flight` remains for compatibility/archive until visible app reads,
+coverage APIs, and parity diagnostics prove that `FlightLeg` can serve as the
+primary operational anchor. Do not drop `Flight`, `FlightPassenger`,
+`CrewFlightLog`, or `/api/flights/[id]` compatibility paths in the current
+chain.
+
 ## Updated Long-Term Direction
 
 The current schema is a v1 operations foundation, not the final regulatory data model.

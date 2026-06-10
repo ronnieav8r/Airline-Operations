@@ -1238,22 +1238,22 @@ email/password credentials, HttpOnly DB-backed sessions, expanded operational
 roles, mutation-first route/action protection, and user attribution through
 existing nullable user fields.
 
-Prompt 164 is complete as static QA. Prisma validation, typecheck, lint, build,
-and non-login server-action guard coverage passed for the local auth foundation.
-Local database/browser auth workflow QA remains pending because Docker Desktop
-was unavailable in this environment.
+Prompt 165 is complete as planning. The FlightLeg cutover strategy is staged:
+move visible reads to FlightLeg-primary helpers, then move coverage APIs toward
+FlightLeg-native inputs, then validate parity before treating legacy `Flight` as
+compatibility/archive only.
 
 Preferred next step:
 
 ```text
-Prompt 165: FlightLeg Cutover Planning
+Prompt 166: FlightLeg Read Cutover Foundation
 ```
 
 Scope:
 
-- Inventory remaining legacy `Flight` reads/writes.
-- Define FlightLeg primary-read cutover order.
-- Define parity and rollback criteria before implementation.
+- Move remaining app/page helper reads to FlightLeg-primary data.
+- Preserve legacy `Flight` fallback for unbridged rows only.
+- Keep write workflows maintaining the legacy bridge until later parity QA.
 
 Deferred follow-up to keep on the roadmap:
 
