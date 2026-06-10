@@ -1327,6 +1327,14 @@ because Docker Desktop was unavailable. Release actions remain available.
 
 Prompt 180 should QA the crew compliance chain.
 
+Prompt 180 is complete for static validation. Crew compliance QA documented the
+schema, seed/backfill, read surfaces, aircraft assignment warnings, and release
+readiness warnings. Prisma validation, typecheck, lint, and build passed.
+DB-backed runtime QA remains pending because Docker Desktop was unavailable.
+
+Prompt 181 should refresh docs/status for the completed crew compliance chain
+and set the next macro step to crew scheduling lifecycle planning.
+
 Preferred next step:
 
 ```text

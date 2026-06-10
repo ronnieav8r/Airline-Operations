@@ -158,3 +158,7 @@ Prompt 179 implementation status: complete. FlightLeg release readiness now
 includes crew compliance warnings as warning-only readiness signals. Static
 validation passed; route/browser and snapshot smoke remain pending because
 Docker Desktop was unavailable.
+
+Prompt 180 QA status: complete for static validation. The crew compliance chain
+passes Prisma validation, typecheck, lint, and build. DB-backed runtime checks
+remain pending because Docker Desktop was unavailable.
