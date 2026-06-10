@@ -161,6 +161,12 @@ Prompts 194-205:
 No airline booking integration, hotel provider integration, or expense workflow
 in this chain.
 
+Prompt 194 planning status: complete. The first crew portal should live at
+`/crew/portal`, require the `CREW` role, resolve the linked crew member through
+`CrewMember.userId`, and start read-only. Crew request submission waits for
+Prompt 196; crew approval, schedule publishing, aircraft assignment changes,
+and logistics writes remain forbidden in the first portal chain.
+
 ## Validation Standard
 
 For every implementation slice:

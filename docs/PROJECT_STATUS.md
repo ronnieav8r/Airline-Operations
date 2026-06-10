@@ -1418,18 +1418,25 @@ pattern requests. Aircraft crew assignment remains the operational coverage
 source. DB-backed workflow/browser smoke for this chain remains pending because
 Docker Desktop was unavailable.
 
+Prompt 194 is complete. Crew self-service portal planning is documented in
+`docs/CREW_SELF_SERVICE_PORTAL_PLAN.md`. The first portal should be a read-only
+`/crew/portal` surface for authenticated `CREW` users linked through
+`CrewMember.userId`. Crew request submission waits for Prompt 196, and crew
+users must not approve requests, publish schedules, change aircraft
+assignments, or write logistics records.
+
 Preferred next step:
 
 ```text
-Prompt 194: Crew self-service portal planning
+Prompt 195: Crew portal shell
 ```
 
 Scope:
 
-- Plan crew-only authenticated portal boundaries.
-- Let crew view profile, published schedule context, requests, time off,
-  assignments, and compliance warnings.
-- Do not allow crew approval, aircraft assignment changes, or logistics writes.
+- Add read-only `/crew/portal`.
+- Require `CREW` role and linked `CrewMember`.
+- Show profile, schedule, requests, time off, assignments, and compliance
+  warnings.
 
 Deferred follow-up to keep on the roadmap:
 
