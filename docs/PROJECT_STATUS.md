@@ -1188,16 +1188,22 @@ management using `CrewRotationPattern` and `CrewRotationPatternDay`, without
 pattern application, schedule generation, publishing, request review, or
 assignment automation.
 
+Prompt 150 is complete. `/crew/scheduling/patterns` now supports rotation
+pattern create/edit, active toggles, and day-row add/update/delete using the
+existing pattern tables only.
+
 Preferred next step:
 
 ```text
-Prompt 150: Rotation Pattern Admin Foundation
+Prompt 151: Rotation Pattern Admin QA
 ```
 
 Scope:
 
-- Implement `/crew/scheduling/patterns` for pattern header and day-row admin.
-- Keep pattern application, schedule generation, and publishing deferred.
+- Validate pattern create/edit, day add/update/delete, active toggles, and route
+  rendering.
+- Confirm no schedule periods, schedule entries, crew schedules, crew requests,
+  aircraft assignments, or crew leg assignments are mutated.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind

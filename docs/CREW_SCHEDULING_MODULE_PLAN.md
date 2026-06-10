@@ -244,6 +244,10 @@ Applying patterns to schedule entries remains deferred.
 Prompt 149 planning status: complete. Prompt 150 should implement pattern
 header create/edit, active toggles, and day-row add/update/delete.
 
+Prompt 150 implementation status: complete. `/crew/scheduling/patterns` now
+supports rotation pattern header admin, active toggles, and ordered day-row
+administration without applying patterns to schedules.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
