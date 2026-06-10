@@ -298,6 +298,36 @@ enum ReleaseAuditEventType {
   RELEASE_VOIDED
 }
 
+enum ReleasePackageStatus {
+  DRAFT
+  PREVIEW
+  FINALIZED
+  VOIDED
+}
+
+enum ReleasePackageEvidenceType {
+  OPERATIONAL_CONTROL_RECORD
+  FLIGHT_RELEASE
+  RELEASE_READINESS_SNAPSHOT
+  RELEASE_AUDIT_EVENT
+  MANIFEST
+  MANIFEST_ITEM
+  WEIGHT_BALANCE_RUN
+  FLIGHT_LOCATING_RECORD
+  POSITION_REPORT
+  DISPATCH_PACKAGE
+  WEATHER_BRIEFING
+  NOTAM_SNAPSHOT
+  FLIGHT_PLAN_REFERENCE
+  AIRWORTHINESS_RELEASE
+  AIRCRAFT_CONFIGURATION
+  AIRCRAFT_CAPABILITY
+  DISCREPANCY
+  DEFERRAL
+  MAINTENANCE_EVENT
+  OTHER
+}
+
 enum ImportDomain {
   AIRCRAFT_MAINTENANCE_AIRWORTHINESS
   FLIGHTLEG_HISTORY
@@ -447,6 +477,7 @@ model OperationalControlRecord {
   authorityRevision    AuthorityRevision  @relation(fields: [authorityRevisionId], references: [id], onDelete: Restrict)
   createdBy            User?              @relation("OperationalControlRecordCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   release              FlightRelease?
+  releasePackages      ReleasePackage[]
 
   @@index([operatorId])
   @@index([operatingAuthorityId])
@@ -467,6 +498,7 @@ model FlightRelease {
   readinessSnapshots         ReleaseReadinessSnapshot[]
   releaseOverrides           ReleaseOverride[]
   releaseAuditEvents         ReleaseAuditEvent[]
+  releasePackages            ReleasePackage[]
 
   @@index([operationalControlRecordId])
   @@index([status])
@@ -506,6 +538,7 @@ model User {
   authoredReleaseOverrides    ReleaseOverride[]          @relation("ReleaseOverrideActor")
   approvedReleaseOverrides    ReleaseOverride[]          @relation("ReleaseOverrideApprover")
   releaseAuditEvents          ReleaseAuditEvent[]        @relation("ReleaseAuditEventActor")
+  releasePackagesCaptured     ReleasePackage[]           @relation("ReleasePackageCapturedBy")
   importBatchesCreated        ImportBatch[]              @relation("ImportBatchCreatedBy")
   importBatchesReviewed       ImportBatch[]              @relation("ImportBatchReviewedBy")
   importMappingDecisions      ImportMappingDecision[]    @relation("ImportMappingDecisionDecidedBy")
@@ -812,6 +845,7 @@ model FlightLeg {
   readinessSnapshots       ReleaseReadinessSnapshot[]
   releaseOverrides         ReleaseOverride[]
   releaseAuditEvents       ReleaseAuditEvent[]
+  releasePackages          ReleasePackage[]
 
   @@index([scheduledDeparture])
   @@index([status, scheduledDeparture])
@@ -989,6 +1023,7 @@ model ReleaseReadinessSnapshot {
   evaluatedBy     User?                      @relation("ReleaseReadinessSnapshotEvaluatedBy", fields: [evaluatedById], references: [id], onDelete: SetNull)
   findings        ReleaseReadinessFinding[]
   auditEvents     ReleaseAuditEvent[]
+  releasePackages ReleasePackage[]
 
   @@index([flightLegId, evaluatedAt])
   @@index([flightReleaseId, evaluatedAt])
@@ -1081,6 +1116,55 @@ model ReleaseAuditEvent {
   @@index([overrideId])
   @@index([eventType])
   @@index([actorUserId])
+}
+
+model ReleasePackage {
+  id                         String                    @id @default(cuid())
+  flightLegId                String
+  operationalControlRecordId String
+  flightReleaseId            String
+  readinessSnapshotId        String?
+  packageNumber              String                    @unique
+  status                     ReleasePackageStatus      @default(PREVIEW)
+  capturedAt                 DateTime                  @default(now())
+  finalizedAt                DateTime?
+  voidedAt                   DateTime?
+  capturedById               String?
+  summary                    Json?
+  notes                      String?
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+  flightLeg                  FlightLeg                 @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  operationalControlRecord   OperationalControlRecord  @relation(fields: [operationalControlRecordId], references: [id], onDelete: Restrict)
+  flightRelease              FlightRelease             @relation(fields: [flightReleaseId], references: [id], onDelete: Restrict)
+  readinessSnapshot          ReleaseReadinessSnapshot? @relation(fields: [readinessSnapshotId], references: [id], onDelete: SetNull)
+  capturedBy                 User?                     @relation("ReleasePackageCapturedBy", fields: [capturedById], references: [id], onDelete: SetNull)
+  evidenceLinks              ReleasePackageEvidenceLink[]
+
+  @@index([flightLegId, capturedAt])
+  @@index([operationalControlRecordId])
+  @@index([flightReleaseId])
+  @@index([readinessSnapshotId])
+  @@index([status])
+  @@index([capturedById])
+}
+
+model ReleasePackageEvidenceLink {
+  id               String                     @id @default(cuid())
+  releasePackageId String
+  evidenceType     ReleasePackageEvidenceType
+  evidenceId       String?
+  evidenceLabel    String
+  statusLabel      String?
+  isRequired       Boolean                    @default(false)
+  summary          Json?
+  capturedMetadata Json?
+  createdAt        DateTime                   @default(now())
+  releasePackage   ReleasePackage             @relation(fields: [releasePackageId], references: [id], onDelete: Cascade)
+
+  @@index([releasePackageId])
+  @@index([evidenceType, evidenceId])
+  @@index([isRequired])
 }
 
 model ImportBatch {

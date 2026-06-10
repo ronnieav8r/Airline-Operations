@@ -51,6 +51,9 @@ ReleasePackage planning is complete in `docs/RELEASEPACKAGE_PLAN.md`.
 `FlightRelease` remains the release decision/status record until a later
 decision-complete transition.
 
+Prompt 170 implements that additive foundation with `ReleasePackage` and
+`ReleasePackageEvidenceLink`. No current `FlightRelease` action behavior changes.
+
 ## Updated Long-Term Direction
 
 The current schema is a v1 operations foundation, not the final regulatory data model.

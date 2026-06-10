@@ -1238,23 +1238,22 @@ email/password credentials, HttpOnly DB-backed sessions, expanded operational
 roles, mutation-first route/action protection, and user attribution through
 existing nullable user fields.
 
-Prompt 169 is complete as planning. `ReleasePackage` is defined as an additive
-release packet/bundle around the current `FlightRelease`; it does not replace
-`FlightRelease`, hard-block release actions, add signatures, or add provider
-integrations in the first implementation.
+Prompt 170 is complete as an additive schema foundation. The schema now includes
+`ReleasePackage`, `ReleasePackageEvidenceLink`, package status/evidence-type
+enums, and health counts. Current `FlightRelease` actions remain unchanged and
+warning-first.
 
 Preferred next step:
 
 ```text
-Prompt 170: ReleasePackage Additive Schema Foundation
+Prompt 171: ReleasePackage Read-Only Preview
 ```
 
 Scope:
 
-- Add ReleasePackage header and evidence-link tables additively.
-- Link to FlightLeg, OperationalControlRecord, FlightRelease, and optional
-  readiness snapshot.
-- Do not change current FlightRelease actions or add hard blocking.
+- Show package completeness on FlightLeg detail.
+- Display existing package headers/evidence links when present.
+- Do not add capture actions or mutate FlightRelease.
 
 Deferred follow-up to keep on the roadmap:
 

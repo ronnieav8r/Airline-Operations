@@ -105,6 +105,36 @@ Enum ReleaseAuditEventType {
   RELEASE_VOIDED
 }
 
+Enum ReleasePackageStatus {
+  DRAFT
+  PREVIEW
+  FINALIZED
+  VOIDED
+}
+
+Enum ReleasePackageEvidenceType {
+  OPERATIONAL_CONTROL_RECORD
+  FLIGHT_RELEASE
+  RELEASE_READINESS_SNAPSHOT
+  RELEASE_AUDIT_EVENT
+  MANIFEST
+  MANIFEST_ITEM
+  WEIGHT_BALANCE_RUN
+  FLIGHT_LOCATING_RECORD
+  POSITION_REPORT
+  DISPATCH_PACKAGE
+  WEATHER_BRIEFING
+  NOTAM_SNAPSHOT
+  FLIGHT_PLAN_REFERENCE
+  AIRWORTHINESS_RELEASE
+  AIRCRAFT_CONFIGURATION
+  AIRCRAFT_CAPABILITY
+  DISCREPANCY
+  DEFERRAL
+  MAINTENANCE_EVENT
+  OTHER
+}
+
 Enum ImportDomain {
   AIRCRAFT_MAINTENANCE_AIRWORTHINESS
   FLIGHTLEG_HISTORY
@@ -663,15 +693,33 @@ Table OperationalControlRecord {
 
 Table ReleasePackage {
   id varchar [pk]
-  flightLegId varchar [not null, unique]
-  operationalControlRecordId varchar [not null, unique]
-  status ReleaseStatus [not null]
-  releasedById varchar
-  releasedAt timestamp
-  amendedAt timestamp
-  releaseNotes text
+  flightLegId varchar [not null]
+  operationalControlRecordId varchar [not null]
+  flightReleaseId varchar [not null]
+  readinessSnapshotId varchar
+  packageNumber varchar [not null, unique]
+  status ReleasePackageStatus [not null]
+  capturedAt timestamp [not null]
+  finalizedAt timestamp
+  voidedAt timestamp
+  capturedById varchar
+  summary json
+  notes text
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
+}
+
+Table ReleasePackageEvidenceLink {
+  id varchar [pk]
+  releasePackageId varchar [not null]
+  evidenceType ReleasePackageEvidenceType [not null]
+  evidenceId varchar
+  evidenceLabel varchar [not null]
+  statusLabel varchar
+  isRequired boolean [not null]
+  summary json
+  capturedMetadata json
+  createdAt timestamp [not null]
 }
 
 Table ReleasePolicyProfile {
@@ -1164,24 +1212,27 @@ Ref: OperationalControlRecord.operationalControlPersonId > User.id
 Ref: OperationalControlRecord.createdById > User.id
 Ref: ReleasePackage.flightLegId > FlightLeg.id
 Ref: ReleasePackage.operationalControlRecordId > OperationalControlRecord.id
-Ref: ReleasePackage.releasedById > User.id
+Ref: ReleasePackage.flightReleaseId > FlightRelease.id
+Ref: ReleasePackage.readinessSnapshotId > ReleaseReadinessSnapshot.id
+Ref: ReleasePackage.capturedById > User.id
+Ref: ReleasePackageEvidenceLink.releasePackageId > ReleasePackage.id
 Ref: ReleasePolicyProfile.operatorId > Operator.id
 Ref: ReleasePolicyProfile.operatingAuthorityId > OperatingAuthority.id
 Ref: ReleasePolicyRule.profileId > ReleasePolicyProfile.id
 Ref: ReleaseReadinessSnapshot.flightLegId > FlightLeg.id
-Ref: ReleaseReadinessSnapshot.flightReleaseId > ReleasePackage.id
+Ref: ReleaseReadinessSnapshot.flightReleaseId > FlightRelease.id
 Ref: ReleaseReadinessSnapshot.policyProfileId > ReleasePolicyProfile.id
 Ref: ReleaseReadinessSnapshot.evaluatedById > User.id
 Ref: ReleaseReadinessFinding.snapshotId > ReleaseReadinessSnapshot.id
 Ref: ReleaseReadinessFinding.ruleId > ReleasePolicyRule.id
 Ref: ReleaseOverride.findingId > ReleaseReadinessFinding.id
 Ref: ReleaseOverride.flightLegId > FlightLeg.id
-Ref: ReleaseOverride.flightReleaseId > ReleasePackage.id
+Ref: ReleaseOverride.flightReleaseId > FlightRelease.id
 Ref: ReleaseOverride.policyProfileId > ReleasePolicyProfile.id
 Ref: ReleaseOverride.actorUserId > User.id
 Ref: ReleaseOverride.approvedById > User.id
 Ref: ReleaseAuditEvent.flightLegId > FlightLeg.id
-Ref: ReleaseAuditEvent.flightReleaseId > ReleasePackage.id
+Ref: ReleaseAuditEvent.flightReleaseId > FlightRelease.id
 Ref: ReleaseAuditEvent.snapshotId > ReleaseReadinessSnapshot.id
 Ref: ReleaseAuditEvent.overrideId > ReleaseOverride.id
 Ref: ReleaseAuditEvent.actorUserId > User.id

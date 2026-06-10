@@ -41,6 +41,9 @@ Use JSON only for copied metadata/summaries where source record structures vary.
 Keep hard relational links for core records: FlightLeg, OperationalControlRecord,
 FlightRelease, and optional readiness snapshot.
 
+Prompt 170 implementation status: complete as an additive schema foundation.
+Package preview UI and capture actions remain deferred.
+
 ## First Workflow Direction
 
 Start with read-only preview, then explicit preview capture. Do not create
