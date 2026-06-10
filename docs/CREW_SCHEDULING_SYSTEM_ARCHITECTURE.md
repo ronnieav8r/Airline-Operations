@@ -218,3 +218,14 @@ should create and maintain manual draft schedule entries inside schedule
 periods. These entries are planning records only. They should not publish
 schedules, generate `CrewSchedule` bridge rows, apply rotation patterns,
 approve schedule requests, or mutate aircraft-block assignments.
+
+## Prompt 182 Schedule Publish/Finalize Planning
+
+Prompt 182 planning status: complete. The selected publish model marks a
+schedule period and eligible schedule entries `PUBLISHED`, sets published
+metadata, and creates or updates linked `CrewSchedule` bridge rows for current
+planner compatibility.
+
+Publishing remains planning/availability behavior only. It must not create,
+replace, or end `AircraftCrewAssignment` rows, must not hard-enforce duty/rest,
+and must not review crew requests or apply rotation patterns.

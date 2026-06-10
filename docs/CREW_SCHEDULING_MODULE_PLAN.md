@@ -235,6 +235,16 @@ Prompt 148 QA status: partial pass. Prisma validation, typecheck, lint, and
 build passed. Local workflow/browser QA is pending because Docker Desktop was
 not running in the session.
 
+## Prompt 182 Schedule Publish/Finalize Planning
+
+The selected publish model keeps `CrewScheduleEntry` as the richer scheduling
+record and uses `CrewSchedule` as the compatibility bridge. Publishing a period
+should mark eligible entries and the period as `PUBLISHED`, set published
+metadata, and create/update one linked `CrewSchedule` row per published entry.
+
+Publishing does not mutate aircraft assignments, does not hard-enforce
+duty/rest, and does not review crew requests.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day

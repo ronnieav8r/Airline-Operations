@@ -1339,17 +1339,22 @@ Prompt 181 is complete. Crew compliance docs/status now reflect the completed
 foundation chain. Static validation for the chain passed in Prompt 180, and
 DB-backed runtime QA remains pending because Docker Desktop was unavailable.
 
+Prompt 182 is complete. Schedule publishing is planned as a planning/availability
+finalization workflow: publish eligible `CrewScheduleEntry` rows, create or
+update linked `CrewSchedule` bridge rows, and mark the period published without
+mutating aircraft assignments or hard-enforcing duty/rest.
+
 Preferred next step:
 
 ```text
-Prompt 182: Schedule publish/finalize planning
+Prompt 183: Schedule publish foundation
 ```
 
 Scope:
 
-- Plan schedule period publish/finalize behavior.
-- Define how published `CrewScheduleEntry` rows create linked `CrewSchedule`
-  bridge rows.
+- Add a protected publish action on schedule period detail.
+- Mark eligible entries and the period `PUBLISHED`.
+- Create/update linked `CrewSchedule` bridge rows idempotently.
 - Keep published schedules as availability/planning context only.
 - Do not auto-create aircraft assignments or add duty/rest hard enforcement.
 
