@@ -112,6 +112,10 @@ Add only auth schema primitives:
 No route protection, login UI, password reset, MFA, signatures, tenant
 membership, or provider auth in Prompt 161.
 
+Prompt 161 implementation status: complete. `UserRole` now includes the planned
+operational roles, and the schema has local password credential plus DB-backed
+session primitives.
+
 ## Prompt 162 Login Target
 
 - Add `/login`.

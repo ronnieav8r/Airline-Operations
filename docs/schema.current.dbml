@@ -207,7 +207,11 @@ Enum IdDocumentType {
 Enum UserRole {
   ADMIN
   OPS
+  DISPATCH
+  MAINTENANCE
   CREW
+  SAFETY
+  VIEWER
 }
 
 Enum OperatingPart {
@@ -461,6 +465,35 @@ Table User {
   isActive boolean [not null, default: true]
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
+}
+
+Table UserPasswordCredential {
+  id varchar [pk]
+  userId varchar [not null, unique]
+  passwordHash varchar [not null]
+  passwordHashAlgorithm varchar [not null, default: "scrypt"]
+  mustChangePassword boolean [not null, default: false]
+  lastChangedAt timestamp [not null]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table UserSession {
+  id varchar [pk]
+  userId varchar [not null]
+  sessionTokenHash varchar [not null, unique]
+  expiresAt timestamp [not null]
+  revokedAt timestamp
+  userAgent varchar
+  ipAddress varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    userId
+    expiresAt
+    revokedAt
+  }
 }
 
 Table UserProfile {
@@ -1508,6 +1541,8 @@ Ref: OperationalControlRecord.authorityRevisionId > AuthorityRevision.id
 Ref: OperationalControlRecord.createdById > User.id
 Ref: FlightRelease.operationalControlRecordId > OperationalControlRecord.id
 Ref: FlightRelease.releasedById > User.id
+Ref: UserPasswordCredential.userId > User.id
+Ref: UserSession.userId > User.id
 Ref: UserProfile.userId > User.id
 Ref: Aircraft.homeStationId > Station.id
 Ref: Flight.aircraftId > Aircraft.id

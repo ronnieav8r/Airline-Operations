@@ -197,7 +197,11 @@ enum IdDocumentType {
 enum UserRole {
   ADMIN
   OPS
+  DISPATCH
+  MAINTENANCE
   CREW
+  SAFETY
+  VIEWER
 }
 
 enum OperatingPart {
@@ -475,6 +479,8 @@ model User {
   isActive                    Boolean                    @default(true)
   createdAt                   DateTime                   @default(now())
   updatedAt                   DateTime                   @updatedAt
+  passwordCredential          UserPasswordCredential?
+  sessions                    UserSession[]
   profile                     UserProfile?
   crewMember                  CrewMember?
   assignedCrewAssignments     AircraftCrewAssignment[]   @relation("AssignmentAuthor")
@@ -510,6 +516,37 @@ model User {
   crewRotationPatternsCreated CrewRotationPattern[]      @relation("CrewRotationPatternCreatedBy")
   crewScheduleEntriesCreated  CrewScheduleEntry[]        @relation("CrewScheduleEntryCreatedBy")
   crewScheduleEntriesPublished CrewScheduleEntry[]       @relation("CrewScheduleEntryPublishedBy")
+}
+
+model UserPasswordCredential {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  passwordHash          String
+  passwordHashAlgorithm String   @default("scrypt")
+  mustChangePassword    Boolean  @default(false)
+  lastChangedAt         DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([lastChangedAt])
+}
+
+model UserSession {
+  id               String    @id @default(cuid())
+  userId           String
+  sessionTokenHash String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  userAgent        String?
+  ipAddress        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
 }
 
 model UserProfile {

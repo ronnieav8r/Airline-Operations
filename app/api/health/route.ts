@@ -52,6 +52,8 @@ export async function GET() {
       crewRotationPatternCount,
       crewRotationPatternDayCount,
       crewScheduleEntryCount,
+      userPasswordCredentialCount,
+      userSessionCount,
     ] = await Promise.all([
       prisma.station.count(),
       prisma.aircraft.count(),
@@ -99,6 +101,8 @@ export async function GET() {
       prisma.crewRotationPattern.count(),
       prisma.crewRotationPatternDay.count(),
       prisma.crewScheduleEntry.count(),
+      prisma.userPasswordCredential.count(),
+      prisma.userSession.count(),
     ]);
 
     return NextResponse.json({
@@ -151,6 +155,8 @@ export async function GET() {
         crewRotationPatterns: crewRotationPatternCount,
         crewRotationPatternDays: crewRotationPatternDayCount,
         crewScheduleEntries: crewScheduleEntryCount,
+        userPasswordCredentials: userPasswordCredentialCount,
+        userSessions: userSessionCount,
       },
     });
   } catch (error) {

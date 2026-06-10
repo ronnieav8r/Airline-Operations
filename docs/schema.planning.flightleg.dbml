@@ -248,6 +248,35 @@ Table User {
   updatedAt timestamp [not null]
 }
 
+Table UserPasswordCredential {
+  id varchar [pk]
+  userId varchar [not null, unique]
+  passwordHash varchar [not null]
+  passwordHashAlgorithm varchar [not null, default: "scrypt"]
+  mustChangePassword boolean [not null, default: false]
+  lastChangedAt timestamp [not null]
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table UserSession {
+  id varchar [pk]
+  userId varchar [not null]
+  sessionTokenHash varchar [not null, unique]
+  expiresAt timestamp [not null]
+  revokedAt timestamp
+  userAgent varchar
+  ipAddress varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    userId
+    expiresAt
+    revokedAt
+  }
+}
+
 Table UserProfile {
   id varchar [pk]
   userId varchar [not null, unique]
@@ -1070,6 +1099,8 @@ Table CorrectiveAction {
 
 // Core refs.
 
+Ref: UserPasswordCredential.userId > User.id
+Ref: UserSession.userId > User.id
 Ref: UserProfile.userId > User.id
 Ref: OperatingAuthority.operatorId > Operator.id
 Ref: AuthorityRevision.operatingAuthorityId > OperatingAuthority.id
