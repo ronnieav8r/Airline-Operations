@@ -248,6 +248,11 @@ Prompt 150 implementation status: complete. `/crew/scheduling/patterns` now
 supports rotation pattern header admin, active toggles, and ordered day-row
 administration without applying patterns to schedules.
 
+Prompt 151 QA status: partial pass. Prisma validation, typecheck, lint, and
+build passed. The build includes `/crew/scheduling/patterns`. Local
+workflow/browser QA is pending because Docker Desktop was not running in the
+session.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

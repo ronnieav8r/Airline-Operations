@@ -1192,18 +1192,23 @@ Prompt 150 is complete. `/crew/scheduling/patterns` now supports rotation
 pattern create/edit, active toggles, and day-row add/update/delete using the
 existing pattern tables only.
 
+Prompt 151 is partial. Static validation passed for the rotation-pattern admin
+workflow, including route generation for `/crew/scheduling/patterns`, but local
+DB-backed workflow/browser QA is pending because Docker Desktop was not running.
+
 Preferred next step:
 
 ```text
-Prompt 151: Rotation Pattern Admin QA
+Prompt 152: Crew Schedule Entry Planning
 ```
 
 Scope:
 
-- Validate pattern create/edit, day add/update/delete, active toggles, and route
-  rendering.
-- Confirm no schedule periods, schedule entries, crew schedules, crew requests,
-  aircraft assignments, or crew leg assignments are mutated.
+- Plan the first controlled schedule-entry workflow after schedule periods and
+  rotation patterns exist.
+- Define whether Prompt 153 should create draft `CrewScheduleEntry` rows
+  manually for a schedule period, without publishing, pattern application, crew
+  self-service, or assignment automation.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind
