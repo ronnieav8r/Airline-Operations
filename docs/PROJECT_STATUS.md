@@ -1287,18 +1287,23 @@ Prompt 173 is complete. Static validation passed for ReleasePackage schema,
 preview, and explicit capture behavior. Local DB-backed workflow smoke remains
 pending because Docker Desktop was unavailable.
 
+Prompt 174 is complete. Crew compliance is now planned as an additive evidence
+foundation beside the current shallow `CrewQualification` table, with separate
+certificate, medical, training, check, recency, duty, and rest records feeding
+warning-only surfaces first.
+
 Preferred next step:
 
 ```text
-Prompt 174: Crew compliance planning
+Prompt 175: Additive crew compliance schema foundation
 ```
 
 Scope:
 
-- Define certificate/rating, medical, training, check, recency, duty, and rest
-  boundaries.
-- Decide which compliance records are warning-only surfaces first.
-- Prepare the additive schema foundation scope for Prompt 175.
+- Add the crew compliance tables additively.
+- Update DBML and health counts.
+- Do not add UI, CRUD workflows, hard release blocking, duty/rest enforcement,
+  imports, provider integrations, or file uploads.
 
 Deferred follow-up to keep on the roadmap:
 

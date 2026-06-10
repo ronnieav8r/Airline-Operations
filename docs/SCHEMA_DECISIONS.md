@@ -272,7 +272,18 @@ Use warning-first enforcement in v1:
 
 Ops/Admin should be able to continue after seeing warnings.
 
-Future qualification work should split the broad qualification idea into separate records for certificates/ratings, medicals, training events, check events, route checks, recency events, duty periods, and rest periods. The current `CrewQualification` table is intentionally shallow.
+Future qualification work should split the broad qualification idea into
+separate records for certificates/ratings, medicals, training events, check
+events, route checks, recency events, duty periods, and rest periods. The
+current `CrewQualification` table is intentionally shallow.
+
+Prompt 174 planning is complete in `docs/CREW_COMPLIANCE_PLAN.md`. The selected
+direction is additive: keep `CrewQualification` for current compatibility
+warnings and add richer compliance evidence tables beside it. Prompt 175 should
+add schema only for `CrewCertificate`, `CrewMedical`, `CrewTrainingEvent`,
+`CrewCheckEvent`, `CrewRecencyEvent`, `CrewDutyPeriod`, and `CrewRestPeriod`.
+Those records should feed warning-only surfaces first, not hard release
+blocking or legal duty/rest enforcement.
 
 ## History Rule
 

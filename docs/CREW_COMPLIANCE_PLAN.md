@@ -1,0 +1,135 @@
+# Crew Compliance Plan
+
+Last updated: 2026-06-10
+
+## Summary
+
+Crew compliance should become a first-class evidence area inside AeroOps. The
+current `CrewQualification` table is intentionally shallow and supports current
+warning surfaces, but it does not represent the full set of records needed for
+certificate/rating, medical, training, check, recency, duty, and rest context.
+
+The selected direction is additive. Keep the current table and add deeper
+record types beside it.
+
+## Source-Of-Truth Boundaries
+
+Crew compliance answers:
+
+```text
+What evidence exists that this crew member is eligible, current, trained,
+checked, recent, and rested enough for the planned operation?
+```
+
+Aircraft crew assignment answers:
+
+```text
+Who is actually assigned to this aircraft block?
+```
+
+Scheduling answers:
+
+```text
+Who appears available and where?
+```
+
+These should stay separate:
+
+- `AircraftCrewAssignment` remains operational staffing truth.
+- `CrewSchedule` and `CrewScheduleEntry` remain planning/availability context.
+- `CrewLegAssignment` remains FlightLeg snapshot/evidence.
+- New compliance records become eligibility evidence and warning inputs.
+
+## Current Schema Support
+
+Current support:
+
+- `CrewMember`: identity, employment status, base, broad duty status.
+- `CrewQualification`: aircraft type plus seat role, issued/expiry dates.
+- `CrewSchedule` / `CrewScheduleEntry`: planned availability context.
+- `TimeOffRequest`: absence context.
+- `AircraftCrewAssignment`: actual aircraft-block staffing.
+- `CrewLegAssignment`: FlightLeg snapshot/evidence.
+
+Current gaps:
+
+- No separate certificate/rating records.
+- No medical certificate records.
+- No training program or module completion records.
+- No proficiency, competency, line, route, or instrument check records.
+- No recency ledger/events.
+- No duty-period history.
+- No rest-period history.
+- No attachment/file evidence.
+- No legal signature semantics.
+- No duty/rest legality engine.
+
+## Additive Compliance Records
+
+Prompt 175 should add these tables:
+
+- `CrewCertificate`: certificates, ratings, endorsements, and related
+  authority/effective-date evidence.
+- `CrewMedical`: medical certificate/class records and limitations.
+- `CrewTrainingEvent`: training program/module completion evidence.
+- `CrewCheckEvent`: checkride, proficiency, competency, line, route, or
+  instrument check evidence.
+- `CrewRecencyEvent`: rolling-window experience evidence such as landings,
+  approaches, route/area exposure, or operating experience events.
+- `CrewDutyPeriod`: duty-period history or planned duty evidence.
+- `CrewRestPeriod`: rest-period history or planned rest evidence.
+
+Each record should favor history over overwrite and include enough fields for:
+
+- crew member lookup,
+- status/currentness,
+- issue/completion/start dates,
+- expiry/end dates where applicable,
+- source or notes,
+- future user attribution,
+- future import/source references.
+
+## Warning-First Policy
+
+Compliance warnings should remain warning-only through this chain:
+
+- Missing certificate or rating: warn.
+- Expired certificate, medical, training, check, or recency evidence: warn.
+- Missing duty/rest evidence: warn.
+- Duty/rest conflict candidate: warn.
+
+Do not hard-block aircraft assignment saves or FlightRelease actions until a
+later release/auth/signature policy slice is decision-complete.
+
+## Future Read Surfaces
+
+After schema and seed:
+
+- Crew detail should show grouped compliance history.
+- Crew planner should show compact compliance health/warnings.
+- Aircraft crew assignment should surface compliance warnings while saving
+  remains allowed.
+- FlightLeg release readiness should include crew compliance warnings.
+
+## Deferred
+
+- Legal duty/rest enforcement algorithm.
+- File uploads for certificate or training documents.
+- Provider/FAA verification integrations.
+- Electronic signatures.
+- Crew self-service compliance uploads.
+- Import execution for old compliance records.
+- Hard release blocking.
+
+## Next Chain
+
+```text
+Prompt 175: Additive crew compliance schema foundation
+Prompt 176: Compliance seed/backfill/demo data and health counts
+Prompt 177: Crew compliance read surfaces on crew detail and planner
+Prompt 178: Aircraft assignment warning integration
+Prompt 179: Release readiness warning integration
+Prompt 180: Crew compliance QA
+Prompt 181: Compliance docs/status refresh
+```
+

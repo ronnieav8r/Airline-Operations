@@ -98,6 +98,11 @@ Prompts 174-181:
 
 No legal duty/rest enforcement algorithm yet. Warnings only.
 
+Prompt 174 planning status: complete. The selected compliance model is
+additive and documented in `docs/CREW_COMPLIANCE_PLAN.md`: keep existing
+`CrewQualification` for compatibility warnings while adding separate
+certificate, medical, training, check, recency, duty, and rest evidence tables.
+
 ## Chain 4: Crew Scheduling Lifecycle
 
 Prompts 182-193:
