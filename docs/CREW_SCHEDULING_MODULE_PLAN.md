@@ -295,6 +295,11 @@ admin/ops approve and deny review for submitted `CrewScheduleRequest` rows.
 Review updates only the request row and keeps schedule-entry creation,
 publishing, and aircraft assignment changes out of scope.
 
+Prompt 191 implementation status: complete. Approved pattern requests can now
+feed the pattern preview/generate flow. Generated draft entries are linked back
+to the approved request through `sourceRequestId` and remain draft planning
+records only.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day

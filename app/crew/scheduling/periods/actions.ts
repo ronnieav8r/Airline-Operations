@@ -53,6 +53,7 @@ type PatternGenerationInput = {
   days: number;
   endDate: Date | null;
   patternId: string;
+  sourceRequestId: string | null;
   startDate: Date;
 };
 
@@ -291,6 +292,7 @@ function parsePatternGenerationInput(formData: FormData): PatternGenerationInput
     days: parseOptionalInteger(formData, "previewDays", 14),
     endDate,
     patternId: getRequiredText(formData, "previewPatternId", "Rotation pattern"),
+    sourceRequestId: getOptionalText(formData, "previewSourceRequestId"),
     startDate,
   };
 }
@@ -328,6 +330,10 @@ function patternGenerationRedirectUrl(
     previewPatternId: input.patternId,
     previewStartDate: entryDateKey(input.startDate),
   });
+
+  if (input.sourceRequestId) {
+    params.set("previewSourceRequestId", input.sourceRequestId);
+  }
 
   if (input.endDate) {
     params.set("previewEndDate", entryDateKey(input.endDate));
@@ -575,6 +581,34 @@ async function generatePatternDraftEntries(
     throw new ScheduleEntryWorkflowError("Generated date window must stay inside the schedule period.");
   }
 
+  if (input.sourceRequestId) {
+    const sourceRequest = await tx.crewScheduleRequest.findUnique({
+      where: { id: input.sourceRequestId },
+      select: {
+        crewMemberId: true,
+        periodId: true,
+        requestedPatternId: true,
+        status: true,
+      },
+    });
+
+    if (
+      !sourceRequest ||
+      sourceRequest.periodId !== periodId ||
+      sourceRequest.crewMemberId !== input.crewMemberId
+    ) {
+      throw new ScheduleEntryWorkflowError("Source request must belong to this period and crew member.");
+    }
+
+    if (sourceRequest.status !== CrewScheduleRequestStatus.APPROVED) {
+      throw new ScheduleEntryWorkflowError("Source request must be approved before generating draft entries.");
+    }
+
+    if (sourceRequest.requestedPatternId && sourceRequest.requestedPatternId !== input.patternId) {
+      throw new ScheduleEntryWorkflowError("Selected pattern must match the approved source request.");
+    }
+  }
+
   const existingEntries = await tx.crewScheduleEntry.findMany({
     where: {
       periodId,
@@ -619,6 +653,7 @@ async function generatePatternDraftEntries(
       notes: `Generated from rotation pattern ${pattern.id}.`,
       periodId,
       rotationPatternId: pattern.id,
+      sourceRequestId: input.sourceRequestId,
       startsAt: dateWithMinutes(date, patternDay.startsAtMinutes),
       stationId: patternDay.stationId,
       status: CrewScheduleEntryStatus.DRAFT,

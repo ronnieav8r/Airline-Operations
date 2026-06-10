@@ -277,3 +277,8 @@ support admin/ops approve and deny review for submitted `CrewScheduleRequest`
 rows. Review records status, timestamp, reviewer, and optional notes. Approval
 does not create schedule entries, publish schedules, create bridge rows, or
 mutate aircraft assignments.
+
+Prompt 191 implementation status: complete. Approved pattern requests can now
+prefill the pattern preview/generate flow from the request card. Generated
+draft entries carry `sourceRequestId`, remain `DRAFT`, and still do not publish
+or mutate aircraft assignments.

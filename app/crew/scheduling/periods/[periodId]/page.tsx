@@ -40,6 +40,7 @@ type PageProps = {
     previewEndDate?: string | string[];
     previewDays?: string | string[];
     previewPatternId?: string | string[];
+    previewSourceRequestId?: string | string[];
     previewStartDate?: string | string[];
   }>;
 };
@@ -55,6 +56,7 @@ type PatternPreviewInput = {
   days: number;
   endDate: Date | null;
   patternId: string;
+  sourceRequestId: string;
   startDate: Date | null;
 };
 type PatternPreviewRow = {
@@ -368,6 +370,7 @@ function getPatternPreviewInput(searchParams: Awaited<PageProps["searchParams"]>
     days: parseQueryNumber(searchParams.previewDays, 14),
     endDate: parseQueryDate(searchParams.previewEndDate),
     patternId: firstSearchParam(searchParams.previewPatternId) ?? "",
+    sourceRequestId: firstSearchParam(searchParams.previewSourceRequestId) ?? "",
     startDate: parseQueryDate(searchParams.previewStartDate),
   };
 }
@@ -578,7 +581,34 @@ function RequestReviewForm({
   );
 }
 
+function requestPatternPreviewHref(periodId: string, request: RequestRow): string | null {
+  if (
+    request.status !== CrewScheduleRequestStatus.APPROVED ||
+    request.requestType !== "PATTERN_REQUEST" ||
+    !request.requestedPattern ||
+    !request.startDate
+  ) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    previewCrewMemberId: request.crewMember.id,
+    previewDays: "14",
+    previewPatternId: request.requestedPattern.id,
+    previewSourceRequestId: request.id,
+    previewStartDate: toInputDate(request.startDate),
+  });
+
+  if (request.endDate) {
+    params.set("previewEndDate", toInputDate(request.endDate));
+  }
+
+  return `/crew/scheduling/periods/${periodId}?${params.toString()}#pattern-preview`;
+}
+
 function RequestCard({ periodId, request }: { periodId: string; request: RequestRow }) {
+  const patternPreviewHref = requestPatternPreviewHref(periodId, request);
+
   return (
     <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -627,6 +657,14 @@ function RequestCard({ periodId, request }: { periodId: string; request: Request
           Reviewed requests are planning context only. They do not create schedule entries automatically.
         </p>
       )}
+      {patternPreviewHref ? (
+        <Link
+          className="mt-3 inline-flex rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800"
+          href={patternPreviewHref}
+        >
+          Preview draft entries from this request
+        </Link>
+      ) : null}
     </article>
   );
 }
@@ -740,6 +778,9 @@ function PatternPreviewPanel({
           required
           type="number"
         />
+        {input.sourceRequestId ? (
+          <input name="previewSourceRequestId" type="hidden" value={input.sourceRequestId} />
+        ) : null}
         <div className="lg:col-span-5">
           <button
             className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
@@ -815,6 +856,7 @@ function PatternPreviewPanel({
           >
             <input name="previewCrewMemberId" type="hidden" value={input.crewMemberId} />
             <input name="previewPatternId" type="hidden" value={input.patternId} />
+            <input name="previewSourceRequestId" type="hidden" value={input.sourceRequestId} />
             <input name="previewStartDate" type="hidden" value={toInputDate(input.startDate)} />
             <input name="previewEndDate" type="hidden" value={toInputDate(input.endDate)} />
             <input name="previewDays" type="hidden" value={String(input.days)} />
@@ -830,7 +872,9 @@ function PatternPreviewPanel({
       {preview.crewMember && preview.pattern ? (
         <p className="mt-3 text-xs text-zinc-500">
           Previewing {preview.pattern.name} for {crewName(preview.crewMember)}
-          {" "}inside {period.name}. Publishing remains a separate action.
+          {" "}inside {period.name}
+          {input.sourceRequestId ? " from an approved source request" : ""}.
+          Publishing remains a separate action.
         </p>
       ) : null}
     </section>

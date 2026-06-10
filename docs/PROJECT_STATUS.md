@@ -1397,17 +1397,24 @@ bridge rows, or mutate aircraft assignments. Static validation passed;
 DB-backed workflow/browser smoke remains pending because Docker Desktop was
 unavailable.
 
+Prompt 191 is complete. Approved pattern requests now expose a request-to-preview
+helper, and generated draft entries carry `sourceRequestId` back to the
+approved request. Generated entries remain `DRAFT`; no publish, `CrewSchedule`
+bridge row creation, request auto-generation, or aircraft assignment mutation
+was added. Static validation passed; DB-backed workflow/browser smoke remains
+pending because Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 191: Request-to-draft-entry helper
+Prompt 192: Crew request workflow QA
 ```
 
 Scope:
 
-- Add controlled helper for approved requests.
-- Link created draft entries to `sourceRequestId`.
-- Keep output as draft planning entries only.
+- Verify request review and request-to-draft helper behavior.
+- Confirm generated rows link to approved source requests.
+- Confirm no publish, bridge-row, or aircraft-assignment side effects.
 
 Deferred follow-up to keep on the roadmap:
 
