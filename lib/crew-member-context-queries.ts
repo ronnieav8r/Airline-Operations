@@ -1,5 +1,6 @@
 import {
   AssignmentStatus,
+  CrewScheduleEntryStatus,
   DutyStatus,
   EmploymentStatus,
   FlightLegStatus,
@@ -79,6 +80,35 @@ const crewMemberContextSelect = {
         select: {
           code: true,
           city: true,
+        },
+      },
+    },
+  },
+  scheduleEntries: {
+    orderBy: [{ date: "asc" }, { startsAt: "asc" }],
+    select: {
+      id: true,
+      date: true,
+      dutyStatus: true,
+      startsAt: true,
+      endsAt: true,
+      status: true,
+      notes: true,
+      period: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      station: {
+        select: {
+          code: true,
+          city: true,
+        },
+      },
+      rotationPattern: {
+        select: {
+          name: true,
         },
       },
     },
@@ -184,6 +214,7 @@ export type CrewMemberContextData = CrewMemberContextPayload & {
   activeAssignments: CrewMemberContextPayload["assignments"];
   availabilityWarnings: string[];
   schedulesInWindow: CrewMemberContextPayload["schedules"];
+  scheduleEntriesInWindow: CrewMemberContextPayload["scheduleEntries"];
   timeOffInWindow: CrewMemberContextPayload["timeOffRequests"];
   upcomingFlights: CrewMemberContextFlight[];
   windowEnd: Date;
@@ -272,6 +303,7 @@ function hasQualificationWarning(
 function buildAvailabilityWarnings(
   crewMember: CrewMemberContextPayload,
   schedulesInWindow: CrewMemberContextPayload["schedules"],
+  scheduleEntriesInWindow: CrewMemberContextPayload["scheduleEntries"],
   timeOffInWindow: CrewMemberContextPayload["timeOffRequests"],
   upcomingFlights: CrewMemberContextFlight[],
 ): string[] {
@@ -289,8 +321,8 @@ function buildAvailabilityWarnings(
     warnings.push(`Current duty status is ${crewMember.dutyStatus}.`);
   }
 
-  if (schedulesInWindow.length === 0) {
-    warnings.push("No CrewSchedule block in the planning window.");
+  if (schedulesInWindow.length === 0 && scheduleEntriesInWindow.length === 0) {
+    warnings.push("No CrewSchedule block or schedule-period entry in the planning window.");
   }
 
   if (timeOffInWindow.length > 0) {
@@ -318,6 +350,18 @@ export async function getCrewMemberContextData(
       schedules: {
         ...crewMemberContextSelect.schedules,
         where: {
+          date: {
+            gte: windowStart,
+            lt: windowEnd,
+          },
+        },
+      },
+      scheduleEntries: {
+        ...crewMemberContextSelect.scheduleEntries,
+        where: {
+          status: {
+            in: [CrewScheduleEntryStatus.DRAFT, CrewScheduleEntryStatus.PUBLISHED],
+          },
           date: {
             gte: windowStart,
             lt: windowEnd,
@@ -380,6 +424,7 @@ export async function getCrewMemberContextData(
     return [{ ...baseFlight, seatRoles }];
   });
   const schedulesInWindow = crewMember.schedules;
+  const scheduleEntriesInWindow = crewMember.scheduleEntries;
   const timeOffInWindow = crewMember.timeOffRequests.filter((request) =>
     overlapsWindow(request.startDate, request.endDate, now, windowEnd),
   );
@@ -390,9 +435,11 @@ export async function getCrewMemberContextData(
     availabilityWarnings: buildAvailabilityWarnings(
       crewMember,
       schedulesInWindow,
+      scheduleEntriesInWindow,
       timeOffInWindow,
       upcomingFlights,
     ),
+    scheduleEntriesInWindow,
     schedulesInWindow,
     timeOffInWindow,
     upcomingFlights,

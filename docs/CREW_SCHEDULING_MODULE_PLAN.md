@@ -288,6 +288,11 @@ Prompt 156 QA status: partial pass. Prisma validation, typecheck, lint, and
 build passed. Local DB-backed route/browser QA is pending because Docker
 Desktop was not running in the session.
 
+Prompt 157 implementation status: complete. `/crew/[crewMemberId]` now shows
+draft and published `CrewScheduleEntry` rows as read-only individual schedule
+context beside existing schedule blocks, time off, qualifications, assignments,
+and upcoming FlightLeg coverage.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

@@ -208,7 +208,7 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Availability</p>
             <p className="mt-2 text-sm font-semibold text-zinc-900">{availabilityLabel}</p>
@@ -223,6 +223,12 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
             <p className="text-sm text-zinc-500">Schedule blocks</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {crewMember.schedulesInWindow.length}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Period entries</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {crewMember.scheduleEntriesInWindow.length}
             </p>
           </article>
           <article className="rounded-md border border-zinc-200 bg-white p-4">
@@ -362,6 +368,51 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
                       {schedule.station?.code ?? "No station"}
                     </div>
                     {schedule.notes ? <p className="mt-1 text-zinc-500">{schedule.notes}</p> : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+
+          <Section title="Schedule Period Entries">
+            <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+              These are schedule-period planning rows. They do not assign this
+              crew member to aircraft and do not replace aircraft-block coverage.
+            </div>
+            {crewMember.scheduleEntriesInWindow.length === 0 ? (
+              <p className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
+                No schedule-period entries in the planning window.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2 text-sm">
+                {crewMember.scheduleEntriesInWindow.map((entry) => (
+                  <li className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={entry.id}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-zinc-900">
+                        {toDate(entry.date)} | {formatStatus(entry.dutyStatus)}
+                      </span>
+                      <span className="rounded-full border border-zinc-300 bg-white px-2 py-0.5 text-xs font-semibold text-zinc-700">
+                        {formatStatus(entry.status)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-zinc-600">
+                      {entry.period.name} | {entry.station?.code ?? "No station"}
+                    </p>
+                    <p className="mt-1 text-zinc-600">
+                      {toDateTime(entry.startsAt)} - {toDateTime(entry.endsAt)}
+                    </p>
+                    {entry.rotationPattern ? (
+                      <p className="mt-1 text-zinc-500">
+                        Pattern: {entry.rotationPattern.name}
+                      </p>
+                    ) : null}
+                    {entry.notes ? <p className="mt-1 text-zinc-500">{entry.notes}</p> : null}
+                    <Link
+                      className="mt-2 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
+                      href={`/crew/scheduling/periods/${entry.period.id}#schedule-entries`}
+                    >
+                      Schedule period detail
+                    </Link>
                   </li>
                 ))}
               </ul>
