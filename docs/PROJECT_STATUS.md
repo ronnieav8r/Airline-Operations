@@ -1425,18 +1425,27 @@ Prompt 194 is complete. Crew self-service portal planning is documented in
 users must not approve requests, publish schedules, change aircraft
 assignments, or write logistics records.
 
+Prompt 195 is complete. `/crew/portal` now provides a read-only portal shell
+for authenticated `CREW` users linked to a `CrewMember`. It shows profile,
+schedule blocks, schedule-period entries, time off, schedule requests, aircraft
+assignments, upcoming FlightLeg coverage, and warning context. It does not
+submit requests, approve requests, publish schedules, change aircraft
+assignments, edit compliance records, or write logistics. Static validation
+passed; DB-backed workflow/browser smoke remains pending because Docker Desktop
+was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 195: Crew portal shell
+Prompt 196: Crew request submission
 ```
 
 Scope:
 
-- Add read-only `/crew/portal`.
-- Require `CREW` role and linked `CrewMember`.
-- Show profile, schedule, requests, time off, assignments, and compliance
-  warnings.
+- Let crew submit their own `CrewScheduleRequest` and `TimeOffRequest` rows.
+- Scope submissions to the linked crew member only.
+- Do not allow crew approval, publishing, assignment changes, or logistics
+  writes.
 
 Deferred follow-up to keep on the roadmap:
 

@@ -2,6 +2,7 @@ import {
   AssignmentStatus,
   CrewComplianceRecordStatus,
   CrewScheduleEntryStatus,
+  CrewScheduleRequestStatus,
   DutyStatus,
   EmploymentStatus,
   FlightLegStatus,
@@ -312,6 +313,30 @@ export type CrewMemberContextData = CrewMemberContextPayload & {
   windowStart: Date;
 };
 
+export type CrewPortalData = CrewMemberContextData & {
+  scheduleRequests: Array<{
+    endDate: Date | null;
+    id: string;
+    preferredDutyStatus: DutyStatus | null;
+    requestNotes: string | null;
+    requestType: string;
+    requestedPattern: {
+      name: string;
+    } | null;
+    requestedSwapCrewMember: {
+      firstName: string;
+      lastName: string;
+    } | null;
+    reviewNotes: string | null;
+    reviewedAt: Date | null;
+    startDate: Date | null;
+    status: CrewScheduleRequestStatus;
+    period: {
+      name: string;
+    };
+  }>;
+};
+
 function addDays(value: Date, days: number): Date {
   const next = new Date(value);
   next.setDate(next.getDate() + days);
@@ -597,5 +622,61 @@ export async function getCrewMemberContextData(
     upcomingFlights,
     windowEnd,
     windowStart,
+  };
+}
+
+export async function getCrewPortalData(userId: string): Promise<CrewPortalData | null> {
+  const linkedCrewMember = await prisma.crewMember.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+
+  if (!linkedCrewMember) {
+    return null;
+  }
+
+  const [context, scheduleRequests] = await Promise.all([
+    getCrewMemberContextData(linkedCrewMember.id),
+    prisma.crewScheduleRequest.findMany({
+      where: { crewMemberId: linkedCrewMember.id },
+      orderBy: [{ createdAt: "desc" }],
+      take: 10,
+      select: {
+        id: true,
+        requestType: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        preferredDutyStatus: true,
+        requestNotes: true,
+        reviewNotes: true,
+        reviewedAt: true,
+        period: {
+          select: {
+            name: true,
+          },
+        },
+        requestedPattern: {
+          select: {
+            name: true,
+          },
+        },
+        requestedSwapCrewMember: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  if (!context) {
+    return null;
+  }
+
+  return {
+    ...context,
+    scheduleRequests,
   };
 }

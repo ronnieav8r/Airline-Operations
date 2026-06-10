@@ -31,6 +31,11 @@ The first portal shell should be read-only and should show:
 - upcoming FlightLeg coverage,
 - compliance warning summary.
 
+Prompt 195 implementation status: complete. `/crew/portal` now requires the
+`CREW` role, resolves the linked `CrewMember` through `CrewMember.userId`, and
+shows read-only profile, schedule, request, time-off, assignment, coverage, and
+warning context. Request submission waits for Prompt 196.
+
 ## Request Submission Scope
 
 The next portal slice can allow a crew member to submit their own

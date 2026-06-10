@@ -167,6 +167,10 @@ Prompt 194 planning status: complete. The first crew portal should live at
 Prompt 196; crew approval, schedule publishing, aircraft assignment changes,
 and logistics writes remain forbidden in the first portal chain.
 
+Prompt 195 implementation status: complete. The read-only `/crew/portal` shell
+is in place for linked `CREW` users and exposes crew profile, schedule, request,
+time-off, assignment, coverage, and warning context without adding mutations.
+
 ## Validation Standard
 
 For every implementation slice:
