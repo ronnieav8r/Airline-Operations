@@ -1179,17 +1179,21 @@ Prompt 147 is complete. `/crew/scheduling/periods` now has schedule-period
 create controls, and `/crew/scheduling/periods/[periodId]` has edit/archive
 controls. The workflow only mutates `CrewSchedulePeriod`.
 
+Prompt 148 is partial. Static validation passed for the schedule-period
+workflow, but local DB-backed workflow/browser QA is pending because Docker
+Desktop was not running.
+
 Preferred next step:
 
 ```text
-Prompt 148: Schedule Period Create/Edit QA
+Prompt 149: Rotation Pattern Admin Planning
 ```
 
 Scope:
 
-- Validate create, edit, and archive behavior.
-- Confirm no schedule entries, crew schedules, requests, patterns, aircraft
-  assignments, or crew leg assignments are mutated.
+- Plan rotation pattern admin using existing `CrewRotationPattern` and
+  `CrewRotationPatternDay`.
+- Keep pattern application and schedule generation deferred.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind

@@ -231,6 +231,10 @@ Prompt 147 implementation status: complete. Schedule periods can now be created,
 edited, and archived from the existing admin routes without publishing schedules
 or generating schedule entries.
 
+Prompt 148 QA status: partial pass. Prisma validation, typecheck, lint, and
+build passed. Local workflow/browser QA is pending because Docker Desktop was
+not running in the session.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
