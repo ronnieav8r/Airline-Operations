@@ -6,6 +6,7 @@ import {
   archiveSchedulePeriodAction,
   cancelScheduleEntryAction,
   createScheduleEntryAction,
+  generatePatternDraftEntriesAction,
   publishSchedulePeriodAction,
   updateScheduleEntryAction,
   updateSchedulePeriodAction,
@@ -26,6 +27,8 @@ type PageProps = {
   }>;
   searchParams: Promise<{
     error?: string | string[];
+    patternGenerated?: string | string[];
+    patternSkipped?: string | string[];
     previewCrewMemberId?: string | string[];
     previewEndDate?: string | string[];
     previewDays?: string | string[];
@@ -623,11 +626,13 @@ function PatternPreviewPanel({
   options,
   period,
   preview,
+  resultMessage,
 }: {
   input: PatternPreviewInput;
   options: EntryOptions;
   period: CrewSchedulePeriodDetail;
   preview: ReturnType<typeof buildPatternPreview>;
+  resultMessage: string | null;
 }) {
   return (
     <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" id="pattern-preview">
@@ -682,6 +687,11 @@ function PatternPreviewPanel({
           </button>
         </div>
       </form>
+      {resultMessage ? (
+        <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          {resultMessage}
+        </div>
+      ) : null}
       {preview.messages.length > 0 ? (
         <ul className="mt-4 grid gap-2 text-sm text-amber-900 md:grid-cols-2">
           {preview.messages.map((message) => (
@@ -734,9 +744,25 @@ function PatternPreviewPanel({
             </tbody>
           </table>
           <p className="mt-3 text-xs text-zinc-500">
-            Preview only. Prompt 187 will add the explicit action to generate
-            these rows as draft `CrewScheduleEntry` records.
+            Generation creates draft `CrewScheduleEntry` records only. Publishing
+            remains a separate action.
           </p>
+          <form
+            action={generatePatternDraftEntriesAction.bind(null, period.id)}
+            className="mt-4"
+          >
+            <input name="previewCrewMemberId" type="hidden" value={input.crewMemberId} />
+            <input name="previewPatternId" type="hidden" value={input.patternId} />
+            <input name="previewStartDate" type="hidden" value={toInputDate(input.startDate)} />
+            <input name="previewEndDate" type="hidden" value={toInputDate(input.endDate)} />
+            <input name="previewDays" type="hidden" value={String(input.days)} />
+            <button
+              className="rounded-md bg-amber-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-800"
+              type="submit"
+            >
+              Generate draft entries from preview
+            </button>
+          </form>
         </div>
       ) : null}
       {preview.crewMember && preview.pattern ? (
@@ -945,6 +971,12 @@ export default async function CrewSchedulePeriodDetailPage({ params, searchParam
     options: entryOptions,
     period,
   });
+  const generatedCount = firstSearchParam(queryParams.patternGenerated);
+  const skippedCount = firstSearchParam(queryParams.patternSkipped);
+  const patternResultMessage =
+    generatedCount !== null || skippedCount !== null
+      ? `Generated ${generatedCount ?? "0"} draft entries. Skipped ${skippedCount ?? "0"} duplicates.`
+      : null;
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -1151,6 +1183,7 @@ export default async function CrewSchedulePeriodDetailPage({ params, searchParam
           options={entryOptions}
           period={period}
           preview={patternPreview}
+          resultMessage={patternResultMessage}
         />
 
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" id="schedule-entries">

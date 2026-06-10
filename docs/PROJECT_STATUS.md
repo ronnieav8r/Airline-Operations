@@ -1370,19 +1370,26 @@ pattern days and shows warning-only conflicts. It does not write
 or mutate aircraft assignments. Static validation passed; DB-backed
 workflow/browser smoke remains pending because Docker Desktop was unavailable.
 
+Prompt 187 is complete. The pattern preview panel now has an explicit
+admin/ops generate-drafts action. It creates only `DRAFT` `CrewScheduleEntry`
+rows, links them to the selected rotation pattern, skips exact duplicates, and
+does not publish schedules, create `CrewSchedule` bridge rows, review requests,
+or mutate aircraft assignments. Static validation passed; DB-backed
+workflow/browser smoke remains pending because Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 187: Pattern generate-drafts foundation
+Prompt 188: Pattern application QA
 ```
 
 Scope:
 
-- Add explicit action to create draft entries from the preview inputs.
-- Create only `DRAFT` `CrewScheduleEntry` rows.
-- Keep duplicates safe and readable.
-- Do not publish.
-- Do not create aircraft assignments.
+- Verify preview and generate-drafts behavior.
+- Verify duplicate-safe generation.
+- Verify planner and crew detail visibility.
+- Verify no `CrewSchedule` bridge rows are created until publish.
+- Verify no aircraft assignments are changed.
 
 Deferred follow-up to keep on the roadmap:
 

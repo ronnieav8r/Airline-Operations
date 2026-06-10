@@ -252,3 +252,9 @@ Prompt 186 implementation status: complete. Schedule period detail now has a
 read-only, URL-driven pattern application preview. It calculates generated rows
 from active pattern day rows and shows warning-only conflicts without writing
 schedule entries or changing publish/assignment behavior.
+
+Prompt 187 implementation status: complete. The preview panel now includes an
+explicit generate-drafts action for admin/ops users. The action validates the
+period, active crew member, active pattern, and date window; creates only
+`DRAFT` `CrewScheduleEntry` rows; skips exact duplicates; and does not publish
+or mutate aircraft assignments.

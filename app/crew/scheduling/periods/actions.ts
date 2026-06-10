@@ -46,6 +46,14 @@ type ScheduleEntryInput = {
   stationId: string | null;
 };
 
+type PatternGenerationInput = {
+  crewMemberId: string;
+  days: number;
+  endDate: Date | null;
+  patternId: string;
+  startDate: Date;
+};
+
 function getOptionalText(formData: FormData, key: string): string | null {
   const value = formData.get(key);
 
@@ -107,6 +115,37 @@ function parseRequiredEntryDate(formData: FormData, key: string, label: string):
   }
 
   return parsed;
+}
+
+function parseOptionalEntryDate(formData: FormData, key: string, label: string): Date | null {
+  const value = getOptionalText(formData, key);
+
+  if (!value) {
+    return null;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new ScheduleEntryWorkflowError(`${label} must be a valid date.`);
+  }
+
+  const parsed = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    throw new ScheduleEntryWorkflowError(`${label} must be a valid date.`);
+  }
+
+  return parsed;
+}
+
+function parseOptionalInteger(formData: FormData, key: string, fallback: number): number {
+  const value = getOptionalText(formData, key);
+  const parsed = value ? Number.parseInt(value, 10) : Number.NaN;
+
+  if (Number.isNaN(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(Math.max(parsed, 1), 62);
 }
 
 function parseOptionalDateTime(formData: FormData, key: string, label: string): Date | null {
@@ -227,6 +266,64 @@ function parseScheduleEntryInput(formData: FormData): ScheduleEntryInput {
     startsAt,
     stationId: getOptionalText(formData, "stationId"),
   };
+}
+
+function parsePatternGenerationInput(formData: FormData): PatternGenerationInput {
+  const startDate = parseRequiredEntryDate(formData, "previewStartDate", "Start date");
+  const endDate = parseOptionalEntryDate(formData, "previewEndDate", "End date");
+
+  if (endDate && endDate < startDate) {
+    throw new ScheduleEntryWorkflowError("End date must be on or after start date.");
+  }
+
+  return {
+    crewMemberId: getRequiredText(formData, "previewCrewMemberId", "Crew member"),
+    days: parseOptionalInteger(formData, "previewDays", 14),
+    endDate,
+    patternId: getRequiredText(formData, "previewPatternId", "Rotation pattern"),
+    startDate,
+  };
+}
+
+function addDays(value: Date, days: number): Date {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function dateWithMinutes(date: Date, minutes: number | null): Date | null {
+  if (minutes === null) {
+    return null;
+  }
+
+  const next = new Date(date);
+  next.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  return next;
+}
+
+function entryDateKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function patternGenerationRedirectUrl(
+  periodId: string,
+  input: PatternGenerationInput,
+  result: { generated: number; skipped: number },
+): string {
+  const params = new URLSearchParams({
+    patternGenerated: String(result.generated),
+    patternSkipped: String(result.skipped),
+    previewCrewMemberId: input.crewMemberId,
+    previewDays: String(input.days),
+    previewPatternId: input.patternId,
+    previewStartDate: entryDateKey(input.startDate),
+  });
+
+  if (input.endDate) {
+    params.set("previewEndDate", entryDateKey(input.endDate));
+  }
+
+  return `/crew/scheduling/periods/${periodId}?${params.toString()}#pattern-preview`;
 }
 
 async function validateScheduleEntryInput(periodId: string, input: ScheduleEntryInput) {
@@ -395,6 +492,140 @@ async function publishSchedulePeriod(tx: Prisma.TransactionClient, periodId: str
   return Array.from(affectedCrewMemberIds);
 }
 
+async function generatePatternDraftEntries(
+  tx: Prisma.TransactionClient,
+  periodId: string,
+  input: PatternGenerationInput,
+  userId: string,
+) {
+  const [period, crewMember, pattern] = await Promise.all([
+    tx.crewSchedulePeriod.findUnique({
+      where: { id: periodId },
+      select: {
+        id: true,
+        endsAt: true,
+        startsAt: true,
+        status: true,
+      },
+    }),
+    tx.crewMember.findUnique({
+      where: { id: input.crewMemberId },
+      select: {
+        id: true,
+        employmentStatus: true,
+      },
+    }),
+    tx.crewRotationPattern.findUnique({
+      where: { id: input.patternId },
+      select: {
+        id: true,
+        cycleLengthDays: true,
+        isActive: true,
+        days: {
+          orderBy: [{ dayNumber: "asc" }],
+          select: {
+            dayNumber: true,
+            dutyStatus: true,
+            endsAtMinutes: true,
+            startsAtMinutes: true,
+            stationId: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  if (!period) {
+    throw new ScheduleEntryWorkflowError("Schedule period was not found.");
+  }
+
+  if (period.status === CrewSchedulePeriodStatus.ARCHIVED) {
+    throw new ScheduleEntryWorkflowError("Archived schedule periods cannot generate draft entries.");
+  }
+
+  if (period.status === CrewSchedulePeriodStatus.PUBLISHED) {
+    throw new ScheduleEntryWorkflowError("Published schedule periods cannot generate new draft entries.");
+  }
+
+  if (!crewMember || crewMember.employmentStatus !== EmploymentStatus.ACTIVE) {
+    throw new ScheduleEntryWorkflowError("Crew member must be active.");
+  }
+
+  if (!pattern || !pattern.isActive) {
+    throw new ScheduleEntryWorkflowError("Rotation pattern must be active.");
+  }
+
+  if (pattern.days.length === 0) {
+    throw new ScheduleEntryWorkflowError("Rotation pattern has no day rows.");
+  }
+
+  const endDate = input.endDate ?? addDays(input.startDate, input.days - 1);
+
+  if (input.startDate < period.startsAt || endDate > period.endsAt) {
+    throw new ScheduleEntryWorkflowError("Generated date window must stay inside the schedule period.");
+  }
+
+  const existingEntries = await tx.crewScheduleEntry.findMany({
+    where: {
+      periodId,
+      crewMemberId: input.crewMemberId,
+      date: {
+        gte: input.startDate,
+        lte: endDate,
+      },
+    },
+    select: {
+      date: true,
+      dutyStatus: true,
+    },
+  });
+  const existingKeys = new Set(
+    existingEntries.map((entry) => `${entryDateKey(entry.date)}:${entry.dutyStatus}`),
+  );
+  const rows: Prisma.CrewScheduleEntryCreateManyInput[] = [];
+  let skipped = 0;
+
+  for (let date = new Date(input.startDate); date <= endDate; date = addDays(date, 1)) {
+    const offsetDays = Math.round((date.getTime() - input.startDate.getTime()) / (24 * 60 * 60 * 1000));
+    const cycleDay = (offsetDays % pattern.cycleLengthDays) + 1;
+    const patternDay = pattern.days.find((day) => day.dayNumber === cycleDay);
+
+    if (!patternDay) {
+      continue;
+    }
+
+    const duplicateKey = `${entryDateKey(date)}:${patternDay.dutyStatus}`;
+    if (existingKeys.has(duplicateKey)) {
+      skipped += 1;
+      continue;
+    }
+
+    rows.push({
+      createdById: userId,
+      crewMemberId: input.crewMemberId,
+      date: new Date(date),
+      dutyStatus: patternDay.dutyStatus,
+      endsAt: dateWithMinutes(date, patternDay.endsAtMinutes),
+      notes: `Generated from rotation pattern ${pattern.id}.`,
+      periodId,
+      rotationPatternId: pattern.id,
+      startsAt: dateWithMinutes(date, patternDay.startsAtMinutes),
+      stationId: patternDay.stationId,
+      status: CrewScheduleEntryStatus.DRAFT,
+    });
+    existingKeys.add(duplicateKey);
+  }
+
+  if (rows.length > 0) {
+    await tx.crewScheduleEntry.createMany({ data: rows });
+  }
+
+  return {
+    generated: rows.length,
+    skipped,
+  };
+}
+
 export async function createSchedulePeriodAction(formData: FormData) {
   const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
   let periodId: string | undefined;
@@ -468,6 +699,25 @@ export async function publishSchedulePeriodAction(periodId: string) {
     revalidatePath(`/crew/${crewMemberId}`);
   }
   redirect(`/crew/scheduling/periods/${periodId}#schedule-entries`);
+}
+
+export async function generatePatternDraftEntriesAction(periodId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
+  let input: PatternGenerationInput;
+  let result: { generated: number; skipped: number };
+
+  try {
+    input = parsePatternGenerationInput(formData);
+    result = await prisma.$transaction((tx) =>
+      generatePatternDraftEntries(tx, periodId, input, currentUser.id),
+    );
+  } catch (error) {
+    redirect(`/crew/scheduling/periods/${periodId}?error=${encodeEntryError(error)}#pattern-preview`);
+  }
+
+  revalidateSchedulePeriodPaths(periodId);
+  revalidatePath(`/crew/${input.crewMemberId}`);
+  redirect(patternGenerationRedirectUrl(periodId, input, result));
 }
 
 export async function archiveSchedulePeriodAction(periodId: string) {

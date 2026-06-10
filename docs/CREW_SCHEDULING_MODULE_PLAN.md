@@ -268,6 +268,12 @@ Prompt 186 implementation status: complete. `/crew/scheduling/periods/[periodId]
 now shows a read-only pattern application preview. The preview calculates
 would-be generated rows, displays warning-only conflicts, and writes nothing.
 
+Prompt 187 implementation status: complete. The preview can now generate draft
+`CrewScheduleEntry` rows. Generation is admin/ops protected, skips exact
+duplicates, links rows to the selected rotation pattern, and does not create
+`CrewSchedule` bridge rows, publish schedules, review requests, or mutate
+aircraft-block assignments.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day
