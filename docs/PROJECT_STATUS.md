@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-06-08
+Last updated: 2026-06-10
 
 This document is the quick onboarding note for planner and builder chats. Read it
 before starting a new AeroOps slice.
@@ -1228,21 +1228,22 @@ Prompt 158 is partial. Static validation passed for crew-member schedule-entry
 context, but local DB-backed route/browser QA is pending because Docker Desktop
 was not running.
 
+Prompt 159 is complete. The remaining major scaffolding is now organized in
+`docs/MAJOR_SCAFFOLDING_MACRO_PLAN.md` as dependency-first chains for auth,
+FlightLeg cutover, ReleasePackage, crew compliance, crew scheduling lifecycle,
+crew self-service, and crew logistics.
+
 Preferred next step:
 
 ```text
-Planning session recommended
+Prompt 160: Local Auth Planning
 ```
 
 Scope:
 
-- Decide whether the next crew scheduling direction should be schedule
-  publishing/finalization, crew schedule request/bid workflow, pattern
-  application, or runtime QA completion once Docker is available.
-- Publishing/finalization needs a separate plan because it decides whether and
-  how `CrewScheduleEntry` generates legacy `CrewSchedule` bridge rows.
-- Pattern application needs a separate plan because it can generate many draft
-  entries and needs conflict/idempotency rules.
+- Plan local email/password auth, HttpOnly sessions, expanded operational
+  roles, route/action protection, and user attribution.
+- Keep implementation deferred until the auth plan is decision-complete.
 
 Deferred follow-up to keep on the roadmap:
 

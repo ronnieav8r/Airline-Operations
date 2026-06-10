@@ -11,6 +11,27 @@ These decisions supersede the Bubble-derived reference docs where they differ.
 - The app should favor clear relational data over Bubble migration parity.
 - The app should grow toward a compliance-ready operations model for Part 91, Part 91K, and Part 135-style small operators.
 - Use one shared canonical schema with authority-specific validations rather than separate data models for each regulatory part.
+- Deployments are single-customer by default. Each customer/operator group gets
+  a separate app/database; `Operator` is a legal/business entity inside that
+  deployment, not a SaaS tenant boundary.
+
+## Major Scaffolding Roadmap
+
+The remaining major scaffolding is now planned in
+`docs/MAJOR_SCAFFOLDING_MACRO_PLAN.md`.
+
+Implementation should run dependency-first:
+
+1. Local auth, operational roles, sessions, and user attribution.
+2. Controlled FlightLeg cutover and additive ReleasePackage.
+3. Crew compliance depth.
+4. Crew scheduling publish/pattern/request lifecycle.
+5. Crew self-service and crew logistics.
+
+Do not implement hard release blocking, legal signatures, provider
+integrations, file uploads, shared multi-tenant SaaS scoping, destructive
+legacy `Flight` removal, or duty/rest legal enforcement without a later
+decision-complete plan.
 
 ## Updated Long-Term Direction
 
