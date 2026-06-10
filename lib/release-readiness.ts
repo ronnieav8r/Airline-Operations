@@ -1,5 +1,6 @@
 import {
   AirworthinessReleaseStatus,
+  CrewComplianceRecordStatus,
   DispatchPackageStatus,
   FlightLocatingStatus,
   ManifestStatus,
@@ -7,6 +8,7 @@ import {
   ReleaseFindingStatus,
   ReleaseRuleSeverity,
   ReleaseSnapshotStatus,
+  SeatRole,
   WeightBalanceStatus,
 } from "@prisma/client";
 
@@ -83,6 +85,63 @@ function releaseReadinessDate(value: Date | null | undefined): string {
   }).format(value);
 }
 
+function hasExpiredStatus(status: CrewComplianceRecordStatus): boolean {
+  return status === CrewComplianceRecordStatus.EXPIRED || status === CrewComplianceRecordStatus.VOIDED;
+}
+
+function isExpired(expiresAt: Date | null, now: Date): boolean {
+  return Boolean(expiresAt && expiresAt < now);
+}
+
+function buildCrewComplianceWarnings(detail: ReleaseEvidenceDetail): string[] {
+  const now = new Date();
+  const warnings: string[] = [];
+  const crewAssignments = detail.crewAssignments;
+  const assignedRoles = new Set(crewAssignments.map((assignment) => assignment.seatRole));
+  const missingRequiredRoles = [SeatRole.CPT, SeatRole.FO].filter(
+    (role) => !assignedRoles.has(role),
+  );
+
+  if (crewAssignments.length === 0) {
+    warnings.push("No FlightLeg crew snapshot assignments are recorded.");
+  }
+
+  if (missingRequiredRoles.length > 0) {
+    warnings.push(`Missing cockpit crew snapshot role(s): ${missingRequiredRoles.join(", ")}.`);
+  }
+
+  for (const assignment of crewAssignments) {
+    const crewMember = assignment.crewMember;
+    const missingCategories = [
+      crewMember.certificates.length === 0 ? "certificate" : null,
+      crewMember.medicals.length === 0 ? "medical" : null,
+      crewMember.trainingEvents.length === 0 ? "training" : null,
+      crewMember.checkEvents.length === 0 ? "check" : null,
+      crewMember.recencyEvents.length === 0 ? "recency" : null,
+      crewMember.dutyPeriods.length === 0 ? "duty" : null,
+      crewMember.restPeriods.length === 0 ? "rest" : null,
+    ].filter(Boolean);
+    const expiredCount =
+      crewMember.certificates.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
+      crewMember.medicals.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
+      crewMember.trainingEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
+      crewMember.checkEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
+      crewMember.recencyEvents.filter((item) => hasExpiredStatus(item.status)).length;
+
+    if (missingCategories.length > 0 || expiredCount > 0) {
+      warnings.push(
+        `${crewMember.firstName} ${crewMember.lastName} has ${
+          missingCategories.length > 0 ? `missing ${missingCategories.join(", ")} evidence` : ""
+        }${missingCategories.length > 0 && expiredCount > 0 ? " and " : ""}${
+          expiredCount > 0 ? `${expiredCount} expired/voided record(s)` : ""
+        }.`,
+      );
+    }
+  }
+
+  return warnings;
+}
+
 export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): ReleaseReadinessItem[] {
   const manifest = detail.manifest;
   const aircraftAssignment = detail.aircraftAssignments[0] ?? null;
@@ -144,6 +203,8 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
             : aircraft.deferrals.length > 0
               ? "deferral.active.exists"
               : "airworthinessRelease.current.missing";
+  const crewComplianceWarnings = buildCrewComplianceWarnings(detail);
+  const crewComplianceReady = crewComplianceWarnings.length === 0;
 
   return [
     {
@@ -191,6 +252,21 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
       readinessCategory: "airworthiness",
       ready: airworthinessReady,
       ruleKey: airworthinessRuleKey,
+    },
+    {
+      classification: crewComplianceReady ? "READY" : "WOULD_WARN",
+      details: {
+        crewAssignments: detail.crewAssignments.length,
+        warnings: crewComplianceWarnings,
+      },
+      evidenceRefType: detail.crewAssignments.length > 0 ? "CrewLegAssignment" : undefined,
+      label: "Crew compliance",
+      message: crewComplianceReady
+        ? "Crew snapshot assignments have supporting compliance evidence."
+        : crewComplianceWarnings.join(" "),
+      readinessCategory: "crew-compliance",
+      ready: crewComplianceReady,
+      ruleKey: crewComplianceReady ? "crewCompliance.current.ready" : "crewCompliance.warning.exists",
     },
     {
       classification: manifestReady ? "READY" : "WOULD_BLOCK",

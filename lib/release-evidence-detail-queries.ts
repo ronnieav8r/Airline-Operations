@@ -159,6 +159,68 @@ const releaseEvidenceDetailSelect = {
     },
     take: 1,
   },
+  crewAssignments: {
+    where: {
+      status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+    },
+    orderBy: [{ seatRole: "asc" }],
+    select: {
+      id: true,
+      seatRole: true,
+      status: true,
+      crewMember: {
+        select: {
+          id: true,
+          employeeNumber: true,
+          firstName: true,
+          lastName: true,
+          certificates: {
+            select: {
+              expiresAt: true,
+              status: true,
+            },
+          },
+          medicals: {
+            select: {
+              expiresAt: true,
+              status: true,
+            },
+          },
+          trainingEvents: {
+            select: {
+              expiresAt: true,
+              status: true,
+            },
+          },
+          checkEvents: {
+            select: {
+              expiresAt: true,
+              status: true,
+            },
+          },
+          recencyEvents: {
+            select: {
+              status: true,
+            },
+          },
+          dutyPeriods: {
+            select: {
+              startsAt: true,
+              endsAt: true,
+              status: true,
+            },
+          },
+          restPeriods: {
+            select: {
+              startsAt: true,
+              endsAt: true,
+              status: true,
+            },
+          },
+        },
+      },
+    },
+  },
   operationalControlRecord: {
     select: {
       controllingEntity: true,

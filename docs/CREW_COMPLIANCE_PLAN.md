@@ -153,3 +153,8 @@ Prompt 178 implementation status: complete. Aircraft crew assignment now
 surfaces richer compliance warnings during assignment review without adding save
 blockers. Static validation passed; workflow/browser smoke remains pending
 because Docker Desktop was unavailable.
+
+Prompt 179 implementation status: complete. FlightLeg release readiness now
+includes crew compliance warnings as warning-only readiness signals. Static
+validation passed; route/browser and snapshot smoke remain pending because
+Docker Desktop was unavailable.

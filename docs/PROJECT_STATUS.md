@@ -1320,6 +1320,13 @@ because Docker Desktop was unavailable.
 Prompt 179 should add crew compliance warnings to FlightLeg release readiness
 as warning-only signals.
 
+Prompt 179 is complete. FlightLeg release readiness now has a warning-only crew
+compliance item based on crew snapshot assignments and compliance evidence.
+Static validation passed; route/browser and snapshot smoke remain pending
+because Docker Desktop was unavailable. Release actions remain available.
+
+Prompt 180 should QA the crew compliance chain.
+
 Preferred next step:
 
 ```text
