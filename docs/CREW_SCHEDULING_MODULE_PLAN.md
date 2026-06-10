@@ -218,6 +218,15 @@ Prompt 145 QA status: complete. Filter routes, combined filters, filtered
 create/review return behavior, route smoke, validation, and no side-effect
 checks passed.
 
+## Prompt 146 Schedule Period Create/Edit Planning
+
+The first `CrewSchedulePeriod` write workflow should let ops/admin users create,
+edit, and archive scheduling periods without publishing schedules or generating
+schedule entries.
+
+Prompt 146 planning status: complete. Prompt 147 should implement create,
+edit, and archive controls on the existing schedule-period admin routes.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

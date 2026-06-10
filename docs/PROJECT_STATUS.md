@@ -1170,16 +1170,21 @@ routes, browser filter controls, filtered create/review/cancel return behavior,
 validation, route smoke, and unchanged schedule/assignment side effects. The
 Prompt 142-145 time-off workflow chain is complete.
 
+Prompt 146 is complete. The next schedule-period write workflow is planned as
+ops/admin create, edit, and archive for `CrewSchedulePeriod`, without schedule
+publishing, schedule entry generation, pattern application, request review, or
+assignment automation.
+
 Preferred next step:
 
 ```text
-Planning session for the next Crew Scheduling workflow chain
+Prompt 147: Schedule Period Create/Edit Foundation
 ```
 
 Scope:
 
-- Decide whether to focus next on schedule-period create/edit, rotation-pattern
-  admin, schedule request/bid workflow, or time-off workflow enhancements.
+- Implement create, edit, and archive controls for schedule periods.
+- Keep publishing and schedule generation deferred.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind
