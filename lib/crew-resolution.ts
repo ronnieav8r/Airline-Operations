@@ -1,4 +1,4 @@
-import { AircraftType, Prisma, SeatRole } from "@prisma/client";
+import { AircraftType, AssignmentStatus, Prisma, SeatRole } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -32,6 +32,8 @@ export type CoverageWarning = QualificationWarning & {
 
 export type FlightCoverage = {
   flightId: string;
+  flightLegId: string | null;
+  readSource: "FLIGHT_LEG" | "LEGACY_FLIGHT";
   aircraftId: string;
   requiredRoles: SeatRole[];
   missingRoles: SeatRole[];
@@ -42,6 +44,8 @@ export type FlightCoverage = {
 
 export type FlightCrew = {
   flightId: string;
+  flightLegId: string | null;
+  readSource: "FLIGHT_LEG" | "LEGACY_FLIGHT";
   aircraftId: string;
   scheduledDeparture: Date;
   crewBySeatRole: Partial<Record<SeatRole, ResolvedCrewAssignment[]>>;
@@ -67,35 +71,90 @@ const flightResolutionSelect = {
   },
 } satisfies Prisma.FlightSelect;
 
+const flightLegResolutionSelect = {
+  id: true,
+  legacyFlightId: true,
+  scheduledDeparture: true,
+  aircraftAssignments: {
+    where: {
+      status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+    },
+    select: {
+      aircraft: {
+        select: {
+          id: true,
+          type: true,
+        },
+      },
+    },
+    orderBy: {
+      assignedAt: "desc",
+    },
+    take: 1,
+  },
+  legacyFlight: {
+    select: flightResolutionSelect,
+  },
+} satisfies Prisma.FlightLegSelect;
+
 const aircraftTypeSelect = {
   id: true,
   type: true,
 } satisfies Prisma.AircraftSelect;
 
-async function resolveLegacyFlightForCoverage(inputId: string) {
-  const directFlight = await prisma.flight.findUnique({
-    where: { id: inputId },
-    select: flightResolutionSelect,
-  });
-
-  if (directFlight) {
-    return directFlight;
-  }
-
+async function resolveFlightContextForCoverage(inputId: string) {
   const flightLeg = await prisma.flightLeg.findUnique({
     where: { id: inputId },
+    select: flightLegResolutionSelect,
+  });
+
+  if (flightLeg) {
+    const assignedAircraft = flightLeg.aircraftAssignments[0]?.aircraft ?? flightLeg.legacyFlight?.aircraft;
+
+    if (!assignedAircraft) {
+      return null;
+    }
+
+    return {
+      aircraftId: assignedAircraft.id,
+      aircraftType: assignedAircraft.type,
+      flightId: flightLeg.legacyFlightId ?? flightLeg.legacyFlight?.id ?? flightLeg.id,
+      flightLegId: flightLeg.id,
+      readSource: "FLIGHT_LEG" as const,
+      scheduledDeparture: flightLeg.scheduledDeparture,
+    };
+  }
+
+  const directFlight = await prisma.flight.findUnique({
+    where: { id: inputId },
     select: {
-      legacyFlight: {
-        select: flightResolutionSelect,
+      ...flightResolutionSelect,
+      flightLeg: {
+        select: {
+          id: true,
+        },
       },
     },
   });
 
-  return flightLeg?.legacyFlight ?? null;
+  if (!directFlight) {
+    return null;
+  }
+
+  return {
+    aircraftId: directFlight.aircraftId,
+    aircraftType: directFlight.aircraft.type,
+    flightId: directFlight.id,
+    flightLegId: directFlight.flightLeg?.id ?? null,
+    readSource: directFlight.flightLeg ? ("FLIGHT_LEG" as const) : ("LEGACY_FLIGHT" as const),
+    scheduledDeparture: directFlight.flightLeg
+      ? directFlight.scheduledDeparture
+      : directFlight.scheduledDeparture,
+  };
 }
 
 export async function resolveFlightCrew(flightId: string): Promise<FlightCrew | null> {
-  const flight = await resolveLegacyFlightForCoverage(flightId);
+  const flight = await resolveFlightContextForCoverage(flightId);
 
   if (!flight) {
     return null;
@@ -103,12 +162,14 @@ export async function resolveFlightCrew(flightId: string): Promise<FlightCrew | 
 
   const assignedCrew = await resolveAssignmentsForAircraftAt(
     flight.aircraftId,
-    flight.aircraft.type,
+    flight.aircraftType,
     flight.scheduledDeparture,
   );
 
   return {
-    flightId: flight.id,
+    flightId: flight.flightId,
+    flightLegId: flight.flightLegId,
+    readSource: flight.readSource,
     aircraftId: flight.aircraftId,
     scheduledDeparture: flight.scheduledDeparture,
     crewBySeatRole: groupBySeatRole(assignedCrew),
@@ -137,6 +198,8 @@ export async function resolveFlightCoverage(flightId: string): Promise<FlightCov
 
   return {
     flightId: crew.flightId,
+    flightLegId: crew.flightLegId,
+    readSource: crew.readSource,
     aircraftId: crew.aircraftId,
     requiredRoles: REQUIRED_COCKPIT_ROLES,
     missingRoles,

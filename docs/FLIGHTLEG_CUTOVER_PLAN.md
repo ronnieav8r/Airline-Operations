@@ -45,6 +45,11 @@ legacy API paths in the current macro scaffolding chain.
    Keep current API paths but make FlightLeg IDs first-class. Preserve response
    compatibility while internals move toward FlightLeg assignment/snapshot data.
 
+   Prompt 167 completed the first resolver/API cutover foundation. The shared
+   crew coverage resolver now accepts FlightLeg IDs first, uses FlightLeg
+   schedule and active AircraftAssignment context, and preserves legacy Flight ID
+   compatibility.
+
 3. **QA And Parity**
    Validate parity diagnostics, route smoke, create/edit bridge synchronization,
    and both ID styles for coverage APIs.
