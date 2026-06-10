@@ -54,6 +54,9 @@ legacy API paths in the current macro scaffolding chain.
    Validate parity diagnostics, route smoke, create/edit bridge synchronization,
    and both ID styles for coverage APIs.
 
+   Prompt 168 completed static QA. Runtime/API/browser checks are pending until
+   Docker Desktop is available.
+
 4. **Compatibility Mode**
    After parity is proven, document legacy `Flight` as compatibility/archive and
    keep destructive removal deferred.

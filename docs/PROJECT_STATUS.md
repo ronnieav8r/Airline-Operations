@@ -1238,22 +1238,22 @@ email/password credentials, HttpOnly DB-backed sessions, expanded operational
 roles, mutation-first route/action protection, and user attribution through
 existing nullable user fields.
 
-Prompt 167 is complete. Crew coverage resolution now accepts FlightLeg IDs as a
-first-class path, uses FlightLeg schedule and active AircraftAssignment context
-when supplied, preserves legacy Flight ID compatibility, and keeps the existing
-coverage API paths stable.
+Prompt 168 is complete as static QA. Prisma validation, typecheck, lint, and
+build passed for the FlightLeg read/API cutover foundation. Runtime route/API
+smoke remains pending because Docker Desktop was unavailable.
 
 Preferred next step:
 
 ```text
-Prompt 168: FlightLeg Cutover QA
+Prompt 169: ReleasePackage Planning
 ```
 
 Scope:
 
-- QA FlightLeg-primary board reads.
-- QA crew/coverage APIs with both FlightLeg IDs and legacy Flight IDs.
-- QA parity diagnostics and create/edit bridge synchronization.
+- Define ReleasePackage as an additive wrapper around current FlightRelease.
+- Define evidence-package contents and capture policy.
+- Keep hard release blocking, signatures, file uploads, and provider
+  integrations deferred.
 
 Deferred follow-up to keep on the roadmap:
 
