@@ -282,3 +282,7 @@ Prompt 191 implementation status: complete. Approved pattern requests can now
 prefill the pattern preview/generate flow from the request card. Generated
 draft entries carry `sourceRequestId`, remain `DRAFT`, and still do not publish
 or mutate aircraft assignments.
+
+Prompt 192 QA status: partial pass. Static validation passed for request review
+and source-linked draft generation. DB-backed workflow smoke remains pending
+because Docker Desktop was unavailable.

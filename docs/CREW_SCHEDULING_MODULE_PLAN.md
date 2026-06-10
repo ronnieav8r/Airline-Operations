@@ -300,6 +300,10 @@ feed the pattern preview/generate flow. Generated draft entries are linked back
 to the approved request through `sourceRequestId` and remain draft planning
 records only.
 
+Prompt 192 QA status: partial pass. Static validation passed. DB-backed request
+review and request-to-draft workflow smoke remains pending until Docker Desktop
+is available.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day

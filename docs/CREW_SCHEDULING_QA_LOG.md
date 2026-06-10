@@ -86,3 +86,46 @@ When Docker Desktop is available, run DB-backed preview/generate QA for
 generated draft rows, duplicate skipping, planner visibility, crew detail
 visibility, no bridge rows before publish, and unchanged aircraft assignment
 counts.
+
+## Prompt 192: Crew Request Workflow QA
+
+### Result
+
+Partial pass. Static validation passed. DB-backed workflow and browser smoke
+are pending because Docker Desktop is not available in this session.
+
+### Static Validation
+
+- `npm run prisma:validate`: pass.
+- `npm run typecheck`: pass.
+- `npm run lint`: pass.
+- `npm run build`: pass.
+
+### Local DB Prep
+
+- `npm run db:local:up`: blocked.
+- Reason: Docker Desktop Linux engine was not reachable at
+  `npipe:////./pipe/dockerDesktopLinuxEngine`.
+
+### Reviewed Behavior
+
+- Request review action is protected by `ADMIN`/`OPS`.
+- Review accepts only `SUBMITTED` requests.
+- Review rejects requests that do not belong to the selected period.
+- Approve/deny updates only `CrewScheduleRequest` status, notes, reviewed
+  timestamp, and reviewer.
+- Approved pattern requests can prefill the pattern preview/generate flow.
+- Generated draft entries from approved pattern requests carry
+  `sourceRequestId`.
+- Request helper generation creates only `DRAFT` `CrewScheduleEntry` rows.
+- Request approval does not automatically create schedule entries.
+- Request helper generation does not create `CrewSchedule` bridge rows.
+- Request helper generation does not publish schedules.
+- Request helper generation does not write `AircraftCrewAssignment`.
+
+### Runtime Follow-Up
+
+When Docker Desktop is available, run DB-backed request review and
+request-to-draft workflow QA for approve, deny, non-submitted rejection,
+source-linked draft entries, no bridge rows before publish, and unchanged
+aircraft assignment counts.

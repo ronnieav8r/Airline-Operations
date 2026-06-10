@@ -1404,17 +1404,23 @@ bridge row creation, request auto-generation, or aircraft assignment mutation
 was added. Static validation passed; DB-backed workflow/browser smoke remains
 pending because Docker Desktop was unavailable.
 
+Prompt 192 is complete as a partial QA pass. Static validation passed for
+request review and request-to-draft helpers. Runtime DB-backed checks for
+approve, deny, non-submitted rejection, source-linked draft entries, no bridge
+rows before publish, and unchanged aircraft assignment counts remain pending
+because Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 192: Crew request workflow QA
+Prompt 193: Scheduling lifecycle docs/status refresh
 ```
 
 Scope:
 
-- Verify request review and request-to-draft helper behavior.
-- Confirm generated rows link to approved source requests.
-- Confirm no publish, bridge-row, or aircraft-assignment side effects.
+- Refresh scheduling lifecycle docs/status.
+- Summarize completed publish, pattern, and request workflow slices.
+- Set next macro step to crew self-service planning.
 
 Deferred follow-up to keep on the roadmap:
 
