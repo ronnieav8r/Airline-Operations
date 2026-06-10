@@ -133,3 +133,7 @@ Prompt 180: Crew compliance QA
 Prompt 181: Compliance docs/status refresh
 ```
 
+Prompt 175 implementation status: complete. The schema foundation adds the
+seven additive compliance evidence tables, health counts, migration, and DBML
+updates only. Demo data, read surfaces, assignment warnings, and
+release-readiness warnings remain in later prompts.

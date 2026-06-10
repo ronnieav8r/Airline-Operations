@@ -585,91 +585,129 @@ Table CrewAircraftBlockAssignment {
   updatedAt timestamp [not null]
 }
 
-Table CertificateRating {
+Table CrewCertificate {
   id varchar [pk]
   crewMemberId varchar [not null]
   certificateType varchar [not null]
-  ratingCode varchar [not null]
+  certificateNumber varchar
+  ratingOrEndorsement varchar
+  aircraftType varchar
+  seatRole SeatRole
+  issuingAuthority varchar
   issuedAt timestamp
   expiresAt timestamp
-  documentStorageKey varchar
+  status varchar [not null]
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
   notes text
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
 }
 
-Table MedicalCertificate {
+Table CrewMedical {
   id varchar [pk]
   crewMemberId varchar [not null]
-  classCode varchar [not null]
-  issuedAt timestamp [not null]
-  expiresAt timestamp [not null]
-  restrictions text
-  documentStorageKey varchar
-  createdAt timestamp [not null]
-  updatedAt timestamp [not null]
-}
-
-Table TrainingEvent {
-  id varchar [pk]
-  crewMemberId varchar [not null]
-  aircraftTypeId varchar
-  operatingAuthorityId varchar
-  eventType varchar [not null]
-  completedAt timestamp [not null]
+  medicalClass varchar [not null]
+  issuedAt timestamp
   expiresAt timestamp
-  instructorOrEvaluator varchar
-  result varchar
+  limitations text
+  status varchar [not null]
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
   notes text
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
 }
 
-Table CheckEvent {
+Table CrewTrainingEvent {
   id varchar [pk]
   crewMemberId varchar [not null]
-  aircraftTypeId varchar
-  operatingAuthorityId varchar
-  checkType varchar [not null]
+  trainingType varchar [not null]
+  programName varchar [not null]
+  moduleName varchar
+  aircraftType varchar
   completedAt timestamp [not null]
   expiresAt timestamp
-  evaluator varchar
   result varchar [not null]
+  instructorName varchar
+  providerName varchar
+  status varchar [not null]
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
   notes text
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
 }
 
-Table RecencyEvent {
+Table CrewCheckEvent {
   id varchar [pk]
   crewMemberId varchar [not null]
-  aircraftTypeId varchar
-  eventCode varchar [not null]
-  eventAt timestamp [not null]
-  countValue int
-  sourceFlightLegId varchar
+  checkType varchar [not null]
+  aircraftType varchar
+  seatRole SeatRole
+  completedAt timestamp [not null]
+  expiresAt timestamp
+  result varchar [not null]
+  evaluatorName varchar
+  providerName varchar
+  status varchar [not null]
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
   notes text
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
 }
 
-Table DutyPeriod {
+Table CrewRecencyEvent {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  recencyType varchar [not null]
+  aircraftType varchar
+  seatRole SeatRole
+  eventAt timestamp [not null]
+  quantity int
+  windowStart timestamp
+  windowEnd timestamp
+  result varchar [not null]
+  status varchar [not null]
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
+  notes text
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+}
+
+Table CrewDutyPeriod {
   id varchar [pk]
   crewMemberId varchar [not null]
   startsAt timestamp [not null]
   endsAt timestamp
+  status varchar [not null]
   dutyStatus CrewDutyStatus [not null]
   source varchar
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
   notes text
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
 }
 
-Table RestPeriod {
+Table CrewRestPeriod {
   id varchar [pk]
   crewMemberId varchar [not null]
   startsAt timestamp [not null]
-  endsAt timestamp [not null]
+  endsAt timestamp
+  status varchar [not null]
+  source varchar
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
   notes text
   createdAt timestamp [not null]
   updatedAt timestamp [not null]
@@ -1191,19 +1229,13 @@ Ref: CrewLegAssignment.sourceAircraftCrewAssignmentId > CrewAircraftBlockAssignm
 Ref: CrewAircraftBlockAssignment.aircraftId > Aircraft.id
 Ref: CrewAircraftBlockAssignment.crewMemberId > CrewMember.id
 Ref: CrewAircraftBlockAssignment.assignedById > User.id
-Ref: CertificateRating.crewMemberId > CrewMember.id
-Ref: MedicalCertificate.crewMemberId > CrewMember.id
-Ref: TrainingEvent.crewMemberId > CrewMember.id
-Ref: TrainingEvent.aircraftTypeId > AircraftType.id
-Ref: TrainingEvent.operatingAuthorityId > OperatingAuthority.id
-Ref: CheckEvent.crewMemberId > CrewMember.id
-Ref: CheckEvent.aircraftTypeId > AircraftType.id
-Ref: CheckEvent.operatingAuthorityId > OperatingAuthority.id
-Ref: RecencyEvent.crewMemberId > CrewMember.id
-Ref: RecencyEvent.aircraftTypeId > AircraftType.id
-Ref: RecencyEvent.sourceFlightLegId > FlightLeg.id
-Ref: DutyPeriod.crewMemberId > CrewMember.id
-Ref: RestPeriod.crewMemberId > CrewMember.id
+Ref: CrewCertificate.crewMemberId > CrewMember.id
+Ref: CrewMedical.crewMemberId > CrewMember.id
+Ref: CrewTrainingEvent.crewMemberId > CrewMember.id
+Ref: CrewCheckEvent.crewMemberId > CrewMember.id
+Ref: CrewRecencyEvent.crewMemberId > CrewMember.id
+Ref: CrewDutyPeriod.crewMemberId > CrewMember.id
+Ref: CrewRestPeriod.crewMemberId > CrewMember.id
 Ref: OperationalControlRecord.flightLegId > FlightLeg.id
 Ref: OperationalControlRecord.operatorId > Operator.id
 Ref: OperationalControlRecord.operatingAuthorityId > OperatingAuthority.id

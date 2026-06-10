@@ -285,6 +285,11 @@ add schema only for `CrewCertificate`, `CrewMedical`, `CrewTrainingEvent`,
 Those records should feed warning-only surfaces first, not hard release
 blocking or legal duty/rest enforcement.
 
+Prompt 175 implementation is complete. The seven crew compliance evidence
+tables now exist additively with nullable created/verified user attribution and
+health counts. No UI, seed data, CRUD workflow, hard blocking, or duty/rest
+legal enforcement was added.
+
 ## History Rule
 
 Keep full assignment history.

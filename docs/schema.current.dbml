@@ -1,5 +1,5 @@
 // AeroOps Center current-state DBML
-// Last updated: 2026-06-09
+// Last updated: 2026-06-10
 // Scope: mirrors the Prisma schema currently implemented in this repo.
 // Important: Flight remains the table read by some current UI/API paths.
 // FlightLeg is now implemented as an additive future operational anchor bridged
@@ -10,7 +10,9 @@
 // remain warning-only. Import staging foundation tables exist for future
 // dry-run legacy imports, but no importer execution or operational writes exist.
 // Crew scheduling foundation tables now exist beside CrewSchedule for future
-// schedule periods, requests, rotation templates, and schedule entries.
+// schedule periods, requests, rotation templates, and schedule entries. Crew
+// compliance foundation tables now exist beside CrewQualification for future
+// certificate, medical, training, check, recency, duty, and rest evidence.
 
 Project AeroOps_Current_State {
   database_type: "PostgreSQL"
@@ -193,6 +195,86 @@ Enum CrewScheduleEntryStatus {
   DRAFT
   PUBLISHED
   SUPERSEDED
+  CANCELLED
+}
+
+Enum CrewComplianceRecordStatus {
+  ACTIVE
+  EXPIRED
+  SUPERSEDED
+  VOIDED
+}
+
+Enum CrewCertificateType {
+  ATP
+  COMMERCIAL
+  PRIVATE
+  FLIGHT_INSTRUCTOR
+  TYPE_RATING
+  AIRCRAFT_RATING
+  ENDORSEMENT
+  OTHER
+}
+
+Enum MedicalCertificateClass {
+  FIRST_CLASS
+  SECOND_CLASS
+  THIRD_CLASS
+  BASICMED
+  OTHER
+}
+
+Enum CrewTrainingEventType {
+  INITIAL
+  RECURRENT
+  TRANSITION
+  UPGRADE
+  DIFFERENCES
+  INDOCTRINATION
+  HAZMAT
+  CRM
+  EMERGENCY
+  OTHER
+}
+
+Enum CrewCheckEventType {
+  PROFICIENCY
+  COMPETENCY
+  LINE_CHECK
+  ROUTE_CHECK
+  INSTRUMENT_CHECK
+  CHECKRIDE
+  OTHER
+}
+
+Enum CrewComplianceResult {
+  SATISFACTORY
+  UNSATISFACTORY
+  INCOMPLETE
+  NOT_APPLICABLE
+}
+
+Enum CrewRecencyEventType {
+  TAKEOFF_LANDING
+  INSTRUMENT_APPROACH
+  HOLDING
+  ROUTE_EXPERIENCE
+  AREA_QUALIFICATION
+  FLIGHT_TIME
+  OTHER
+}
+
+Enum CrewDutyPeriodStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+Enum CrewRestPeriodStatus {
+  PLANNED
+  COMPLETED
+  INTERRUPTED
   CANCELLED
 }
 
@@ -1328,6 +1410,196 @@ Table CrewQualification {
   }
 }
 
+Table CrewCertificate {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  certificateType CrewCertificateType [not null]
+  certificateNumber varchar
+  ratingOrEndorsement varchar
+  aircraftType AircraftType
+  seatRole SeatRole
+  issuingAuthority varchar
+  issuedAt timestamp
+  expiresAt timestamp
+  status CrewComplianceRecordStatus [not null, default: "ACTIVE"]
+  notes text
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (crewMemberId, status)
+    (crewMemberId, expiresAt)
+    certificateType
+    (aircraftType, seatRole)
+    createdById
+    verifiedById
+  }
+}
+
+Table CrewMedical {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  medicalClass MedicalCertificateClass [not null]
+  issuedAt timestamp
+  expiresAt timestamp
+  limitations text
+  status CrewComplianceRecordStatus [not null, default: "ACTIVE"]
+  notes text
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (crewMemberId, status)
+    (crewMemberId, expiresAt)
+    medicalClass
+    createdById
+    verifiedById
+  }
+}
+
+Table CrewTrainingEvent {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  trainingType CrewTrainingEventType [not null]
+  programName varchar [not null]
+  moduleName varchar
+  aircraftType AircraftType
+  completedAt timestamp [not null]
+  expiresAt timestamp
+  result CrewComplianceResult [not null, default: "SATISFACTORY"]
+  instructorName varchar
+  providerName varchar
+  status CrewComplianceRecordStatus [not null, default: "ACTIVE"]
+  notes text
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (crewMemberId, status)
+    (crewMemberId, completedAt)
+    (crewMemberId, expiresAt)
+    trainingType
+    aircraftType
+    createdById
+    verifiedById
+  }
+}
+
+Table CrewCheckEvent {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  checkType CrewCheckEventType [not null]
+  aircraftType AircraftType
+  seatRole SeatRole
+  completedAt timestamp [not null]
+  expiresAt timestamp
+  result CrewComplianceResult [not null, default: "SATISFACTORY"]
+  evaluatorName varchar
+  providerName varchar
+  status CrewComplianceRecordStatus [not null, default: "ACTIVE"]
+  notes text
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (crewMemberId, status)
+    (crewMemberId, completedAt)
+    (crewMemberId, expiresAt)
+    checkType
+    (aircraftType, seatRole)
+    createdById
+    verifiedById
+  }
+}
+
+Table CrewRecencyEvent {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  recencyType CrewRecencyEventType [not null]
+  aircraftType AircraftType
+  seatRole SeatRole
+  eventAt timestamp [not null]
+  quantity int
+  windowStart timestamp
+  windowEnd timestamp
+  result CrewComplianceResult [not null, default: "SATISFACTORY"]
+  status CrewComplianceRecordStatus [not null, default: "ACTIVE"]
+  notes text
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (crewMemberId, status)
+    (crewMemberId, eventAt)
+    (crewMemberId, windowStart, windowEnd)
+    recencyType
+    (aircraftType, seatRole)
+    createdById
+    verifiedById
+  }
+}
+
+Table CrewDutyPeriod {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  startsAt timestamp [not null]
+  endsAt timestamp
+  status CrewDutyPeriodStatus [not null, default: "PLANNED"]
+  dutyStatus DutyStatus
+  source varchar
+  notes text
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (crewMemberId, status)
+    (crewMemberId, startsAt, endsAt)
+    dutyStatus
+    createdById
+    verifiedById
+  }
+}
+
+Table CrewRestPeriod {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  startsAt timestamp [not null]
+  endsAt timestamp
+  status CrewRestPeriodStatus [not null, default: "PLANNED"]
+  source varchar
+  notes text
+  createdById varchar
+  verifiedById varchar
+  verifiedAt timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (crewMemberId, status)
+    (crewMemberId, startsAt, endsAt)
+    createdById
+    verifiedById
+  }
+}
+
 Table AircraftCrewAssignment {
   id varchar [pk]
   aircraftId varchar [not null]
@@ -1644,6 +1916,27 @@ Ref: AircraftAssignment.assignedById > User.id
 Ref: CrewMember.userId > User.id
 Ref: CrewMember.baseStationId > Station.id
 Ref: CrewQualification.crewMemberId > CrewMember.id
+Ref: CrewCertificate.crewMemberId > CrewMember.id
+Ref: CrewCertificate.createdById > User.id
+Ref: CrewCertificate.verifiedById > User.id
+Ref: CrewMedical.crewMemberId > CrewMember.id
+Ref: CrewMedical.createdById > User.id
+Ref: CrewMedical.verifiedById > User.id
+Ref: CrewTrainingEvent.crewMemberId > CrewMember.id
+Ref: CrewTrainingEvent.createdById > User.id
+Ref: CrewTrainingEvent.verifiedById > User.id
+Ref: CrewCheckEvent.crewMemberId > CrewMember.id
+Ref: CrewCheckEvent.createdById > User.id
+Ref: CrewCheckEvent.verifiedById > User.id
+Ref: CrewRecencyEvent.crewMemberId > CrewMember.id
+Ref: CrewRecencyEvent.createdById > User.id
+Ref: CrewRecencyEvent.verifiedById > User.id
+Ref: CrewDutyPeriod.crewMemberId > CrewMember.id
+Ref: CrewDutyPeriod.createdById > User.id
+Ref: CrewDutyPeriod.verifiedById > User.id
+Ref: CrewRestPeriod.crewMemberId > CrewMember.id
+Ref: CrewRestPeriod.createdById > User.id
+Ref: CrewRestPeriod.verifiedById > User.id
 Ref: AircraftCrewAssignment.aircraftId > Aircraft.id
 Ref: AircraftCrewAssignment.crewMemberId > CrewMember.id
 Ref: AircraftCrewAssignment.assignedById > User.id

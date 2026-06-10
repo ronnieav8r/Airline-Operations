@@ -1292,16 +1292,23 @@ foundation beside the current shallow `CrewQualification` table, with separate
 certificate, medical, training, check, recency, duty, and rest records feeding
 warning-only surfaces first.
 
+Prompt 175 is complete. The additive crew compliance schema foundation adds
+separate compliance evidence tables, migration, DBML updates, and health counts
+only. Static validation passed; local migration smoke remains pending because
+Docker Desktop was unavailable. Seed/demo data, read surfaces, assignment
+warnings, release-readiness warnings, and QA remain in later prompts.
+
 Preferred next step:
 
 ```text
-Prompt 175: Additive crew compliance schema foundation
+Prompt 176: Compliance seed/backfill/demo data and health counts
 ```
 
 Scope:
 
-- Add the crew compliance tables additively.
-- Update DBML and health counts.
+- Add safe local/demo rows for the seven crew compliance tables.
+- Keep seed/backfill idempotent.
+- Confirm health counts can expose nonzero local data after seed.
 - Do not add UI, CRUD workflows, hard release blocking, duty/rest enforcement,
   imports, provider integrations, or file uploads.
 
