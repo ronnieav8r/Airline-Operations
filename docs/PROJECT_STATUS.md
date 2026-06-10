@@ -1216,18 +1216,24 @@ Prompt 155 is complete. `/crew/scheduling` now shows draft/published
 existing `CrewSchedule` blocks. This does not change aircraft assignment or
 coverage behavior.
 
+Prompt 156 is partial. Static validation passed for schedule-entry planner
+visibility, but local DB-backed route/browser QA is pending because Docker
+Desktop was not running.
+
 Preferred next step:
 
 ```text
-Prompt 156: Crew Schedule Entry Planner Visibility QA
+Prompt 157: Crew Member Schedule Context Foundation
 ```
 
 Scope:
 
-- Validate `/crew/scheduling` schedule-entry visibility, summary count,
-  schedule-period detail links, filters, and grouping.
-- Confirm schedule entries remain planning context and do not change
-  `AircraftCrewAssignment` coverage truth.
+- Surface schedule-period entries on `/crew/[crewMemberId]` as individual crew
+  planning context.
+- Keep existing schedule blocks, time off, assignments, qualifications, and
+  FlightLeg coverage sections.
+- Do not add crew-member schedule writes, publishing, pattern expansion, request
+  review, or aircraft assignment mutations.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind
