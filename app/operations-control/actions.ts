@@ -7,6 +7,8 @@ import {
   Prisma,
   ReleaseAuditEventType,
   ReleaseFindingStatus,
+  ReleasePackageEvidenceType,
+  ReleasePackageStatus,
   ReleaseStatus,
   UserRole,
 } from "@prisma/client";
@@ -42,6 +44,14 @@ type AttemptSnapshotResult = {
   capturedBeforeStatus: ReleaseStatus | null;
   skippedReason: string | null;
   snapshotId: string | null;
+};
+
+type PackageEvidenceLinkInput = {
+  evidenceType: ReleasePackageEvidenceType;
+  evidenceId: string | null;
+  evidenceLabel: string;
+  statusLabel: string | null;
+  isRequired: boolean;
 };
 
 type FlightLegFormInput = {
@@ -685,6 +695,32 @@ function revalidateFlightLegWorkflowPaths() {
   revalidatePath("/internal/flightleg-parity");
 }
 
+function packageDateKey(date: Date): string {
+  return date.toISOString().replaceAll("-", "").replaceAll(":", "").replace(/\.\d{3}Z$/, "Z");
+}
+
+function buildPackageNumber(flightNumber: string | null, scheduledDeparture: Date): string {
+  const safeFlightNumber = (flightNumber ?? "UNNUMBERED").replace(/[^A-Z0-9-]/gi, "").toUpperCase();
+
+  return `PKG-${safeFlightNumber}-${packageDateKey(scheduledDeparture)}-${Date.now().toString(36).toUpperCase()}`;
+}
+
+function packageEvidenceLink(
+  evidenceType: ReleasePackageEvidenceType,
+  evidenceLabel: string,
+  evidenceId: string | null,
+  statusLabel: string | null,
+  isRequired = true,
+): PackageEvidenceLinkInput {
+  return {
+    evidenceType,
+    evidenceId,
+    evidenceLabel,
+    statusLabel,
+    isRequired,
+  };
+}
+
 export async function createFlightLegAction(formData: FormData) {
   const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
   let flightLegId: string;
@@ -1009,4 +1045,245 @@ export async function captureReleasePreviewSnapshotAction(flightLegId: string) {
   revalidatePath(`/operations-control/${flightLegId}`);
   revalidatePath("/api/health");
   redirect(`/operations-control/${flightLegId}?snapshotMessage=Preview%20snapshot%20captured.`);
+}
+
+export async function captureReleasePackagePreviewAction(flightLegId: string) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+  let capturedPackageNumber: string;
+
+  try {
+    const flightLeg = await prisma.flightLeg.findUnique({
+      where: { id: flightLegId },
+      select: {
+        id: true,
+        flightNumber: true,
+        scheduledDeparture: true,
+        operationalControlRecord: {
+          select: {
+            id: true,
+            release: {
+              select: {
+                id: true,
+                status: true,
+              },
+            },
+          },
+        },
+        manifest: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+        weightBalanceRuns: {
+          where: {
+            status: { not: "VOIDED" },
+          },
+          orderBy: [{ createdAt: "desc" }],
+          take: 1,
+          select: {
+            id: true,
+            runLabel: true,
+            status: true,
+          },
+        },
+        flightLocatingRecord: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+        dispatchPackage: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+        readinessSnapshots: {
+          orderBy: [{ evaluatedAt: "desc" }],
+          take: 1,
+          select: {
+            id: true,
+            snapshotStatus: true,
+          },
+        },
+        aircraftAssignments: {
+          where: {
+            status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+          },
+          orderBy: [{ assignedAt: "desc" }],
+          take: 1,
+          select: {
+            aircraft: {
+              select: {
+                configurations: {
+                  where: { status: "ACTIVE" },
+                  orderBy: [{ effectiveStart: "desc" }],
+                  take: 1,
+                  select: {
+                    id: true,
+                    configurationLabel: true,
+                    status: true,
+                  },
+                },
+                airworthinessReleases: {
+                  where: { status: "RELEASED" },
+                  orderBy: [{ releasedAt: "desc" }, { createdAt: "desc" }],
+                  take: 1,
+                  select: {
+                    id: true,
+                    releaseNumber: true,
+                    status: true,
+                  },
+                },
+                discrepancies: {
+                  where: {
+                    status: { in: ["OPEN", "DEFERRED"] },
+                  },
+                  select: {
+                    id: true,
+                  },
+                },
+                deferrals: {
+                  where: { status: "ACTIVE" },
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!flightLeg) {
+      throw new FlightLegFormError("FlightLeg was not found.");
+    }
+
+    const controlRecord = flightLeg.operationalControlRecord;
+
+    if (!controlRecord) {
+      throw new FlightLegFormError("Operational-control record was not found.");
+    }
+
+    if (!controlRecord.release) {
+      throw new FlightLegFormError("FlightRelease record was not found.");
+    }
+
+    const latestWeightBalanceRun = flightLeg.weightBalanceRuns[0] ?? null;
+    const latestReadinessSnapshot = flightLeg.readinessSnapshots[0] ?? null;
+    const aircraft = flightLeg.aircraftAssignments[0]?.aircraft ?? null;
+    const aircraftConfiguration = aircraft?.configurations[0] ?? null;
+    const airworthinessRelease = aircraft?.airworthinessReleases[0] ?? null;
+    const evidenceLinks = [
+      packageEvidenceLink(
+        ReleasePackageEvidenceType.OPERATIONAL_CONTROL_RECORD,
+        "Operational control",
+        controlRecord.id,
+        "Linked",
+      ),
+      packageEvidenceLink(
+        ReleasePackageEvidenceType.FLIGHT_RELEASE,
+        "FlightRelease",
+        controlRecord.release.id,
+        controlRecord.release.status,
+      ),
+      packageEvidenceLink(
+        ReleasePackageEvidenceType.RELEASE_READINESS_SNAPSHOT,
+        "Latest readiness snapshot",
+        latestReadinessSnapshot?.id ?? null,
+        latestReadinessSnapshot?.snapshotStatus ?? "Missing",
+      ),
+      packageEvidenceLink(
+        ReleasePackageEvidenceType.MANIFEST,
+        "Manifest",
+        flightLeg.manifest?.id ?? null,
+        flightLeg.manifest?.status ?? "Missing",
+      ),
+      packageEvidenceLink(
+        ReleasePackageEvidenceType.WEIGHT_BALANCE_RUN,
+        latestWeightBalanceRun?.runLabel ?? "Weight and balance",
+        latestWeightBalanceRun?.id ?? null,
+        latestWeightBalanceRun?.status ?? "Missing",
+      ),
+      packageEvidenceLink(
+        ReleasePackageEvidenceType.FLIGHT_LOCATING_RECORD,
+        "Flight locating",
+        flightLeg.flightLocatingRecord?.id ?? null,
+        flightLeg.flightLocatingRecord?.status ?? "Missing",
+      ),
+      packageEvidenceLink(
+        ReleasePackageEvidenceType.DISPATCH_PACKAGE,
+        "Dispatch package",
+        flightLeg.dispatchPackage?.id ?? null,
+        flightLeg.dispatchPackage?.status ?? "Missing",
+      ),
+      packageEvidenceLink(
+        ReleasePackageEvidenceType.AIRWORTHINESS_RELEASE,
+        airworthinessRelease?.releaseNumber ?? "Aircraft airworthiness release",
+        airworthinessRelease?.id ?? null,
+        airworthinessRelease?.status ?? "Missing",
+      ),
+      packageEvidenceLink(
+        ReleasePackageEvidenceType.AIRCRAFT_CONFIGURATION,
+        aircraftConfiguration?.configurationLabel ?? "Aircraft configuration",
+        aircraftConfiguration?.id ?? null,
+        aircraftConfiguration?.status ?? "Missing",
+        false,
+      ),
+      packageEvidenceLink(
+        ReleasePackageEvidenceType.DISCREPANCY,
+        "Open discrepancies",
+        null,
+        `${aircraft?.discrepancies.length ?? 0} open/deferred`,
+        false,
+      ),
+      packageEvidenceLink(
+        ReleasePackageEvidenceType.DEFERRAL,
+        "Active deferrals",
+        null,
+        `${aircraft?.deferrals.length ?? 0} active`,
+        false,
+      ),
+    ];
+    const presentRequiredCount = evidenceLinks.filter(
+      (link) => link.isRequired && link.evidenceId,
+    ).length;
+    const requiredCount = evidenceLinks.filter((link) => link.isRequired).length;
+    const releasePackage = await prisma.releasePackage.create({
+      data: {
+        flightLegId: flightLeg.id,
+        operationalControlRecordId: controlRecord.id,
+        flightReleaseId: controlRecord.release.id,
+        readinessSnapshotId: latestReadinessSnapshot?.id ?? null,
+        packageNumber: buildPackageNumber(flightLeg.flightNumber, flightLeg.scheduledDeparture),
+        status: ReleasePackageStatus.PREVIEW,
+        capturedById: currentUser.id,
+        summary: {
+          requiredCount,
+          presentRequiredCount,
+          source: "manual-preview-capture",
+        },
+        evidenceLinks: {
+          create: evidenceLinks,
+        },
+      },
+      select: {
+        packageNumber: true,
+      },
+    });
+    capturedPackageNumber = releasePackage.packageNumber;
+
+    revalidatePath(`/operations-control/${flightLegId}`);
+    revalidatePath("/api/health");
+  } catch (error) {
+    redirect(`/operations-control/${flightLegId}?packageError=${encodeError(error)}#release-package`);
+  }
+
+  redirect(
+    `/operations-control/${flightLegId}?packageMessage=${encodeURIComponent(
+      `ReleasePackage ${capturedPackageNumber} captured.`,
+    )}#release-package`,
+  );
 }

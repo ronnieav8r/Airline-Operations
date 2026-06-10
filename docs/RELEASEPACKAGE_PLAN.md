@@ -48,6 +48,10 @@ Prompt 171 implementation status: complete. FlightLeg detail now shows a
 read-only ReleasePackage completeness preview and existing package evidence
 links when present. Capture actions remain deferred.
 
+Prompt 172 implementation status: complete. FlightLeg detail now supports an
+explicit preview capture action that creates a ReleasePackage header plus
+evidence links without changing `FlightRelease.status`.
+
 ## First Workflow Direction
 
 Start with read-only preview, then explicit preview capture. Do not create

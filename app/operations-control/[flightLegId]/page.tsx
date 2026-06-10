@@ -11,6 +11,7 @@ import {
 
 import {
   cancelFlightLegReleaseAction,
+  captureReleasePackagePreviewAction,
   captureReleasePreviewSnapshotAction,
   markFlightLegReleasedAction,
   voidFlightLegReleaseAction,
@@ -35,6 +36,8 @@ type PageProps = {
     releaseError?: string | string[];
     snapshotError?: string | string[];
     snapshotMessage?: string | string[];
+    packageError?: string | string[];
+    packageMessage?: string | string[];
   }>;
 };
 
@@ -576,6 +579,18 @@ function ReleasePackagePreview({ detail }: { detail: ReleaseEvidenceDetail }) {
             {readyCount} / {packageItems.length} evidence groups present
           </span>
         </div>
+
+        <form action={captureReleasePackagePreviewAction.bind(null, detail.id)} className="mt-4">
+          <button
+            className="rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
+            type="submit"
+          >
+            Capture package preview
+          </button>
+          <p className="mt-2 text-xs text-zinc-500">
+            Creates a preview package record only. FlightRelease status is not changed.
+          </p>
+        </form>
 
         {latestPackage ? (
           <div className="mt-4 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
@@ -1357,6 +1372,18 @@ export default async function ReleaseEvidenceDetailPage({ params, searchParams }
         {firstSearchParam(queryParams.snapshotMessage) ? (
           <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
             {firstSearchParam(queryParams.snapshotMessage)}
+          </div>
+        ) : null}
+
+        {firstSearchParam(queryParams.packageError) ? (
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            {firstSearchParam(queryParams.packageError)}
+          </div>
+        ) : null}
+
+        {firstSearchParam(queryParams.packageMessage) ? (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+            {firstSearchParam(queryParams.packageMessage)}
           </div>
         ) : null}
 

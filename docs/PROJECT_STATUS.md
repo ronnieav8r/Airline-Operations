@@ -1238,21 +1238,22 @@ email/password credentials, HttpOnly DB-backed sessions, expanded operational
 roles, mutation-first route/action protection, and user attribution through
 existing nullable user fields.
 
-Prompt 171 is complete. FlightLeg detail now shows a read-only ReleasePackage
-completeness preview and any existing package evidence links. No package capture,
-finalization, hard blocking, or FlightRelease behavior changes were added.
+Prompt 172 is complete. FlightLeg detail now has an explicit ReleasePackage
+preview capture action that creates a package header and evidence links without
+auto-capture, hard blocking, finalization, signatures, file uploads, or
+FlightRelease status changes.
 
 Preferred next step:
 
 ```text
-Prompt 172: ReleasePackage Capture Foundation
+Prompt 173: ReleasePackage QA
 ```
 
 Scope:
 
-- Add explicit package preview capture action.
-- Create ReleasePackage header and evidence links from current evidence.
-- Do not auto-capture, hard-block, or mutate FlightRelease status.
+- QA explicit package capture and read-only package history.
+- Confirm release actions still mutate only FlightRelease status.
+- Confirm health counts include package records after capture.
 
 Deferred follow-up to keep on the roadmap:
 
