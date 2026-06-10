@@ -262,3 +262,12 @@ or mutate aircraft assignments.
 Prompt 188 QA status: partial pass. Static validation passed for pattern
 preview and draft generation. DB-backed preview/generate workflow smoke remains
 pending because Docker Desktop was unavailable.
+
+## Prompt 189 Crew Schedule Request Workflow Planning
+
+Prompt 189 planning status: complete. `CrewScheduleRequest` is the broader
+period-scoped bid/preference/swap/note workflow and remains separate from
+simple `TimeOffRequest` absence tracking. The first implementation should add
+admin/ops approve/deny review for submitted requests only. Approved requests
+become planning input; they must not automatically create schedule entries,
+publish schedules, or mutate aircraft assignments.

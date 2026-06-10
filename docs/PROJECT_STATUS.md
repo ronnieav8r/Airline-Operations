@@ -1383,17 +1383,23 @@ generation, duplicate skipping, planner visibility, no bridge rows before
 publish, and unchanged aircraft assignment counts remain pending because Docker
 Desktop was unavailable.
 
+Prompt 189 is complete. The `CrewScheduleRequest` workflow is planned as
+admin/ops approve/deny review of submitted period-scoped requests. Approved
+requests are planning input only and must not automatically create schedule
+entries, publish schedules, create `CrewSchedule` bridge rows, or mutate
+aircraft assignments.
+
 Preferred next step:
 
 ```text
-Prompt 189: Crew schedule request workflow planning
+Prompt 190: Admin request review foundation
 ```
 
 Scope:
 
-- Plan admin workflow for `CrewScheduleRequest`.
-- Keep broader requests separate from simple `TimeOffRequest`.
-- Do not auto-generate schedules or assignments from requests yet.
+- Add approve/deny review controls for submitted `CrewScheduleRequest` rows.
+- Record review status, notes, timestamp, and reviewer.
+- Keep approval side effects to the request row only.
 
 Deferred follow-up to keep on the roadmap:
 

@@ -278,6 +278,18 @@ Prompt 188 QA status: partial pass. Static validation passed. DB-backed
 pattern preview and generate-drafts workflow smoke remains pending until Docker
 Desktop is available.
 
+## Prompt 189 Crew Schedule Request Workflow Planning
+
+`CrewScheduleRequest` is the period-scoped bid/preference/swap/note request
+workflow. It is not the same thing as `TimeOffRequest`, which remains the
+simple absence workflow.
+
+Prompt 190 should add admin/ops approve/deny review for submitted
+`CrewScheduleRequest` rows on schedule period detail. Approval should record
+review metadata and make the request available as planning input only. It
+should not create schedule entries, publish schedules, or mutate aircraft-block
+assignments.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day
