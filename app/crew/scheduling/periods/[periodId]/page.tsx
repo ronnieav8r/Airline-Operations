@@ -3,6 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
+  archiveSchedulePeriodAction,
+  updateSchedulePeriodAction,
+} from "@/app/crew/scheduling/periods/actions";
+import {
   countEntriesByStatus,
   CrewSchedulePeriodDetail,
   getCrewSchedulePeriodDetail,
@@ -13,6 +17,9 @@ export const dynamic = "force-dynamic";
 type PageProps = {
   params: Promise<{
     periodId: string;
+  }>;
+  searchParams: Promise<{
+    error?: string | string[];
   }>;
 };
 
@@ -31,6 +38,22 @@ function toDate(value: Date | null): string {
   }).format(value);
 }
 
+function toInputDate(value: Date | null): string {
+  if (!value) {
+    return "";
+  }
+
+  return value.toISOString().slice(0, 10);
+}
+
+function firstSearchParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
 function toDateTime(value: Date | null): string {
   if (!value) {
     return "Not set";
@@ -43,6 +66,55 @@ function toDateTime(value: Date | null): string {
     minute: "2-digit",
     hour12: false,
   }).format(value);
+}
+
+function Field({
+  defaultValue,
+  label,
+  name,
+  required = false,
+  type = "text",
+}: {
+  defaultValue?: string;
+  label: string;
+  name: string;
+  required?: boolean;
+  type?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-zinc-700">{label}</span>
+      <input
+        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+        defaultValue={defaultValue ?? ""}
+        name={name}
+        required={required}
+        type={type}
+      />
+    </label>
+  );
+}
+
+function StatusSelect({ defaultValue }: { defaultValue: CrewSchedulePeriodStatus }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-zinc-700">Status</span>
+      <select
+        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+        defaultValue={
+          defaultValue === CrewSchedulePeriodStatus.PUBLISHED
+            ? CrewSchedulePeriodStatus.DRAFTING
+            : defaultValue
+        }
+        name="status"
+        required
+      >
+        <option value={CrewSchedulePeriodStatus.BID_OPEN}>Bid open</option>
+        <option value={CrewSchedulePeriodStatus.DRAFTING}>Drafting</option>
+        <option value={CrewSchedulePeriodStatus.ARCHIVED}>Archived</option>
+      </select>
+    </label>
+  );
 }
 
 function formatStatus(value: string): string {
@@ -145,9 +217,11 @@ function EntryRowView({ entry }: { entry: EntryRow }) {
   );
 }
 
-export default async function CrewSchedulePeriodDetailPage({ params }: PageProps) {
+export default async function CrewSchedulePeriodDetailPage({ params, searchParams }: PageProps) {
   const { periodId } = await params;
+  const queryParams = await searchParams;
   const period = await getCrewSchedulePeriodDetail(periodId);
+  const error = firstSearchParam(queryParams.error);
 
   if (!period) {
     notFound();
@@ -205,12 +279,19 @@ export default async function CrewSchedulePeriodDetailPage({ params }: PageProps
         </header>
 
         <section className="rounded-md border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
-          <p className="font-semibold">Read-only schedule period context</p>
+          <p className="font-semibold">Schedule-period workflow boundary</p>
           <p className="mt-1">
-            This page does not publish schedules, review requests, apply patterns, or
+            This page edits the schedule-period container only. It does not publish
+            schedules, generate schedule entries, review requests, apply patterns, or
             create aircraft assignments.
           </p>
         </section>
+
+        {error ? (
+          <section className="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            {decodeURIComponent(error)}
+          </section>
+        ) : null}
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
@@ -235,6 +316,77 @@ export default async function CrewSchedulePeriodDetailPage({ params }: PageProps
               {toDate(period.bidOpenAt)} - {toDate(period.bidCloseAt)}
             </p>
           </article>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Edit period</h2>
+              <p className="mt-1 text-sm text-zinc-600">
+                Publishing and schedule-entry generation remain deferred.
+              </p>
+            </div>
+            {period.status !== CrewSchedulePeriodStatus.ARCHIVED ? (
+              <form action={archiveSchedulePeriodAction.bind(null, period.id)}>
+                <button
+                  className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                  type="submit"
+                >
+                  Archive period
+                </button>
+              </form>
+            ) : null}
+          </div>
+          <form
+            action={updateSchedulePeriodAction.bind(null, period.id)}
+            className="mt-4 grid gap-4 lg:grid-cols-2"
+          >
+            <Field defaultValue={period.periodKey} label="Period key" name="periodKey" required />
+            <Field defaultValue={period.name} label="Name" name="name" required />
+            <Field
+              defaultValue={toInputDate(period.startsAt)}
+              label="Start date"
+              name="startsAt"
+              required
+              type="date"
+            />
+            <Field
+              defaultValue={toInputDate(period.endsAt)}
+              label="End date"
+              name="endsAt"
+              required
+              type="date"
+            />
+            <Field
+              defaultValue={toInputDate(period.bidOpenAt)}
+              label="Bid open date"
+              name="bidOpenAt"
+              type="date"
+            />
+            <Field
+              defaultValue={toInputDate(period.bidCloseAt)}
+              label="Bid close date"
+              name="bidCloseAt"
+              type="date"
+            />
+            <StatusSelect defaultValue={period.status} />
+            <label className="block lg:col-span-2">
+              <span className="text-sm font-medium text-zinc-700">Notes</span>
+              <textarea
+                className="mt-1 min-h-24 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+                defaultValue={period.notes ?? ""}
+                name="notes"
+              />
+            </label>
+            <div className="lg:col-span-2">
+              <button
+                className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+                type="submit"
+              >
+                Save period
+              </button>
+            </div>
+          </form>
         </section>
 
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">

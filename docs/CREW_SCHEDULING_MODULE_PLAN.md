@@ -227,6 +227,10 @@ schedule entries.
 Prompt 146 planning status: complete. Prompt 147 should implement create,
 edit, and archive controls on the existing schedule-period admin routes.
 
+Prompt 147 implementation status: complete. Schedule periods can now be created,
+edited, and archived from the existing admin routes without publishing schedules
+or generating schedule entries.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

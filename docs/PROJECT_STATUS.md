@@ -1175,16 +1175,21 @@ ops/admin create, edit, and archive for `CrewSchedulePeriod`, without schedule
 publishing, schedule entry generation, pattern application, request review, or
 assignment automation.
 
+Prompt 147 is complete. `/crew/scheduling/periods` now has schedule-period
+create controls, and `/crew/scheduling/periods/[periodId]` has edit/archive
+controls. The workflow only mutates `CrewSchedulePeriod`.
+
 Preferred next step:
 
 ```text
-Prompt 147: Schedule Period Create/Edit Foundation
+Prompt 148: Schedule Period Create/Edit QA
 ```
 
 Scope:
 
-- Implement create, edit, and archive controls for schedule periods.
-- Keep publishing and schedule generation deferred.
+- Validate create, edit, and archive behavior.
+- Confirm no schedule entries, crew schedules, requests, patterns, aircraft
+  assignments, or crew leg assignments are mutated.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind
