@@ -37,6 +37,10 @@ legacy API paths in the current macro scaffolding chain.
    Move visible boards and helper queries to FlightLeg-primary reads, keeping
    legacy fallback rows visible.
 
+   Prompt 166 completed the first board cutover for `/`, `/flights`, and
+   `/aircraft`. Crew-heavy reads remain with the coverage/API cutover because
+   they depend on `resolveFlightCoverage` semantics.
+
 2. **Coverage/API Cutover**
    Keep current API paths but make FlightLeg IDs first-class. Preserve response
    compatibility while internals move toward FlightLeg assignment/snapshot data.

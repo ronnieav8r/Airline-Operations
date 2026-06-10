@@ -1238,22 +1238,22 @@ email/password credentials, HttpOnly DB-backed sessions, expanded operational
 roles, mutation-first route/action protection, and user attribution through
 existing nullable user fields.
 
-Prompt 165 is complete as planning. The FlightLeg cutover strategy is staged:
-move visible reads to FlightLeg-primary helpers, then move coverage APIs toward
-FlightLeg-native inputs, then validate parity before treating legacy `Flight` as
-compatibility/archive only.
+Prompt 166 is complete as a read-cutover foundation. `/flights`, the dashboard
+today-flight board, and `/aircraft` fleet board now use FlightLeg-primary reads
+with legacy `Flight` fallback only for unbridged rows. Crew-heavy reads remain
+deferred to Prompt 167 because they are coupled to coverage/API semantics.
 
 Preferred next step:
 
 ```text
-Prompt 166: FlightLeg Read Cutover Foundation
+Prompt 167: FlightLeg API Cutover Foundation
 ```
 
 Scope:
 
-- Move remaining app/page helper reads to FlightLeg-primary data.
-- Preserve legacy `Flight` fallback for unbridged rows only.
-- Keep write workflows maintaining the legacy bridge until later parity QA.
+- Move crew coverage helpers and APIs toward FlightLeg-native inputs.
+- Preserve `/api/flights/[id]/crew` and `/api/flights/[id]/coverage`.
+- Keep compatibility aliases for legacy `Flight.id` callers.
 
 Deferred follow-up to keep on the roadmap:
 

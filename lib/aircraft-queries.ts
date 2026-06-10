@@ -6,6 +6,7 @@ import {
   AlertSeverity,
   AlertStatus,
   AlertType,
+  AssignmentStatus,
   DeferralStatus,
   DiscrepancyStatus,
   FlightLegStatus,
@@ -211,8 +212,47 @@ const aircraftBoardSelect = {
   },
 } satisfies Prisma.AircraftSelect;
 
+const aircraftBoardFlightLegSelect = {
+  id: true,
+  legacyFlightId: true,
+  flightNumber: true,
+  scheduledDeparture: true,
+  scheduledArrival: true,
+  status: true,
+  departureStation: {
+    select: {
+      code: true,
+      city: true,
+    },
+  },
+  arrivalStation: {
+    select: {
+      code: true,
+      city: true,
+    },
+  },
+  legacyFlight: {
+    select: {
+      id: true,
+      flightNumber: true,
+    },
+  },
+  aircraftAssignments: {
+    where: {
+      status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+    },
+    select: {
+      aircraftId: true,
+    },
+  },
+} satisfies Prisma.FlightLegSelect;
+
 type AircraftBoardPayload = Prisma.AircraftGetPayload<{
   select: typeof aircraftBoardSelect;
+}>;
+
+type AircraftBoardFlightLegPayload = Prisma.FlightLegGetPayload<{
+  select: typeof aircraftBoardFlightLegSelect;
 }>;
 
 type AircraftBoardCrewAssignment = AircraftBoardPayload["crewAssignments"][number];
@@ -308,6 +348,21 @@ function normalizeFlight(flight: AircraftBoardPayload["flights"][number]): Aircr
   };
 }
 
+function normalizeFlightLeg(flightLeg: AircraftBoardFlightLegPayload): AircraftBoardFlight {
+  return {
+    id: flightLeg.legacyFlightId ?? flightLeg.legacyFlight?.id ?? flightLeg.id,
+    legacyFlightId: flightLeg.legacyFlightId ?? flightLeg.legacyFlight?.id ?? flightLeg.id,
+    flightLegId: flightLeg.id,
+    readSource: "FLIGHT_LEG",
+    flightNumber: flightLeg.flightNumber ?? flightLeg.legacyFlight?.flightNumber ?? "UNNUMBERED",
+    scheduledDeparture: flightLeg.scheduledDeparture,
+    scheduledArrival: flightLeg.scheduledArrival,
+    status: flightLeg.status,
+    departureStation: flightLeg.departureStation,
+    arrivalStation: flightLeg.arrivalStation,
+  };
+}
+
 export async function getAircraftBoard(): Promise<AircraftBoardData> {
   const now = new Date();
 
@@ -315,12 +370,54 @@ export async function getAircraftBoard(): Promise<AircraftBoardData> {
     select: aircraftBoardSelect,
     orderBy: [{ tailNumber: "asc" }],
   });
+  const aircraftIds = aircraftRows.map((item) => item.id);
+  const flightLegRows = await prisma.flightLeg.findMany({
+    where: {
+      scheduledArrival: { gte: now },
+      status: { not: FlightLegStatus.CANCELLED },
+      aircraftAssignments: {
+        some: {
+          aircraftId: { in: aircraftIds },
+          status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+        },
+      },
+    },
+    select: aircraftBoardFlightLegSelect,
+    orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
+  });
+  const flightLegsByAircraftId = new Map<string, AircraftBoardFlight[]>();
+
+  for (const flightLeg of flightLegRows) {
+    for (const assignment of flightLeg.aircraftAssignments) {
+      const existing = flightLegsByAircraftId.get(assignment.aircraftId) ?? [];
+      existing.push(normalizeFlightLeg(flightLeg));
+      flightLegsByAircraftId.set(assignment.aircraftId, existing);
+    }
+  }
 
   const aircraft = aircraftRows.map((item) => ({
     ...item,
-    flights: item.flights
-      .filter((flight) => flight.scheduledArrival >= now && flight.status !== FlightStatus.CANCELLED)
-      .map(normalizeFlight)
+    flights: [
+      ...(flightLegsByAircraftId.get(item.id) ?? []),
+      ...item.flights
+        .filter(
+          (flight) =>
+            !flight.flightLeg &&
+            flight.scheduledArrival >= now &&
+            flight.status !== FlightStatus.CANCELLED,
+        )
+        .map(normalizeFlight),
+    ]
+      .sort((first, second) => {
+        const departureDelta =
+          first.scheduledDeparture.getTime() - second.scheduledDeparture.getTime();
+
+        if (departureDelta !== 0) {
+          return departureDelta;
+        }
+
+        return first.flightNumber.localeCompare(second.flightNumber);
+      })
       .slice(0, 3),
     crewAssignments: item.crewAssignments.filter(
       (assignment) =>

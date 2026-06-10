@@ -20,7 +20,84 @@ import {
 } from "@/lib/flightleg-operations-control-queries";
 import { prisma } from "@/lib/prisma";
 
-const dashboardFlightSelect = {
+const dashboardFlightLegSelect = {
+  id: true,
+  legacyFlightId: true,
+  flightNumber: true,
+  scheduledDeparture: true,
+  status: true,
+  departureStation: {
+    select: { code: true },
+  },
+  arrivalStation: {
+    select: { code: true },
+  },
+  aircraftAssignments: {
+    where: {
+      status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+    },
+    select: {
+      aircraft: {
+        select: { tailNumber: true },
+      },
+    },
+    orderBy: {
+      assignedAt: "desc",
+    },
+    take: 1,
+  },
+  legacyFlight: {
+    select: {
+      id: true,
+      flightNumber: true,
+      aircraft: {
+        select: { tailNumber: true },
+      },
+    },
+  },
+  manifest: {
+    select: {
+      status: true,
+      items: {
+        select: { id: true },
+      },
+    },
+  },
+  weightBalanceRuns: {
+    select: {
+      status: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 1,
+  },
+  flightLocatingRecord: {
+    select: {
+      status: true,
+    },
+  },
+  operationalControlRecord: {
+    select: {
+      release: {
+        select: {
+          status: true,
+          releasedAt: true,
+        },
+      },
+    },
+  },
+  dispatchPackage: {
+    select: {
+      id: true,
+      weatherBriefingId: true,
+      notamSnapshotId: true,
+      flightPlanReferenceId: true,
+    },
+  },
+} satisfies Prisma.FlightLegSelect;
+
+const fallbackDashboardFlightSelect = {
   id: true,
   flightNumber: true,
   scheduledDeparture: true,
@@ -34,78 +111,14 @@ const dashboardFlightSelect = {
   aircraft: {
     select: { tailNumber: true },
   },
-  flightLeg: {
-    select: {
-      id: true,
-      flightNumber: true,
-      scheduledDeparture: true,
-      status: true,
-      departureStation: {
-        select: { code: true },
-      },
-      arrivalStation: {
-        select: { code: true },
-      },
-      aircraftAssignments: {
-        where: {
-          status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
-        },
-        select: {
-          aircraft: {
-            select: { tailNumber: true },
-          },
-        },
-        orderBy: {
-          assignedAt: "desc",
-        },
-        take: 1,
-      },
-      manifest: {
-        select: {
-          status: true,
-          items: {
-            select: { id: true },
-          },
-        },
-      },
-      weightBalanceRuns: {
-        select: {
-          status: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 1,
-      },
-      flightLocatingRecord: {
-        select: {
-          status: true,
-        },
-      },
-      operationalControlRecord: {
-        select: {
-          release: {
-            select: {
-              status: true,
-              releasedAt: true,
-            },
-          },
-        },
-      },
-      dispatchPackage: {
-        select: {
-          id: true,
-          weatherBriefingId: true,
-          notamSnapshotId: true,
-          flightPlanReferenceId: true,
-        },
-      },
-    },
-  },
 } satisfies Prisma.FlightSelect;
 
-type DashboardFlightPayload = Prisma.FlightGetPayload<{
-  select: typeof dashboardFlightSelect;
+type DashboardFlightLegPayload = Prisma.FlightLegGetPayload<{
+  select: typeof dashboardFlightLegSelect;
+}>;
+
+type FallbackDashboardFlightPayload = Prisma.FlightGetPayload<{
+  select: typeof fallbackDashboardFlightSelect;
 }>;
 
 export type DashboardFlightReadSource = "FLIGHT_LEG" | "LEG_MISSING_FALLBACK_FLIGHT";
@@ -237,7 +250,7 @@ function buildFleetSnapshot(statusCounts: Array<{ status: AircraftStatus; count:
 }
 
 function buildDashboardReleaseEvidence(
-  flightLeg: NonNullable<DashboardFlightPayload["flightLeg"]>,
+  flightLeg: DashboardFlightLegPayload,
 ): DashboardReleaseEvidence {
   const weightBalanceStatus = flightLeg.weightBalanceRuns[0]?.status ?? null;
   const dispatchPackageReady = Boolean(
@@ -397,25 +410,30 @@ function buildPriorityFlightLegs(
     .slice(0, 6);
 }
 
-function normalizeFlight(flight: DashboardFlightPayload): Omit<DashboardFlight, "coverage"> {
-  if (flight.flightLeg) {
-    return {
-      id: flight.id,
-      legacyFlightId: flight.id,
-      flightLegId: flight.flightLeg.id,
-      readSource: "FLIGHT_LEG",
-      flightNumber: flight.flightLeg.flightNumber ?? flight.flightNumber,
-      scheduledDeparture: flight.flightLeg.scheduledDeparture,
-      status: flight.flightLeg.status,
-      departureCode: flight.flightLeg.departureStation.code,
-      arrivalCode: flight.flightLeg.arrivalStation.code,
-      tailNumber: flight.flightLeg.aircraftAssignments[0]?.aircraft.tailNumber ?? flight.aircraft.tailNumber,
-      releaseEvidence: buildDashboardReleaseEvidence(flight.flightLeg),
-      releaseStatus: flight.flightLeg.operationalControlRecord?.release?.status ?? null,
-      releasedAt: flight.flightLeg.operationalControlRecord?.release?.releasedAt ?? null,
-    };
-  }
+function normalizeFlightLeg(flightLeg: DashboardFlightLegPayload): Omit<DashboardFlight, "coverage"> {
+  return {
+    id: flightLeg.legacyFlightId ?? flightLeg.legacyFlight?.id ?? flightLeg.id,
+    legacyFlightId: flightLeg.legacyFlightId ?? flightLeg.legacyFlight?.id ?? flightLeg.id,
+    flightLegId: flightLeg.id,
+    readSource: "FLIGHT_LEG",
+    flightNumber: flightLeg.flightNumber ?? flightLeg.legacyFlight?.flightNumber ?? "UNNUMBERED",
+    scheduledDeparture: flightLeg.scheduledDeparture,
+    status: flightLeg.status,
+    departureCode: flightLeg.departureStation.code,
+    arrivalCode: flightLeg.arrivalStation.code,
+    tailNumber:
+      flightLeg.aircraftAssignments[0]?.aircraft.tailNumber ??
+      flightLeg.legacyFlight?.aircraft.tailNumber ??
+      "Unassigned",
+    releaseEvidence: buildDashboardReleaseEvidence(flightLeg),
+    releaseStatus: flightLeg.operationalControlRecord?.release?.status ?? null,
+    releasedAt: flightLeg.operationalControlRecord?.release?.releasedAt ?? null,
+  };
+}
 
+function normalizeFallbackFlight(
+  flight: FallbackDashboardFlightPayload,
+): Omit<DashboardFlight, "coverage"> {
   return {
     id: flight.id,
     legacyFlightId: flight.id,
@@ -440,16 +458,42 @@ export async function getDashboardData(): Promise<DashboardData> {
     await Promise.all([
       prisma.aircraft.count(),
       prisma.crewMember.count(),
-      prisma.flight.findMany({
-        where: {
-          scheduledDeparture: {
-            gte: start,
-            lt: end,
+      Promise.all([
+        prisma.flightLeg.findMany({
+          where: {
+            scheduledDeparture: {
+              gte: start,
+              lt: end,
+            },
           },
-        },
-        select: dashboardFlightSelect,
-        orderBy: { scheduledDeparture: "asc" },
-      }),
+          select: dashboardFlightLegSelect,
+          orderBy: { scheduledDeparture: "asc" },
+        }),
+        prisma.flight.findMany({
+          where: {
+            flightLeg: null,
+            scheduledDeparture: {
+              gte: start,
+              lt: end,
+            },
+          },
+          select: fallbackDashboardFlightSelect,
+          orderBy: { scheduledDeparture: "asc" },
+        }),
+      ]).then(([flightLegs, fallbackFlights]) =>
+        [...flightLegs.map(normalizeFlightLeg), ...fallbackFlights.map(normalizeFallbackFlight)].sort(
+          (first, second) => {
+            const departureDelta =
+              first.scheduledDeparture.getTime() - second.scheduledDeparture.getTime();
+
+            if (departureDelta !== 0) {
+              return departureDelta;
+            }
+
+            return first.flightNumber.localeCompare(second.flightNumber);
+          },
+        ),
+      ),
       prisma.alert.findMany({
         where: {
           status: AlertStatus.ACTIVE,
@@ -482,11 +526,9 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const flightsWithCoverage: DashboardFlight[] = await Promise.all(
     todayFlights.map(async (flight) => {
-      const normalized = normalizeFlight(flight);
-
       return {
-        ...normalized,
-        coverage: await resolveFlightCoverage(normalized.legacyFlightId),
+        ...flight,
+        coverage: await resolveFlightCoverage(flight.flightLegId ?? flight.legacyFlightId),
       };
     }),
   );
