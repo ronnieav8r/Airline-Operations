@@ -239,3 +239,11 @@ period is marked `PUBLISHED`. Aircraft assignments remain unchanged.
 Prompt 184 QA status: partial pass. Static validation passed for the publish
 foundation. DB-backed idempotency, planner visibility, and no-assignment-mutation
 workflow smoke remains pending because Docker Desktop was unavailable.
+
+## Prompt 185 Rotation Pattern Application Planning
+
+Prompt 185 planning status: complete. The selected pattern application model is
+preview-first and draft-only. Applying a pattern should generate
+`CrewScheduleEntry` rows with status `DRAFT`, linked to the selected
+`CrewRotationPattern`, and should not publish entries, create `CrewSchedule`
+bridge rows, review requests, or mutate aircraft assignments.

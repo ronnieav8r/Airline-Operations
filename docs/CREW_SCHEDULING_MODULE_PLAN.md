@@ -254,6 +254,16 @@ unchanged.
 Prompt 184 QA status: partial pass. Static validation passed. DB-backed
 publish workflow smoke remains pending until Docker Desktop is available.
 
+## Prompt 185 Rotation Pattern Application Planning
+
+The selected first pattern application workflow is preview-first and
+draft-only. Schedule period detail should let ops/admin users preview generated
+rows from an active rotation pattern, then explicitly generate `DRAFT`
+`CrewScheduleEntry` rows in a later implementation slice.
+
+Pattern application must not publish entries, create `CrewSchedule` bridge
+rows, review requests, or mutate aircraft-block assignments.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day

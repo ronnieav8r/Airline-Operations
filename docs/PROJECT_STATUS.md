@@ -1357,17 +1357,24 @@ row creation/update, planner visibility, crew detail visibility, and unchanged
 aircraft assignment counts remain pending because Docker Desktop was
 unavailable.
 
+Prompt 185 is complete. Rotation pattern application is planned as a
+preview-first, draft-only workflow on schedule period detail. Pattern
+application should generate `DRAFT` `CrewScheduleEntry` rows only, and must not
+publish entries, create `CrewSchedule` bridge rows, review requests, or mutate
+aircraft assignments.
+
 Preferred next step:
 
 ```text
-Prompt 185: Rotation pattern application planning
+Prompt 186: Pattern application preview
 ```
 
 Scope:
 
-- Plan pattern preview/generation boundaries.
-- Keep pattern application draft-only.
-- Do not publish automatically.
+- Add read-only generated-entry preview on schedule period detail.
+- Show warning-only conflicts before saving.
+- Do not write rows yet.
+- Do not publish.
 - Do not create aircraft assignments.
 
 Deferred follow-up to keep on the roadmap:
