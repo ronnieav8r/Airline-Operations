@@ -1183,17 +1183,21 @@ Prompt 148 is partial. Static validation passed for the schedule-period
 workflow, but local DB-backed workflow/browser QA is pending because Docker
 Desktop was not running.
 
+Prompt 149 is complete. Rotation pattern admin is planned as template
+management using `CrewRotationPattern` and `CrewRotationPatternDay`, without
+pattern application, schedule generation, publishing, request review, or
+assignment automation.
+
 Preferred next step:
 
 ```text
-Prompt 149: Rotation Pattern Admin Planning
+Prompt 150: Rotation Pattern Admin Foundation
 ```
 
 Scope:
 
-- Plan rotation pattern admin using existing `CrewRotationPattern` and
-  `CrewRotationPatternDay`.
-- Keep pattern application and schedule generation deferred.
+- Implement `/crew/scheduling/patterns` for pattern header and day-row admin.
+- Keep pattern application, schedule generation, and publishing deferred.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind

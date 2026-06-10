@@ -235,6 +235,15 @@ Prompt 148 QA status: partial pass. Prisma validation, typecheck, lint, and
 build passed. Local workflow/browser QA is pending because Docker Desktop was
 not running in the session.
 
+## Prompt 149 Rotation Pattern Admin Planning
+
+Rotation pattern admin should manage reusable template headers and ordered day
+rows using existing `CrewRotationPattern` and `CrewRotationPatternDay` tables.
+Applying patterns to schedule entries remains deferred.
+
+Prompt 149 planning status: complete. Prompt 150 should implement pattern
+header create/edit, active toggles, and day-row add/update/delete.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.
