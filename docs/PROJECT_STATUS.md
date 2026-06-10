@@ -1233,17 +1233,24 @@ Prompt 159 is complete. The remaining major scaffolding is now organized in
 FlightLeg cutover, ReleasePackage, crew compliance, crew scheduling lifecycle,
 crew self-service, and crew logistics.
 
+Prompt 160 is complete. Local auth is planned in `docs/LOCAL_AUTH_PLAN.md`:
+email/password credentials, HttpOnly DB-backed sessions, expanded operational
+roles, mutation-first route/action protection, and user attribution through
+existing nullable user fields.
+
 Preferred next step:
 
 ```text
-Prompt 160: Local Auth Planning
+Prompt 161: Auth Schema Foundation
 ```
 
 Scope:
 
-- Plan local email/password auth, HttpOnly sessions, expanded operational
-  roles, route/action protection, and user attribution.
-- Keep implementation deferred until the auth plan is decision-complete.
+- Expand `UserRole`.
+- Add password credential and DB-backed session tables.
+- Add `User` relations for auth primitives.
+- Do not add login UI, route protection, signatures, provider auth, password
+  reset, MFA, or hard release blocking yet.
 
 Deferred follow-up to keep on the roadmap:
 

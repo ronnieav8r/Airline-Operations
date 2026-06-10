@@ -33,6 +33,12 @@ integrations, file uploads, shared multi-tenant SaaS scoping, destructive
 legacy `Flight` removal, or duty/rest legal enforcement without a later
 decision-complete plan.
 
+Local auth planning is complete in `docs/LOCAL_AUTH_PLAN.md`. The first auth
+schema slice should expand operational roles and add local password credential
+plus DB-backed session primitives. The app should populate existing nullable
+user attribution fields only after the relevant route/action is protected.
+Attribution is not a legal signature.
+
 ## Updated Long-Term Direction
 
 The current schema is a v1 operations foundation, not the final regulatory data model.
