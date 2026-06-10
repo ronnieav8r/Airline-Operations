@@ -180,6 +180,46 @@ It has:
 136. Crew planner date/window controls planning.
 137. Crew planner date/window controls foundation.
 138. Crew planner date/window controls QA.
+139. Crew scheduling system architecture planning.
+140. Crew scheduling schema foundation planning.
+141. Crew scheduling additive schema foundation.
+142. Crew scheduling schema QA.
+143. Schedule period read-only admin surface planning.
+144. Schedule period read-only admin surface foundation.
+145. Schedule period read-only admin surface QA.
+146. Time-off request workflow planning.
+147. Time-off request workflow foundation.
+148. Time-off request workflow QA.
+149. Time-off queue filters foundation.
+150. Time-off queue filters QA.
+151. Schedule period create/edit planning.
+152. Schedule period create/edit foundation.
+153. Schedule period create/edit QA.
+154. Rotation pattern admin planning.
+155. Rotation pattern admin foundation.
+156. Rotation pattern admin QA.
+157. Crew schedule entry planning.
+158. Crew schedule entry foundation.
+159. Crew schedule entry QA.
+160. Crew schedule entry planner visibility foundation.
+161. Crew schedule entry planner visibility QA.
+162. Crew member schedule context foundation.
+163. Crew member schedule context QA.
+164. Major scaffolding macro plan.
+165. Local auth planning.
+166. Auth schema foundation.
+167. Login/session foundation.
+168. Role and attribution foundation.
+169. Auth QA.
+170. FlightLeg cutover planning.
+171. FlightLeg read cutover foundation.
+172. FlightLeg API cutover foundation.
+173. FlightLeg cutover QA.
+174. ReleasePackage planning.
+175. ReleasePackage schema foundation.
+176. ReleasePackage read-only preview.
+177. ReleasePackage preview capture foundation.
+178. ReleasePackage QA.
 
 ## Current Data Model Boundaries
 
@@ -1243,17 +1283,22 @@ preview capture action that creates a package header and evidence links without
 auto-capture, hard blocking, finalization, signatures, file uploads, or
 FlightRelease status changes.
 
+Prompt 173 is complete. Static validation passed for ReleasePackage schema,
+preview, and explicit capture behavior. Local DB-backed workflow smoke remains
+pending because Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 173: ReleasePackage QA
+Prompt 174: Crew compliance planning
 ```
 
 Scope:
 
-- QA explicit package capture and read-only package history.
-- Confirm release actions still mutate only FlightRelease status.
-- Confirm health counts include package records after capture.
+- Define certificate/rating, medical, training, check, recency, duty, and rest
+  boundaries.
+- Decide which compliance records are warning-only surfaces first.
+- Prepare the additive schema foundation scope for Prompt 175.
 
 Deferred follow-up to keep on the roadmap:
 

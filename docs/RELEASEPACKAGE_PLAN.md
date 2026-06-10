@@ -52,6 +52,9 @@ Prompt 172 implementation status: complete. FlightLeg detail now supports an
 explicit preview capture action that creates a ReleasePackage header plus
 evidence links without changing `FlightRelease.status`.
 
+Prompt 173 QA status: static validation complete. Runtime workflow smoke is
+pending because Docker Desktop was unavailable.
+
 ## First Workflow Direction
 
 Start with read-only preview, then explicit preview capture. Do not create
