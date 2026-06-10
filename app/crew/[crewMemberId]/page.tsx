@@ -190,6 +190,9 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
                 <Link className="text-sky-700 hover:text-sky-900" href="/crew/scheduling/time-off">
                   Time off
                 </Link>
+                <Link className="text-sky-700 hover:text-sky-900" href={`/crew/${crewMemberId}/logistics`}>
+                  Manage logistics
+                </Link>
               </div>
               <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Crew Member Context
@@ -297,6 +300,12 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
             create bookings, expenses, aircraft assignments, schedule entries, or duty/rest
             compliance decisions.
           </div>
+          <Link
+            className="mt-3 inline-flex rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+            href={`/crew/${crewMember.id}/logistics`}
+          >
+            Manage logistics
+          </Link>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
               <h3 className="text-sm font-semibold text-zinc-950">Latest location records</h3>

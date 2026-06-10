@@ -1469,16 +1469,24 @@ create/edit UI, booking, expense, schedule, assignment, release, or duty/rest
 behavior was added. DB-backed runtime QA remains pending because Docker Desktop
 was unavailable.
 
+Prompt 201 is complete for static validation. Ops/admin users can manage
+crew-scoped logistics records at `/crew/[crewMemberId]/logistics`: add/edit
+location records, add/edit travel-support needs, update statuses, and store
+provider/confirmation placeholders. This remains a coordination workflow only;
+it does not book travel, create expenses, change schedules, change aircraft
+assignments, enforce duty/rest, or affect release behavior. DB-backed runtime
+QA remains pending because Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 201: Logistics create/edit foundation
+Prompt 202: Logistics QA
 ```
 
 Scope:
 
-- Add ops/admin create/edit workflows for crew location records and logistics
-  needs.
+- QA logistics schema, read surfaces, create/edit workflow, role gates, and
+  unchanged schedule/assignment behavior.
 - No booking, expense, assignment, schedule, release, or duty/rest behavior
   changes.
 

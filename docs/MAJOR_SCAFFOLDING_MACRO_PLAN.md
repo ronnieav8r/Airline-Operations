@@ -200,6 +200,15 @@ mutations, aircraft assignment automation, release behavior, or duty/rest
 enforcement were added. DB-backed runtime QA remains pending because Docker
 Desktop was unavailable.
 
+Prompt 201 implementation status: complete for static validation. Ops/admin
+users can create and edit crew-scoped location records and travel-support needs
+under `/crew/[crewMemberId]/logistics`, including status,
+provider-placeholder, and confirmation-placeholder updates. No provider
+booking, expense workflow, schedule mutation, aircraft assignment automation,
+release behavior, duty/rest enforcement, or crew self-service logistics writes
+were added. DB-backed runtime QA remains pending because Docker Desktop was
+unavailable.
+
 ## Validation Standard
 
 For every implementation slice:

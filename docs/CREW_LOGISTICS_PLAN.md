@@ -82,3 +82,14 @@ schedule, assignment, release, duty/rest, booking, or expense behavior.
 
 Prompt 201 should add ops/admin logistics create/edit workflow planning and
 implementation if the read-only context is acceptable.
+
+Prompt 201 implementation status: complete for static validation. Ops/admin
+users can manage crew-scoped logistics records at
+`/crew/[crewMemberId]/logistics`: create/edit location records, create/edit
+travel-support needs, update status, and store provider/confirmation
+placeholders. The workflow does not book travel, create expenses, mutate
+schedules, mutate aircraft assignments, enforce duty/rest, or affect release
+behavior.
+
+Prompt 202 should QA the logistics schema, read surfaces, write workflow, role
+gates, and unchanged schedule/assignment behavior.
