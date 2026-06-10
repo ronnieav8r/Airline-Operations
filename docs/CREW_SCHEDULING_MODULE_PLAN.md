@@ -275,6 +275,10 @@ support manual draft `CrewScheduleEntry` create/edit/cancel, readable duplicate
 errors, and warning-only conflict context while preserving the boundary that
 schedule entries are planning records only.
 
+Prompt 154 QA status: partial pass. Prisma validation, typecheck, lint, and
+build passed. Local DB-backed workflow/browser QA is pending because Docker
+Desktop was not running in the session.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

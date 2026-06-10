@@ -1207,19 +1207,24 @@ manual draft `CrewScheduleEntry` create/edit/cancel with warning-only conflict
 context. It does not publish schedules, generate `CrewSchedule` rows, apply
 patterns, review requests, or mutate aircraft assignments.
 
+Prompt 154 is partial. Static validation passed for the draft schedule-entry
+workflow, but local DB-backed workflow/browser QA is pending because Docker
+Desktop was not running.
+
 Preferred next step:
 
 ```text
-Prompt 154: Crew Schedule Entry QA
+Prompt 155: Crew Schedule Entry Planner Visibility Foundation
 ```
 
 Scope:
 
-- Validate draft schedule-entry create/edit/cancel.
-- Confirm duplicate entries show readable errors and warning-only context does
-  not block valid saves.
-- Confirm no `CrewSchedule`, aircraft assignment, publishing, pattern
-  expansion, request review, release, auth, import, or provider side effects.
+- Surface `CrewScheduleEntry` rows on `/crew/scheduling` as planning
+  availability context beside existing `CrewSchedule` blocks.
+- Keep planner visibility read-only and do not make schedule entries the active
+  coverage source.
+- Do not publish schedules, generate legacy `CrewSchedule` rows, apply
+  patterns, approve requests, or mutate aircraft assignments.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind
