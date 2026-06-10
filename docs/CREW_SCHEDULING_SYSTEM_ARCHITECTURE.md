@@ -258,3 +258,7 @@ explicit generate-drafts action for admin/ops users. The action validates the
 period, active crew member, active pattern, and date window; creates only
 `DRAFT` `CrewScheduleEntry` rows; skips exact duplicates; and does not publish
 or mutate aircraft assignments.
+
+Prompt 188 QA status: partial pass. Static validation passed for pattern
+preview and draft generation. DB-backed preview/generate workflow smoke remains
+pending because Docker Desktop was unavailable.

@@ -274,6 +274,10 @@ duplicates, links rows to the selected rotation pattern, and does not create
 `CrewSchedule` bridge rows, publish schedules, review requests, or mutate
 aircraft-block assignments.
 
+Prompt 188 QA status: partial pass. Static validation passed. DB-backed
+pattern preview and generate-drafts workflow smoke remains pending until Docker
+Desktop is available.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day

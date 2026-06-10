@@ -1377,19 +1377,23 @@ does not publish schedules, create `CrewSchedule` bridge rows, review requests,
 or mutate aircraft assignments. Static validation passed; DB-backed
 workflow/browser smoke remains pending because Docker Desktop was unavailable.
 
+Prompt 188 is complete as a partial QA pass. Static validation passed for
+pattern preview and draft generation. Runtime DB-backed checks for preview,
+generation, duplicate skipping, planner visibility, no bridge rows before
+publish, and unchanged aircraft assignment counts remain pending because Docker
+Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 188: Pattern application QA
+Prompt 189: Crew schedule request workflow planning
 ```
 
 Scope:
 
-- Verify preview and generate-drafts behavior.
-- Verify duplicate-safe generation.
-- Verify planner and crew detail visibility.
-- Verify no `CrewSchedule` bridge rows are created until publish.
-- Verify no aircraft assignments are changed.
+- Plan admin workflow for `CrewScheduleRequest`.
+- Keep broader requests separate from simple `TimeOffRequest`.
+- Do not auto-generate schedules or assignments from requests yet.
 
 Deferred follow-up to keep on the roadmap:
 
