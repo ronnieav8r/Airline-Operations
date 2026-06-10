@@ -130,6 +130,13 @@ Prompts 182-193:
 No auto-publishing, silent aircraft assignment creation, or duty/rest hard
 enforcement in this chain.
 
+Prompts 182-193 status: complete for static validation and docs. The scheduling
+lifecycle now supports explicit period publishing into linked `CrewSchedule`
+bridge rows, pattern preview and draft-entry generation, admin review of
+period-scoped `CrewScheduleRequest` rows, and source-linked draft generation
+from approved pattern requests. DB-backed runtime QA remains pending because
+Docker Desktop was unavailable.
+
 ## Chain 5: Crew Self-Service And Logistics
 
 Prompts 194-205:

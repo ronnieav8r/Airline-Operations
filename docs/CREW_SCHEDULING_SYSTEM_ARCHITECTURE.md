@@ -286,3 +286,12 @@ or mutate aircraft assignments.
 Prompt 192 QA status: partial pass. Static validation passed for request review
 and source-linked draft generation. DB-backed workflow smoke remains pending
 because Docker Desktop was unavailable.
+
+## Prompt 193 Scheduling Lifecycle Docs/Status Refresh
+
+Prompt 193 status: complete. The scheduling lifecycle chain is now documented
+as complete for static validation. Admin/ops can manage periods, draft entries,
+publish periods into `CrewSchedule` bridge rows, preview/generate pattern-based
+draft entries, review period-scoped requests, and generate source-linked draft
+entries from approved pattern requests. `AircraftCrewAssignment` remains the
+operational coverage source.

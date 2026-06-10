@@ -304,6 +304,18 @@ Prompt 192 QA status: partial pass. Static validation passed. DB-backed request
 review and request-to-draft workflow smoke remains pending until Docker Desktop
 is available.
 
+## Prompt 193 Scheduling Lifecycle Refresh
+
+The Prompt 182-193 lifecycle chain is complete for static validation and docs.
+Crew Scheduling now has controlled admin workflows for period publishing,
+pattern-based draft generation, request review, and approved request to draft
+entry linkage.
+
+The permanent boundary remains unchanged: `CrewScheduleEntry` and
+`CrewSchedule` describe planning/finalized availability, while
+`AircraftCrewAssignment` remains the operational aircraft staffing source of
+truth.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day

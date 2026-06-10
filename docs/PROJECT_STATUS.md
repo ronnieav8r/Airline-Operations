@@ -1410,17 +1410,26 @@ approve, deny, non-submitted rejection, source-linked draft entries, no bridge
 rows before publish, and unchanged aircraft assignment counts remain pending
 because Docker Desktop was unavailable.
 
+Prompt 193 is complete. The crew scheduling lifecycle chain is documented as
+complete for static validation. Admin/ops scheduling now supports period
+publishing into `CrewSchedule` bridge rows, pattern preview and draft
+generation, request review, and source-linked draft generation from approved
+pattern requests. Aircraft crew assignment remains the operational coverage
+source. DB-backed workflow/browser smoke for this chain remains pending because
+Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 193: Scheduling lifecycle docs/status refresh
+Prompt 194: Crew self-service portal planning
 ```
 
 Scope:
 
-- Refresh scheduling lifecycle docs/status.
-- Summarize completed publish, pattern, and request workflow slices.
-- Set next macro step to crew self-service planning.
+- Plan crew-only authenticated portal boundaries.
+- Let crew view profile, published schedule context, requests, time off,
+  assignments, and compliance warnings.
+- Do not allow crew approval, aircraft assignment changes, or logistics writes.
 
 Deferred follow-up to keep on the roadmap:
 
