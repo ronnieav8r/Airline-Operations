@@ -1,8 +1,11 @@
 # AeroOps Center
 
-AeroOps Center is a greenfield airline operations web app for small airline, charter, or air taxi operations.
+AeroOps Center is a greenfield airline operations web app for small airline,
+charter, or air taxi operations.
 
-This repository is intentionally starting from planning docs instead of generated app code. Builder chats should work in small, reviewable slices and should not attempt the full product in one pass.
+This repository now contains an active Next.js, TypeScript, Prisma, and
+PostgreSQL implementation. Builder chats should still work in small,
+reviewable slices and should not attempt the full product in one pass.
 
 ## Current Build Direction
 
@@ -14,11 +17,21 @@ This repository is intentionally starting from planning docs instead of generate
 - Deferred: advanced reports, TV mode, uploads, rich analytics
 - Compliance roadmap: [docs/COMPLIANCE_ROADMAP.md](docs/COMPLIANCE_ROADMAP.md)
 - Local development: [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
+- Builder onboarding: [docs/BUILDER_ONBOARDING.md](docs/BUILDER_ONBOARDING.md)
 - Current project status: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
+- Macro scaffolding plan: [docs/MAJOR_SCAFFOLDING_MACRO_PLAN.md](docs/MAJOR_SCAFFOLDING_MACRO_PLAN.md)
+- Macro QA log: [docs/MACRO_SCAFFOLDING_QA_LOG.md](docs/MACRO_SCAFFOLDING_QA_LOG.md)
 - Current-state DBML: [docs/schema.current.dbml](docs/schema.current.dbml)
 - FlightLeg planning DBML: [docs/schema.planning.flightleg.dbml](docs/schema.planning.flightleg.dbml)
 
-The current implementation is a small v1 operations slice. It should not be treated as the final regulatory data model. Future schema work should move toward a flight-leg-centered, authority-aware operating model that can support Part 91, Part 91K, and Part 135 workflows without splitting into separate mini-systems.
+The current implementation is a broad operational scaffolding slice, not the
+final regulatory product. It includes FlightLeg-centered operations control,
+release evidence, ReleasePackage previews, aircraft context, aircraft
+airworthiness, crew assignment, crew compliance, crew scheduling lifecycle,
+crew self-service, and crew logistics foundations.
+
+Runtime QA for recent macro-chain work should be completed when Docker Desktop
+is available. Static validation currently passes.
 
 ## Core Schema Decision
 
@@ -37,19 +50,23 @@ AircraftCrewAssignment
 
 A flight resolves crew by finding active assignments for its aircraft at the flight's scheduled departure time.
 
-The current `Flight` table should be understood as the v1 stand-in for the future operational `FlightLeg` anchor. Before the app grows much beyond dashboard and crew-resolution workflows, add authority, operational-control, manifest, locating, and release concepts around each leg.
+`FlightLeg` is now the long-term operational anchor. The legacy `Flight` table
+still exists for compatibility/archive behavior until parity is proven and
+retirement is separately planned.
+
+`AircraftCrewAssignment` remains the operational crew coverage source.
+`CrewScheduleEntry` and `CrewSchedule` support crew availability planning, not
+aircraft staffing truth. Crew Logistics tracks location and travel-support
+needs only; it does not book travel, create expenses, or automate positioning.
 
 See [docs/SCHEMA_DECISIONS.md](docs/SCHEMA_DECISIONS.md).
 
 ## Builder Prompt Sequence
 
-Use one builder prompt at a time. Completed prompts are preserved for audit context; future prompts should read the current schema decisions and compliance roadmap before extending the app.
+Use one builder prompt at a time. Completed prompts are preserved under
+[docs/builder-prompts](docs/builder-prompts) for audit context. Future prompts
+should read `docs/BUILDER_ONBOARDING.md`, `docs/PROJECT_STATUS.md`, and the
+domain-specific planning doc before extending the app.
 
-1. [docs/builder-prompts/01-foundation-and-schema.md](docs/builder-prompts/01-foundation-and-schema.md)
-2. [docs/builder-prompts/02-crew-resolution-api.md](docs/builder-prompts/02-crew-resolution-api.md)
-3. [docs/builder-prompts/03-operations-dashboard-readonly.md](docs/builder-prompts/03-operations-dashboard-readonly.md)
-4. [docs/builder-prompts/04-app-shell-navigation.md](docs/builder-prompts/04-app-shell-navigation.md)
-5. [docs/builder-prompts/05-authority-operational-control-foundation.md](docs/builder-prompts/05-authority-operational-control-foundation.md)
-6. [docs/builder-prompts/06-readonly-operational-pages.md](docs/builder-prompts/06-readonly-operational-pages.md)
-
-Future prompts should build on completed code and should stay limited to one app slice.
+Future prompts should build on completed code and stay limited to one app
+slice.

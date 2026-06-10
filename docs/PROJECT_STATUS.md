@@ -1494,16 +1494,22 @@ the macro scaffolding state, and results are recorded in
 `docs/MACRO_SCAFFOLDING_QA_LOG.md`. DB-backed route/workflow smoke remains
 pending because Docker Desktop was unavailable.
 
+Prompt 205 is complete for static validation. README and
+`docs/BUILDER_ONBOARDING.md` now summarize the current macro scaffolding state,
+boundaries, required reading, validation status, and safe next planning
+choices.
+
 Preferred next step:
 
 ```text
-Prompt 205: Docs/status/onboarding refresh
+Planning checkpoint
 ```
 
 Scope:
 
-- Refresh project onboarding docs and summarize the current macro scaffolding
-  state for future planner/builder chats.
+- Decide whether to prioritize runtime QA catch-up, UI usability polish,
+  hard-release/signature planning, duty/rest enforcement planning, provider
+  integration planning, or legacy Flight retirement planning.
 - No booking, expense, assignment, schedule, release, or duty/rest behavior
   changes.
 

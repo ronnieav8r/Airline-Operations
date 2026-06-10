@@ -226,6 +226,11 @@ scaffolding state. Results are recorded in
 `docs/MACRO_SCAFFOLDING_QA_LOG.md`. DB-backed route/workflow smoke remains
 pending because Docker Desktop was unavailable.
 
+Prompt 205 docs/status status: complete for static validation. README and
+builder onboarding now reflect the current macro scaffolding state, current
+boundaries, required reading, validation status, and safe next planning
+choices.
+
 ## Validation Standard
 
 For every implementation slice:
