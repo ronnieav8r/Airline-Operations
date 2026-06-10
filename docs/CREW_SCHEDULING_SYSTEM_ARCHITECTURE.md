@@ -247,3 +247,8 @@ preview-first and draft-only. Applying a pattern should generate
 `CrewScheduleEntry` rows with status `DRAFT`, linked to the selected
 `CrewRotationPattern`, and should not publish entries, create `CrewSchedule`
 bridge rows, review requests, or mutate aircraft assignments.
+
+Prompt 186 implementation status: complete. Schedule period detail now has a
+read-only, URL-driven pattern application preview. It calculates generated rows
+from active pattern day rows and shows warning-only conflicts without writing
+schedule entries or changing publish/assignment behavior.

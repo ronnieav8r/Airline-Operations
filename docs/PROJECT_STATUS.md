@@ -1363,17 +1363,24 @@ application should generate `DRAFT` `CrewScheduleEntry` rows only, and must not
 publish entries, create `CrewSchedule` bridge rows, review requests, or mutate
 aircraft assignments.
 
+Prompt 186 is complete. Schedule period detail now has a read-only
+pattern-application preview that calculates generated rows from active rotation
+pattern days and shows warning-only conflicts. It does not write
+`CrewScheduleEntry` rows, create `CrewSchedule` bridge rows, publish schedules,
+or mutate aircraft assignments. Static validation passed; DB-backed
+workflow/browser smoke remains pending because Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 186: Pattern application preview
+Prompt 187: Pattern generate-drafts foundation
 ```
 
 Scope:
 
-- Add read-only generated-entry preview on schedule period detail.
-- Show warning-only conflicts before saving.
-- Do not write rows yet.
+- Add explicit action to create draft entries from the preview inputs.
+- Create only `DRAFT` `CrewScheduleEntry` rows.
+- Keep duplicates safe and readable.
 - Do not publish.
 - Do not create aircraft assignments.
 

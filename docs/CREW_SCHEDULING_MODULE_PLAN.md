@@ -264,6 +264,10 @@ rows from an active rotation pattern, then explicitly generate `DRAFT`
 Pattern application must not publish entries, create `CrewSchedule` bridge
 rows, review requests, or mutate aircraft-block assignments.
 
+Prompt 186 implementation status: complete. `/crew/scheduling/periods/[periodId]`
+now shows a read-only pattern application preview. The preview calculates
+would-be generated rows, displays warning-only conflicts, and writes nothing.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day

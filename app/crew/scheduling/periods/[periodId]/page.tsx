@@ -26,12 +26,36 @@ type PageProps = {
   }>;
   searchParams: Promise<{
     error?: string | string[];
+    previewCrewMemberId?: string | string[];
+    previewEndDate?: string | string[];
+    previewDays?: string | string[];
+    previewPatternId?: string | string[];
+    previewStartDate?: string | string[];
   }>;
 };
 
 type RequestRow = CrewSchedulePeriodDetail["requests"][number];
 type EntryRow = CrewSchedulePeriodDetail["scheduleEntries"][number];
 type EntryOptions = CrewScheduleEntryWorkflowOptions;
+type PreviewCrewMember = EntryOptions["activeCrewMembers"][number];
+type PreviewPattern = EntryOptions["activePatterns"][number];
+type PreviewPatternDay = PreviewPattern["days"][number];
+type PatternPreviewInput = {
+  crewMemberId: string;
+  days: number;
+  endDate: Date | null;
+  patternId: string;
+  startDate: Date | null;
+};
+type PatternPreviewRow = {
+  date: Date;
+  dutyStatus: string;
+  endsAt: Date | null;
+  patternDay: PreviewPatternDay;
+  startsAt: Date | null;
+  stationLabel: string;
+  warnings: string[];
+};
 
 function toDate(value: Date | null): string {
   if (!value) {
@@ -73,6 +97,28 @@ function firstSearchParam(value: string | string[] | undefined): string | null {
   }
 
   return value ?? null;
+}
+
+function parseQueryDate(value: string | string[] | undefined): Date | null {
+  const first = firstSearchParam(value);
+
+  if (!first || !/^\d{4}-\d{2}-\d{2}$/.test(first)) {
+    return null;
+  }
+
+  const parsed = new Date(`${first}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseQueryNumber(value: string | string[] | undefined, fallback: number): number {
+  const first = firstSearchParam(value);
+  const parsed = first ? Number.parseInt(first, 10) : Number.NaN;
+
+  if (Number.isNaN(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(Math.max(parsed, 1), 62);
 }
 
 function toDateTime(value: Date | null): string {
@@ -195,6 +241,22 @@ function sameDay(first: Date, second: Date): boolean {
   return toInputDate(first) === toInputDate(second);
 }
 
+function addDays(value: Date, days: number): Date {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function dateWithMinutes(date: Date, minutes: number | null): Date | null {
+  if (minutes === null) {
+    return null;
+  }
+
+  const next = new Date(date);
+  next.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  return next;
+}
+
 function entryWindow(entry: EntryRow): { end: Date; start: Date } {
   const start = entry.startsAt ?? entry.date;
   const end = entry.endsAt ?? new Date(entry.date.getTime() + 24 * 60 * 60 * 1000);
@@ -206,6 +268,16 @@ function rangesOverlap(firstStart: Date, firstEnd: Date, secondStart: Date, seco
   const normalizedSecondEnd = secondEnd ?? new Date(secondStart.getTime() + 24 * 60 * 60 * 1000);
 
   return firstStart < normalizedSecondEnd && secondStart < firstEnd;
+}
+
+function patternPreviewWindow(row: Pick<PatternPreviewRow, "date" | "endsAt" | "startsAt">): {
+  end: Date;
+  start: Date;
+} {
+  const start = row.startsAt ?? row.date;
+  const end = row.endsAt ?? addDays(row.date, 1);
+
+  return { end, start };
 }
 
 function scheduleEntryWarnings(entry: EntryRow, allEntries: EntryRow[]): string[] {
@@ -278,6 +350,185 @@ function statusBadgeClasses(status: CrewSchedulePeriodStatus | CrewScheduleEntry
 
 function crewName(crewMember: { firstName: string; lastName: string }): string {
   return `${crewMember.firstName} ${crewMember.lastName}`;
+}
+
+function getPatternPreviewInput(searchParams: Awaited<PageProps["searchParams"]>): PatternPreviewInput {
+  return {
+    crewMemberId: firstSearchParam(searchParams.previewCrewMemberId) ?? "",
+    days: parseQueryNumber(searchParams.previewDays, 14),
+    endDate: parseQueryDate(searchParams.previewEndDate),
+    patternId: firstSearchParam(searchParams.previewPatternId) ?? "",
+    startDate: parseQueryDate(searchParams.previewStartDate),
+  };
+}
+
+function patternPreviewWarnings({
+  allEntries,
+  crewMember,
+  period,
+  row,
+}: {
+  allEntries: EntryRow[];
+  crewMember: PreviewCrewMember;
+  period: CrewSchedulePeriodDetail;
+  row: Omit<PatternPreviewRow, "warnings">;
+}): string[] {
+  const warnings: string[] = [];
+  const { end, start } = patternPreviewWindow(row);
+
+  if (row.date < period.startsAt || row.date > period.endsAt) {
+    warnings.push("Preview date is outside this schedule period.");
+  }
+
+  const duplicateEntry = allEntries.find(
+    (entry) =>
+      entry.status !== CrewScheduleEntryStatus.CANCELLED &&
+      entry.crewMember.id === crewMember.id &&
+      sameDay(entry.date, row.date) &&
+      entry.dutyStatus === row.dutyStatus,
+  );
+
+  if (duplicateEntry) {
+    warnings.push("A schedule entry already exists for this crew member, date, and duty status.");
+  }
+
+  const sameDayEntry = allEntries.find(
+    (entry) =>
+      entry.status !== CrewScheduleEntryStatus.CANCELLED &&
+      entry.crewMember.id === crewMember.id &&
+      sameDay(entry.date, row.date) &&
+      entry.dutyStatus !== row.dutyStatus,
+  );
+
+  if (sameDayEntry) {
+    warnings.push("Another schedule entry already exists for this crew member on this date.");
+  }
+
+  const overlappingTimeOff = crewMember.timeOffRequests.filter(
+    (request) =>
+      (request.status === TimeOffRequestStatus.PENDING ||
+        request.status === TimeOffRequestStatus.APPROVED) &&
+      rangesOverlap(start, end, request.startDate, request.endDate),
+  );
+
+  if (overlappingTimeOff.length > 0) {
+    warnings.push("Pending or approved time off overlaps this generated row.");
+  }
+
+  const overlappingSimpleSchedules = crewMember.schedules.filter((schedule) => {
+    const scheduleStart = schedule.startsAt ?? schedule.date;
+    const scheduleEnd = schedule.endsAt ?? addDays(schedule.date, 1);
+    return rangesOverlap(start, end, scheduleStart, scheduleEnd);
+  });
+
+  if (overlappingSimpleSchedules.length > 0) {
+    warnings.push("Existing CrewSchedule block overlaps this generated row.");
+  }
+
+  const overlappingAircraftAssignments = crewMember.assignments.filter((assignment) =>
+    rangesOverlap(start, end, assignment.startsAt, assignment.endsAt),
+  );
+
+  if (overlappingAircraftAssignments.length > 0) {
+    warnings.push("Aircraft-block assignment overlaps this generated row.");
+  }
+
+  if (crewMember.qualifications.length === 0) {
+    warnings.push("No qualifications are recorded for this crew member.");
+  }
+
+  if (crewMember.employmentStatus !== "ACTIVE") {
+    warnings.push(`Crew member employment status is ${formatStatus(crewMember.employmentStatus)}.`);
+  }
+
+  return warnings;
+}
+
+function buildPatternPreview({
+  input,
+  options,
+  period,
+}: {
+  input: PatternPreviewInput;
+  options: EntryOptions;
+  period: CrewSchedulePeriodDetail;
+}): {
+  crewMember: PreviewCrewMember | null;
+  messages: string[];
+  pattern: PreviewPattern | null;
+  rows: PatternPreviewRow[];
+} {
+  const messages: string[] = [];
+  const crewMember = options.activeCrewMembers.find((candidate) => candidate.id === input.crewMemberId) ?? null;
+  const pattern = options.activePatterns.find((candidate) => candidate.id === input.patternId) ?? null;
+
+  if (!input.crewMemberId && !input.patternId && !input.startDate) {
+    return { crewMember, messages, pattern, rows: [] };
+  }
+
+  if (!crewMember) {
+    messages.push("Select an active crew member.");
+  }
+
+  if (!pattern) {
+    messages.push("Select an active rotation pattern.");
+  }
+
+  if (!input.startDate) {
+    messages.push("Select a valid start date.");
+  }
+
+  if (input.endDate && input.startDate && input.endDate < input.startDate) {
+    messages.push("Preview end date must be on or after the start date.");
+  }
+
+  if (pattern && pattern.days.length === 0) {
+    messages.push("Selected pattern has no day rows to preview.");
+  }
+
+  if (!crewMember || !pattern || !input.startDate || messages.length > 0) {
+    return { crewMember, messages, pattern, rows: [] };
+  }
+
+  const endDate = input.endDate ?? addDays(input.startDate, input.days - 1);
+  const rows: PatternPreviewRow[] = [];
+
+  for (let date = new Date(input.startDate); date <= endDate; date = addDays(date, 1)) {
+    const offsetDays = Math.round((date.getTime() - input.startDate.getTime()) / (24 * 60 * 60 * 1000));
+    const cycleDay = (offsetDays % pattern.cycleLengthDays) + 1;
+    const patternDay = pattern.days.find((day) => day.dayNumber === cycleDay);
+
+    if (!patternDay) {
+      continue;
+    }
+
+    const rowWithoutWarnings = {
+      date: new Date(date),
+      dutyStatus: patternDay.dutyStatus,
+      endsAt: dateWithMinutes(date, patternDay.endsAtMinutes),
+      patternDay,
+      startsAt: dateWithMinutes(date, patternDay.startsAtMinutes),
+      stationLabel: patternDay.station
+        ? `${patternDay.station.code} - ${patternDay.station.city}`
+        : "No station",
+    };
+
+    rows.push({
+      ...rowWithoutWarnings,
+      warnings: patternPreviewWarnings({
+        allEntries: period.scheduleEntries,
+        crewMember,
+        period,
+        row: rowWithoutWarnings,
+      }),
+    });
+  }
+
+  if (rows.length === 0) {
+    messages.push("No rows would be generated for the selected pattern and date window.");
+  }
+
+  return { crewMember, messages, pattern, rows };
 }
 
 function RequestCard({ request }: { request: RequestRow }) {
@@ -364,6 +615,137 @@ function PatternOptions({ options }: { options: EntryOptions }) {
         </option>
       ))}
     </>
+  );
+}
+
+function PatternPreviewPanel({
+  input,
+  options,
+  period,
+  preview,
+}: {
+  input: PatternPreviewInput;
+  options: EntryOptions;
+  period: CrewSchedulePeriodDetail;
+  preview: ReturnType<typeof buildPatternPreview>;
+}) {
+  return (
+    <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" id="pattern-preview">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Pattern application preview</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Preview generated draft rows from an active rotation pattern. This
+            panel does not save rows, publish schedules, or assign crew to aircraft.
+          </p>
+        </div>
+        <Link
+          className="text-sm font-semibold text-sky-700 hover:text-sky-900"
+          href="/crew/scheduling/patterns"
+        >
+          Manage patterns
+        </Link>
+      </div>
+      <form className="mt-4 grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4 lg:grid-cols-5" method="get">
+        <SelectField defaultValue={input.crewMemberId} label="Crew member" name="previewCrewMemberId" required>
+          <CrewMemberOptions options={options} />
+        </SelectField>
+        <SelectField defaultValue={input.patternId} label="Rotation pattern" name="previewPatternId" required>
+          <PatternOptions options={options} />
+        </SelectField>
+        <Field
+          defaultValue={toInputDate(input.startDate)}
+          label="Start date"
+          name="previewStartDate"
+          required
+          type="date"
+        />
+        <Field
+          defaultValue={toInputDate(input.endDate)}
+          label="Optional end date"
+          name="previewEndDate"
+          type="date"
+        />
+        <Field
+          defaultValue={String(input.days)}
+          label="Days if no end date"
+          name="previewDays"
+          required
+          type="number"
+        />
+        <div className="lg:col-span-5">
+          <button
+            className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+            type="submit"
+          >
+            Preview generated rows
+          </button>
+        </div>
+      </form>
+      {preview.messages.length > 0 ? (
+        <ul className="mt-4 grid gap-2 text-sm text-amber-900 md:grid-cols-2">
+          {preview.messages.map((message) => (
+            <li className="rounded-md border border-amber-200 bg-amber-50 p-3" key={message}>
+              {message}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {preview.rows.length > 0 ? (
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-zinc-200 text-zinc-500">
+                <th className="px-3 py-2 font-medium">Date</th>
+                <th className="px-3 py-2 font-medium">Cycle day</th>
+                <th className="px-3 py-2 font-medium">Duty</th>
+                <th className="px-3 py-2 font-medium">Times</th>
+                <th className="px-3 py-2 font-medium">Station</th>
+                <th className="px-3 py-2 font-medium">Warnings</th>
+              </tr>
+            </thead>
+            <tbody>
+              {preview.rows.map((row) => (
+                <tr className="border-b border-zinc-100 align-top" key={`${toInputDate(row.date)}-${row.patternDay.id}`}>
+                  <td className="px-3 py-2.5 text-zinc-700">{toDate(row.date)}</td>
+                  <td className="px-3 py-2.5 text-zinc-700">{row.patternDay.dayNumber}</td>
+                  <td className="px-3 py-2.5 text-zinc-700">{formatStatus(row.dutyStatus)}</td>
+                  <td className="px-3 py-2.5 text-zinc-700">
+                    {toDateTime(row.startsAt)} - {toDateTime(row.endsAt)}
+                  </td>
+                  <td className="px-3 py-2.5 text-zinc-700">{row.stationLabel}</td>
+                  <td className="px-3 py-2.5">
+                    {row.warnings.length > 0 ? (
+                      <ul className="grid gap-1 text-xs text-amber-900">
+                        {row.warnings.map((warning) => (
+                          <li className="rounded border border-amber-200 bg-amber-50 p-1.5" key={warning}>
+                            {warning}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800">
+                        No warning-only conflicts
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-3 text-xs text-zinc-500">
+            Preview only. Prompt 187 will add the explicit action to generate
+            these rows as draft `CrewScheduleEntry` records.
+          </p>
+        </div>
+      ) : null}
+      {preview.crewMember && preview.pattern ? (
+        <p className="mt-3 text-xs text-zinc-500">
+          Previewing {preview.pattern.name} for {crewName(preview.crewMember)}
+          {" "}inside {period.name}. Publishing remains a separate action.
+        </p>
+      ) : null}
+    </section>
   );
 }
 
@@ -557,6 +939,12 @@ export default async function CrewSchedulePeriodDetailPage({ params, searchParam
   const distinctPatternCount = new Set(
     period.scheduleEntries.flatMap((entry) => (entry.rotationPattern ? [entry.rotationPattern.id] : [])),
   ).size;
+  const previewInput = getPatternPreviewInput(queryParams);
+  const patternPreview = buildPatternPreview({
+    input: previewInput,
+    options: entryOptions,
+    period,
+  });
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -757,6 +1145,13 @@ export default async function CrewSchedulePeriodDetailPage({ params, searchParam
             </div>
           )}
         </section>
+
+        <PatternPreviewPanel
+          input={previewInput}
+          options={entryOptions}
+          period={period}
+          preview={patternPreview}
+        />
 
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" id="schedule-entries">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">

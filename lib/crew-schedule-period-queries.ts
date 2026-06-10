@@ -205,10 +205,48 @@ export type CrewScheduleEntryWorkflowOptions = {
     firstName: string;
     id: string;
     lastName: string;
+    dutyStatus: string;
+    employmentStatus: string;
+    assignments: Array<{
+      endsAt: Date | null;
+      id: string;
+      startsAt: Date;
+    }>;
+    qualifications: Array<{
+      expiresAt: Date | null;
+      id: string;
+    }>;
+    schedules: Array<{
+      date: Date;
+      endsAt: Date | null;
+      id: string;
+      startsAt: Date | null;
+    }>;
+    timeOffRequests: Array<{
+      endDate: Date;
+      id: string;
+      startDate: Date;
+      status: string;
+    }>;
   }>;
   activePatterns: Array<{
+    cycleLengthDays: number;
+    days: Array<{
+      dayNumber: number;
+      dutyStatus: string;
+      endsAtMinutes: number | null;
+      id: string;
+      startsAtMinutes: number | null;
+      station: {
+        city: string;
+        code: string;
+        id: string;
+      } | null;
+      stationId: string | null;
+    }>;
     id: string;
     name: string;
+    patternKey: string;
   }>;
   period: Prisma.CrewSchedulePeriodGetPayload<{
     select: typeof entryWorkflowOptionsSelect;
@@ -276,9 +314,43 @@ export async function getCrewScheduleEntryWorkflowOptions(
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
       select: {
         id: true,
+        dutyStatus: true,
         employeeNumber: true,
+        employmentStatus: true,
         firstName: true,
         lastName: true,
+        assignments: {
+          where: {
+            isActive: true,
+          },
+          select: {
+            id: true,
+            startsAt: true,
+            endsAt: true,
+          },
+        },
+        qualifications: {
+          select: {
+            id: true,
+            expiresAt: true,
+          },
+        },
+        schedules: {
+          select: {
+            id: true,
+            date: true,
+            startsAt: true,
+            endsAt: true,
+          },
+        },
+        timeOffRequests: {
+          select: {
+            id: true,
+            status: true,
+            startDate: true,
+            endDate: true,
+          },
+        },
       },
     }),
     prisma.station.findMany({
@@ -296,6 +368,26 @@ export async function getCrewScheduleEntryWorkflowOptions(
       select: {
         id: true,
         name: true,
+        patternKey: true,
+        cycleLengthDays: true,
+        days: {
+          orderBy: [{ dayNumber: "asc" }],
+          select: {
+            id: true,
+            dayNumber: true,
+            dutyStatus: true,
+            startsAtMinutes: true,
+            endsAtMinutes: true,
+            stationId: true,
+            station: {
+              select: {
+                id: true,
+                code: true,
+                city: true,
+              },
+            },
+          },
+        },
       },
     }),
   ]);
