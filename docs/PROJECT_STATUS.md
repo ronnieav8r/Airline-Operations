@@ -1312,6 +1312,14 @@ behavior was added.
 Prompt 178 should add richer warning-only compliance context to the aircraft
 crew assignment workflow without blocking saves.
 
+Prompt 178 is complete. The aircraft crew assignment workflow now shows
+warning-only compliance evidence context, and assignment save behavior remains
+unchanged. Static validation passed; workflow/browser smoke remains pending
+because Docker Desktop was unavailable.
+
+Prompt 179 should add crew compliance warnings to FlightLeg release readiness
+as warning-only signals.
+
 Preferred next step:
 
 ```text

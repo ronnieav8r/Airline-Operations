@@ -1,5 +1,6 @@
 import {
   AircraftType,
+  CrewComplianceRecordStatus,
   DutyStatus,
   EmploymentStatus,
   Prisma,
@@ -45,6 +46,49 @@ const aircraftCrewWorkflowSelect = {
               aircraftType: true,
               seatRole: true,
               expiresAt: true,
+            },
+          },
+          certificates: {
+            select: {
+              expiresAt: true,
+              status: true,
+            },
+          },
+          medicals: {
+            select: {
+              expiresAt: true,
+              status: true,
+            },
+          },
+          trainingEvents: {
+            select: {
+              expiresAt: true,
+              status: true,
+            },
+          },
+          checkEvents: {
+            select: {
+              expiresAt: true,
+              status: true,
+            },
+          },
+          recencyEvents: {
+            select: {
+              status: true,
+            },
+          },
+          dutyPeriods: {
+            select: {
+              startsAt: true,
+              endsAt: true,
+              status: true,
+            },
+          },
+          restPeriods: {
+            select: {
+              startsAt: true,
+              endsAt: true,
+              status: true,
             },
           },
         },
@@ -107,6 +151,49 @@ const crewMemberOptionSelect = {
       aircraftType: true,
       seatRole: true,
       expiresAt: true,
+    },
+  },
+  certificates: {
+    select: {
+      expiresAt: true,
+      status: true,
+    },
+  },
+  medicals: {
+    select: {
+      expiresAt: true,
+      status: true,
+    },
+  },
+  trainingEvents: {
+    select: {
+      expiresAt: true,
+      status: true,
+    },
+  },
+  checkEvents: {
+    select: {
+      expiresAt: true,
+      status: true,
+    },
+  },
+  recencyEvents: {
+    select: {
+      status: true,
+    },
+  },
+  dutyPeriods: {
+    select: {
+      startsAt: true,
+      endsAt: true,
+      status: true,
+    },
+  },
+  restPeriods: {
+    select: {
+      startsAt: true,
+      endsAt: true,
+      status: true,
     },
   },
   assignments: {
@@ -181,6 +268,7 @@ export type AircraftCrewWorkflowLeg =
 export type AircraftCrewMemberOption = CrewMemberOptionPayload & {
   availabilityStatus: "CLEAR" | "CAUTION" | "UNAVAILABLE";
   availabilityWarnings: string[];
+  complianceWarnings: string[];
   label: string;
   warningsBySeatRole: Partial<Record<SeatRole, string[]>>;
 };
@@ -255,6 +343,56 @@ function qualificationWarningsForSeatRole(
   return [];
 }
 
+function isExpired(expiresAt: Date | null, now: Date): boolean {
+  return Boolean(expiresAt && expiresAt < now);
+}
+
+function hasExpiredStatus(status: CrewComplianceRecordStatus): boolean {
+  return status === CrewComplianceRecordStatus.EXPIRED || status === CrewComplianceRecordStatus.VOIDED;
+}
+
+function buildComplianceWarnings(
+  crewMember: Pick<
+    CrewMemberOptionPayload,
+    | "certificates"
+    | "checkEvents"
+    | "dutyPeriods"
+    | "medicals"
+    | "recencyEvents"
+    | "restPeriods"
+    | "trainingEvents"
+  >,
+  now: Date,
+): string[] {
+  const warnings: string[] = [];
+  const missingCategories = [
+    crewMember.certificates.length === 0 ? "certificate" : null,
+    crewMember.medicals.length === 0 ? "medical" : null,
+    crewMember.trainingEvents.length === 0 ? "training" : null,
+    crewMember.checkEvents.length === 0 ? "check" : null,
+    crewMember.recencyEvents.length === 0 ? "recency" : null,
+    crewMember.dutyPeriods.length === 0 ? "duty" : null,
+    crewMember.restPeriods.length === 0 ? "rest" : null,
+  ].filter(Boolean);
+
+  if (missingCategories.length > 0) {
+    warnings.push(`Missing ${missingCategories.join(", ")} evidence.`);
+  }
+
+  const expiredCount =
+    crewMember.certificates.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
+    crewMember.medicals.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
+    crewMember.trainingEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
+    crewMember.checkEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
+    crewMember.recencyEvents.filter((item) => hasExpiredStatus(item.status)).length;
+
+  if (expiredCount > 0) {
+    warnings.push(`${expiredCount} expired or voided compliance record${expiredCount === 1 ? "" : "s"}.`);
+  }
+
+  return warnings;
+}
+
 function missingCockpitRoles(assignments: Array<{ seatRole: SeatRole }>): SeatRole[] {
   const assignedRoles = new Set(assignments.map((assignment) => assignment.seatRole));
 
@@ -275,12 +413,15 @@ function normalizeAssignment(
   return {
     ...assignment,
     timing,
-    warnings: qualificationWarningsForSeatRole(
-      assignment.crewMember,
-      aircraftType,
-      assignment.seatRole,
-      assignment.startsAt,
-    ),
+    warnings: [
+      ...qualificationWarningsForSeatRole(
+        assignment.crewMember,
+        aircraftType,
+        assignment.seatRole,
+        assignment.startsAt,
+      ),
+      ...buildComplianceWarnings(assignment.crewMember, now),
+    ],
   };
 }
 
@@ -337,6 +478,12 @@ function normalizeCrewOption(
     );
   }
 
+  const complianceWarnings = buildComplianceWarnings(crewMember, now);
+
+  if (complianceWarnings.length > 0) {
+    availabilityWarnings.push("Crew compliance evidence should be reviewed.");
+  }
+
   const availabilityStatus =
     crewMember.employmentStatus !== EmploymentStatus.ACTIVE ||
     crewMember.dutyStatus === DutyStatus.SICK ||
@@ -350,6 +497,7 @@ function normalizeCrewOption(
     ...crewMember,
     availabilityStatus,
     availabilityWarnings,
+    complianceWarnings,
     label:
       availabilityStatus === "CLEAR"
         ? crewMemberLabel(crewMember)

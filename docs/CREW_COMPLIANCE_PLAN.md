@@ -148,3 +148,8 @@ Prompt 177 implementation status: complete. Crew detail and crew planner now
 show read-only compliance evidence and compact warning summaries without adding
 writes or enforcement. Static validation passed; runtime route/browser smoke
 remains pending because Docker Desktop was unavailable.
+
+Prompt 178 implementation status: complete. Aircraft crew assignment now
+surfaces richer compliance warnings during assignment review without adding save
+blockers. Static validation passed; workflow/browser smoke remains pending
+because Docker Desktop was unavailable.

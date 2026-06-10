@@ -302,6 +302,16 @@ function AvailabilityHintPanel({ crewOptions }: { crewOptions: AircraftCrewMembe
                 ))}
               </ul>
             )}
+            {crewMember.complianceWarnings.length > 0 ? (
+              <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                <p className="font-semibold">Compliance evidence review</p>
+                <ul className="mt-1 space-y-1">
+                  {crewMember.complianceWarnings.slice(0, 2).map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </article>
         ))}
       </div>
@@ -365,7 +375,7 @@ function AssignmentForm({
           {mode === "CREATE" ? "Create assignment" : "Save assignment"}
         </button>
         <span className="text-xs text-zinc-500">
-          Qualification and CPT/FO coverage issues are warning-only in this workflow.
+          Qualification, compliance, and CPT/FO coverage issues are warning-only in this workflow.
         </span>
       </div>
     </form>
@@ -440,7 +450,7 @@ function AssignmentCard({
       </div>
       {assignment.warnings.length > 0 ? (
         <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          <p className="font-semibold">Warning-only qualification issue</p>
+          <p className="font-semibold">Warning-only crew issue</p>
           <ul className="mt-1 list-inside list-disc">
             {assignment.warnings.map((warning) => (
               <li key={warning}>{warning}</li>
