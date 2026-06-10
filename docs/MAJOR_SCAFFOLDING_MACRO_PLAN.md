@@ -209,6 +209,11 @@ release behavior, duty/rest enforcement, or crew self-service logistics writes
 were added. DB-backed runtime QA remains pending because Docker Desktop was
 unavailable.
 
+Prompt 202 QA status: partial pass. Static validation passed for logistics
+schema, read surfaces, and create/edit workflow. Results are recorded in
+`docs/CREW_LOGISTICS_QA_LOG.md`. DB-backed route/workflow smoke remains pending
+because Docker Desktop was unavailable.
+
 ## Validation Standard
 
 For every implementation slice:

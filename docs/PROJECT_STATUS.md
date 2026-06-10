@@ -1477,16 +1477,21 @@ it does not book travel, create expenses, change schedules, change aircraft
 assignments, enforce duty/rest, or affect release behavior. DB-backed runtime
 QA remains pending because Docker Desktop was unavailable.
 
+Prompt 202 is complete as a partial QA pass. Static validation passed for the
+logistics schema, read surfaces, and ops/admin create/edit workflow. Results
+are recorded in `docs/CREW_LOGISTICS_QA_LOG.md`. DB-backed route/workflow smoke
+remains pending because Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 202: Logistics QA
+Prompt 203: Cross-link polish
 ```
 
 Scope:
 
-- QA logistics schema, read surfaces, create/edit workflow, role gates, and
-  unchanged schedule/assignment behavior.
+- Add small navigation polish between crew scheduling, aircraft assignment,
+  crew detail, logistics, and portal surfaces.
 - No booking, expense, assignment, schedule, release, or duty/rest behavior
   changes.
 

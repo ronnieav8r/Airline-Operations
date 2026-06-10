@@ -93,3 +93,7 @@ behavior.
 
 Prompt 202 should QA the logistics schema, read surfaces, write workflow, role
 gates, and unchanged schedule/assignment behavior.
+
+Prompt 202 QA status: partial pass. Static validation passed and results are
+recorded in `docs/CREW_LOGISTICS_QA_LOG.md`. DB-backed route/workflow smoke
+remains pending because Docker Desktop was unavailable.
