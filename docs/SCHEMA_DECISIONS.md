@@ -455,3 +455,11 @@ create/edit/cancel inside a schedule period. These rows remain crew
 availability planning records only. They must not publish schedules, generate
 legacy `CrewSchedule` rows, apply rotation patterns, approve requests, or
 mutate `AircraftCrewAssignment` or `CrewLegAssignment` records.
+
+Crew Logistics now has an additive schema foundation. `CrewLocationRecord`
+tracks crew location context over time, and `CrewLogisticsNeed` tracks
+positioning, deadhead, airline ticket, hotel, ground transport, and other
+travel-support placeholders. These records are planning/context data only.
+They do not replace `CrewScheduleEntry`, `CrewSchedule`,
+`AircraftCrewAssignment`, `CrewLegAssignment`, or crew duty/rest evidence, and
+they do not imply booking, expense, release, or assignment automation.

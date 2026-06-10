@@ -64,3 +64,13 @@ Ops/admin write workflows should follow after read surfaces.
 
 Prompt 198 planning status: complete. Prompt 199 should implement additive
 schema only for crew location records and logistics needs.
+
+Prompt 199 schema status: complete for static validation. Crew Logistics now
+has additive `CrewLocationRecord` and `CrewLogisticsNeed` tables with enum
+status/type/source fields and optional links to crew, stations, aircraft,
+FlightLegs, and creator users. No logistics UI, booking integration,
+assignment automation, schedule mutation, expense workflow, or duty/rest
+enforcement has been added.
+
+Prompt 200 should add read-only logistics surfaces on crew detail, crew
+planner, and aircraft crew assignment workflow.

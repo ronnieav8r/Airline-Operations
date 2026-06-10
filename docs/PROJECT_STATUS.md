@@ -1454,17 +1454,27 @@ location and travel-need tracking only. Booking integrations, expenses,
 automatic positioning, duty/rest hard enforcement, crew-created logistics
 records, and aircraft assignment automation remain deferred.
 
+Prompt 199 is complete for static validation. Crew Logistics now has additive
+`CrewLocationRecord` and `CrewLogisticsNeed` tables for crew location context
+and travel-support needs. These records may reference crew, stations, aircraft,
+FlightLegs, and creator users, but they do not create bookings, expenses,
+schedule rows, aircraft assignments, duty/rest enforcement, or release
+behavior. DB-backed runtime QA remains pending because Docker Desktop was
+unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 199: Logistics schema foundation
+Prompt 200: Logistics read surfaces
 ```
 
 Scope:
 
-- Add additive logistics schema models/enums only.
-- Seed/demo data and read/write UI wait for later prompts.
-- No booking, expense, assignment, or duty/rest behavior changes.
+- Add read-only logistics context on crew detail, crew planner, and aircraft
+  crew assignment workflow.
+- Do not add logistics create/edit UI yet.
+- No booking, expense, assignment, schedule, release, or duty/rest behavior
+  changes.
 
 Deferred follow-up to keep on the roadmap:
 

@@ -185,6 +185,13 @@ additive crew location and travel-need records only. Booking integrations,
 expenses, automated positioning, duty/rest enforcement, and assignment
 automation remain deferred.
 
+Prompt 199 implementation status: complete for static validation. The additive
+Crew Logistics schema now stores crew location records and travel-support needs
+with optional links to crew, stations, aircraft, FlightLegs, and creator users.
+No logistics UI, booking provider integration, expense workflow, duty/rest
+enforcement, or aircraft assignment automation has been added. DB-backed
+runtime QA remains pending because Docker Desktop was unavailable.
+
 ## Validation Standard
 
 For every implementation slice:

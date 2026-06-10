@@ -61,6 +61,8 @@ export async function GET() {
       crewRecencyEventCount,
       crewDutyPeriodCount,
       crewRestPeriodCount,
+      crewLocationRecordCount,
+      crewLogisticsNeedCount,
       userPasswordCredentialCount,
       userSessionCount,
     ] = await Promise.all([
@@ -119,6 +121,8 @@ export async function GET() {
       prisma.crewRecencyEvent.count(),
       prisma.crewDutyPeriod.count(),
       prisma.crewRestPeriod.count(),
+      prisma.crewLocationRecord.count(),
+      prisma.crewLogisticsNeed.count(),
       prisma.userPasswordCredential.count(),
       prisma.userSession.count(),
     ]);
@@ -182,6 +186,8 @@ export async function GET() {
         crewRecencyEvents: crewRecencyEventCount,
         crewDutyPeriods: crewDutyPeriodCount,
         crewRestPeriods: crewRestPeriodCount,
+        crewLocationRecords: crewLocationRecordCount,
+        crewLogisticsNeeds: crewLogisticsNeedCount,
         userPasswordCredentials: userPasswordCredentialCount,
         userSessions: userSessionCount,
       },
