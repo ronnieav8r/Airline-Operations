@@ -279,6 +279,11 @@ Prompt 154 QA status: partial pass. Prisma validation, typecheck, lint, and
 build passed. Local DB-backed workflow/browser QA is pending because Docker
 Desktop was not running in the session.
 
+Prompt 155 implementation status: complete. `/crew/scheduling` now surfaces
+draft and published `CrewScheduleEntry` rows as read-only planning context
+beside existing `CrewSchedule` blocks. Aircraft-block assignments remain the
+operational coverage source.
+
 Warning-only conflict examples:
 
 - No schedule found for the planning day/window.

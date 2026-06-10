@@ -1,5 +1,6 @@
 import {
   AssignmentStatus,
+  CrewScheduleEntryStatus,
   DutyStatus,
   EmploymentStatus,
   FlightLegStatus,
@@ -74,6 +75,35 @@ const crewPlannerSelect = {
         select: {
           code: true,
           city: true,
+        },
+      },
+    },
+    orderBy: [{ date: "asc" }, { startsAt: "asc" }],
+  },
+  scheduleEntries: {
+    select: {
+      id: true,
+      date: true,
+      dutyStatus: true,
+      startsAt: true,
+      endsAt: true,
+      status: true,
+      notes: true,
+      period: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      station: {
+        select: {
+          code: true,
+          city: true,
+        },
+      },
+      rotationPattern: {
+        select: {
+          name: true,
         },
       },
     },
@@ -178,6 +208,7 @@ export type CrewPlannerMember = CrewPlannerPayload & {
   availabilityWarnings: string[];
   currentAssignments: CrewPlannerPayload["assignments"];
   schedulesInWindow: CrewPlannerPayload["schedules"];
+  scheduleEntriesInWindow: CrewPlannerPayload["scheduleEntries"];
   timeOffInWindow: CrewPlannerPayload["timeOffRequests"];
   upcomingFlights: CrewPlannerFlight[];
 };
@@ -190,6 +221,7 @@ export type CrewSchedulingPlannerData = {
     activeCrew: number;
     assignedCrew: number;
     crewWithAvailabilityWarnings: number;
+    crewWithScheduleEntries: number;
     crewWithScheduleBlocks: number;
     crewWithTimeOff: number;
     upcomingCoverageGaps: number;
@@ -276,6 +308,7 @@ function normalizeFlight(
 function buildAvailabilityWarnings(
   crewMember: CrewPlannerPayload,
   schedulesInWindow: CrewPlannerPayload["schedules"],
+  scheduleEntriesInWindow: CrewPlannerPayload["scheduleEntries"],
   timeOffInWindow: CrewPlannerPayload["timeOffRequests"],
   upcomingFlights: CrewPlannerFlight[],
 ): string[] {
@@ -293,8 +326,8 @@ function buildAvailabilityWarnings(
     warnings.push(`Current duty status is ${crewMember.dutyStatus}.`);
   }
 
-  if (schedulesInWindow.length === 0) {
-    warnings.push("No CrewSchedule block in the planning window.");
+  if (schedulesInWindow.length === 0 && scheduleEntriesInWindow.length === 0) {
+    warnings.push("No CrewSchedule block or schedule-period entry in the planning window.");
   }
 
   if (timeOffInWindow.length > 0) {
@@ -324,6 +357,18 @@ export async function getCrewSchedulingPlannerData(
         schedules: {
           ...crewPlannerSelect.schedules,
           where: {
+            date: {
+              gte: windowStart,
+              lt: windowEnd,
+            },
+          },
+        },
+        scheduleEntries: {
+          ...crewPlannerSelect.scheduleEntries,
+          where: {
+            status: {
+              in: [CrewScheduleEntryStatus.DRAFT, CrewScheduleEntryStatus.PUBLISHED],
+            },
             date: {
               gte: windowStart,
               lt: windowEnd,
@@ -364,6 +409,7 @@ export async function getCrewSchedulingPlannerData(
       hasCurrentAssignment(assignment, now),
     );
     const schedulesInWindow = crewMember.schedules;
+    const scheduleEntriesInWindow = crewMember.scheduleEntries;
     const timeOffInWindow = crewMember.timeOffRequests.filter((request) =>
       overlapsWindow(request.startDate, request.endDate, windowStart, windowEnd),
     );
@@ -383,6 +429,7 @@ export async function getCrewSchedulingPlannerData(
     const availabilityWarnings = buildAvailabilityWarnings(
       crewMember,
       schedulesInWindow,
+      scheduleEntriesInWindow,
       timeOffInWindow,
       upcomingFlights,
     );
@@ -391,6 +438,7 @@ export async function getCrewSchedulingPlannerData(
       ...crewMember,
       availabilityWarnings,
       currentAssignments,
+      scheduleEntriesInWindow,
       schedulesInWindow,
       timeOffInWindow,
       upcomingFlights,
@@ -410,6 +458,9 @@ export async function getCrewSchedulingPlannerData(
       ).length,
       crewWithAvailabilityWarnings: crewMembersWithPlanning.filter(
         (crewMember) => crewMember.availabilityWarnings.length > 0,
+      ).length,
+      crewWithScheduleEntries: crewMembersWithPlanning.filter(
+        (crewMember) => crewMember.scheduleEntriesInWindow.length > 0,
       ).length,
       crewWithScheduleBlocks: crewMembersWithPlanning.filter(
         (crewMember) => crewMember.schedulesInWindow.length > 0,

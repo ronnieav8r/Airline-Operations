@@ -760,7 +760,7 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
             <p className="text-sm text-zinc-500">Planning window</p>
             <p className="mt-2 text-sm font-semibold text-zinc-900">{windowLabel}</p>
@@ -778,6 +778,12 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
             <p className="text-sm text-zinc-500">Schedule blocks</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {data.summary.crewWithScheduleBlocks}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4">
+            <p className="text-sm text-zinc-500">Period entries</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {data.summary.crewWithScheduleEntries}
             </p>
           </article>
           <article className="rounded-md border border-zinc-200 bg-white p-4">
@@ -910,7 +916,7 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
                             </ul>
                           ) : null}
 
-                          <div className="mt-4 grid gap-3 xl:grid-cols-4">
+                          <div className="mt-4 grid gap-3 xl:grid-cols-5">
                             <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
                               <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                                 Schedule Blocks
@@ -931,6 +937,46 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
                                         {schedule.endsAt ? toDateTime(schedule.endsAt) : "No end"} |{" "}
                                         {schedule.station?.code ?? "No station"}
                                       </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+
+                            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                                Period Entries
+                              </h4>
+                              {crewMember.scheduleEntriesInWindow.length === 0 ? (
+                                <p className="mt-2 text-sm text-zinc-600">
+                                  No schedule-period entries in this window.
+                                </p>
+                              ) : (
+                                <ul className="mt-2 space-y-2 text-sm">
+                                  {crewMember.scheduleEntriesInWindow.map((entry) => (
+                                    <li key={entry.id}>
+                                      <div className="font-medium text-zinc-900">
+                                        {toDate(entry.date)} | {formatStatus(entry.dutyStatus)}
+                                      </div>
+                                      <div className="text-xs text-zinc-500">
+                                        {entry.period.name} | {formatStatus(entry.status)} |{" "}
+                                        {entry.station?.code ?? "No station"}
+                                      </div>
+                                      <div className="text-xs text-zinc-500">
+                                        {entry.startsAt ? toDateTime(entry.startsAt) : "No start"} -{" "}
+                                        {entry.endsAt ? toDateTime(entry.endsAt) : "No end"}
+                                      </div>
+                                      {entry.rotationPattern ? (
+                                        <div className="text-xs text-zinc-500">
+                                          Pattern: {entry.rotationPattern.name}
+                                        </div>
+                                      ) : null}
+                                      <Link
+                                        className="mt-1 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
+                                        href={`/crew/scheduling/periods/${entry.period.id}#schedule-entries`}
+                                      >
+                                        Period detail
+                                      </Link>
                                     </li>
                                   ))}
                                 </ul>

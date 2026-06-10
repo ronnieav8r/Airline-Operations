@@ -1211,20 +1211,23 @@ Prompt 154 is partial. Static validation passed for the draft schedule-entry
 workflow, but local DB-backed workflow/browser QA is pending because Docker
 Desktop was not running.
 
+Prompt 155 is complete. `/crew/scheduling` now shows draft/published
+`CrewScheduleEntry` rows as read-only schedule-period planning context beside
+existing `CrewSchedule` blocks. This does not change aircraft assignment or
+coverage behavior.
+
 Preferred next step:
 
 ```text
-Prompt 155: Crew Schedule Entry Planner Visibility Foundation
+Prompt 156: Crew Schedule Entry Planner Visibility QA
 ```
 
 Scope:
 
-- Surface `CrewScheduleEntry` rows on `/crew/scheduling` as planning
-  availability context beside existing `CrewSchedule` blocks.
-- Keep planner visibility read-only and do not make schedule entries the active
-  coverage source.
-- Do not publish schedules, generate legacy `CrewSchedule` rows, apply
-  patterns, approve requests, or mutate aircraft assignments.
+- Validate `/crew/scheduling` schedule-entry visibility, summary count,
+  schedule-period detail links, filters, and grouping.
+- Confirm schedule entries remain planning context and do not change
+  `AircraftCrewAssignment` coverage truth.
 - Keep schedule writes, crew self-service time-off, duty/rest enforcement,
   assignment automation, auth/signatures, hard release blocking, imports,
   provider integrations, and positioning/logistics implementation behind
