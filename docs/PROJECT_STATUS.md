@@ -1442,17 +1442,23 @@ schedules, create schedule entries automatically, change aircraft assignments,
 or write logistics records. Static validation passed; DB-backed workflow/browser
 smoke remains pending because Docker Desktop was unavailable.
 
+Prompt 197 is complete as a partial QA pass. Static validation passed for the
+crew portal shell and request submission workflow. Runtime DB-backed checks for
+linked-crew scoping, time-off submission, schedule request submission, and no
+approval/publish/assignment/logistics side effects remain pending because
+Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 197: Crew portal QA
+Prompt 198: Crew logistics planning
 ```
 
 Scope:
 
-- Verify crew portal shell and request submission behavior.
-- Confirm linked-crew scoping.
-- Confirm no approval, publishing, assignment, or logistics side effects.
+- Plan crew location and travel-need data boundaries.
+- Keep airline booking, hotel booking, and expenses deferred.
+- Decide route/context for first logistics surfaces.
 
 Deferred follow-up to keep on the roadmap:
 

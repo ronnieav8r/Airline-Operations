@@ -176,6 +176,10 @@ users submitting their own time-off and schedule requests. Submissions remain
 review inputs only; crew users cannot approve requests, publish schedules,
 change assignments, or write logistics.
 
+Prompt 197 QA status: partial pass. Static validation passed for the crew
+portal shell and request submission workflow. DB-backed runtime smoke remains
+pending because Docker Desktop was unavailable.
+
 ## Validation Standard
 
 For every implementation slice:

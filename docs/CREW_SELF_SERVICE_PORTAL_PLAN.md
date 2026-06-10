@@ -48,6 +48,10 @@ their own `CrewScheduleRequest` rows with `SUBMITTED` status. Admin/ops review
 remains required. Crew users still cannot approve, publish, assign aircraft, or
 write logistics records.
 
+Prompt 197 QA status: partial pass. Static validation passed. DB-backed portal
+shell and request submission smoke remains pending until Docker Desktop is
+available.
+
 ## Explicit Non-Goals
 
 - Crew users cannot approve requests.
