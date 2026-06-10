@@ -1489,16 +1489,21 @@ filtered planner views. This is navigation-only polish; no data model,
 mutation, booking, schedule, assignment, release, or duty/rest behavior
 changed.
 
+Prompt 204 is complete as a partial QA pass. Static validation passed across
+the macro scaffolding state, and results are recorded in
+`docs/MACRO_SCAFFOLDING_QA_LOG.md`. DB-backed route/workflow smoke remains
+pending because Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 204: Macro scaffolding QA pass
+Prompt 205: Docs/status/onboarding refresh
 ```
 
 Scope:
 
-- Run a macro QA/status pass across auth, FlightLeg cutover, ReleasePackage,
-  crew compliance, scheduling lifecycle, self-service, and logistics.
+- Refresh project onboarding docs and summarize the current macro scaffolding
+  state for future planner/builder chats.
 - No booking, expense, assignment, schedule, release, or duty/rest behavior
   changes.
 
