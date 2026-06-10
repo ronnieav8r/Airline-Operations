@@ -1,4 +1,10 @@
-import { CrewScheduleEntryStatus, CrewSchedulePeriodStatus, DutyStatus, TimeOffRequestStatus } from "@prisma/client";
+import {
+  CrewScheduleEntryStatus,
+  CrewSchedulePeriodStatus,
+  CrewScheduleRequestStatus,
+  DutyStatus,
+  TimeOffRequestStatus,
+} from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -8,6 +14,7 @@ import {
   createScheduleEntryAction,
   generatePatternDraftEntriesAction,
   publishSchedulePeriodAction,
+  reviewCrewScheduleRequestAction,
   updateScheduleEntryAction,
   updateSchedulePeriodAction,
 } from "@/app/crew/scheduling/periods/actions";
@@ -534,7 +541,44 @@ function buildPatternPreview({
   return { crewMember, messages, pattern, rows };
 }
 
-function RequestCard({ request }: { request: RequestRow }) {
+function RequestReviewForm({
+  decision,
+  periodId,
+  requestId,
+}: {
+  decision: "APPROVED" | "DENIED";
+  periodId: string;
+  requestId: string;
+}) {
+  return (
+    <form
+      action={reviewCrewScheduleRequestAction.bind(null, periodId, requestId, decision)}
+      className="grid gap-2 rounded-md border border-zinc-200 bg-white p-2"
+    >
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">
+          {decision === "APPROVED" ? "Approval notes" : "Denial notes"}
+        </span>
+        <textarea
+          className="mt-1 min-h-16 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+          name="reviewNotes"
+        />
+      </label>
+      <button
+        className={
+          decision === "APPROVED"
+            ? "rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800"
+            : "rounded-md bg-rose-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-800"
+        }
+        type="submit"
+      >
+        {decision === "APPROVED" ? "Approve request" : "Deny request"}
+      </button>
+    </form>
+  );
+}
+
+function RequestCard({ periodId, request }: { periodId: string; request: RequestRow }) {
   return (
     <article className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -565,6 +609,24 @@ function RequestCard({ request }: { request: RequestRow }) {
         </p>
       ) : null}
       {request.requestNotes ? <p className="mt-2 text-sm text-zinc-700">{request.requestNotes}</p> : null}
+      {request.reviewNotes ? (
+        <p className="mt-2 rounded-md border border-zinc-200 bg-white p-2 text-xs text-zinc-600">
+          Review notes: {request.reviewNotes}
+        </p>
+      ) : null}
+      {request.reviewedAt ? (
+        <p className="mt-2 text-xs text-zinc-500">Reviewed {toDateTime(request.reviewedAt)}</p>
+      ) : null}
+      {request.status === CrewScheduleRequestStatus.SUBMITTED ? (
+        <div className="mt-3 grid gap-2 md:grid-cols-2">
+          <RequestReviewForm decision="APPROVED" periodId={periodId} requestId={request.id} />
+          <RequestReviewForm decision="DENIED" periodId={periodId} requestId={request.id} />
+        </div>
+      ) : (
+        <p className="mt-3 text-xs text-zinc-500">
+          Reviewed requests are planning context only. They do not create schedule entries automatically.
+        </p>
+      )}
     </article>
   );
 }
@@ -1163,8 +1225,12 @@ export default async function CrewSchedulePeriodDetailPage({ params, searchParam
           )}
         </section>
 
-        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" id="period-requests">
           <h2 className="text-lg font-semibold">Recent requests</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Review broader period-scoped bids, preferences, swaps, and notes.
+            Approval is planning input only and does not create schedule entries.
+          </p>
           {period.requests.length === 0 ? (
             <p className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
               No requests found for this period.
@@ -1172,7 +1238,7 @@ export default async function CrewSchedulePeriodDetailPage({ params, searchParam
           ) : (
             <div className="mt-3 grid gap-3 lg:grid-cols-2">
               {period.requests.slice(0, 8).map((request) => (
-                <RequestCard key={request.id} request={request} />
+                <RequestCard key={request.id} periodId={period.id} request={request} />
               ))}
             </div>
           )}

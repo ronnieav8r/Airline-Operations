@@ -3,6 +3,7 @@
 import {
   CrewScheduleEntryStatus,
   CrewSchedulePeriodStatus,
+  CrewScheduleRequestStatus,
   DutyStatus,
   EmploymentStatus,
   Prisma,
@@ -16,6 +17,7 @@ import { requireRole } from "@/lib/auth/guards";
 
 class SchedulePeriodWorkflowError extends Error {}
 class ScheduleEntryWorkflowError extends Error {}
+class CrewScheduleRequestWorkflowError extends Error {}
 
 const editableStatuses = [
   CrewSchedulePeriodStatus.BID_OPEN,
@@ -232,6 +234,14 @@ function encodeEntryError(error: unknown): string {
   }
 
   return encodeURIComponent("Schedule entry workflow failed.");
+}
+
+function encodeRequestError(error: unknown): string {
+  if (error instanceof CrewScheduleRequestWorkflowError) {
+    return encodeURIComponent(error.message);
+  }
+
+  return encodeURIComponent("Crew schedule request workflow failed.");
 }
 
 function archivedAtForStatus(status: SchedulePeriodInput["status"]): Date | null {
@@ -718,6 +728,52 @@ export async function generatePatternDraftEntriesAction(periodId: string, formDa
   revalidateSchedulePeriodPaths(periodId);
   revalidatePath(`/crew/${input.crewMemberId}`);
   redirect(patternGenerationRedirectUrl(periodId, input, result));
+}
+
+export async function reviewCrewScheduleRequestAction(
+  periodId: string,
+  requestId: string,
+  decision: "APPROVED" | "DENIED",
+  formData: FormData,
+) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
+
+  try {
+    const request = await prisma.crewScheduleRequest.findUnique({
+      where: { id: requestId },
+      select: {
+        id: true,
+        periodId: true,
+        status: true,
+      },
+    });
+
+    if (!request || request.periodId !== periodId) {
+      throw new CrewScheduleRequestWorkflowError("Crew schedule request was not found for this period.");
+    }
+
+    if (request.status !== CrewScheduleRequestStatus.SUBMITTED) {
+      throw new CrewScheduleRequestWorkflowError("Only submitted schedule requests can be reviewed.");
+    }
+
+    await prisma.crewScheduleRequest.update({
+      where: { id: request.id },
+      data: {
+        reviewedAt: new Date(),
+        reviewedById: currentUser.id,
+        reviewNotes: getOptionalText(formData, "reviewNotes"),
+        status:
+          decision === "APPROVED"
+            ? CrewScheduleRequestStatus.APPROVED
+            : CrewScheduleRequestStatus.DENIED,
+      },
+    });
+  } catch (error) {
+    redirect(`/crew/scheduling/periods/${periodId}?error=${encodeRequestError(error)}#period-requests`);
+  }
+
+  revalidateSchedulePeriodPaths(periodId);
+  redirect(`/crew/scheduling/periods/${periodId}#period-requests`);
 }
 
 export async function archiveSchedulePeriodAction(periodId: string) {

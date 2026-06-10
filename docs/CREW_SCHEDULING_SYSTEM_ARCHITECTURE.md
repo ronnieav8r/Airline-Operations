@@ -271,3 +271,9 @@ simple `TimeOffRequest` absence tracking. The first implementation should add
 admin/ops approve/deny review for submitted requests only. Approved requests
 become planning input; they must not automatically create schedule entries,
 publish schedules, or mutate aircraft assignments.
+
+Prompt 190 implementation status: complete. Schedule period request cards now
+support admin/ops approve and deny review for submitted `CrewScheduleRequest`
+rows. Review records status, timestamp, reviewer, and optional notes. Approval
+does not create schedule entries, publish schedules, create bridge rows, or
+mutate aircraft assignments.

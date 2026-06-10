@@ -1389,17 +1389,25 @@ requests are planning input only and must not automatically create schedule
 entries, publish schedules, create `CrewSchedule` bridge rows, or mutate
 aircraft assignments.
 
+Prompt 190 is complete. Schedule period request cards now support admin/ops
+approve and deny review for submitted `CrewScheduleRequest` rows. Review
+updates status, notes, reviewed timestamp, and reviewer attribution only; it
+does not create schedule entries, publish schedules, create `CrewSchedule`
+bridge rows, or mutate aircraft assignments. Static validation passed;
+DB-backed workflow/browser smoke remains pending because Docker Desktop was
+unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 190: Admin request review foundation
+Prompt 191: Request-to-draft-entry helper
 ```
 
 Scope:
 
-- Add approve/deny review controls for submitted `CrewScheduleRequest` rows.
-- Record review status, notes, timestamp, and reviewer.
-- Keep approval side effects to the request row only.
+- Add controlled helper for approved requests.
+- Link created draft entries to `sourceRequestId`.
+- Keep output as draft planning entries only.
 
 Deferred follow-up to keep on the roadmap:
 

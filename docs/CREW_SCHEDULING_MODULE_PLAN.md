@@ -290,6 +290,11 @@ review metadata and make the request available as planning input only. It
 should not create schedule entries, publish schedules, or mutate aircraft-block
 assignments.
 
+Prompt 190 implementation status: complete. Schedule period detail now supports
+admin/ops approve and deny review for submitted `CrewScheduleRequest` rows.
+Review updates only the request row and keeps schedule-entry creation,
+publishing, and aircraft assignment changes out of scope.
+
 ## Prompt 149 Rotation Pattern Admin Planning
 
 Rotation pattern admin should manage reusable template headers and ordered day
