@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { use } from "react";
+
+import { logoutAction } from "@/app/login/actions";
+import type { CurrentUser } from "@/lib/auth/session";
 
 const navigationItems = [
   { label: "Dashboard", href: "/" },
@@ -20,8 +24,15 @@ function isActiveRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {
+export function AppShell({
+  children,
+  currentUserPromise,
+}: Readonly<{
+  children: React.ReactNode;
+  currentUserPromise: Promise<CurrentUser | null>;
+}>) {
   const pathname = usePathname();
+  const currentUser = use(currentUserPromise);
 
   return (
     <div className="min-h-screen bg-zinc-100">
@@ -39,8 +50,30 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
                 </span>
               </div>
             </Link>
-            <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
-              FlightLeg write v1
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
+                FlightLeg write v1
+              </div>
+              {currentUser ? (
+                <form action={logoutAction} className="flex items-center gap-2">
+                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
+                    {currentUser.name} · {currentUser.role}
+                  </span>
+                  <button
+                    className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition hover:border-zinc-300 hover:text-zinc-950"
+                    type="submit"
+                  >
+                    Sign out
+                  </button>
+                </form>
+              ) : (
+                <Link
+                  className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition hover:border-zinc-300 hover:text-zinc-950"
+                  href="/login"
+                >
+                  Sign in
+                </Link>
+              )}
             </div>
           </div>
 

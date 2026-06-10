@@ -124,6 +124,11 @@ session primitives.
 - Add safe local/demo seed credential behavior.
 - Keep broad route protection for Prompt 163.
 
+Prompt 162 implementation status: complete. The app now has local login/logout,
+DB-backed session helpers, an app-shell user indicator, and seeded local/demo
+credentials for the demo admin and ops users. Mutation protection and
+attribution remain Prompt 163 scope.
+
 ## Prompt 163 Protection Target
 
 - Add role guard helpers.

@@ -34,9 +34,12 @@ import {
   WeightBalanceStatus,
 } from "@prisma/client";
 
+import { createPasswordHash } from "../lib/auth/password";
 import { seedDefaultReleasePolicies } from "../lib/release-policy-defaults";
 
 const prisma = new PrismaClient();
+const DEFAULT_ADMIN_PASSWORD = "AeroOpsDemoAdmin!2026";
+const DEFAULT_OPS_PASSWORD = "AeroOpsDemoOps!2026";
 
 function addDays(date: Date, days: number): Date {
   const next = new Date(date);
@@ -964,6 +967,27 @@ async function main() {
       data: {
         email: "ops@aeroops.local",
         role: UserRole.OPS,
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    prisma.userPasswordCredential.create({
+      data: {
+        userId: adminUser.id,
+        passwordHash: await createPasswordHash(
+          process.env.AEROOPS_DEMO_ADMIN_PASSWORD ?? DEFAULT_ADMIN_PASSWORD,
+        ),
+        mustChangePassword: process.env.AEROOPS_DEMO_ADMIN_PASSWORD ? false : true,
+      },
+    }),
+    prisma.userPasswordCredential.create({
+      data: {
+        userId: opsUser.id,
+        passwordHash: await createPasswordHash(
+          process.env.AEROOPS_DEMO_OPS_PASSWORD ?? DEFAULT_OPS_PASSWORD,
+        ),
+        mustChangePassword: process.env.AEROOPS_DEMO_OPS_PASSWORD ? false : true,
       },
     }),
   ]);

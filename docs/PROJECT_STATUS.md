@@ -1238,22 +1238,25 @@ email/password credentials, HttpOnly DB-backed sessions, expanded operational
 roles, mutation-first route/action protection, and user attribution through
 existing nullable user fields.
 
-Prompt 161 is complete. The auth schema foundation expands operational roles
-and adds local password credential plus DB-backed session primitives. Login,
-logout, route protection, signatures, password reset, MFA, and provider auth
-remain deferred.
+Prompt 162 is complete. The app now has local login/logout, DB-backed session
+helpers, an app-shell current-user indicator, and local/demo seed credentials.
+Broad mutation protection, role gates, signatures, password reset, MFA, and
+provider auth remain deferred.
 
 Preferred next step:
 
 ```text
-Prompt 162: Login And Session Foundation
+Prompt 163: Role And Attribution Foundation
 ```
 
 Scope:
 
-- Add `/login`, login/logout server actions, current-user/session helpers, and
-  safe local/demo credential seed behavior.
-- Keep broad mutation action protection for Prompt 163.
+- Add role guard helpers.
+- Protect mutation server actions.
+- Populate existing nullable user attribution fields from the current user where
+  actions become protected.
+- Keep read-route lock-down and crew portal scoping for later auth slices unless
+  needed by the protected write flow.
 
 Deferred follow-up to keep on the roadmap:
 
