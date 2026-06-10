@@ -1224,22 +1224,25 @@ Prompt 157 is complete. `/crew/[crewMemberId]` now shows draft/published
 `CrewScheduleEntry` rows as read-only individual crew schedule context. This
 does not change aircraft assignment or coverage behavior.
 
+Prompt 158 is partial. Static validation passed for crew-member schedule-entry
+context, but local DB-backed route/browser QA is pending because Docker Desktop
+was not running.
+
 Preferred next step:
 
 ```text
-Prompt 158: Crew Member Schedule Context QA
+Planning session recommended
 ```
 
 Scope:
 
-- Validate `/crew/[crewMemberId]` schedule-entry visibility and links.
-- Confirm existing schedule blocks, time off, qualifications, assignments, and
-  upcoming coverage sections still render.
-- Confirm operational coverage still comes from aircraft-block assignments.
-- Keep schedule writes, crew self-service time-off, duty/rest enforcement,
-  assignment automation, auth/signatures, hard release blocking, imports,
-  provider integrations, and positioning/logistics implementation behind
-  separate plans.
+- Decide whether the next crew scheduling direction should be schedule
+  publishing/finalization, crew schedule request/bid workflow, pattern
+  application, or runtime QA completion once Docker is available.
+- Publishing/finalization needs a separate plan because it decides whether and
+  how `CrewScheduleEntry` generates legacy `CrewSchedule` bridge rows.
+- Pattern application needs a separate plan because it can generate many draft
+  entries and needs conflict/idempotency rules.
 
 Deferred follow-up to keep on the roadmap:
 
