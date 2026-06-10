@@ -103,6 +103,12 @@ additive and documented in `docs/CREW_COMPLIANCE_PLAN.md`: keep existing
 `CrewQualification` for compatibility warnings while adding separate
 certificate, medical, training, check, recency, duty, and rest evidence tables.
 
+Prompts 175-181 status: complete for static validation and docs. The additive
+crew compliance schema, demo seed/backfill support, read-only surfaces,
+aircraft-assignment warnings, release-readiness warnings, QA log, and status
+refresh are in place. DB-backed runtime QA remains pending because Docker
+Desktop was unavailable.
+
 ## Chain 4: Crew Scheduling Lifecycle
 
 Prompts 182-193:

@@ -290,6 +290,12 @@ tables now exist additively with nullable created/verified user attribution and
 health counts. No UI, seed data, CRUD workflow, hard blocking, or duty/rest
 legal enforcement was added.
 
+Prompts 176-181 completed the first crew compliance scaffolding chain around
+that schema: demo seed/backfill support, read-only crew/planner surfaces,
+warning-only aircraft assignment context, warning-only release readiness
+context, QA docs, and status refresh. Compliance records remain evidence and
+warning inputs, not hard release blockers.
+
 ## History Rule
 
 Keep full assignment history.

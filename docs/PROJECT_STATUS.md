@@ -1335,19 +1335,23 @@ DB-backed runtime QA remains pending because Docker Desktop was unavailable.
 Prompt 181 should refresh docs/status for the completed crew compliance chain
 and set the next macro step to crew scheduling lifecycle planning.
 
+Prompt 181 is complete. Crew compliance docs/status now reflect the completed
+foundation chain. Static validation for the chain passed in Prompt 180, and
+DB-backed runtime QA remains pending because Docker Desktop was unavailable.
+
 Preferred next step:
 
 ```text
-Prompt 176: Compliance seed/backfill/demo data and health counts
+Prompt 182: Schedule publish/finalize planning
 ```
 
 Scope:
 
-- Add safe local/demo rows for the seven crew compliance tables.
-- Keep seed/backfill idempotent.
-- Confirm health counts can expose nonzero local data after seed.
-- Do not add UI, CRUD workflows, hard release blocking, duty/rest enforcement,
-  imports, provider integrations, or file uploads.
+- Plan schedule period publish/finalize behavior.
+- Define how published `CrewScheduleEntry` rows create linked `CrewSchedule`
+  bridge rows.
+- Keep published schedules as availability/planning context only.
+- Do not auto-create aircraft assignments or add duty/rest hard enforcement.
 
 Deferred follow-up to keep on the roadmap:
 

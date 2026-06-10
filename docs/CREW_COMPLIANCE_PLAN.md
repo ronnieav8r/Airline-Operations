@@ -162,3 +162,8 @@ Docker Desktop was unavailable.
 Prompt 180 QA status: complete for static validation. The crew compliance chain
 passes Prisma validation, typecheck, lint, and build. DB-backed runtime checks
 remain pending because Docker Desktop was unavailable.
+
+Prompt 181 docs/status refresh: complete. The crew compliance foundation chain
+is closed from a scaffolding standpoint. Runtime DB/browser QA remains pending
+until Docker is available, but the next macro build step can move to crew
+scheduling lifecycle planning.
