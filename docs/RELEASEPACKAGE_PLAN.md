@@ -44,6 +44,10 @@ FlightRelease, and optional readiness snapshot.
 Prompt 170 implementation status: complete as an additive schema foundation.
 Package preview UI and capture actions remain deferred.
 
+Prompt 171 implementation status: complete. FlightLeg detail now shows a
+read-only ReleasePackage completeness preview and existing package evidence
+links when present. Capture actions remain deferred.
+
 ## First Workflow Direction
 
 Start with read-only preview, then explicit preview capture. Do not create

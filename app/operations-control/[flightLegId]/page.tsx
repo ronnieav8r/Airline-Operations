@@ -457,6 +457,7 @@ function SectionNavigation() {
   const sections = [
     ["#readiness", "Readiness"],
     ["#release-history", "Release History"],
+    ["#release-package", "Release Package"],
     ["#airworthiness", "Airworthiness"],
     ["#evidence-details", "Evidence Details"],
     ["#raw-reference-data", "Raw Reference Data"],
@@ -506,6 +507,132 @@ function SectionGroup({
       </div>
       {children}
     </section>
+  );
+}
+
+function ReleasePackagePreview({ detail }: { detail: ReleaseEvidenceDetail }) {
+  const latestPackage = detail.releasePackages[0] ?? null;
+  const latestUsableWeightBalanceRun =
+    detail.weightBalanceRuns.find((run) => run.status !== WeightBalanceStatus.VOIDED) ?? null;
+  const currentAirworthinessRelease =
+    detail.aircraftAssignments[0]?.aircraft.airworthinessReleases.find(
+      (release) => release.status === "RELEASED" && (!release.expiresAt || release.expiresAt > new Date()),
+    ) ?? null;
+  const packageItems = [
+    {
+      label: "Operational control",
+      ready: Boolean(detail.operationalControlRecord),
+      status: detail.operationalControlRecord ? "Linked" : "Missing",
+    },
+    {
+      label: "FlightRelease",
+      ready: Boolean(detail.operationalControlRecord?.release),
+      status: detail.operationalControlRecord?.release?.status ?? "Missing",
+    },
+    {
+      label: "Readiness snapshot",
+      ready: detail.readinessSnapshots.length > 0,
+      status: detail.readinessSnapshots[0]?.snapshotStatus ?? "Missing",
+    },
+    {
+      label: "Manifest",
+      ready: Boolean(detail.manifest),
+      status: detail.manifest?.status ?? "Missing",
+    },
+    {
+      label: "Weight and balance",
+      ready: Boolean(latestUsableWeightBalanceRun),
+      status: latestUsableWeightBalanceRun?.status ?? "Missing",
+    },
+    {
+      label: "Flight locating",
+      ready: Boolean(detail.flightLocatingRecord),
+      status: detail.flightLocatingRecord?.status ?? "Missing",
+    },
+    {
+      label: "Dispatch package",
+      ready: Boolean(detail.dispatchPackage),
+      status: detail.dispatchPackage?.status ?? "Missing",
+    },
+    {
+      label: "Airworthiness release",
+      ready: Boolean(currentAirworthinessRelease),
+      status: currentAirworthinessRelease?.status ?? "Missing",
+    },
+  ];
+  const readyCount = packageItems.filter((item) => item.ready).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-zinc-950">ReleasePackage Preview</h3>
+            <p className="mt-1 text-sm text-zinc-600">
+              Read-only package completeness context. Capture/finalize actions are deferred.
+            </p>
+          </div>
+          <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700">
+            {readyCount} / {packageItems.length} evidence groups present
+          </span>
+        </div>
+
+        {latestPackage ? (
+          <div className="mt-4 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+            Latest package {latestPackage.packageNumber} is {latestPackage.status}; captured{" "}
+            {toDateTimeLabel(latestPackage.capturedAt)} with{" "}
+            {latestPackage.evidenceLinks.length} evidence links.
+          </div>
+        ) : (
+          <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            No ReleasePackage has been captured yet. This does not block current release actions.
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {packageItems.map((item) => (
+            <div
+              className={`rounded-md border p-3 ${
+                item.ready
+                  ? "border-emerald-200 bg-emerald-50"
+                  : "border-zinc-200 bg-zinc-50"
+              }`}
+              key={item.label}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                {item.label}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-zinc-950">{item.status}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {latestPackage?.evidenceLinks.length ? (
+        <div className="overflow-hidden rounded-md border border-zinc-200 bg-white shadow-sm">
+          <table className="min-w-full divide-y divide-zinc-200 text-sm">
+            <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wider text-zinc-500">
+              <tr>
+                <th className="px-3 py-2 font-medium">Evidence</th>
+                <th className="px-3 py-2 font-medium">Type</th>
+                <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">Required</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {latestPackage.evidenceLinks.map((link) => (
+                <tr key={link.id}>
+                  <td className="px-3 py-2.5 font-medium text-zinc-900">{link.evidenceLabel}</td>
+                  <td className="px-3 py-2.5 text-zinc-600">{link.evidenceType}</td>
+                  <td className="px-3 py-2.5 text-zinc-600">{link.statusLabel ?? "Not captured"}</td>
+                  <td className="px-3 py-2.5 text-zinc-600">{link.isRequired ? "Yes" : "No"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -1265,6 +1392,14 @@ export default async function ReleaseEvidenceDetailPage({ params, searchParams }
             <RecentReleaseSnapshots detail={detail} />
             <ReleaseAuditTimeline detail={detail} />
           </div>
+        </SectionGroup>
+
+        <SectionGroup
+          description="Read-only ReleasePackage completeness preview. Package capture remains deferred."
+          id="release-package"
+          title="Release Package"
+        >
+          <ReleasePackagePreview detail={detail} />
         </SectionGroup>
 
         <SectionGroup

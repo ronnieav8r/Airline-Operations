@@ -329,6 +329,32 @@ const releaseEvidenceDetailSelect = {
       },
     },
   },
+  releasePackages: {
+    orderBy: {
+      capturedAt: "desc",
+    },
+    take: 5,
+    select: {
+      id: true,
+      packageNumber: true,
+      status: true,
+      capturedAt: true,
+      finalizedAt: true,
+      voidedAt: true,
+      notes: true,
+      evidenceLinks: {
+        orderBy: [{ evidenceType: "asc" }, { evidenceLabel: "asc" }],
+        select: {
+          id: true,
+          evidenceType: true,
+          evidenceId: true,
+          evidenceLabel: true,
+          statusLabel: true,
+          isRequired: true,
+        },
+      },
+    },
+  },
 } satisfies Prisma.FlightLegSelect;
 
 export type ReleaseEvidenceDetail = Prisma.FlightLegGetPayload<{

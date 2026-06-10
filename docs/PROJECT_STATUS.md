@@ -1238,22 +1238,21 @@ email/password credentials, HttpOnly DB-backed sessions, expanded operational
 roles, mutation-first route/action protection, and user attribution through
 existing nullable user fields.
 
-Prompt 170 is complete as an additive schema foundation. The schema now includes
-`ReleasePackage`, `ReleasePackageEvidenceLink`, package status/evidence-type
-enums, and health counts. Current `FlightRelease` actions remain unchanged and
-warning-first.
+Prompt 171 is complete. FlightLeg detail now shows a read-only ReleasePackage
+completeness preview and any existing package evidence links. No package capture,
+finalization, hard blocking, or FlightRelease behavior changes were added.
 
 Preferred next step:
 
 ```text
-Prompt 171: ReleasePackage Read-Only Preview
+Prompt 172: ReleasePackage Capture Foundation
 ```
 
 Scope:
 
-- Show package completeness on FlightLeg detail.
-- Display existing package headers/evidence links when present.
-- Do not add capture actions or mutate FlightRelease.
+- Add explicit package preview capture action.
+- Create ReleasePackage header and evidence links from current evidence.
+- Do not auto-capture, hard-block, or mutate FlightRelease status.
 
 Deferred follow-up to keep on the roadmap:
 
