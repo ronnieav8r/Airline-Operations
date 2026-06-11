@@ -1809,10 +1809,15 @@ Prompt 243 is complete. `npm run smoke:schedule-publishing` verifies schedule
 period publishing creates stable linked `CrewSchedule` bridge rows, is
 idempotent on repeat publish, and does not mutate aircraft crew assignments.
 
+Prompt 244 is complete. `npm run smoke:rotation-patterns` verifies rotation
+pattern generation creates draft-only pattern-linked schedule entries, skips
+duplicate generation, creates no `CrewSchedule` bridge rows before publish, and
+does not mutate aircraft crew assignments.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 244: Rotation Pattern QA And Fixes
+Prompt 245: Crew Request And Time-Off QA
 ```
 
 Scope:

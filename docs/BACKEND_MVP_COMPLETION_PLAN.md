@@ -186,6 +186,10 @@ Prompt 243 is complete. Schedule publishing runtime QA passed with a focused
 smoke for publish idempotency, bridge rows, and unchanged aircraft assignment
 counts.
 
+Prompt 244 is complete. Rotation pattern runtime QA passed with a focused smoke
+for draft generation, duplicate skipping, and unchanged aircraft assignment
+counts.
+
 - `242`: Crew scheduling runtime QA planning.
 - `243`: Schedule period and publishing QA.
 - `244`: Rotation pattern QA and fixes.

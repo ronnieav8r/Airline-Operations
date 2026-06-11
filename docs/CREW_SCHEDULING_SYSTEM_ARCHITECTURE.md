@@ -304,3 +304,8 @@ the scheduling backend MVP-complete. The planned QA chain is documented in
 Prompt 243 runtime QA status: complete. Schedule publishing now has a focused
 smoke that verifies period/entry publishing, linked `CrewSchedule` bridge
 creation, idempotency, and unchanged aircraft assignment counts.
+
+Prompt 244 runtime QA status: complete. Rotation pattern generation now has a
+focused smoke that verifies draft-only generation, duplicate skipping, pattern
+links, no pre-publish `CrewSchedule` bridge rows, and unchanged aircraft
+assignment counts.

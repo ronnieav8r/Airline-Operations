@@ -21,6 +21,7 @@
     "smoke:workflows": "tsx scripts/smoke-workflows.ts",
     "smoke:duty-rest-snapshot": "tsx scripts/smoke-duty-rest-snapshot.ts",
     "smoke:schedule-publishing": "tsx scripts/smoke-schedule-publishing.ts",
+    "smoke:rotation-patterns": "tsx scripts/smoke-rotation-patterns.ts",
     "smoke:browser": "playwright test",
     "playwright:install": "playwright install chromium",
     "db:local:up": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-docker-compose.ps1 up -Detach postgres",

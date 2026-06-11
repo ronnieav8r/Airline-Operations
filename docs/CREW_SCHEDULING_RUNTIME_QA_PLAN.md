@@ -42,6 +42,8 @@ Verify:
 
 ## Prompt 244: Rotation Pattern QA And Fixes
 
+Status: complete.
+
 Verify:
 
 - Pattern preview is read-only and URL-driven.

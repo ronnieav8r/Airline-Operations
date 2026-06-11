@@ -50,6 +50,35 @@ Runtime QA passed locally.
 - Re-running publish keeps the same bridge row and published timestamps.
 - Publishing does not mutate `AircraftCrewAssignment` row counts.
 
+## Prompt 244: Rotation Pattern QA And Fixes
+
+### Result
+
+Runtime QA passed locally. No runtime bug fixes beyond shared-helper extraction
+were required.
+
+### Validation
+
+- `npm run prisma:validate`: pass.
+- `npm run typecheck`: pass.
+- `npm run lint`: pass.
+- `npm run build`: pass.
+- `npm run db:local:up`: pass.
+- `npm run db:local:migrate`: pass.
+- `npm run db:local:seed`: pass.
+- `npm run smoke:rotation-patterns`: pass.
+- `npm run smoke:workflows`: pass.
+- `npm run smoke:app`: pass.
+- `npm run smoke:browser`: pass.
+
+### Verified Behavior
+
+- Pattern generation creates draft `CrewScheduleEntry` rows only.
+- Generated rows link to the selected rotation pattern.
+- Generated rows do not create `CrewSchedule` bridge rows before publish.
+- Re-running generation skips exact duplicate rows.
+- Pattern generation does not mutate `AircraftCrewAssignment` row counts.
+
 ## Prompt 184: Schedule Publish QA
 
 ### Result
