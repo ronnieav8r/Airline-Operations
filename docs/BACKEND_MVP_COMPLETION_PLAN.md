@@ -144,6 +144,9 @@ missing-input, overlap, and deferred-data cases.
 Prompt 237 is complete. A gated scenario seed script now creates local/demo
 duty-rest QA fixtures for those cases.
 
+Prompt 238 is complete. A read-only internal duty/rest scenario diagnostic now
+shows live evaluator output for seeded fixtures.
+
 - `236`: Duty/rest scenario QA planning.
 - `237`: Duty/rest scenario seed foundation.
 - `238`: Duty/rest diagnostic foundation.

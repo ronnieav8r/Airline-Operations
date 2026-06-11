@@ -41,6 +41,15 @@ Scenario QA should be inspectable from a read-only diagnostic route or script
 showing the FlightLeg, operating authority, assigned crew, duty periods, rest
 periods, and evaluator findings.
 
+Prompt 238 implementation status: complete. Use:
+
+```text
+/internal/duty-rest-scenarios
+```
+
+The route evaluates seeded scenario FlightLegs live and shows expected outcome,
+finding status, message, rule key, and details JSON.
+
 ## Deferred
 
 - Hard enforcement.

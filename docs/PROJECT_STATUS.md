@@ -1781,6 +1781,10 @@ Prompt 237 is complete. `npm run seed:duty-rest-scenarios` now provides a gated
 local/demo fixture seed for the duty/rest scenario matrix and skips unless
 `RUN_DUTY_REST_SCENARIOS=1` is set.
 
+Prompt 238 is complete. `/internal/duty-rest-scenarios` now provides a read-only
+diagnostic for seeded duty/rest scenario FlightLegs and their live evaluator
+findings.
+
 Next FlightLeg cutover step:
 
 ```text

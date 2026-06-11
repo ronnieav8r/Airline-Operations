@@ -136,3 +136,6 @@ duty/rest overlap, and deferred-data cases. See
 
 Prompt 237 is complete. A gated local/demo scenario seed script now creates
 duty/rest QA FlightLeg fixtures when `RUN_DUTY_REST_SCENARIOS=1` is set.
+
+Prompt 238 is complete. `/internal/duty-rest-scenarios` now shows read-only live
+evaluator output for seeded duty/rest scenarios.

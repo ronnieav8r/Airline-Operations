@@ -150,6 +150,7 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
     { label: "crew planner", path: "/crew/scheduling" },
     { label: "scheduling", path: "/scheduling" },
     { label: "health", path: "/api/health" },
+    { label: "duty/rest scenarios", path: "/internal/duty-rest-scenarios" },
     { label: "FlightLeg detail", path: `/operations-control/${ids.flightLegId}` },
     { label: "aircraft context", path: `/aircraft/${ids.aircraftId}` },
     { label: "crew detail", path: `/crew/${ids.crewMemberId}` },
