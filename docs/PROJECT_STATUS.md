@@ -1682,6 +1682,13 @@ should expand the existing route, workflow, and Playwright smoke harness to
 exercise the major backend workflows without adding production bypasses or
 changing product behavior.
 
+Prompt 219 is complete. The smoke harness now has broader backend-MVP coverage:
+workflow smoke creates and verifies release evidence, a duty/rest readiness
+finding, ReleasePackage preview evidence links, release audit attribution,
+scheduling publish bridge rows, crew portal requests, and logistics links.
+Browser smoke also opens evidence workflow pages, scheduling admin pages, and
+internal diagnostics as an admin user.
+
 Next FlightLeg cutover step:
 
 ```text

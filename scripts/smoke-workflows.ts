@@ -7,10 +7,14 @@ import {
   CrewSchedulePeriodStatus,
   CrewScheduleRequestStatus,
   CrewScheduleRequestType,
+  DispatchPackageStatus,
   DutyStatus,
   FlightLegStatus,
+  FlightLocatingStatus,
   FlightStatus,
+  ManifestStatus,
   PrismaClient,
+  ReleaseAuditEventType,
   ReleaseAuthorityClass,
   ReleaseFindingStatus,
   ReleasePackageEvidenceType,
@@ -20,6 +24,7 @@ import {
   ReleaseStatus,
   TimeOffRequestStatus,
   TimeOffRequestType,
+  WeightBalanceStatus,
 } from "@prisma/client";
 
 import { verifyPassword } from "../lib/auth/password";
@@ -50,6 +55,15 @@ type SmokeFlightLegResult = {
   flightLegId: string;
   flightReleaseId: string;
   operationalControlRecordId: string;
+};
+
+type SmokeReleaseEvidenceResult = {
+  dispatchPackageId: string;
+  flightLocatingRecordId: string;
+  flightPlanReferenceId: string;
+  manifestId: string;
+  readinessSnapshotId: string;
+  weightBalanceRunId: string;
 };
 
 const runKey = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
@@ -434,6 +448,248 @@ async function smokeSchedulingPublish(context: SmokeContext) {
   console.log(`scheduling: published period ${result.periodId} and bridge ${result.bridgeId}`);
 }
 
+async function smokeReleaseEvidence(
+  context: SmokeContext,
+  flightLeg: SmokeFlightLegResult,
+): Promise<SmokeReleaseEvidenceResult> {
+  const now = new Date();
+  const routeText = `${smokeLabel} route`;
+
+  const result = await prisma.$transaction(async (tx) => {
+    const manifest = await tx.manifest.create({
+      data: {
+        flightLegId: flightLeg.flightLegId,
+        status: ManifestStatus.READY,
+        items: {
+          create: [
+            {
+              baggageWeight: "20.00",
+              checkedInAt: now,
+              notes: `${smokeLabel} manifest item`,
+              personName: "Smoke Passenger",
+              seatNumber: "1A",
+              weight: "185.00",
+            },
+          ],
+        },
+      },
+      select: { id: true },
+    });
+
+    const weightBalanceRun = await tx.weightBalanceRun.create({
+      data: {
+        approvedAt: now,
+        approvedById: context.adminUserId,
+        calculatedAt: now,
+        calculatedById: context.adminUserId,
+        calculationSnapshot: {
+          smokeLabel,
+          source: "workflow-smoke",
+        },
+        centerOfGravity: "Within envelope",
+        flightLegId: flightLeg.flightLegId,
+        landingWeight: "10100.00",
+        manifestId: manifest.id,
+        runLabel: `${smokeLabel}-WB`,
+        status: WeightBalanceStatus.APPROVED,
+        takeoffWeight: "10800.00",
+      },
+      select: { id: true },
+    });
+
+    const locating = await tx.flightLocatingRecord.create({
+      data: {
+        activatedAt: now,
+        flightLegId: flightLeg.flightLegId,
+        lastKnownPosition: "AeroOps smoke route",
+        notes: `${smokeLabel} locating smoke`,
+        plannedRoute: routeText,
+        positionReports: {
+          create: [
+            {
+              notes: `${smokeLabel} manual position report`,
+              positionSummary: "Smoke position report",
+              reportedAt: now,
+              source: "SMOKE",
+            },
+          ],
+        },
+        responsibleParty: "AeroOps Runtime QA",
+        status: FlightLocatingStatus.ACTIVE,
+      },
+      select: { id: true },
+    });
+
+    const weather = await tx.weatherBriefingSnapshot.create({
+      data: {
+        briefingAt: now,
+        provider: "AeroOps Smoke",
+        rawSnapshot: { smokeLabel },
+        routeSummary: routeText,
+        snapshotKey: `${smokeLabel}-WX`,
+      },
+      select: { id: true },
+    });
+
+    const notam = await tx.notamSnapshot.create({
+      data: {
+        affectedStationCodes: routeText,
+        capturedAt: now,
+        rawSnapshot: { smokeLabel },
+        snapshotKey: `${smokeLabel}-NOTAM`,
+      },
+      select: { id: true },
+    });
+
+    const flightPlan = await tx.flightPlanReference.create({
+      data: {
+        externalReference: `${smokeLabel}-FPL`,
+        filedAt: now,
+        flightLegId: flightLeg.flightLegId,
+        provider: "AeroOps Smoke",
+        routeText,
+        status: "filed",
+      },
+      select: { id: true },
+    });
+
+    const dispatchPackage = await tx.dispatchPackage.create({
+      data: {
+        createdById: context.adminUserId,
+        flightLegId: flightLeg.flightLegId,
+        flightPlanReferenceId: flightPlan.id,
+        notamSnapshotId: notam.id,
+        performanceData: {
+          smokeLabel,
+          source: "workflow-smoke",
+        },
+        readyAt: now,
+        reviewNotes: `${smokeLabel} dispatch review`,
+        reviewedAt: now,
+        reviewedById: context.adminUserId,
+        status: DispatchPackageStatus.REVIEWED,
+        weatherBriefingId: weather.id,
+      },
+      select: { id: true },
+    });
+
+    const snapshot = await tx.releaseReadinessSnapshot.create({
+      data: {
+        authorityClass: context.policyAuthorityClass,
+        evaluatedById: context.adminUserId,
+        findings: {
+          create: [
+            {
+              evidenceRefId: manifest.id,
+              evidenceRefType: "Manifest",
+              isOverridable: false,
+              readinessCategory: "manifest",
+              ruleKey: `${smokeLabel}-manifest`,
+              severity: ReleaseRuleSeverity.INFO,
+              status: ReleaseFindingStatus.PASS,
+              summary: `${smokeLabel} manifest ready`,
+            },
+            {
+              evidenceRefId: weightBalanceRun.id,
+              evidenceRefType: "WeightBalanceRun",
+              isOverridable: false,
+              readinessCategory: "weight-balance",
+              ruleKey: `${smokeLabel}-weight-balance`,
+              severity: ReleaseRuleSeverity.INFO,
+              status: ReleaseFindingStatus.PASS,
+              summary: `${smokeLabel} W&B approved`,
+            },
+            {
+              evidenceRefId: locating.id,
+              evidenceRefType: "FlightLocatingRecord",
+              isOverridable: false,
+              readinessCategory: "flight-locating",
+              ruleKey: `${smokeLabel}-flight-locating`,
+              severity: ReleaseRuleSeverity.INFO,
+              status: ReleaseFindingStatus.PASS,
+              summary: `${smokeLabel} locating active`,
+            },
+            {
+              evidenceRefId: dispatchPackage.id,
+              evidenceRefType: "DispatchPackage",
+              isOverridable: false,
+              readinessCategory: "dispatch",
+              ruleKey: `${smokeLabel}-dispatch`,
+              severity: ReleaseRuleSeverity.INFO,
+              status: ReleaseFindingStatus.PASS,
+              summary: `${smokeLabel} dispatch reviewed`,
+            },
+            {
+              details: {
+                subfindings: [
+                  {
+                    message: "Workflow smoke confirms duty/rest findings persist in readiness snapshots.",
+                    status: "WARNING",
+                  },
+                ],
+              },
+              isOverridable: true,
+              readinessCategory: "duty-rest",
+              ruleKey: `${smokeLabel}-duty-rest`,
+              severity: ReleaseRuleSeverity.WARN,
+              status: ReleaseFindingStatus.WARNING,
+              summary: `${smokeLabel} duty/rest warning-only finding`,
+            },
+          ],
+        },
+        flightLegId: flightLeg.flightLegId,
+        flightReleaseId: flightLeg.flightReleaseId,
+        policyProfileId: context.policyProfileId,
+        snapshotStatus: ReleaseSnapshotStatus.WARNING_ONLY,
+        summary: {
+          passes: 4,
+          smokeLabel,
+          warnings: 1,
+        },
+      },
+      select: { id: true },
+    });
+
+    return {
+      dispatchPackageId: dispatchPackage.id,
+      flightLocatingRecordId: locating.id,
+      flightPlanReferenceId: flightPlan.id,
+      manifestId: manifest.id,
+      readinessSnapshotId: snapshot.id,
+      weightBalanceRunId: weightBalanceRun.id,
+    };
+  });
+
+  const verified = await prisma.releaseReadinessSnapshot.findUnique({
+    where: { id: result.readinessSnapshotId },
+    select: {
+      findings: {
+        select: {
+          readinessCategory: true,
+          status: true,
+        },
+      },
+      snapshotStatus: true,
+    },
+  });
+  const findingCategories = new Set(verified?.findings.map((finding) => finding.readinessCategory) ?? []);
+
+  if (
+    !verified ||
+    verified.snapshotStatus !== ReleaseSnapshotStatus.WARNING_ONLY ||
+    !findingCategories.has("manifest") ||
+    !findingCategories.has("weight-balance") ||
+    !findingCategories.has("flight-locating") ||
+    !findingCategories.has("dispatch") ||
+    !findingCategories.has("duty-rest")
+  ) {
+    throw new Error("Release evidence smoke verification failed.");
+  }
+
+  console.log(`release evidence: captured manifest, W&B, locating, dispatch, and snapshot ${result.readinessSnapshotId}`);
+  return result;
+}
+
 async function smokeCrewPortalRequests(context: SmokeContext) {
   const startDate = atUtcHour(addDays(new Date(), 30), 0);
   const endDate = atUtcHour(addDays(new Date(), 31), 23, 59);
@@ -569,37 +825,11 @@ async function smokeLogisticsWrites(context: SmokeContext, flightLegId: string) 
   console.log(`logistics: recorded location ${location.id} and booked need ${need.id}`);
 }
 
-async function smokeReleasePackageCapture(context: SmokeContext, flightLeg: SmokeFlightLegResult) {
-  const snapshot = await prisma.releaseReadinessSnapshot.create({
-    data: {
-      authorityClass: context.policyAuthorityClass,
-      evaluatedById: context.adminUserId,
-      findings: {
-        create: [
-          {
-            isOverridable: false,
-            readinessCategory: "runtime-smoke",
-            ruleKey: `${smokeLabel}-release-ready`,
-            severity: ReleaseRuleSeverity.INFO,
-            status: ReleaseFindingStatus.PASS,
-            summary: `${smokeLabel} preview finding`,
-          },
-        ],
-      },
-      flightLegId: flightLeg.flightLegId,
-      flightReleaseId: flightLeg.flightReleaseId,
-      policyProfileId: context.policyProfileId,
-      snapshotStatus: ReleaseSnapshotStatus.PASS,
-      summary: {
-        blocks: 0,
-        passes: 1,
-        smokeLabel,
-        warnings: 0,
-      },
-    },
-    select: { id: true },
-  });
-
+async function smokeReleasePackageCapture(
+  context: SmokeContext,
+  flightLeg: SmokeFlightLegResult,
+  evidence: SmokeReleaseEvidenceResult,
+) {
   const releasePackage = await prisma.releasePackage.create({
     data: {
       capturedById: context.adminUserId,
@@ -620,11 +850,46 @@ async function smokeReleasePackageCapture(context: SmokeContext, flightLeg: Smok
             statusLabel: "planned",
           },
           {
-            evidenceId: snapshot.id,
+            evidenceId: evidence.readinessSnapshotId,
             evidenceLabel: "Release readiness snapshot",
             evidenceType: ReleasePackageEvidenceType.RELEASE_READINESS_SNAPSHOT,
             isRequired: true,
-            statusLabel: "pass",
+            statusLabel: "warning-only",
+          },
+          {
+            evidenceId: evidence.manifestId,
+            evidenceLabel: "Manifest",
+            evidenceType: ReleasePackageEvidenceType.MANIFEST,
+            isRequired: true,
+            statusLabel: "ready",
+          },
+          {
+            evidenceId: evidence.weightBalanceRunId,
+            evidenceLabel: "Weight and balance",
+            evidenceType: ReleasePackageEvidenceType.WEIGHT_BALANCE_RUN,
+            isRequired: true,
+            statusLabel: "approved",
+          },
+          {
+            evidenceId: evidence.flightLocatingRecordId,
+            evidenceLabel: "Flight locating",
+            evidenceType: ReleasePackageEvidenceType.FLIGHT_LOCATING_RECORD,
+            isRequired: true,
+            statusLabel: "active",
+          },
+          {
+            evidenceId: evidence.dispatchPackageId,
+            evidenceLabel: "Dispatch package",
+            evidenceType: ReleasePackageEvidenceType.DISPATCH_PACKAGE,
+            isRequired: true,
+            statusLabel: "reviewed",
+          },
+          {
+            evidenceId: evidence.flightPlanReferenceId,
+            evidenceLabel: "Flight plan reference",
+            evidenceType: ReleasePackageEvidenceType.FLIGHT_PLAN_REFERENCE,
+            isRequired: false,
+            statusLabel: "filed",
           },
         ],
       },
@@ -633,10 +898,10 @@ async function smokeReleasePackageCapture(context: SmokeContext, flightLeg: Smok
       notes: `${smokeLabel} release package preview`,
       operationalControlRecordId: flightLeg.operationalControlRecordId,
       packageNumber: `${smokeLabel}-PKG`,
-      readinessSnapshotId: snapshot.id,
+      readinessSnapshotId: evidence.readinessSnapshotId,
       status: ReleasePackageStatus.PREVIEW,
       summary: {
-        evidenceLinks: 3,
+        evidenceLinks: 8,
         smokeLabel,
       },
     },
@@ -648,11 +913,64 @@ async function smokeReleasePackageCapture(context: SmokeContext, flightLeg: Smok
     },
   });
 
-  if (releasePackage._count.evidenceLinks !== 3) {
+  if (releasePackage._count.evidenceLinks !== 8) {
     throw new Error("ReleasePackage capture smoke verification failed.");
   }
 
   console.log(`release package: captured preview ${releasePackage.id}`);
+}
+
+async function smokeReleaseAudit(context: SmokeContext, flightLeg: SmokeFlightLegResult, snapshotId: string) {
+  await prisma.$transaction([
+    prisma.flightRelease.update({
+      where: { id: flightLeg.flightReleaseId },
+      data: {
+        releasedAt: new Date(),
+        releasedById: context.adminUserId,
+        releaseNotes: `${smokeLabel} warning-only release smoke`,
+        status: ReleaseStatus.RELEASED,
+      },
+    }),
+    prisma.releaseAuditEvent.create({
+      data: {
+        actorRole: "ADMIN",
+        actorUserId: context.adminUserId,
+        eventType: ReleaseAuditEventType.RELEASE_COMPLETED,
+        flightLegId: flightLeg.flightLegId,
+        flightReleaseId: flightLeg.flightReleaseId,
+        message: `${smokeLabel} release status smoke`,
+        metadata: {
+          smokeLabel,
+          warningOnly: true,
+        },
+        snapshotId,
+      },
+    }),
+  ]);
+
+  const verified = await prisma.flightRelease.findUnique({
+    where: { id: flightLeg.flightReleaseId },
+    select: {
+      releaseAuditEvents: {
+        where: { message: `${smokeLabel} release status smoke` },
+        select: { actorUserId: true, eventType: true, snapshotId: true },
+      },
+      releasedById: true,
+      status: true,
+    },
+  });
+
+  if (
+    !verified ||
+    verified.status !== ReleaseStatus.RELEASED ||
+    verified.releasedById !== context.adminUserId ||
+    verified.releaseAuditEvents[0]?.eventType !== ReleaseAuditEventType.RELEASE_COMPLETED ||
+    verified.releaseAuditEvents[0]?.snapshotId !== snapshotId
+  ) {
+    throw new Error("Release audit smoke verification failed.");
+  }
+
+  console.log(`release audit: released ${flightLeg.flightReleaseId} with audit event`);
 }
 
 async function main() {
@@ -662,10 +980,12 @@ async function main() {
   await verifySmokeLogins();
   const context = await getSmokeContext();
   const flightLeg = await smokeFlightLegWorkflow(context);
+  const evidence = await smokeReleaseEvidence(context, flightLeg);
   await smokeSchedulingPublish(context);
   await smokeCrewPortalRequests(context);
   await smokeLogisticsWrites(context, flightLeg.flightLegId);
-  await smokeReleasePackageCapture(context, flightLeg);
+  await smokeReleasePackageCapture(context, flightLeg, evidence);
+  await smokeReleaseAudit(context, flightLeg, evidence.readinessSnapshotId);
 
   console.log(`workflow smoke complete: ${smokeLabel}`);
 }

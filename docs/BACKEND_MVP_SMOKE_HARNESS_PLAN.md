@@ -72,3 +72,9 @@ npm run smoke:browser
 - Smoke output clearly identifies the created runtime QA records.
 - Failures are actionable and tied to a workflow area.
 - The harness does not change public app behavior or loosen production auth.
+
+Prompt 219 implementation status: complete. The workflow smoke now verifies
+representative release evidence, duty/rest snapshot persistence, ReleasePackage
+preview links, release audit attribution, scheduling publish bridge rows, crew
+portal requests, and logistics links. Browser smoke now opens evidence pages,
+scheduling admin pages, and internal diagnostics as an admin user.

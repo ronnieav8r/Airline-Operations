@@ -42,6 +42,10 @@ Prompt 218 planning is documented in `docs/BACKEND_MVP_SMOKE_HARNESS_PLAN.md`.
 Prompt 219 should extend the existing smoke scripts and Playwright coverage; it
 should not introduce a separate framework or production bypass.
 
+Prompt 219 is implemented. The expanded smoke harness now covers the main
+backend-MVP route, workflow, browser, release evidence, ReleasePackage,
+scheduling, crew portal, logistics, and duty/rest readiness paths.
+
 ## Batch 2: Release Backend Completion
 
 - `224`: MVP release lifecycle planning.

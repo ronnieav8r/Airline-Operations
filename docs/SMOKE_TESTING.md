@@ -137,3 +137,10 @@ Prompt 218 planning status: complete. The next smoke-harness implementation
 should follow `docs/BACKEND_MVP_SMOKE_HARNESS_PLAN.md` and expand the existing
 route, workflow, and Playwright checks rather than adding a separate framework
 or any production bypass.
+
+Prompt 219 implementation status: complete. `npm run smoke:workflows` now also
+verifies representative release evidence, duty/rest readiness snapshot
+persistence, ReleasePackage preview evidence links, release audit attribution,
+scheduling publish bridge rows, crew portal requests, and logistics links.
+`npm run smoke:browser` now opens evidence workflow pages, scheduling admin
+pages, and internal diagnostics for the admin smoke user.

@@ -76,10 +76,19 @@ test.describe.serial("AeroOps browser smoke", () => {
     await expectPageOk(page, "/");
     await expectPageOk(page, "/operations-control");
     await expectPageOk(page, `/operations-control/${ids.flightLegId}`);
+    await expectPageOk(page, `/operations-control/${ids.flightLegId}/manifest`);
+    await expectPageOk(page, `/operations-control/${ids.flightLegId}/weight-balance`);
+    await expectPageOk(page, `/operations-control/${ids.flightLegId}/locating`);
+    await expectPageOk(page, `/operations-control/${ids.flightLegId}/dispatch`);
     await expectPageOk(page, "/crew/scheduling/periods");
+    await expectPageOk(page, "/crew/scheduling/patterns");
+    await expectPageOk(page, "/crew/scheduling/time-off");
     await expectPageOk(page, "/crew/logistics");
     await expectPageOk(page, `/crew/${ids.crewMemberId}/logistics`);
     await expectPageOk(page, `/aircraft/${ids.aircraftId}/crew`);
+    await expectPageOk(page, "/internal/flightleg-parity");
+    await expectPageOk(page, "/internal/flightleg-write-readiness");
+    await expectPageOk(page, "/internal/duty-rest-policy-readiness");
   });
 
   test("crew signs in, opens crew portal, and is redirected away from logistics management", async ({
