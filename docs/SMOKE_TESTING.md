@@ -144,3 +144,6 @@ persistence, ReleasePackage preview evidence links, release audit attribution,
 scheduling publish bridge rows, crew portal requests, and logistics links.
 `npm run smoke:browser` now opens evidence workflow pages, scheduling admin
 pages, and internal diagnostics for the admin smoke user.
+
+Prompt 220 QA status: pass. The expanded backend MVP smoke baseline passed
+locally with workflow run label `SMOKE-20260611125426`.

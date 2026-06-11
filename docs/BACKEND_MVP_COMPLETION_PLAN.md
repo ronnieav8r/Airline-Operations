@@ -46,6 +46,10 @@ Prompt 219 is implemented. The expanded smoke harness now covers the main
 backend-MVP route, workflow, browser, release evidence, ReleasePackage,
 scheduling, crew portal, logistics, and duty/rest readiness paths.
 
+Prompt 220 QA passed and is recorded in `docs/BACKEND_MVP_QA_LOG.md`. No code
+fixes were required. The next batch step is a legacy `Flight` dependency
+inventory before further FlightLeg cutover.
+
 ## Batch 2: Release Backend Completion
 
 - `224`: MVP release lifecycle planning.

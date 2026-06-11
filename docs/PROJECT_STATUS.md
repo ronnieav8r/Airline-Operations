@@ -1689,6 +1689,11 @@ scheduling publish bridge rows, crew portal requests, and logistics links.
 Browser smoke also opens evidence workflow pages, scheduling admin pages, and
 internal diagnostics as an admin user.
 
+Prompt 220 is complete. The full backend MVP QA baseline passed locally:
+Prisma validation, typecheck, lint, build, local DB migrate/seed,
+`smoke:workflows`, `smoke:app`, and `smoke:browser`. Results are recorded in
+`docs/BACKEND_MVP_QA_LOG.md`. No code fixes were required.
+
 Next FlightLeg cutover step:
 
 ```text
