@@ -308,7 +308,7 @@ function getReleaseWindow(now: Date, value: DashboardWindowValue) {
     return {
       end: todayRange.end,
       label: "Through today",
-      start: now,
+      start: todayRange.start,
     };
   }
 
@@ -317,8 +317,8 @@ function getReleaseWindow(now: Date, value: DashboardWindowValue) {
 
   return {
     end,
-    label: `Next ${hours} hr`,
-    start: now,
+    label: `Today + next ${hours} hr`,
+    start: todayRange.start,
   };
 }
 
