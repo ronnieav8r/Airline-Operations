@@ -225,6 +225,10 @@ Prompt 249 is complete. Crew logistics workflow runtime QA passed with a
 focused smoke for location and logistics-need create/update behavior and no
 schedule/assignment/release/duty-rest side effects.
 
+Prompt 250 is complete. Crew logistics workbench runtime QA passed with a
+focused smoke for `/crew/logistics` filters, grouping, role gate redirects,
+and cross-link rendering.
+
 - `248`: Logistics runtime QA planning.
 - `249`: Crew logistics workflow QA.
 - `250`: Logistics workbench QA and fixes.

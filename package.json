@@ -25,6 +25,7 @@
     "smoke:crew-requests-time-off": "tsx scripts/smoke-crew-requests-time-off.ts",
     "smoke:crew-portal-backend": "tsx scripts/smoke-crew-portal-backend.ts",
     "smoke:crew-logistics-workflow": "tsx scripts/smoke-crew-logistics-workflow.ts",
+    "smoke:crew-logistics-workbench": "tsx scripts/smoke-crew-logistics-workbench.ts",
     "smoke:browser": "playwright test",
     "playwright:install": "playwright install chromium",
     "db:local:up": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-docker-compose.ps1 up -Detach postgres",

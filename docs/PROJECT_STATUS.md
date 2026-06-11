@@ -1839,19 +1839,23 @@ location create/update, all MVP logistics need types, status/provider
 placeholder persistence, and no schedule, assignment, release, or duty/rest side
 effects.
 
+Prompt 250 is complete. `npm run smoke:crew-logistics-workbench` verifies the
+central logistics workbench filters, grouping modes, role gate redirect, and
+cross-link rendering.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 250: Logistics Workbench QA And Fixes
+Prompt 251: Logistics Docs Refresh
 ```
 
 Scope:
 
-- Runtime-test schedule periods, pattern preview/generation, publishing,
-  requests, time off, and crew portal behavior.
-- Fix only clear runtime/data-integrity bugs.
-- Do not add assignment automation, duty/rest hard enforcement, provider
-  integrations, imports, signatures, or frontend polish.
+- Refresh logistics docs after runtime QA.
+- Mark manual crew logistics backend MVP-complete for the current scope if no
+  new QA blockers are found.
+- Keep provider integrations, live booking, expenses, crew self-service
+  logistics writes, and automatic positioning recommendations deferred.
 
 Next FlightLeg cutover step:
 

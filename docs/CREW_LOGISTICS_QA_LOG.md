@@ -51,6 +51,38 @@ Runtime QA passed locally.
 - Logistics writes do not mutate schedule, assignment, release, or duty/rest
   row counts.
 
+## Prompt 250 Logistics Workbench QA And Fixes
+
+### Result
+
+Runtime QA passed locally.
+
+### Validation
+
+- `npm run prisma:validate`: pass.
+- `npm run typecheck`: pass.
+- `npm run lint`: pass.
+- `npm run build`: pass.
+- `npm run db:local:up`: pass.
+- `npm run db:local:migrate`: pass.
+- `npm run db:local:seed`: pass.
+- `npm run smoke:crew-logistics-workbench`: pass.
+- `npm run smoke:workflows`: pass.
+- `npm run smoke:app`: pass.
+- `npm run smoke:browser`: pass.
+
+### Verified Behavior
+
+- `/crew/logistics` renders for admin/ops.
+- Crew users are redirected away from the workbench.
+- Workbench grouping renders for status, need type, aircraft, and needed-by
+  windows.
+- Status, type, crew, aircraft, and station filters render expected logistics
+  records.
+- Cards preserve links to crew detail, aircraft context, aircraft crew
+  workflow, FlightLeg detail where linked, and crew-scoped logistics
+  management.
+
 ## Prompt 202 Static QA
 
 ### Scope Reviewed

@@ -135,3 +135,9 @@ Prompt 249 runtime QA status: complete. `npm run smoke:crew-logistics-workflow`
 verifies crew location create/update, all MVP logistics need types, status and
 provider placeholder persistence, and no schedule, assignment, release, or
 duty/rest side effects.
+
+Prompt 250 workbench QA status: complete. `npm run smoke:crew-logistics-workbench`
+verifies the central `/crew/logistics` workbench renders for admin/ops,
+redirects crew users, supports status/type/crew/aircraft/station filters,
+supports status/type/aircraft/needed-by grouping, and preserves workbench
+cross-links.

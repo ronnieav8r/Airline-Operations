@@ -32,6 +32,8 @@ Verify:
 
 ## Prompt 250: Logistics Workbench QA And Fixes
 
+Status: complete.
+
 Verify:
 
 - `/crew/logistics` renders for admin/ops.
