@@ -1777,6 +1777,10 @@ fixtures for ordinary Part 91 guardrails and Part 135 unscheduled pass,
 warning, missing-input, overlap, and deferred-data cases before refining the
 calculator.
 
+Prompt 237 is complete. `npm run seed:duty-rest-scenarios` now provides a gated
+local/demo fixture seed for the duty/rest scenario matrix and skips unless
+`RUN_DUTY_REST_SCENARIOS=1` is set.
+
 Next FlightLeg cutover step:
 
 ```text

@@ -141,6 +141,9 @@ Prompt 236 is complete as planning. Duty/rest scenario QA should use
 deterministic local fixtures for Part 91 guardrails and Part 135 pass, warning,
 missing-input, overlap, and deferred-data cases.
 
+Prompt 237 is complete. A gated scenario seed script now creates local/demo
+duty-rest QA fixtures for those cases.
+
 - `236`: Duty/rest scenario QA planning.
 - `237`: Duty/rest scenario seed foundation.
 - `238`: Duty/rest diagnostic foundation.

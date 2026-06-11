@@ -133,3 +133,6 @@ Prompt 236 is complete as planning. Scenario QA should cover ordinary Part 91
 guardrail behavior plus Part 135 unscheduled pass, warning, missing-input,
 duty/rest overlap, and deferred-data cases. See
 `docs/DUTY_REST_SCENARIO_QA_PLAN.md`.
+
+Prompt 237 is complete. A gated local/demo scenario seed script now creates
+duty/rest QA FlightLeg fixtures when `RUN_DUTY_REST_SCENARIOS=1` is set.

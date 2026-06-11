@@ -26,6 +26,15 @@ future calculator refinements can be tested against known expected outcomes.
 - Do not run against Render unless explicitly gated.
 - No schema changes.
 
+Prompt 237 implementation status: complete. Use:
+
+```powershell
+$env:RUN_DUTY_REST_SCENARIOS="1"
+npm run seed:duty-rest-scenarios
+```
+
+The script skips unless the environment flag is set.
+
 ## Diagnostic Policy
 
 Scenario QA should be inspectable from a read-only diagnostic route or script
