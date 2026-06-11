@@ -1,6 +1,6 @@
 # FlightLeg Cutover Plan
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Decision
 
@@ -57,9 +57,17 @@ legacy API paths in the current macro scaffolding chain.
    Prompt 168 completed static QA. Runtime/API/browser checks are pending until
    Docker Desktop is available.
 
+   Prompt 211 completed local runtime QA with Docker Postgres available. Static
+   checks, route smoke, browser smoke, FlightLeg parity diagnostics, and
+   FlightLeg-vs-legacy-ID coverage resolver checks passed for seeded data.
+
 4. **Compatibility Mode**
    After parity is proven, document legacy `Flight` as compatibility/archive and
    keep destructive removal deferred.
+
+   Next recommended step is FlightLeg-native coverage response planning. The
+   API paths should continue accepting both FlightLeg IDs and legacy Flight IDs,
+   while response fields move toward FlightLeg-first naming with legacy aliases.
 
 ## Deferred
 

@@ -1582,6 +1582,29 @@ Next logistics QA slice:
 Prompt 211: Crew Logistics Workbench QA
 ```
 
+Legacy Flight cutover readiness QA is complete as Prompt 211. Local runtime QA
+now confirms seeded Flight-to-FlightLeg parity: 5 bridged rows checked, 0
+coverage/crew resolver mismatches between FlightLeg IDs and legacy Flight IDs,
+5 parity rows passing, and 0 missing bridge, crew, aircraft, control, or
+turnaround mismatches. Static validation, route smoke, and browser smoke passed.
+The app is ready for the next controlled FlightLeg-native coverage response
+planning slice, but not for destructive legacy `Flight` removal.
+
+Next FlightLeg cutover slice:
+
+```text
+Prompt 212: FlightLeg-Native Coverage Response Planning
+```
+
+Scope:
+
+- Plan how coverage/crew API responses expose FlightLeg-primary identity while
+  preserving legacy `flightId` compatibility.
+- Keep `/api/flights/[id]` paths accepting both FlightLeg IDs and legacy Flight
+  IDs.
+- Do not drop `Flight`, `FlightPassenger`, `CrewFlightLog`,
+  `OperationalControlRecord.flightId`, or `FlightLeg.legacyFlightId`.
+
 Deferred follow-up to keep on the roadmap:
 
 ```text

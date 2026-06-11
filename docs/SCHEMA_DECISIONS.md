@@ -490,3 +490,10 @@ reserve/standby detail, transportation classification, reduced-rest
 compensation, actual flight-time, OpSpecs/MSpecs, and flight-attendant data
 should remain explicit missing-input/deferred findings rather than schema
 assumptions.
+
+Prompt 211 verified local FlightLeg cutover readiness against seeded data.
+Parity and both-ID coverage resolver checks passed, but the schema boundary is
+unchanged: legacy `Flight`, `FlightPassenger`, `CrewFlightLog`,
+`OperationalControlRecord.flightId`, and `FlightLeg.legacyFlightId` remain for
+compatibility/archive behavior. The next safe cutover step is response-shape and
+API compatibility planning, not table removal.
