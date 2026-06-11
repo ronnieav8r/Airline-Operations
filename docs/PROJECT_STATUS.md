@@ -1800,10 +1800,15 @@ enforcement, legal signatures, outside-flying ledger, transportation
 classification, reserve/standby modeling, reduced-rest debt, and actual
 flight-time calculations remain post-MVP.
 
+Prompt 242 is complete as planning. Crew Scheduling runtime hardening should
+now follow `docs/CREW_SCHEDULING_RUNTIME_QA_PLAN.md`: schedule publishing,
+rotation pattern draft generation, request/time-off workflows, and crew portal
+behavior need DB-backed QA before scheduling is marked backend MVP-complete.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 242: Crew Scheduling Runtime QA Planning
+Prompt 243: Schedule Period And Publishing QA
 ```
 
 Scope:

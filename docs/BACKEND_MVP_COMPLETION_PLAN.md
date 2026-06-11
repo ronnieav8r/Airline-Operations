@@ -179,6 +179,9 @@ hardening.
 
 ## Batch 5: Crew Scheduling Runtime Hardening
 
+Prompt 242 is complete as planning. The DB-backed runtime QA chain is defined
+in `docs/CREW_SCHEDULING_RUNTIME_QA_PLAN.md`.
+
 - `242`: Crew scheduling runtime QA planning.
 - `243`: Schedule period and publishing QA.
 - `244`: Rotation pattern QA and fixes.

@@ -295,3 +295,8 @@ publish periods into `CrewSchedule` bridge rows, preview/generate pattern-based
 draft entries, review period-scoped requests, and generate source-linked draft
 entries from approved pattern requests. `AircraftCrewAssignment` remains the
 operational coverage source.
+
+Prompt 242 planning status: complete. The runtime hardening pass should verify
+the scheduling lifecycle with local DB-backed workflow checks before declaring
+the scheduling backend MVP-complete. The planned QA chain is documented in
+`docs/CREW_SCHEDULING_RUNTIME_QA_PLAN.md`.

@@ -406,3 +406,10 @@ Warning-only conflict examples:
 - Do not treat `CrewLegAssignment` as live staffing truth.
 - Do not add schema for Prompt 118 unless a separate planning slice approves
   it.
+
+## Prompt 242 Runtime QA Planning
+
+Prompt 242 planning status: complete. The next Crew Scheduling backend-MVP
+chain should complete the DB-backed runtime QA that was previously pending for
+schedule publishing, rotation pattern generation, request/time-off workflows,
+and crew portal behavior. See `docs/CREW_SCHEDULING_RUNTIME_QA_PLAN.md`.

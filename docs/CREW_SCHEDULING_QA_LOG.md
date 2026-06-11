@@ -2,6 +2,27 @@
 
 Last updated: 2026-06-10
 
+## Prompt 242: Runtime QA Plan
+
+### Result
+
+Planning complete. The DB-backed runtime QA chain is documented in
+`docs/CREW_SCHEDULING_RUNTIME_QA_PLAN.md`.
+
+### Planned Runtime QA Slices
+
+- Prompt 243: schedule period and publishing QA.
+- Prompt 244: rotation pattern preview/generate QA and clear fixes.
+- Prompt 245: crew request and time-off QA.
+- Prompt 246: crew portal backend QA.
+- Prompt 247: docs/status refresh.
+
+### Boundary
+
+The QA chain must verify scheduling behavior without adding schema,
+assignment automation, duty/rest hard enforcement, provider integrations,
+imports, signatures, or frontend polish.
+
 ## Prompt 184: Schedule Publish QA
 
 ### Result
