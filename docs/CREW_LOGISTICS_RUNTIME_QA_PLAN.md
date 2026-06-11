@@ -11,6 +11,8 @@ runtime checks were partial.
 
 ## Prompt 249: Crew Logistics Workflow QA
 
+Status: complete.
+
 Verify:
 
 - Admin/ops can create and edit `CrewLocationRecord` rows.

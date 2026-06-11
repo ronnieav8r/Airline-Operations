@@ -130,3 +130,8 @@ duty/rest enforcement.
 Prompt 248 planning status: complete. The next logistics backend-MVP chain
 should complete DB-backed runtime QA for crew-scoped logistics workflows and
 the central logistics workbench. See `docs/CREW_LOGISTICS_RUNTIME_QA_PLAN.md`.
+
+Prompt 249 runtime QA status: complete. `npm run smoke:crew-logistics-workflow`
+verifies crew location create/update, all MVP logistics need types, status and
+provider placeholder persistence, and no schedule, assignment, release, or
+duty/rest side effects.

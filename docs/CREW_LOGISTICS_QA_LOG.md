@@ -22,6 +22,35 @@ integrations, live booking, expense tracking, crew self-service logistics
 writes, automatic positioning recommendations, schedule mutation, aircraft
 assignment mutation, release behavior changes, or duty/rest hard enforcement.
 
+## Prompt 249 Crew Logistics Workflow QA
+
+### Result
+
+Runtime QA passed locally.
+
+### Validation
+
+- `npm run prisma:validate`: pass.
+- `npm run typecheck`: pass.
+- `npm run lint`: pass.
+- `npm run build`: pass.
+- `npm run db:local:up`: pass.
+- `npm run db:local:migrate`: pass.
+- `npm run db:local:seed`: pass.
+- `npm run smoke:crew-logistics-workflow`: pass.
+- `npm run smoke:workflows`: pass.
+- `npm run smoke:app`: pass.
+- `npm run smoke:browser`: pass.
+
+### Verified Behavior
+
+- Crew location records can be created and updated.
+- Logistics needs can be created and updated for positioning, deadhead,
+  airline ticket, hotel, ground transport, and other needs.
+- Status and provider/confirmation placeholders persist.
+- Logistics writes do not mutate schedule, assignment, release, or duty/rest
+  row counts.
+
 ## Prompt 202 Static QA
 
 ### Scope Reviewed

@@ -1834,10 +1834,15 @@ follow `docs/CREW_LOGISTICS_RUNTIME_QA_PLAN.md`: crew-scoped logistics writes
 and the central `/crew/logistics` workbench need DB-backed QA before manual
 logistics is marked backend MVP-complete.
 
+Prompt 249 is complete. `npm run smoke:crew-logistics-workflow` verifies crew
+location create/update, all MVP logistics need types, status/provider
+placeholder persistence, and no schedule, assignment, release, or duty/rest side
+effects.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 249: Crew Logistics Workflow QA
+Prompt 250: Logistics Workbench QA And Fixes
 ```
 
 Scope:
