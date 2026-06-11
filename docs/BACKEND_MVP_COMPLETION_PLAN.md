@@ -118,6 +118,9 @@ compliance route and remain warning-only inputs.
 Prompt 234 is complete. Compliance admin workflow QA passed locally across
 static checks, workflow smoke, route smoke, and browser smoke.
 
+Prompt 235 is complete. Crew compliance docs now mark this backend area as
+MVP-complete under warning-only policy.
+
 - `230`: Crew compliance admin workflow planning.
 - `231`: Certificate and medical admin foundation.
 - `232`: Training, check, and recency admin foundation.

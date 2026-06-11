@@ -206,3 +206,7 @@ warning-only; this does not add regulatory hard enforcement.
 
 Prompt 234 QA is complete. Local static validation, workflow smoke, route
 smoke, and browser smoke passed for the compliance admin workflow chain.
+
+Prompt 235 docs/status refresh is complete. Crew compliance backend is
+MVP-complete for warning-only development use; see
+`docs/CREW_COMPLIANCE_MVP_STATUS.md`.

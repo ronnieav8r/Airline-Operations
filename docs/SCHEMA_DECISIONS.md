@@ -301,6 +301,10 @@ new schema is expected for the first admin workflow chain; use
 `CrewCertificate`, `CrewMedical`, `CrewTrainingEvent`, `CrewCheckEvent`,
 `CrewRecencyEvent`, `CrewDutyPeriod`, and `CrewRestPeriod` directly.
 
+Prompts 231-235 completed the first admin workflow chain using the existing
+compliance schema. No schema changes were required. Compliance records remain
+evidence and warning inputs, not staffing truth or release blockers.
+
 ## History Rule
 
 Keep full assignment history.

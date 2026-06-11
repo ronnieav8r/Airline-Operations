@@ -1766,6 +1766,12 @@ static validation, workflow smoke, app route smoke, and browser smoke. The QA
 confirmed admin/ops access, non-admin redirects, and compliance record
 write/review/status behavior.
 
+Prompt 235 is complete. Crew compliance backend is documented as MVP-complete
+for warning-only development use. Ops/admin can manage certificates, medicals,
+training, checks, recency, duty, and rest records; hard enforcement,
+signatures, uploads, provider verification, imports, and crew self-service
+compliance uploads remain deferred.
+
 Next FlightLeg cutover step:
 
 ```text

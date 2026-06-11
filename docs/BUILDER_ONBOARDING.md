@@ -20,6 +20,7 @@ Core surfaces:
 - `/aircraft/[aircraftId]/airworthiness`: aircraft airworthiness workflow.
 - `/crew`: crew roster.
 - `/crew/[crewMemberId]`: crew member context.
+- `/crew/[crewMemberId]/compliance`: ops/admin crew compliance management.
 - `/crew/[crewMemberId]/logistics`: ops/admin crew logistics management.
 - `/crew/portal`: linked crew-user self-service portal.
 - `/crew/scheduling`: crew availability planner.
@@ -45,6 +46,8 @@ Core surfaces:
   assignments.
 - Crew Logistics tracks location and travel-support needs only. It does not
   book travel, create expenses, or automate positioning.
+- Crew Compliance tracks certificates, medicals, training, checks, recency,
+  duty, and rest as admin-managed evidence and warning inputs only.
 
 ## Auth And Roles
 
