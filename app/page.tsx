@@ -590,9 +590,7 @@ export default async function Home({ searchParams }: PageProps) {
   const panel = parsePanel(params.panel);
   const selectedLegId = firstParam(params.leg);
   const dashboard = await getDashboardData({ window: selectedWindow });
-  const visibleFlights = dashboard.flights.slice(0, 8);
-  const visiblePriorityFlightLegs = dashboard.operationsAttention.priorityFlightLegs.slice(0, 4);
-  const visibleAlerts = dashboard.alerts.slice(0, 3);
+  const visibleFlights = dashboard.flights;
   const selectedFlight =
     dashboard.flights.find((flight) => flight.flightLegId === selectedLegId || flight.id === selectedLegId) ??
     null;
@@ -660,124 +658,17 @@ export default async function Home({ searchParams }: PageProps) {
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-          <MiniSection
-            action={
-              <DashboardActionLink
-                href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
-                label="Review all"
-              />
-            }
-            title={`Release Review | ${dashboard.releaseWindowLabel}`}
-          >
-            {visiblePriorityFlightLegs.length === 0 ? (
-              <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-                No release review items inside this window.
-              </p>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {visiblePriorityFlightLegs.map((flightLeg) => {
-                  const flight = dashboard.flights.find((item) => item.flightLegId === flightLeg.id);
-
-                  if (!flight) {
-                    return null;
-                  }
-
-                  return (
-                    <article className="rounded-lg border border-zinc-200 bg-zinc-50 p-3" key={flightLeg.id}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <Link
-                            className="font-semibold text-sky-700 hover:text-sky-900"
-                            href={dashboardHref(dashboard.selectedWindow, {
-                              leg: flightLeg.id,
-                              panel: "flight",
-                            })}
-                          >
-                            {flightLeg.flightNumber}
-                          </Link>
-                          <p className="mt-1 text-sm text-zinc-600">
-                            {flightLeg.route} | {flightLeg.tailNumber}
-                          </p>
-                          <p className="mt-1 text-xs text-zinc-500">
-                            {flightLeg.scheduledDeparture ? toTime(flightLeg.scheduledDeparture) : "Not scheduled"}
-                          </p>
-                        </div>
-                        <span
-                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${releaseBadgeClasses(
-                            flightLeg.releaseStatus,
-                          )}`}
-                        >
-                          {flightLeg.releaseStatus ?? "NO RELEASE"}
-                        </span>
-                      </div>
-                      <div className="mt-3">
-                        <ReleaseStrip flight={flight} selectedWindow={dashboard.selectedWindow} />
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </MiniSection>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
-            <MiniSection
-              action={
-                <DashboardActionLink
-                  href={dashboardHref(dashboard.selectedWindow, { panel: "alerts" })}
-                  label="Open drawer"
-                />
-              }
-              title="Active alerts"
-            >
-              {visibleAlerts.length === 0 ? (
-                <p className="text-sm text-zinc-600">No active alerts.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {visibleAlerts.map((alert) => (
-                    <li className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm" key={alert.id}>
-                      <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                        <span
-                          className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${severityBadgeClasses(
-                            alert.severity,
-                          )}`}
-                        >
-                          {alert.severity}
-                        </span>
-                        <span className="font-medium text-zinc-800">{alert.type}</span>
-                      </div>
-                      <p className="font-medium text-zinc-950">{alert.title}</p>
-                      <p className="mt-1 line-clamp-2 text-zinc-600">{alert.message}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </MiniSection>
-
-            <MiniSection title="AI Review Notes">
-              <div className="rounded-xl border border-dashed border-sky-300 bg-sky-50/70 p-3">
-                <p className="text-sm font-semibold text-sky-950">Future placeholder</p>
-                <p className="mt-1 text-xs text-sky-900">
-                  Reserved for future AI-generated operational observations. Inactive: no provider calls,
-                  note storage, or automated recommendations.
-                </p>
-              </div>
-            </MiniSection>
-          </div>
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
           <MiniSection
             action={<DashboardActionLink href="/operations-control" label="Full workbench" />}
-            title="Flight board"
+            title={`Flight board | ${dashboard.releaseWindowLabel}`}
           >
             {dashboard.flights.length === 0 ? (
               <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                No flights found for today.
+                No flights found inside this selected view.
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="max-h-[34rem] space-y-2 overflow-y-auto pr-1">
                 {visibleFlights.map((flight) => (
                   <article
                     className="grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm md:grid-cols-[auto_1fr_auto]"
@@ -855,30 +746,49 @@ export default async function Home({ searchParams }: PageProps) {
                     </div>
                   </article>
                 ))}
-                {dashboard.flights.length > visibleFlights.length ? (
-                  <p className="text-xs text-zinc-500">
-                    Showing {visibleFlights.length} of {dashboard.flights.length} flights. Open Operations Control for the full board.
-                  </p>
-                ) : null}
               </div>
             )}
           </MiniSection>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
-            <MiniSection action={<DashboardActionLink href="/aircraft" label="Aircraft" />} title="Fleet snapshot">
-              <div className="grid grid-cols-2 gap-2">
-                {dashboard.fleetSnapshot.map((bucket) => (
-                  <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3" key={bucket.status}>
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-wide text-zinc-500">
-                      {bucket.status}
-                    </p>
-                    <p className="mt-1 text-xl font-semibold tabular-nums">{bucket.count}</p>
-                  </div>
-                ))}
+          <MiniSection title="AI Review Notes">
+            <div className="flex min-h-[34rem] flex-col justify-between rounded-xl border border-dashed border-sky-300 bg-sky-50/70 p-4">
+              <div>
+                <p className="text-sm font-semibold text-sky-950">Future placeholder</p>
+                <p className="mt-2 text-sm text-sky-900">
+                  Reserved for future AI-generated operational observations, release-readiness
+                  review notes, suggested follow-ups, and trend callouts.
+                </p>
               </div>
-            </MiniSection>
-          </div>
+              <p className="mt-4 rounded-lg border border-sky-200 bg-white/80 p-3 text-xs text-sky-900">
+                Inactive: no provider calls, note storage, or automated recommendations.
+              </p>
+            </div>
+          </MiniSection>
         </section>
+
+        <footer className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                Fleet snapshot
+              </h2>
+              <p className="mt-1 text-xs text-zinc-500">
+                Aircraft state overview. Detailed maintenance context stays in Aircraft.
+              </p>
+            </div>
+            <DashboardActionLink href="/aircraft" label="Open aircraft" />
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            {dashboard.fleetSnapshot.map((bucket) => (
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3" key={bucket.status}>
+                <p className="text-[0.68rem] font-semibold uppercase tracking-wide text-zinc-500">
+                  {bucket.status}
+                </p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">{bucket.count}</p>
+              </div>
+            ))}
+          </div>
+        </footer>
       </div>
 
       <DashboardDrawer

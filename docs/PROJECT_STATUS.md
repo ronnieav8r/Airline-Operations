@@ -49,6 +49,8 @@ Recent prompt-numbering note:
 - Prompt 259 implemented release-readiness dashboard labels, MX beacons,
   lookahead controls, and quick-review drawers; frontend IA moves to Prompt
   260.
+- Prompt 260 implemented dashboard body reflow and the first app-wide light/dark
+  view toggle; frontend IA moves to Prompt 261.
 
 ## Current State
 
@@ -1899,10 +1901,16 @@ MX, and Crew, plus URL-driven quick-review drawers for alerts, release review,
 FlightLeg summaries, and individual release components. No schema, release
 policy, or mutation behavior changed.
 
+Prompt 260 is complete. The dashboard body now uses a scrollable Flight Board,
+expanded AI Review Notes placeholder, and Fleet Snapshot footer. Active Alerts
+and Release Review remain available through top-tile drawers instead of visible
+body sections. The app shell now includes an app-wide Light/Dark view toggle
+with broad CSS-based dark-mode coverage.
+
 Next recommended workstream:
 
 ```text
-Frontend/UI polish continuing with Prompt 260
+Frontend/UI polish continuing with Prompt 261
 ```
 
 Scope:

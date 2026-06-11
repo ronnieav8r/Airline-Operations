@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { use } from "react";
 
 import { logoutAction } from "@/app/login/actions";
+import { ThemeToggle } from "@/components/app-shell/theme-toggle";
 import type { CurrentUser } from "@/lib/auth/session";
 
 const navigationItems = [
@@ -51,6 +52,7 @@ export function AppShell({
               </div>
             </Link>
             <div className="flex flex-wrap items-center gap-2">
+              <ThemeToggle />
               {currentUser ? (
                 <form action={logoutAction} className="flex items-center gap-2">
                   <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">

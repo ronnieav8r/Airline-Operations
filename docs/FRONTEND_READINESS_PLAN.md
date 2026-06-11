@@ -118,20 +118,22 @@ Prompt 256 was inserted as ADS-B provider-neutral integration planning. Prompt
 257 was inserted as documentation audit/navigation cleanup. Prompt 258
 implemented the first compact dashboard foundation after user dashboard review.
 Prompt 259 followed with release-readiness labels, MX visibility, hour-based
-lookahead controls, and dashboard quick-review drawers.
+lookahead controls, and dashboard quick-review drawers. Prompt 260 reflowed the
+dashboard body and added the first app-wide light/dark view toggle.
 
 - Prompt 258: Dashboard Compact Ops Foundation.
 - Prompt 259: Dashboard Release Readiness Drawer Foundation.
-- Prompt 260: Frontend IA Audit Planning.
-- Prompt 261: App Shell Navigation Polish.
-- Prompt 262: App Shell QA.
-- Prompt 263: Operator Release Configuration Planning.
-- Prompt 264: Dashboard Command Surface Follow-Up Planning.
-- Prompt 265: Dashboard Command Surface Follow-Up Foundation.
-- Prompt 266: Dashboard Command Surface QA.
-- Prompt 267: Operations Control Workbench Polish Planning.
-- Prompt 268: Operations Control Workbench Polish Foundation.
-- Prompt 269: Operations Control Workbench QA.
+- Prompt 260: Dashboard Layout And Theme Foundation.
+- Prompt 261: Frontend IA Audit Planning.
+- Prompt 262: App Shell Navigation Polish.
+- Prompt 263: App Shell QA.
+- Prompt 264: Operator Release Configuration Planning.
+- Prompt 265: Dashboard Command Surface Follow-Up Planning.
+- Prompt 266: Dashboard Command Surface Follow-Up Foundation.
+- Prompt 267: Dashboard Command Surface QA.
+- Prompt 268: Operations Control Workbench Polish Planning.
+- Prompt 269: Operations Control Workbench Polish Foundation.
+- Prompt 270: Operations Control Workbench QA.
 
 ## Backend Work To Avoid During UI Polish
 
