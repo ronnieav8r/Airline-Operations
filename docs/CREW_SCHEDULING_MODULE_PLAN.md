@@ -413,3 +413,9 @@ Prompt 242 planning status: complete. The next Crew Scheduling backend-MVP
 chain should complete the DB-backed runtime QA that was previously pending for
 schedule publishing, rotation pattern generation, request/time-off workflows,
 and crew portal behavior. See `docs/CREW_SCHEDULING_RUNTIME_QA_PLAN.md`.
+
+## Prompt 247 MVP Status
+
+Prompt 247 status: complete. Crew Scheduling backend is MVP-complete for the
+current planning/availability boundary. Current status and deferred post-MVP
+items are summarized in `docs/CREW_SCHEDULING_MVP_STATUS.md`.

@@ -90,6 +90,8 @@ Verify:
 
 ## Prompt 247: Docs Refresh
 
+Status: complete.
+
 After runtime QA:
 
 - Update `docs/CREW_SCHEDULING_QA_LOG.md`.
@@ -98,6 +100,9 @@ After runtime QA:
 - Update `docs/PROJECT_STATUS.md`.
 - Mark scheduling backend MVP-complete only if runtime QA passes or remaining
   gaps are explicitly deferred as post-MVP.
+
+Runtime QA passed and current status is documented in
+`docs/CREW_SCHEDULING_MVP_STATUS.md`.
 
 ## Common Validation
 

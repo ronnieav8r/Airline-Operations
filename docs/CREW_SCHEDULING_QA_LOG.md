@@ -139,6 +139,13 @@ Runtime QA passed locally.
 - Crew portal submissions do not mutate aircraft assignments, schedule entries,
   schedule bridge rows, logistics records, or compliance records.
 
+## Prompt 247: Crew Scheduling Docs Refresh
+
+### Result
+
+Docs refresh complete. Crew Scheduling runtime hardening is complete for backend
+MVP and summarized in `docs/CREW_SCHEDULING_MVP_STATUS.md`.
+
 ## Prompt 184: Schedule Publish QA
 
 ### Result

@@ -196,6 +196,9 @@ focused smoke for review metadata and no scheduling/assignment side effects.
 Prompt 246 is complete. Crew portal backend QA passed with a focused smoke for
 linked-crew request submission and no restricted workflow side effects.
 
+Prompt 247 is complete. Crew Scheduling backend MVP status is documented in
+`docs/CREW_SCHEDULING_MVP_STATUS.md`.
+
 - `242`: Crew scheduling runtime QA planning.
 - `243`: Schedule period and publishing QA.
 - `244`: Rotation pattern QA and fixes.
@@ -210,6 +213,8 @@ Acceptance for this batch:
 - Publishing creates linked `CrewSchedule` bridge rows without mutating aircraft
   assignments.
 - Crew users can submit allowed requests only.
+
+Batch 5 status: complete for backend MVP. Next batch is logistics hardening.
 
 ## Batch 6: Logistics Hardening
 

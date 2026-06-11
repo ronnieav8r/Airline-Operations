@@ -317,3 +317,7 @@ now have a focused smoke that verifies status/review metadata and no
 Prompt 246 runtime QA status: complete. Crew portal backend smoke verifies
 linked-crew request submission, pending/submitted states, no review metadata,
 and no restricted logistics/compliance/scheduling/assignment side effects.
+
+Prompt 247 status: complete. Crew Scheduling is backend MVP-complete for the
+current planning/availability boundary. See
+`docs/CREW_SCHEDULING_MVP_STATUS.md`.

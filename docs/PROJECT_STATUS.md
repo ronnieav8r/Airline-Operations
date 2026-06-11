@@ -1825,10 +1825,14 @@ does not create review metadata, logistics records, compliance records,
 schedule entries, schedule bridge rows, or aircraft crew assignment side
 effects.
 
+Prompt 247 is complete. Crew Scheduling backend is MVP-complete for the current
+planning/availability boundary and documented in
+`docs/CREW_SCHEDULING_MVP_STATUS.md`.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 247: Crew Scheduling Docs Refresh
+Prompt 248: Logistics Runtime QA Planning
 ```
 
 Scope:
