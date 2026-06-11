@@ -2,6 +2,13 @@
 
 Last updated: 2026-06-11
 
+## Current Status Note
+
+Crew Compliance is backend MVP-complete for admin-managed evidence and
+warning-only surfaces. Use `docs/CREW_COMPLIANCE_MVP_STATUS.md` and
+`docs/BACKEND_MVP_FINAL_SMOKE_QA.md` as newer truth if older sections in this
+file mention Docker/runtime QA pending.
+
 ## Summary
 
 Crew compliance should become a first-class evidence area inside AeroOps. The

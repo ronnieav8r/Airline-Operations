@@ -94,6 +94,7 @@ gaps are in `docs/BACKEND_MVP_GAP_REVIEW.md`.
 
 ## Required Reading Before New Work
 
+- `docs/README.md`
 - `docs/PROJECT_STATUS.md`
 - `docs/BACKEND_MVP_STATE.md`
 - `docs/SCHEMA_DECISIONS.md`
@@ -101,6 +102,7 @@ gaps are in `docs/BACKEND_MVP_GAP_REVIEW.md`.
 - `docs/BACKEND_MVP_COMPLETION_PLAN.md`
 - `docs/MACRO_SCAFFOLDING_QA_LOG.md`
 - `docs/SMOKE_TESTING.md`
+- `docs/DOCUMENTATION_AUDIT.md`
 - Relevant domain doc for the slice, such as:
   - `docs/CREW_SCHEDULING_SYSTEM_ARCHITECTURE.md`
   - `docs/CREW_COMPLIANCE_PLAN.md`
@@ -110,12 +112,11 @@ gaps are in `docs/BACKEND_MVP_GAP_REVIEW.md`.
 
 ## Next Safe Planning Choices
 
-The active priority is frontend readiness planning and then major frontend/UI
-polish. Choose one narrow slice at a time, and preserve the backend contracts
+The active priority is frontend/UI polish after Prompt 257 documentation
+cleanup. Choose one narrow slice at a time, and preserve the backend contracts
 documented in `docs/BACKEND_MVP_STATE.md`.
 
-- Frontend readiness planning.
-- Information architecture cleanup.
+- Frontend information architecture cleanup.
 - UI polish for dashboard, Operations Control, aircraft, crew, scheduling,
   release evidence, compliance, and logistics.
 - Backend follow-ups only when they are explicit post-MVP decisions.

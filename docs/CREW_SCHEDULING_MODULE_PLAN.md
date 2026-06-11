@@ -1,6 +1,13 @@
 # Crew Scheduling Module Plan
 
-Last updated: 2026-06-09
+Last updated: 2026-06-11
+
+## Current Status Note
+
+Crew Scheduling is backend MVP-complete for the current planning/availability
+boundary. Use `docs/CREW_SCHEDULING_MVP_STATUS.md` and
+`docs/BACKEND_MVP_FINAL_SMOKE_QA.md` as newer truth if older sections in this
+file mention Docker/runtime QA pending.
 
 ## Summary
 

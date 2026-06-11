@@ -2,6 +2,14 @@
 
 Last updated: 2026-06-11
 
+## Current Status Note
+
+FlightLeg is the preferred backend MVP operational identity. Use
+`docs/FLIGHTLEG_LEGACY_ARCHIVE_POLICY.md`,
+`docs/FLIGHTLEG_COVERAGE_RESPONSE_CONTRACT.md`, and
+`docs/BACKEND_MVP_FINAL_SMOKE_QA.md` as newer truth if older sections in this
+file mention runtime/API/browser QA pending.
+
 ## Decision
 
 `FlightLeg` is the long-term operational anchor. Legacy `Flight` remains as a

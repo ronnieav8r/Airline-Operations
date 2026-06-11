@@ -2,6 +2,12 @@
 
 Last updated: 2026-06-10
 
+## Current Status Note
+
+Crew portal backend smoke passed during backend MVP closure. Use
+`docs/BACKEND_MVP_FINAL_SMOKE_QA.md` and `docs/CREW_SCHEDULING_MVP_STATUS.md`
+as newer truth if older sections in this file mention runtime QA pending.
+
 ## Purpose
 
 The crew self-service portal gives a crew member a safe authenticated view into

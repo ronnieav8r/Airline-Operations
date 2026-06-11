@@ -18,6 +18,7 @@ reviewable slices and should not attempt the full product in one pass.
 - Compliance roadmap: [docs/COMPLIANCE_ROADMAP.md](docs/COMPLIANCE_ROADMAP.md)
 - Local development: [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
 - Smoke testing: [docs/SMOKE_TESTING.md](docs/SMOKE_TESTING.md)
+- Docs map: [docs/README.md](docs/README.md)
 - Builder onboarding: [docs/BUILDER_ONBOARDING.md](docs/BUILDER_ONBOARDING.md)
 - Current project status: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
 - Backend MVP state: [docs/BACKEND_MVP_STATE.md](docs/BACKEND_MVP_STATE.md)

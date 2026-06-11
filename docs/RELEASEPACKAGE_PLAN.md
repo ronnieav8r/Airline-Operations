@@ -2,6 +2,14 @@
 
 Last updated: 2026-06-10
 
+## Current Status Note
+
+ReleasePackage preview and final capture are active for backend MVP. Use
+`docs/RELEASE_BACKEND_MVP_STATUS.md`,
+`docs/RELEASE_BACKEND_QA_LOG.md`, and
+`docs/BACKEND_MVP_FINAL_SMOKE_QA.md` as newer truth if older sections in this
+file mention capture actions or runtime QA as pending.
+
 ## Decision
 
 `ReleasePackage` is the durable release packet/bundle. It is additive and wraps

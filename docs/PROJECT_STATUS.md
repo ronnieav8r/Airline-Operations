@@ -9,13 +9,17 @@ before starting a new AeroOps slice.
 
 The current active tracks are:
 
+- **Docs navigation**: Prompt 257 added `docs/README.md` and
+  `docs/DOCUMENTATION_AUDIT.md`. Use those before browsing older prompt or QA
+  history.
 - **Backend MVP state**: backend MVP scaffolding is complete for the current
   warning-first scope. See `docs/BACKEND_MVP_STATE.md`,
   `docs/BACKEND_MVP_FINAL_SMOKE_QA.md`, and
   `docs/BACKEND_MVP_GAP_REVIEW.md`.
 - **Frontend readiness**: Prompt 255 planned the handoff into UI/frontend work
   using the stable backend contracts. Prompt 256 was inserted for ADS-B
-  provider-neutral planning; frontend IA should start at Prompt 257.
+  provider-neutral planning, and Prompt 257 was inserted for docs cleanup;
+  frontend IA should start at Prompt 258.
 - **FlightLeg cutover**: Prompt 216 is implemented. Crew-heavy internal
   coverage consumers now prefer FlightLeg IDs while keeping legacy fallback and
   public API compatibility. Legacy `Flight` remains compatibility/archive.
@@ -37,8 +41,9 @@ Recent prompt-numbering note:
 - Prompt 253 found no backend MVP blockers.
 - Prompt 254 cleaned up backend MVP status docs.
 - Prompt 255 planned frontend readiness.
-- Prompt 256 inserted ADS-B provider-neutral integration planning; frontend IA
-  moves to Prompt 257.
+- Prompt 256 inserted ADS-B provider-neutral integration planning.
+- Prompt 257 cleaned up documentation navigation; frontend IA moves to Prompt
+  258.
 
 ## Current State
 
@@ -1875,10 +1880,13 @@ Prompt 256 is complete as planning. ADS-B/external tracking is documented in
 `docs/ADSB_DATA_SOURCE_OPTIONS_REPORT.md` as the source report. No provider,
 schema, credential, polling, map, release-blocking, or UI behavior was added.
 
+Prompt 257 is complete as docs cleanup. `docs/README.md` is now the docs map,
+and `docs/DOCUMENTATION_AUDIT.md` explains stale-note handling.
+
 Next recommended workstream:
 
 ```text
-Frontend/UI polish beginning with Prompt 257
+Frontend/UI polish beginning with Prompt 258
 ```
 
 Scope:
