@@ -518,3 +518,9 @@ response fields.
 Prompt 216 implements that first internal-consumer migration for crew-heavy
 coverage callers. This remains a behavior-preserving cutover: no schema change,
 API path change, response-field removal, or legacy `Flight` retirement.
+
+Prompt 221 inventories the remaining legacy `Flight` dependencies in
+`docs/FLIGHTLEG_LEGACY_DEPENDENCY_INVENTORY.md`. The schema decision is
+unchanged: legacy `Flight`, `FlightPassenger`, `CrewFlightLog`,
+`OperationalControlRecord.flightId`, `FlightLeg.legacyFlightId`, and
+`/api/flights/[id]` compatibility paths remain in place for MVP.

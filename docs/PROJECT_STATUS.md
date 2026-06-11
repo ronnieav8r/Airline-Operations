@@ -1694,6 +1694,13 @@ Prisma validation, typecheck, lint, build, local DB migrate/seed,
 `smoke:workflows`, `smoke:app`, and `smoke:browser`. Results are recorded in
 `docs/BACKEND_MVP_QA_LOG.md`. No code fixes were required.
 
+Prompt 221 is complete. Remaining legacy `Flight` dependencies are inventoried
+in `docs/FLIGHTLEG_LEGACY_DEPENDENCY_INVENTORY.md` and classified as
+cutover-ready, compatibility-required, or archive/diagnostic. Prompt 222 should
+only move remaining Flight-first internal read consumers to FlightLeg-primary
+reads while keeping bridge writes, compatibility APIs, seed/backfill behavior,
+parity diagnostics, and archive/history tables intact.
+
 Next FlightLeg cutover step:
 
 ```text

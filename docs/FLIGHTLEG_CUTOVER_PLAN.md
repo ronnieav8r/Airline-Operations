@@ -91,6 +91,13 @@ legacy API paths in the current macro scaffolding chain.
    helpers and page consumers. Parity diagnostics and backfill scripts remain
    legacy-aware because they intentionally compare or create bridge records.
 
+6. **Legacy Dependency Inventory**
+   Prompt 221 inventories remaining legacy `Flight` dependencies in
+   `docs/FLIGHTLEG_LEGACY_DEPENDENCY_INVENTORY.md`. The next implementation
+   should move only the remaining Flight-first internal read consumers to
+   FlightLeg-primary reads. Bridge writes, compatibility APIs, seed/backfill
+   scripts, parity diagnostics, and archive/history tables remain legacy-aware.
+
 ## Deferred
 
 - Dropping or renaming legacy `Flight`.
