@@ -38,6 +38,10 @@ Acceptance for this batch:
 - Legacy `Flight` is documented as compatibility/archive, not active
   operational truth.
 
+Prompt 218 planning is documented in `docs/BACKEND_MVP_SMOKE_HARNESS_PLAN.md`.
+Prompt 219 should extend the existing smoke scripts and Playwright coverage; it
+should not introduce a separate framework or production bypass.
+
 ## Batch 2: Release Backend Completion
 
 - `224`: MVP release lifecycle planning.

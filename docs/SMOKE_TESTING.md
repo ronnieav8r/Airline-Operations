@@ -132,3 +132,8 @@ and the browser smoke runner checks real login/form navigation in Chromium.
 Last checked during Prompt 210: local Docker Postgres, route smoke, and
 Playwright browser smoke passed with the explicit local database URL and
 `AEROOPS_ENABLE_TEST_AUTH=1`.
+
+Prompt 218 planning status: complete. The next smoke-harness implementation
+should follow `docs/BACKEND_MVP_SMOKE_HARNESS_PLAN.md` and expand the existing
+route, workflow, and Playwright checks rather than adding a separate framework
+or any production bypass.

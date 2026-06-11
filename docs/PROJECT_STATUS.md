@@ -30,6 +30,7 @@ Recent prompt-numbering note:
 - Prompts 209-213 were an intentional logistics and FlightLeg cutover pivot.
 - Prompt 214 planned the next FlightLeg coverage consumer cutover.
 - Prompt 217 starts the backend-MVP completion chain.
+- Prompt 218 plans the backend-MVP smoke harness expansion.
 
 ## Current State
 
@@ -1674,6 +1675,12 @@ backend QA, FlightLeg cutover, release backend completion, crew compliance
 admin workflows, duty/rest QA/refinement, crew scheduling runtime hardening,
 logistics hardening, and final backend MVP closure before major frontend/UI
 polish.
+
+Prompt 218 is complete as a docs-only planning slice. The backend MVP smoke
+harness plan now lives in `docs/BACKEND_MVP_SMOKE_HARNESS_PLAN.md`. Prompt 219
+should expand the existing route, workflow, and Playwright smoke harness to
+exercise the major backend workflows without adding production bypasses or
+changing product behavior.
 
 Next FlightLeg cutover step:
 
