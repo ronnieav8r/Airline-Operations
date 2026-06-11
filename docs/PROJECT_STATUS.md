@@ -9,14 +9,17 @@ before starting a new AeroOps slice.
 
 The current active tracks are:
 
-- **Duty/rest calculator follow-up**: Prompt 208 is implemented. Next work
-  should be QA/refinement only unless a new planning slice approves a dedicated
-  diagnostic page, additional data inputs, or enforcement behavior.
-- **FlightLeg cutover**: Prompt 214 planned the next implementation. Prompt 216
-  should migrate internal crew-heavy coverage consumers to prefer FlightLeg IDs
-  while keeping legacy fallback and public API compatibility.
-- **Legacy imports**: keep lower priority. Import execution should remain
-  deferred until core app workflows and operational screens are more stable.
+- **Backend MVP completion**: Prompt 217 starts the backend-first completion
+  chain in `docs/BACKEND_MVP_COMPLETION_PLAN.md`. The next work should build a
+  full backend smoke harness, then finish FlightLeg cutover, release backend,
+  crew compliance admin, duty/rest QA/refinement, scheduling runtime hardening,
+  and logistics hardening before major frontend/UI polish.
+- **FlightLeg cutover**: Prompt 216 is implemented. Crew-heavy internal
+  coverage consumers now prefer FlightLeg IDs while keeping legacy fallback and
+  public API compatibility. Legacy `Flight` remains compatibility/archive.
+- **Legacy imports and ADS-B**: keep lower priority. Import execution and ADS-B
+  provider integration should remain deferred until backend MVP workflows are
+  stable.
 
 Recent prompt-numbering note:
 
@@ -26,6 +29,7 @@ Recent prompt-numbering note:
   Prompt 213.
 - Prompts 209-213 were an intentional logistics and FlightLeg cutover pivot.
 - Prompt 214 planned the next FlightLeg coverage consumer cutover.
+- Prompt 217 starts the backend-MVP completion chain.
 
 ## Current State
 
@@ -1663,6 +1667,13 @@ unchanged.
 Prompt 215 is complete as a docs-only cleanup slice. The project status now
 calls out the recent Prompt 208 skip/pivot, the 209-213 logistics/FlightLeg
 detour, and the active next-step tracks.
+
+Prompt 217 is complete as a docs-only roadmap slice. The backend-MVP completion
+chain now lives in `docs/BACKEND_MVP_COMPLETION_PLAN.md` and prioritizes
+backend QA, FlightLeg cutover, release backend completion, crew compliance
+admin workflows, duty/rest QA/refinement, crew scheduling runtime hardening,
+logistics hardening, and final backend MVP closure before major frontend/UI
+polish.
 
 Next FlightLeg cutover step:
 

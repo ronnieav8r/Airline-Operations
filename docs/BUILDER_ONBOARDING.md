@@ -76,8 +76,9 @@ Latest macro QA static checks passed:
 - `npm run lint`
 - `npm run build`
 
-Runtime DB/browser QA remains pending for several recent chains because Docker
-Desktop was unavailable during implementation.
+Runtime DB/browser QA is now available locally through the smoke harness. Some
+older chains still need backend-MVP runtime QA catch-up because they were first
+implemented when Docker Desktop was unavailable.
 
 Command-driven role smoke testing is available through
 `docs/SMOKE_TESTING.md`. The harness creates gated smoke users for every role
@@ -88,6 +89,7 @@ and checks app routes with real DB-backed session cookies.
 - `docs/PROJECT_STATUS.md`
 - `docs/SCHEMA_DECISIONS.md`
 - `docs/MAJOR_SCAFFOLDING_MACRO_PLAN.md`
+- `docs/BACKEND_MVP_COMPLETION_PLAN.md`
 - `docs/MACRO_SCAFFOLDING_QA_LOG.md`
 - `docs/SMOKE_TESTING.md`
 - Relevant domain doc for the slice, such as:
@@ -99,12 +101,14 @@ and checks app routes with real DB-backed session cookies.
 
 ## Next Safe Planning Choices
 
-Choose one narrow slice at a time:
+The active priority is backend-MVP completion before major frontend/UI polish.
+Choose one narrow slice at a time from `docs/BACKEND_MVP_COMPLETION_PLAN.md`.
 
-- Runtime QA catch-up when Docker Desktop is available.
-- Prompted docs cleanup for any stale early docs.
-- Next planning slice for hard release blocking, signatures, duty/rest
-  enforcement, provider integrations, or legacy `Flight` retirement.
-- UI usability polish within existing boundaries.
+- Backend smoke harness planning and implementation.
+- FlightLeg cutover QA and archive policy.
+- Release backend completion while staying warning-only.
+- Crew compliance admin workflows.
+- Duty/rest calculator QA/refinement.
+- Crew scheduling and logistics runtime hardening.
 
 Avoid broad multi-feature implementation without a fresh plan.

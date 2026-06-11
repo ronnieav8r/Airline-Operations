@@ -1,0 +1,159 @@
+# Backend MVP Completion Plan
+
+Last updated: 2026-06-11
+
+## Summary
+
+This plan moves AeroOps from broad backend scaffolding to a mostly complete MVP
+backend before major frontend/UI polish. Work remains backend-first,
+warning-first, and operationally safe. Legacy `Flight` remains
+compatibility/archive until destructive retirement is separately planned.
+
+Execution model:
+
+- Work in small sequential prompts starting at Prompt 217.
+- Commit and push after every slice.
+- Use parallel/subagent work only for docs inventory or QA review with disjoint
+  file scopes.
+- Stop if a slice requires hard release blocking, legal signatures, provider
+  integrations, file uploads, destructive legacy removal, or ambiguous
+  regulatory/product policy.
+
+## Batch 1: Backend MVP QA Baseline And FlightLeg Cutover
+
+- `217`: Backend MVP macro plan docs.
+- `218`: Backend MVP smoke harness planning.
+- `219`: Backend MVP smoke harness foundation.
+- `220`: Backend MVP QA pass.
+- `221`: FlightLeg legacy dependency inventory.
+- `222`: FlightLeg consumer cutover foundation 2.
+- `223`: FlightLeg cutover QA and archive policy.
+
+Acceptance for this batch:
+
+- The smoke harness exercises auth/roles, FlightLeg create/edit, release
+  evidence, ReleasePackage, scheduling, crew portal, logistics, and duty/rest
+  readiness.
+- Safe internal consumers prefer `FlightLeg.id` where bridges exist.
+- Legacy `Flight` is documented as compatibility/archive, not active
+  operational truth.
+
+## Batch 2: Release Backend Completion
+
+- `224`: MVP release lifecycle planning.
+- `225`: Release lifecycle foundation.
+- `226`: ReleasePackage final capture planning.
+- `227`: ReleasePackage final capture foundation.
+- `228`: Release backend QA.
+- `229`: Release backend docs refresh.
+
+Acceptance for this batch:
+
+- `FlightRelease` remains the release decision record.
+- `ReleasePackage` is the evidence package wrapper.
+- Release actions are warning-only and audit-attributed.
+- Preview/final package capture behavior is explicit and tested.
+
+## Batch 3: Crew Compliance Admin Workflows
+
+- `230`: Crew compliance admin workflow planning.
+- `231`: Certificate and medical admin foundation.
+- `232`: Training, check, and recency admin foundation.
+- `233`: Duty and rest admin foundation.
+- `234`: Crew compliance warning integration QA.
+- `235`: Crew compliance docs refresh.
+
+Acceptance for this batch:
+
+- Ops/admin users can manage MVP crew compliance records.
+- Compliance warnings remain visible in crew detail, crew planner, aircraft crew
+  assignment, and release readiness.
+- No legal enforcement, signature semantics, or hard blocking is added.
+
+## Batch 4: Duty/Rest Calculator QA And Refinement
+
+- `236`: Duty/rest scenario QA planning.
+- `237`: Duty/rest scenario seed foundation.
+- `238`: Duty/rest diagnostic foundation.
+- `239`: Duty/rest calculator refinement.
+- `240`: Duty/rest snapshot QA.
+- `241`: Duty/rest docs refresh.
+
+Acceptance for this batch:
+
+- Seeded Part 91 and Part 135-style scenarios cover pass, warning,
+  missing-input, and deferred outcomes.
+- Duty/rest findings persist into readiness snapshots.
+- Missing outside flying, transportation classification, reserve/standby,
+  reduced-rest debt, actual flight-time, and hard enforcement remain explicit
+  deferrals.
+
+## Batch 5: Crew Scheduling Runtime Hardening
+
+- `242`: Crew scheduling runtime QA planning.
+- `243`: Schedule period and publishing QA.
+- `244`: Rotation pattern QA and fixes.
+- `245`: Crew request and time-off QA.
+- `246`: Crew portal backend QA.
+- `247`: Crew scheduling docs refresh.
+
+Acceptance for this batch:
+
+- Schedule periods, draft entries, pattern generation, publishing, requests,
+  time off, and crew portal behavior are runtime-tested.
+- Publishing creates linked `CrewSchedule` bridge rows without mutating aircraft
+  assignments.
+- Crew users can submit allowed requests only.
+
+## Batch 6: Logistics Hardening
+
+- `248`: Logistics runtime QA planning.
+- `249`: Crew logistics workflow QA.
+- `250`: Logistics workbench QA and fixes.
+- `251`: Logistics docs refresh.
+
+Acceptance for this batch:
+
+- Manual logistics workflows are runtime-tested for location records and travel
+  needs.
+- `/crew/logistics` filters, grouping, and cross-links are validated.
+- Provider integrations, bookings, expenses, and automatic positioning remain
+  deferred.
+
+## Batch 7: Backend MVP Closure
+
+- `252`: Backend MVP final smoke pass.
+- `253`: Backend MVP gap review.
+- `254`: Backend MVP status cleanup.
+- `255`: Frontend readiness planning.
+
+Acceptance for this batch:
+
+- Backend MVP gaps are either fixed or explicitly deferred as post-MVP.
+- Project docs clearly identify stable backend contracts for frontend work.
+- The team can shift to frontend/UI polish without backend ambiguity.
+
+## Global Validation Standard
+
+Every implementation slice must run:
+
+- `npm run prisma:validate`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+- Local DB prep when needed: `npm run db:local:up`,
+  `npm run db:local:migrate`, `npm run db:local:seed`
+- `npm run smoke:app`
+- `npm run smoke:browser`
+- Feature-specific workflow smoke for the changed area.
+
+## Out Of Scope For Backend MVP
+
+- Legacy import execution.
+- ADS-B/provider integrations.
+- Booking integrations.
+- File uploads.
+- Expense workflow.
+- Formal legal signatures.
+- Hard release blocking.
+- Destructive legacy `Flight` removal.
