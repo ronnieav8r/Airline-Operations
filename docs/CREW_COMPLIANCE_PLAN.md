@@ -1,6 +1,6 @@
 # Crew Compliance Plan
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Summary
 
@@ -182,3 +182,11 @@ release readiness now includes one warning-only duty/rest item with detailed
 subfindings stored in readiness item details and captured by existing preview
 and release-attempt snapshots. The calculator remains an operational warning
 surface, not a legal enforcement engine.
+
+Prompt 230 admin workflow planning is complete. The next compliance chain should
+add `/crew/[crewMemberId]/compliance` as an ops/admin management surface for
+existing compliance tables. Implementation should proceed in narrow slices:
+certificate/medical, training/check/recency, duty/rest, QA, and docs refresh.
+Records remain evidence and warning inputs only; no hard enforcement,
+signatures, uploads, provider verification, or crew self-service compliance
+submission should be added.

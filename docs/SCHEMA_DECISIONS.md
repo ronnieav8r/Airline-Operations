@@ -296,6 +296,11 @@ warning-only aircraft assignment context, warning-only release readiness
 context, QA docs, and status refresh. Compliance records remain evidence and
 warning inputs, not hard release blockers.
 
+Prompt 230 plans admin workflows on top of the existing compliance schema. No
+new schema is expected for the first admin workflow chain; use
+`CrewCertificate`, `CrewMedical`, `CrewTrainingEvent`, `CrewCheckEvent`,
+`CrewRecencyEvent`, `CrewDutyPeriod`, and `CrewRestPeriod` directly.
+
 ## History Rule
 
 Keep full assignment history.

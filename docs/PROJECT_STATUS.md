@@ -1744,6 +1744,11 @@ package capture, and final package capture are active. Hard blocking,
 signatures, overrides, providers, file uploads, and generated documents remain
 post-MVP.
 
+Prompt 230 is complete as planning. Crew compliance admin workflows should add
+`/crew/[crewMemberId]/compliance` and use existing tables for certificates,
+medicals, training, checks, recency, duty, and rest records. These workflows
+remain admin-managed evidence inputs and warning-only downstream signals.
+
 Next FlightLeg cutover step:
 
 ```text
