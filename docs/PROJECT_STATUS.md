@@ -1723,6 +1723,11 @@ metadata into release-attempt snapshots and `ReleaseAuditEvent.actorRole`.
 Release behavior remains warning-only; no hard blocking, signatures, overrides,
 or final ReleasePackage capture were added.
 
+Prompt 226 is complete as planning. Final ReleasePackage capture should be an
+explicit `ADMIN` or `OPS` action that creates a new `FINALIZED`
+`ReleasePackage` with `finalizedAt` and `capturedById`, preserves preview
+packages, and does not change `FlightRelease.status` or add hard blocking.
+
 Next FlightLeg cutover step:
 
 ```text

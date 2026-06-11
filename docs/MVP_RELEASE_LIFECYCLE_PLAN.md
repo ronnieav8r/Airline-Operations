@@ -60,6 +60,11 @@ MVP direction for that later slice:
 - Final package capture still must not hard-block release until a later policy
   slice approves enforcement.
 
+Prompt 226 planning status: complete. Final package capture should create a new
+`FINALIZED` package as an explicit `ADMIN` or `OPS` action. It should preserve
+preview packages, set `finalizedAt` and `capturedById`, and leave
+`FlightRelease.status` unchanged.
+
 ## Deferred
 
 - Hard release blocking.

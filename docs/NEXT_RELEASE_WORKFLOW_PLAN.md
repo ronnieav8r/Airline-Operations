@@ -74,3 +74,7 @@ warning-only.
 
 Prompt 225 implementation status: complete. Existing release actions now record
 actor role in release audit events and snapshot metadata.
+
+Prompt 226 planning status: complete. The next release workflow implementation
+should add explicit final ReleasePackage capture as a separate `FINALIZED`
+package row, not as an automatic side effect of release actions.

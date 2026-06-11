@@ -60,10 +60,20 @@ bundle around `FlightRelease`. Final package capture should be planned
 separately in Prompt 226 and must not replace `FlightRelease` or introduce hard
 blocking.
 
+Prompt 226 planning status: complete. Final package capture should be an
+explicit `ADMIN` or `OPS` action that creates a new `FINALIZED`
+`ReleasePackage` with `finalizedAt` and `capturedById`. It must not mutate
+existing preview packages, change `FlightRelease.status`, or hard-block release
+actions.
+
 ## First Workflow Direction
 
 Start with read-only preview, then explicit preview capture. Do not create
 packages automatically on page load or as a side effect of release actions.
+
+MVP final capture should also be explicit. It should create a separate
+historical package row so preview history remains intact and the final package
+represents the evidence state at final-capture time.
 
 ## Deferred
 

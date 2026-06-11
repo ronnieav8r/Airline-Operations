@@ -71,6 +71,10 @@ while keeping release warning-only.
 Prompt 225 is complete. Release action snapshots/audit events now include
 actor user and role metadata, and release actions remain warning-only.
 
+Prompt 226 is complete as planning. Final ReleasePackage capture should be an
+explicit `ADMIN` or `OPS` action that creates a new `FINALIZED` package while
+leaving preview packages and `FlightRelease.status` unchanged.
+
 ## Batch 2: Release Backend Completion
 
 - `224`: MVP release lifecycle planning.
