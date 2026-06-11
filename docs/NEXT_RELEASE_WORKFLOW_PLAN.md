@@ -82,3 +82,6 @@ package row, not as an automatic side effect of release actions.
 Prompt 227 implementation status: complete. Explicit final ReleasePackage
 capture is implemented, and Prompt 228 should QA the full warning-only release
 backend.
+
+Prompt 228 QA status: complete. Release backend smoke verified preview/final
+package capture, release audit creation, route access, and browser login flows.

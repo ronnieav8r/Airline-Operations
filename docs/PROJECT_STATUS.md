@@ -1733,6 +1733,11 @@ preview and final capture actions. Final capture creates a separate
 `FINALIZED` package with `finalizedAt` and `capturedById`; release behavior
 remains warning-only and `FlightRelease.status` is unchanged by package capture.
 
+Prompt 228 is complete. Release backend QA passed with local static validation,
+workflow smoke, app route smoke, and browser smoke. The QA run verified preview
+and final ReleasePackage capture, release audit creation, and warning-only
+release behavior.
+
 Next FlightLeg cutover step:
 
 ```text

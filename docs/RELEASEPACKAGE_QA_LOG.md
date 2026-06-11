@@ -1,6 +1,6 @@
 # ReleasePackage QA Log
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Prompt 173 Static QA
 
@@ -25,17 +25,18 @@ static checks:
 
 ## Runtime QA Status
 
-Local DB-backed workflow QA is pending because Docker Desktop was unavailable.
-The local database start command could not connect to the Docker Desktop Linux
-engine.
+Runtime QA is now complete through Prompt 228.
 
-Pending runtime checks:
+- Local Postgres started successfully.
+- Local migrations were current.
+- Local seed completed.
+- Workflow smoke run `SMOKE-20260611132210` created both preview and final
+  ReleasePackage records.
+- Preview package capture created a `PREVIEW` package with evidence links.
+- Final package capture created a `FINALIZED` package with `finalizedAt` and
+  evidence links.
+- Existing release audit smoke still marked a FlightLeg released and created an
+  audit event.
+- App route smoke and browser smoke passed.
 
-- Start local Postgres.
-- Run local migrations and seed.
-- Sign in as an ops/admin user.
-- Capture a package preview from a FlightLeg detail page.
-- Confirm package and evidence-link rows are created.
-- Confirm package counts appear in `/api/health`.
-- Confirm existing release actions still behave independently.
-- Smoke-check the main operational routes and FlightLeg diagnostics.
+Package capture remains independent of `FlightRelease.status`.

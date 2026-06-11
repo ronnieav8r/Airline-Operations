@@ -78,6 +78,9 @@ leaving preview packages and `FlightRelease.status` unchanged.
 Prompt 227 is complete. ReleasePackage final capture now exists as an explicit
 backend workflow and preserves warning-only release behavior.
 
+Prompt 228 is complete. Release backend QA passed locally across static checks,
+workflow smoke, route smoke, and browser smoke.
+
 ## Batch 2: Release Backend Completion
 
 - `224`: MVP release lifecycle planning.
