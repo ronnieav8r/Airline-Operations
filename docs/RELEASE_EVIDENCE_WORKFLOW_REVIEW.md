@@ -1,6 +1,6 @@
 # Release Evidence Workflow Review
 
-Last updated: 2026-06-08
+Last updated: 2026-06-11
 
 ## Summary
 
@@ -15,6 +15,7 @@ FlightLeg:
 - Explicit preview snapshots.
 - Snapshot drift diagnostic.
 - Snapshot findings detail.
+- Planned duty/rest warning readiness.
 
 The current system is usable for development. FlightLeg detail now acts as a
 clearer command center, Operations Control now has a filterable workbench
@@ -22,6 +23,11 @@ board, the dashboard surfaces current attention items, each aircraft has a
 read-only context page, and Crew Scheduling now has a read-only availability
 planner. Aircraft-block crew assignment writes are locally validated and remain
 the operational coverage source.
+
+Prompt 207 keeps duty/rest in the same warning-only readiness model. The first
+calculator should surface operational warning/missing-input findings only. It
+must not change release actions, legal signoff semantics, hard-blocking policy,
+schedule publishing, or aircraft crew assignment behavior.
 
 ## Current Workflow Map
 
@@ -32,7 +38,7 @@ the operational coverage source.
 | Weight and balance | Add/edit manual W&B runs, mark `CALCULATED`, and void runs. | Manual workflow active. |
 | Flight locating | Save locating details and mark `FILED`, `ACTIVE`, or `CLOSED`. | Manual workflow active. |
 | Dispatch package | Save manual weather, NOTAM, flight-plan, and dispatch notes in one form. | Manual workflow active. |
-| Release Readiness | Displays warning-only checklist and non-enforcing blocker preview. | Active, not blocking. |
+| Release Readiness | Displays warning-only checklist and non-enforcing blocker preview. Prompt 208 should add one duty/rest warning item using the Prompt 207 calculator boundary. | Active, not blocking. |
 | Preview snapshots | Explicitly capture readiness snapshot and recent history. | Active, explicit only. |
 | Snapshot diagnostics | Compare live readiness to latest snapshot and show drift. | Active, internal/read-only. |
 | Snapshot findings detail | Inspect stored snapshot findings and metadata. | Active, read-only. |

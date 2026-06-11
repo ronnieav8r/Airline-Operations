@@ -473,3 +473,14 @@ settings do not perform legal calculations, persist warning snapshots, block
 schedule publication, block aircraft assignment, block release, or create
 signature semantics. All defaults are warning-only pending operator/legal
 review.
+
+Prompt 207 plans the first calculator without schema changes. Prompt 208 should
+reuse existing release-readiness snapshot findings for persistence and should
+not add `CrewDutyRestWarning` yet. The initial calculator may use current
+`CrewDutyPeriod`, `CrewRestPeriod`, FlightLeg schedule, crew assignment, and
+duty/rest policy rows for warning-only Part 135 unscheduled/on-demand checks
+and ordinary Part 91 guardrails. Missing outside commercial flying,
+reserve/standby detail, transportation classification, reduced-rest
+compensation, actual flight-time, OpSpecs/MSpecs, and flight-attendant data
+should remain explicit missing-input/deferred findings rather than schema
+assumptions.

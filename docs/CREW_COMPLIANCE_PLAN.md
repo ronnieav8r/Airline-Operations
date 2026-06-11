@@ -167,3 +167,12 @@ Prompt 181 docs/status refresh: complete. The crew compliance foundation chain
 is closed from a scaffolding standpoint. Runtime DB/browser QA remains pending
 until Docker is available, but the next macro build step can move to crew
 scheduling lifecycle planning.
+
+Prompt 207 duty/rest calculator planning is complete. Duty/rest findings should
+remain operational warnings inside FlightLeg release readiness first. The first
+calculator should use existing duty/rest policy settings, `CrewDutyPeriod`,
+`CrewRestPeriod`, FlightLeg schedule, and crew assignment context. It should not
+be treated as legal enforcement, should not block release or assignment actions,
+and should report missing outside flying, reserve/standby detail,
+transportation classification, reduced-rest compensation, and actual
+flight-time data as missing-input or deferred findings.

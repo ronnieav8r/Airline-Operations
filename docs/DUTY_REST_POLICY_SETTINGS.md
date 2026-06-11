@@ -34,6 +34,28 @@ operator review later. They do not decide legal compliance yet.
 - Outside commercial flying is marked required where cumulative limits depend on
   all commercial flying.
 
+## Prompt 207 Calculator Plan
+
+Prompt 207 selected the first duty/rest calculator boundary. Prompt 208 should
+implement a narrow warning-only evaluator using existing data and existing
+snapshot storage.
+
+Selected first scope:
+
+- Ordinary Part 91 guardrail/info findings only.
+- Part 135 unscheduled/on-demand warnings first.
+- FlightLeg release readiness as the first warning surface.
+- Existing `ReleaseReadinessSnapshot` and `ReleaseReadinessFinding` as the first
+  persistence path for captured findings.
+- UTC planned preflight timing from `FlightLeg.scheduledDeparture` and
+  `FlightLeg.scheduledArrival`.
+- Scheduled-block duration estimates only, because AeroOps does not yet store a
+  dedicated airborne/logged flight-time field.
+
+Prompt 208 should produce readable `PASS`, `WARNING`, `MISSING_INPUT`,
+`NOT_APPLICABLE`, and `DEFERRED` findings. It must not hard-block release,
+schedule publishing, aircraft assignment, or crew portal actions.
+
 ## Diagnostic
 
 Use:
@@ -74,8 +96,9 @@ applicability and input requirements.
 
 Deferred items:
 
-- Duty/rest calculation engine.
-- Persisted warning snapshots.
+- Broader duty/rest calculation engine beyond the Prompt 208 warning-only first
+  pass.
+- Dedicated `CrewDutyRestWarning` table.
 - Release, schedule, or assignment blocking.
 - Acknowledgement/signature workflow.
 - External commercial flying ledger.

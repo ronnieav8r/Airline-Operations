@@ -1521,6 +1521,30 @@ and `/api/health` counts. This does not calculate legal duty/rest compliance,
 block schedules, block aircraft assignments, block releases, or create legal
 signoff behavior.
 
+Prompt 207 is complete as a docs/planning slice. The selected first calculator
+scope is narrow: ordinary Part 91 guardrail/info findings plus Part 135
+unscheduled/on-demand warning checks using current `CrewDutyPeriod`,
+`CrewRestPeriod`, FlightLeg schedule, crew assignment, and duty/rest policy
+settings. Prompt 208 should surface one warning-only duty/rest item in
+FlightLeg release readiness and store captured details through existing
+`ReleaseReadinessSnapshot` / `ReleaseReadinessFinding` records. No new schema,
+hard blocking, legal signoff, outside flying ledger, reserve/standby detail
+tables, transportation classification, or dedicated `CrewDutyRestWarning` table
+is approved in this first calculator slice.
+
+Next recommended slice:
+
+```text
+Prompt 208: Duty/Rest Warning Calculator Foundation
+```
+
+Scope:
+
+- Implement the warning-only evaluator planned in Prompt 207.
+- Keep all release, schedule, assignment, and crew portal actions continueable.
+- Treat missing inputs as explicit warning/deferred findings instead of legal
+  pass/fail enforcement.
+
 Deferred follow-up to keep on the roadmap:
 
 ```text
