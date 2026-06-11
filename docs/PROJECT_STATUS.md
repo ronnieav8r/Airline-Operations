@@ -1863,17 +1863,20 @@ later-policy work.
 Prompt 254 is complete. Backend MVP status docs are cleaned up around
 `docs/BACKEND_MVP_STATE.md`.
 
-Next backend-MVP batch:
+Prompt 255 is complete. Frontend readiness is documented in
+`docs/FRONTEND_READINESS_PLAN.md`.
+
+Next recommended workstream:
 
 ```text
-Prompt 255: Frontend Readiness Planning
+Frontend/UI polish beginning with Prompt 256
 ```
 
 Scope:
 
-- Plan the handoff into frontend/UI work.
-- List stable backend contracts the frontend can rely on.
-- Identify the first UI polish tracks without changing app behavior.
+- Start with frontend IA/app-shell planning and polish.
+- Preserve backend contracts in `docs/BACKEND_MVP_STATE.md`.
+- Keep backend post-MVP gaps deferred unless separately planned.
 
 Next FlightLeg cutover step:
 

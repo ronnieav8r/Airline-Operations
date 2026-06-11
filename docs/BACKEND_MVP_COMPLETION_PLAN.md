@@ -251,7 +251,7 @@ Acceptance for this batch:
 - `252`: Backend MVP final smoke pass. Status: complete.
 - `253`: Backend MVP gap review. Status: complete.
 - `254`: Backend MVP status cleanup. Status: complete.
-- `255`: Frontend readiness planning.
+- `255`: Frontend readiness planning. Status: complete.
 
 Acceptance for this batch:
 
@@ -265,6 +265,10 @@ later-policy work.
 
 Prompt 254 cleaned up the backend MVP state in `docs/BACKEND_MVP_STATE.md` and
 updated onboarding/status docs. Prompt 255 should plan the frontend/UI handoff.
+
+Prompt 255 is complete. Frontend readiness is documented in
+`docs/FRONTEND_READINESS_PLAN.md`; the next major workstream should be
+frontend/UI polish unless a new backend product decision is approved.
 
 ## Global Validation Standard
 
