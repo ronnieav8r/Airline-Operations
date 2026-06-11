@@ -1794,6 +1794,26 @@ Prompt 240 is complete. `npm run smoke:duty-rest-snapshot` now verifies that
 live duty/rest readiness output is persisted into `ReleaseReadinessSnapshot` and
 `ReleaseReadinessFinding` rows, including evaluator subfindings in details JSON.
 
+Prompt 241 is complete. Duty/rest backend status is documented as MVP-complete
+for the current warning-only policy in `docs/DUTY_REST_MVP_STATUS.md`. Hard
+enforcement, legal signatures, outside-flying ledger, transportation
+classification, reserve/standby modeling, reduced-rest debt, and actual
+flight-time calculations remain post-MVP.
+
+Next backend-MVP batch:
+
+```text
+Prompt 242: Crew Scheduling Runtime QA Planning
+```
+
+Scope:
+
+- Runtime-test schedule periods, pattern preview/generation, publishing,
+  requests, time off, and crew portal behavior.
+- Fix only clear runtime/data-integrity bugs.
+- Do not add assignment automation, duty/rest hard enforcement, provider
+  integrations, imports, signatures, or frontend polish.
+
 Next FlightLeg cutover step:
 
 ```text

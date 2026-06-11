@@ -65,6 +65,9 @@ The smoke captures a real readiness snapshot from live readiness helper output
 and verifies the persisted `duty-rest` finding includes evaluator subfindings.
 Results are tracked in `docs/DUTY_REST_SCENARIO_QA_LOG.md`.
 
+Prompt 241 docs refresh status: complete. The current MVP boundary is captured
+in `docs/DUTY_REST_MVP_STATUS.md`.
+
 ## Deferred
 
 - Hard enforcement.

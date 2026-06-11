@@ -34,11 +34,11 @@ operator review later. They do not decide legal compliance yet.
 - Outside commercial flying is marked required where cumulative limits depend on
   all commercial flying.
 
-## Prompt 207 Calculator Plan
+## Calculator Boundary
 
-Prompt 207 selected the first duty/rest calculator boundary. Prompt 208 should
-implement a narrow warning-only evaluator using existing data and existing
-snapshot storage.
+Prompt 207 selected the first duty/rest calculator boundary. Prompt 208-240
+implemented and validated that first warning-only evaluator using existing data
+and existing snapshot storage.
 
 Selected first scope:
 
@@ -52,8 +52,8 @@ Selected first scope:
 - Scheduled-block duration estimates only, because AeroOps does not yet store a
   dedicated airborne/logged flight-time field.
 
-Prompt 208 should produce readable `PASS`, `WARNING`, `MISSING_INPUT`,
-`NOT_APPLICABLE`, and `DEFERRED` findings. It must not hard-block release,
+The evaluator produces readable `PASS`, `WARNING`, `MISSING_INPUT`,
+`NOT_APPLICABLE`, and `DEFERRED` findings. It does not hard-block release,
 schedule publishing, aircraft assignment, or crew portal actions.
 
 ## Prompt 208 Implementation
@@ -149,3 +149,6 @@ finding.
 Prompt 240 is complete. `npm run smoke:duty-rest-snapshot` verifies that the
 live duty/rest readiness item persists into release-readiness snapshots with
 evaluator subfindings in JSON details.
+
+Prompt 241 is complete. Current duty/rest MVP status is summarized in
+`docs/DUTY_REST_MVP_STATUS.md`.

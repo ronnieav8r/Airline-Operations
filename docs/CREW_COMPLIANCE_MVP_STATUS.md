@@ -26,6 +26,8 @@ Implemented backend capabilities:
   - `CrewDutyPeriod`,
   - `CrewRestPeriod`.
 - Local smoke coverage for compliance writes, route access, and role redirects.
+- Duty/rest calculator status is tracked separately in
+  `docs/DUTY_REST_MVP_STATUS.md`.
 
 ## MVP Boundaries
 

@@ -155,6 +155,9 @@ Prompt 240 is complete. A focused duty/rest snapshot smoke verifies live
 readiness output persists a warning-only `duty-rest` finding and evaluator
 subfindings into release-readiness snapshot records.
 
+Prompt 241 is complete. Duty/rest backend status is documented as MVP-complete
+for warning-only use in `docs/DUTY_REST_MVP_STATUS.md`.
+
 - `236`: Duty/rest scenario QA planning.
 - `237`: Duty/rest scenario seed foundation.
 - `238`: Duty/rest diagnostic foundation.
@@ -170,6 +173,9 @@ Acceptance for this batch:
 - Missing outside flying, transportation classification, reserve/standby,
   reduced-rest debt, actual flight-time, and hard enforcement remain explicit
   deferrals.
+
+Batch 4 status: complete for backend MVP. Next batch is crew scheduling runtime
+hardening.
 
 ## Batch 5: Crew Scheduling Runtime Hardening
 
