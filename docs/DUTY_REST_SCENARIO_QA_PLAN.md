@@ -55,6 +55,16 @@ show supported current-leg scheduled-block findings as `PASS` when the scheduled
 block is inside the one-pilot or two-pilot estimate, while outside commercial
 flying and transportation gaps remain visible as missing/deferred items.
 
+Prompt 240 snapshot QA status: complete. Use:
+
+```powershell
+npm run smoke:duty-rest-snapshot
+```
+
+The smoke captures a real readiness snapshot from live readiness helper output
+and verifies the persisted `duty-rest` finding includes evaluator subfindings.
+Results are tracked in `docs/DUTY_REST_SCENARIO_QA_LOG.md`.
+
 ## Deferred
 
 - Hard enforcement.

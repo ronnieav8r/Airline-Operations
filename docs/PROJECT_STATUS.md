@@ -1790,6 +1790,10 @@ scheduled-block estimates as passing when the visible FlightLeg block is within
 the one-pilot or two-pilot Part 135 unscheduled estimate, while keeping outside
 commercial flying and other unavailable inputs as warning/missing-input items.
 
+Prompt 240 is complete. `npm run smoke:duty-rest-snapshot` now verifies that
+live duty/rest readiness output is persisted into `ReleaseReadinessSnapshot` and
+`ReleaseReadinessFinding` rows, including evaluator subfindings in details JSON.
+
 Next FlightLeg cutover step:
 
 ```text

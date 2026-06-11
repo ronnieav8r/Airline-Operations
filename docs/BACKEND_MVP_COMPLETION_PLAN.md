@@ -151,6 +151,10 @@ Prompt 239 is complete. The calculator now separates current-leg scheduled-block
 estimate pass/fail from missing outside-commercial-flying ledger data, preserving
 warning-first behavior while making supported pass scenarios clearer.
 
+Prompt 240 is complete. A focused duty/rest snapshot smoke verifies live
+readiness output persists a warning-only `duty-rest` finding and evaluator
+subfindings into release-readiness snapshot records.
+
 - `236`: Duty/rest scenario QA planning.
 - `237`: Duty/rest scenario seed foundation.
 - `238`: Duty/rest diagnostic foundation.

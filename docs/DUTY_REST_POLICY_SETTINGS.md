@@ -145,3 +145,7 @@ estimates now pass when the visible FlightLeg scheduled block is within the
 Part 135 unscheduled estimate. Full rolling commercial totals still remain
 separate missing-input warnings through the outside-commercial-flying ledger
 finding.
+
+Prompt 240 is complete. `npm run smoke:duty-rest-snapshot` verifies that the
+live duty/rest readiness item persists into release-readiness snapshots with
+evaluator subfindings in JSON details.
