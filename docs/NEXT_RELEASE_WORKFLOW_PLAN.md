@@ -78,3 +78,7 @@ actor role in release audit events and snapshot metadata.
 Prompt 226 planning status: complete. The next release workflow implementation
 should add explicit final ReleasePackage capture as a separate `FINALIZED`
 package row, not as an automatic side effect of release actions.
+
+Prompt 227 implementation status: complete. Explicit final ReleasePackage
+capture is implemented, and Prompt 228 should QA the full warning-only release
+backend.

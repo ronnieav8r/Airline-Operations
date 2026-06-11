@@ -66,6 +66,11 @@ explicit `ADMIN` or `OPS` action that creates a new `FINALIZED`
 existing preview packages, change `FlightRelease.status`, or hard-block release
 actions.
 
+Prompt 227 implementation status: complete. FlightLeg detail now supports
+explicit final package capture. Final capture creates a new `FINALIZED`
+`ReleasePackage` with `finalizedAt` and `capturedById`, preserves preview
+history, and does not mutate `FlightRelease.status`.
+
 ## First Workflow Direction
 
 Start with read-only preview, then explicit preview capture. Do not create

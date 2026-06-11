@@ -1728,6 +1728,11 @@ explicit `ADMIN` or `OPS` action that creates a new `FINALIZED`
 `ReleasePackage` with `finalizedAt` and `capturedById`, preserves preview
 packages, and does not change `FlightRelease.status` or add hard blocking.
 
+Prompt 227 is complete. FlightLeg detail now has explicit ReleasePackage
+preview and final capture actions. Final capture creates a separate
+`FINALIZED` package with `finalizedAt` and `capturedById`; release behavior
+remains warning-only and `FlightRelease.status` is unchanged by package capture.
+
 Next FlightLeg cutover step:
 
 ```text

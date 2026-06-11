@@ -1055,8 +1055,11 @@ export async function captureReleasePreviewSnapshotAction(flightLegId: string) {
   redirect(`/operations-control/${flightLegId}?snapshotMessage=Preview%20snapshot%20captured.`);
 }
 
-export async function captureReleasePackagePreviewAction(flightLegId: string) {
-  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+async function captureReleasePackage(
+  flightLegId: string,
+  currentUser: CurrentUser,
+  status: ReleasePackageStatus,
+) {
   let capturedPackageNumber: string;
 
   try {
@@ -1266,12 +1269,16 @@ export async function captureReleasePackagePreviewAction(flightLegId: string) {
         flightReleaseId: controlRecord.release.id,
         readinessSnapshotId: latestReadinessSnapshot?.id ?? null,
         packageNumber: buildPackageNumber(flightLeg.flightNumber, flightLeg.scheduledDeparture),
-        status: ReleasePackageStatus.PREVIEW,
+        status,
+        finalizedAt: status === ReleasePackageStatus.FINALIZED ? new Date() : null,
         capturedById: currentUser.id,
         summary: {
           requiredCount,
           presentRequiredCount,
-          source: "manual-preview-capture",
+          source:
+            status === ReleasePackageStatus.FINALIZED
+              ? "manual-final-capture"
+              : "manual-preview-capture",
         },
         evidenceLinks: {
           create: evidenceLinks,
@@ -1289,9 +1296,35 @@ export async function captureReleasePackagePreviewAction(flightLegId: string) {
     redirect(`/operations-control/${flightLegId}?packageError=${encodeError(error)}#release-package`);
   }
 
+  return capturedPackageNumber;
+}
+
+export async function captureReleasePackagePreviewAction(flightLegId: string) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH]);
+  const capturedPackageNumber = await captureReleasePackage(
+    flightLegId,
+    currentUser,
+    ReleasePackageStatus.PREVIEW,
+  );
+
   redirect(
     `/operations-control/${flightLegId}?packageMessage=${encodeURIComponent(
       `ReleasePackage ${capturedPackageNumber} captured.`,
+    )}#release-package`,
+  );
+}
+
+export async function captureReleasePackageFinalAction(flightLegId: string) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
+  const capturedPackageNumber = await captureReleasePackage(
+    flightLegId,
+    currentUser,
+    ReleasePackageStatus.FINALIZED,
+  );
+
+  redirect(
+    `/operations-control/${flightLegId}?packageMessage=${encodeURIComponent(
+      `ReleasePackage ${capturedPackageNumber} finalized.`,
     )}#release-package`,
   );
 }

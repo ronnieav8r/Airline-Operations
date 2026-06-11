@@ -75,6 +75,9 @@ Prompt 226 is complete as planning. Final ReleasePackage capture should be an
 explicit `ADMIN` or `OPS` action that creates a new `FINALIZED` package while
 leaving preview packages and `FlightRelease.status` unchanged.
 
+Prompt 227 is complete. ReleasePackage final capture now exists as an explicit
+backend workflow and preserves warning-only release behavior.
+
 ## Batch 2: Release Backend Completion
 
 - `224`: MVP release lifecycle planning.

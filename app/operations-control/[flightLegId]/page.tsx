@@ -5,12 +5,14 @@ import {
   DispatchPackageStatus,
   FlightLocatingStatus,
   ManifestStatus,
+  ReleasePackageStatus,
   ReleaseStatus,
   WeightBalanceStatus,
 } from "@prisma/client";
 
 import {
   cancelFlightLegReleaseAction,
+  captureReleasePackageFinalAction,
   captureReleasePackagePreviewAction,
   captureReleasePreviewSnapshotAction,
   markFlightLegReleasedAction,
@@ -515,6 +517,9 @@ function SectionGroup({
 
 function ReleasePackagePreview({ detail }: { detail: ReleaseEvidenceDetail }) {
   const latestPackage = detail.releasePackages[0] ?? null;
+  const latestFinalPackage =
+    detail.releasePackages.find((releasePackage) => releasePackage.status === ReleasePackageStatus.FINALIZED) ??
+    null;
   const latestUsableWeightBalanceRun =
     detail.weightBalanceRuns.find((run) => run.status !== WeightBalanceStatus.VOIDED) ?? null;
   const currentAirworthinessRelease =
@@ -572,7 +577,8 @@ function ReleasePackagePreview({ detail }: { detail: ReleaseEvidenceDetail }) {
           <div>
             <h3 className="font-semibold text-zinc-950">ReleasePackage Preview</h3>
             <p className="mt-1 text-sm text-zinc-600">
-              Read-only package completeness context. Capture/finalize actions are deferred.
+              Read-only package completeness context with explicit preview and final capture.
+              Final capture does not change FlightRelease status.
             </p>
           </div>
           <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700">
@@ -580,17 +586,27 @@ function ReleasePackagePreview({ detail }: { detail: ReleaseEvidenceDetail }) {
           </span>
         </div>
 
-        <form action={captureReleasePackagePreviewAction.bind(null, detail.id)} className="mt-4">
-          <button
-            className="rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
-            type="submit"
-          >
-            Capture package preview
-          </button>
-          <p className="mt-2 text-xs text-zinc-500">
-            Creates a preview package record only. FlightRelease status is not changed.
-          </p>
-        </form>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <form action={captureReleasePackagePreviewAction.bind(null, detail.id)}>
+            <button
+              className="rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
+              type="submit"
+            >
+              Capture package preview
+            </button>
+          </form>
+          <form action={captureReleasePackageFinalAction.bind(null, detail.id)}>
+            <button
+              className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+              type="submit"
+            >
+              Capture final package
+            </button>
+          </form>
+        </div>
+        <p className="mt-2 text-xs text-zinc-500">
+          Preview and final capture create package records only. FlightRelease status is not changed.
+        </p>
 
         {latestPackage ? (
           <div className="mt-4 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
@@ -603,6 +619,13 @@ function ReleasePackagePreview({ detail }: { detail: ReleaseEvidenceDetail }) {
             No ReleasePackage has been captured yet. This does not block current release actions.
           </div>
         )}
+
+        {latestFinalPackage ? (
+          <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+            Latest finalized package {latestFinalPackage.packageNumber} was finalized{" "}
+            {toDateTimeLabel(latestFinalPackage.finalizedAt ?? latestFinalPackage.capturedAt)}.
+          </div>
+        ) : null}
 
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {packageItems.map((item) => (
@@ -645,6 +668,39 @@ function ReleasePackagePreview({ detail }: { detail: ReleaseEvidenceDetail }) {
               ))}
             </tbody>
           </table>
+        </div>
+      ) : null}
+
+      {detail.releasePackages.length ? (
+        <div className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h4 className="text-sm font-semibold text-zinc-950">Recent package captures</h4>
+          <div className="mt-3 space-y-2">
+            {detail.releasePackages.map((releasePackage) => (
+              <div
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-100 bg-zinc-50 px-3 py-2 text-sm"
+                key={releasePackage.id}
+              >
+                <div>
+                  <p className="font-medium text-zinc-900">{releasePackage.packageNumber}</p>
+                  <p className="text-xs text-zinc-500">
+                    Captured {toDateTimeLabel(releasePackage.capturedAt)}
+                    {releasePackage.finalizedAt
+                      ? `; finalized ${toDateTimeLabel(releasePackage.finalizedAt)}`
+                      : ""}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    releasePackage.status === ReleasePackageStatus.FINALIZED
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-sky-100 text-sky-800"
+                  }`}
+                >
+                  {releasePackage.status}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
     </div>

@@ -830,80 +830,86 @@ async function smokeReleasePackageCapture(
   flightLeg: SmokeFlightLegResult,
   evidence: SmokeReleaseEvidenceResult,
 ) {
+  const evidenceLinks = [
+    {
+      evidenceId: flightLeg.operationalControlRecordId,
+      evidenceLabel: "Operational control record",
+      evidenceType: ReleasePackageEvidenceType.OPERATIONAL_CONTROL_RECORD,
+      isRequired: true,
+      statusLabel: "captured",
+    },
+    {
+      evidenceId: flightLeg.flightReleaseId,
+      evidenceLabel: "Flight release",
+      evidenceType: ReleasePackageEvidenceType.FLIGHT_RELEASE,
+      isRequired: true,
+      statusLabel: "planned",
+    },
+    {
+      evidenceId: evidence.readinessSnapshotId,
+      evidenceLabel: "Release readiness snapshot",
+      evidenceType: ReleasePackageEvidenceType.RELEASE_READINESS_SNAPSHOT,
+      isRequired: true,
+      statusLabel: "warning-only",
+    },
+    {
+      evidenceId: evidence.manifestId,
+      evidenceLabel: "Manifest",
+      evidenceType: ReleasePackageEvidenceType.MANIFEST,
+      isRequired: true,
+      statusLabel: "ready",
+    },
+    {
+      evidenceId: evidence.weightBalanceRunId,
+      evidenceLabel: "Weight and balance",
+      evidenceType: ReleasePackageEvidenceType.WEIGHT_BALANCE_RUN,
+      isRequired: true,
+      statusLabel: "approved",
+    },
+    {
+      evidenceId: evidence.flightLocatingRecordId,
+      evidenceLabel: "Flight locating",
+      evidenceType: ReleasePackageEvidenceType.FLIGHT_LOCATING_RECORD,
+      isRequired: true,
+      statusLabel: "active",
+    },
+    {
+      evidenceId: evidence.dispatchPackageId,
+      evidenceLabel: "Dispatch package",
+      evidenceType: ReleasePackageEvidenceType.DISPATCH_PACKAGE,
+      isRequired: true,
+      statusLabel: "reviewed",
+    },
+    {
+      evidenceId: evidence.flightPlanReferenceId,
+      evidenceLabel: "Flight plan reference",
+      evidenceType: ReleasePackageEvidenceType.FLIGHT_PLAN_REFERENCE,
+      isRequired: false,
+      statusLabel: "filed",
+    },
+  ];
+
+  const releasePackageBase = {
+    capturedById: context.adminUserId,
+    flightLegId: flightLeg.flightLegId,
+    flightReleaseId: flightLeg.flightReleaseId,
+    operationalControlRecordId: flightLeg.operationalControlRecordId,
+    readinessSnapshotId: evidence.readinessSnapshotId,
+    summary: {
+      evidenceLinks: 8,
+      smokeLabel,
+    },
+  };
+
   const releasePackage = await prisma.releasePackage.create({
     data: {
-      capturedById: context.adminUserId,
+      ...releasePackageBase,
       evidenceLinks: {
-        create: [
-          {
-            evidenceId: flightLeg.operationalControlRecordId,
-            evidenceLabel: "Operational control record",
-            evidenceType: ReleasePackageEvidenceType.OPERATIONAL_CONTROL_RECORD,
-            isRequired: true,
-            statusLabel: "captured",
-          },
-          {
-            evidenceId: flightLeg.flightReleaseId,
-            evidenceLabel: "Flight release",
-            evidenceType: ReleasePackageEvidenceType.FLIGHT_RELEASE,
-            isRequired: true,
-            statusLabel: "planned",
-          },
-          {
-            evidenceId: evidence.readinessSnapshotId,
-            evidenceLabel: "Release readiness snapshot",
-            evidenceType: ReleasePackageEvidenceType.RELEASE_READINESS_SNAPSHOT,
-            isRequired: true,
-            statusLabel: "warning-only",
-          },
-          {
-            evidenceId: evidence.manifestId,
-            evidenceLabel: "Manifest",
-            evidenceType: ReleasePackageEvidenceType.MANIFEST,
-            isRequired: true,
-            statusLabel: "ready",
-          },
-          {
-            evidenceId: evidence.weightBalanceRunId,
-            evidenceLabel: "Weight and balance",
-            evidenceType: ReleasePackageEvidenceType.WEIGHT_BALANCE_RUN,
-            isRequired: true,
-            statusLabel: "approved",
-          },
-          {
-            evidenceId: evidence.flightLocatingRecordId,
-            evidenceLabel: "Flight locating",
-            evidenceType: ReleasePackageEvidenceType.FLIGHT_LOCATING_RECORD,
-            isRequired: true,
-            statusLabel: "active",
-          },
-          {
-            evidenceId: evidence.dispatchPackageId,
-            evidenceLabel: "Dispatch package",
-            evidenceType: ReleasePackageEvidenceType.DISPATCH_PACKAGE,
-            isRequired: true,
-            statusLabel: "reviewed",
-          },
-          {
-            evidenceId: evidence.flightPlanReferenceId,
-            evidenceLabel: "Flight plan reference",
-            evidenceType: ReleasePackageEvidenceType.FLIGHT_PLAN_REFERENCE,
-            isRequired: false,
-            statusLabel: "filed",
-          },
-        ],
+        create: evidenceLinks,
       },
-      flightLegId: flightLeg.flightLegId,
-      flightReleaseId: flightLeg.flightReleaseId,
       notes: `${smokeLabel} release package preview`,
-      operationalControlRecordId: flightLeg.operationalControlRecordId,
       packageNumber: `${smokeLabel}-PKG`,
-      readinessSnapshotId: evidence.readinessSnapshotId,
       status: ReleasePackageStatus.PREVIEW,
-      summary: {
-        evidenceLinks: 8,
-        smokeLabel,
-      },
     },
     select: {
       _count: {
@@ -912,12 +918,38 @@ async function smokeReleasePackageCapture(
       id: true,
     },
   });
+  const finalizedAt = new Date();
+  const finalPackage = await prisma.releasePackage.create({
+    data: {
+      ...releasePackageBase,
+      evidenceLinks: {
+        create: evidenceLinks,
+      },
+      finalizedAt,
+      notes: `${smokeLabel} release package final`,
+      packageNumber: `${smokeLabel}-PKG-FINAL`,
+      status: ReleasePackageStatus.FINALIZED,
+    },
+    select: {
+      _count: {
+        select: { evidenceLinks: true },
+      },
+      finalizedAt: true,
+      id: true,
+      status: true,
+    },
+  });
 
-  if (releasePackage._count.evidenceLinks !== 8) {
+  if (
+    releasePackage._count.evidenceLinks !== 8 ||
+    finalPackage._count.evidenceLinks !== 8 ||
+    finalPackage.status !== ReleasePackageStatus.FINALIZED ||
+    !finalPackage.finalizedAt
+  ) {
     throw new Error("ReleasePackage capture smoke verification failed.");
   }
 
-  console.log(`release package: captured preview ${releasePackage.id}`);
+  console.log(`release package: captured preview ${releasePackage.id} and final ${finalPackage.id}`);
 }
 
 async function smokeReleaseAudit(context: SmokeContext, flightLeg: SmokeFlightLegResult, snapshotId: string) {

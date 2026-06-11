@@ -65,6 +65,10 @@ Prompt 226 planning status: complete. Final package capture should create a new
 preview packages, set `finalizedAt` and `capturedById`, and leave
 `FlightRelease.status` unchanged.
 
+Prompt 227 implementation status: complete. The app now has explicit preview
+and final ReleasePackage capture actions. Final capture creates a separate
+`FINALIZED` package and keeps release behavior warning-only.
+
 ## Deferred
 
 - Hard release blocking.
