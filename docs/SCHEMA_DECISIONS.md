@@ -524,3 +524,8 @@ Prompt 221 inventories the remaining legacy `Flight` dependencies in
 unchanged: legacy `Flight`, `FlightPassenger`, `CrewFlightLog`,
 `OperationalControlRecord.flightId`, `FlightLeg.legacyFlightId`, and
 `/api/flights/[id]` compatibility paths remain in place for MVP.
+
+Prompt 222 completes the remaining safe internal consumer cutover without a
+schema change. FlightLeg is now the preferred internal read identity for the
+targeted crew, scheduling, and time-off surfaces; legacy `Flight` remains
+compatibility/archive.

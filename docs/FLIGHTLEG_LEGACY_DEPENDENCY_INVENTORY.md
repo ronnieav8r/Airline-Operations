@@ -64,6 +64,10 @@ Implement only the cutover-ready internal consumer changes. Do not remove
 legacy models, response fields, API paths, bridge writes, seed/backfill logic,
 parity diagnostics, or archive tables.
 
+Prompt 222 implementation status: complete. The remaining cutover-ready
+internal consumers now prefer FlightLeg-primary reads, with explicit legacy
+fallback retained for unbridged rows.
+
 ## Stop Conditions
 
 - A consumer requires reinterpreting `flightId` as `FlightLeg.id`.

@@ -5,7 +5,7 @@ import {
   TimeOffRequestType,
 } from "@prisma/client";
 
-import { resolveFlightCoverage } from "@/lib/crew-resolution";
+import { getUpcomingCoverageFlightsForAircrafts } from "@/lib/flightleg-upcoming-coverage";
 import { prisma } from "@/lib/prisma";
 
 const ACTIVE_REVIEW_STATUSES = [TimeOffRequestStatus.PENDING, TimeOffRequestStatus.APPROVED];
@@ -92,7 +92,7 @@ async function getTimeOffConflictWarnings(
   const scheduleStart = startOfDay(windowStart);
   const scheduleEnd = addDays(startOfDay(windowEnd), 1);
 
-  const [overlappingRequests, schedules, assignments, flights] = await Promise.all([
+  const [overlappingRequests, schedules, assignments] = await Promise.all([
     prisma.timeOffRequest.findMany({
       where: {
         id: { not: request.id },
@@ -142,23 +142,6 @@ async function getTimeOffConflictWarnings(
         endsAt: true,
       },
     }),
-    prisma.flight.findMany({
-      where: {
-        scheduledDeparture: { lt: windowEnd },
-        scheduledArrival: { gt: windowStart },
-      },
-      select: {
-        id: true,
-        flightNumber: true,
-        scheduledDeparture: true,
-        flightLeg: {
-          select: {
-            id: true,
-          },
-        },
-      },
-      orderBy: { scheduledDeparture: "asc" },
-    }),
   ]);
 
   if (overlappingRequests.length > 0) {
@@ -184,9 +167,11 @@ async function getTimeOffConflictWarnings(
   }
 
   const assignedFlights = [];
+  const aircraftIds = Array.from(new Set(assignments.map((assignment) => assignment.aircraft.id)));
+  const flights = await getUpcomingCoverageFlightsForAircrafts(aircraftIds, windowStart, windowEnd);
+
   for (const flight of flights) {
-    const coverage = await resolveFlightCoverage(flight.flightLeg?.id ?? flight.id);
-    const isAssigned = coverage?.assignedCrew.some(
+    const isAssigned = flight.coverage?.assignedCrew.some(
       (assignment) => assignment.crewMemberId === request.crewMemberId,
     );
 

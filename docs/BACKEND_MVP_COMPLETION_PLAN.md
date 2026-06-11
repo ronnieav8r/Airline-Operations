@@ -55,6 +55,10 @@ in `docs/FLIGHTLEG_LEGACY_DEPENDENCY_INVENTORY.md`. Prompt 222 should only
 cut over the remaining Flight-first internal read consumers; compatibility and
 archive dependencies remain in place.
 
+Prompt 222 is complete. Remaining safe internal consumers now prefer
+FlightLeg-primary reads while preserving legacy fallback and API compatibility.
+Prompt 223 should QA the cutover and document the MVP archive policy.
+
 ## Batch 2: Release Backend Completion
 
 - `224`: MVP release lifecycle planning.

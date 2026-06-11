@@ -1,5 +1,4 @@
 import {
-  AssignmentStatus,
   CrewComplianceRecordStatus,
   CrewLogisticsNeedStatus,
   CrewScheduleEntryStatus,
@@ -7,14 +6,15 @@ import {
   CrewScheduleRequestStatus,
   DutyStatus,
   EmploymentStatus,
-  FlightLegStatus,
-  FlightStatus,
   Prisma,
   SeatRole,
   TimeOffRequestStatus,
 } from "@prisma/client";
 
-import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
+import {
+  getUpcomingCoverageFlightsForAircrafts,
+  UpcomingCoverageFlight,
+} from "@/lib/flightleg-upcoming-coverage";
 import { prisma } from "@/lib/prisma";
 
 export const CREW_MEMBER_CONTEXT_WINDOW_DAYS = 7;
@@ -296,89 +296,24 @@ const crewMemberContextSelect = {
   },
 } satisfies Prisma.CrewMemberSelect;
 
-const flightContextSelect = {
-  id: true,
-  aircraftId: true,
-  flightNumber: true,
-  scheduledDeparture: true,
-  scheduledArrival: true,
-  status: true,
-  departureStation: {
-    select: {
-      code: true,
-    },
-  },
-  arrivalStation: {
-    select: {
-      code: true,
-    },
-  },
-  aircraft: {
-    select: {
-      id: true,
-      tailNumber: true,
-    },
-  },
-  flightLeg: {
-    select: {
-      id: true,
-      flightNumber: true,
-      scheduledDeparture: true,
-      scheduledArrival: true,
-      status: true,
-      departureStation: {
-        select: {
-          code: true,
-        },
-      },
-      arrivalStation: {
-        select: {
-          code: true,
-        },
-      },
-      aircraftAssignments: {
-        where: {
-          status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
-        },
-        select: {
-          aircraft: {
-            select: {
-              id: true,
-              tailNumber: true,
-            },
-          },
-        },
-        orderBy: { assignedAt: "desc" },
-        take: 1,
-      },
-    },
-  },
-} satisfies Prisma.FlightSelect;
-
 type CrewMemberContextPayload = Prisma.CrewMemberGetPayload<{
   select: typeof crewMemberContextSelect;
 }>;
 
-type FlightContextPayload = Prisma.FlightGetPayload<{
-  select: typeof flightContextSelect;
-}>;
-
-function coverageLookupId(flight: FlightContextPayload): string {
-  return flight.flightLeg?.id ?? flight.id;
-}
-
-export type CrewMemberContextFlight = {
-  id: string;
-  flightLegId: string | null;
-  flightNumber: string;
-  scheduledDeparture: Date;
-  scheduledArrival: Date;
-  status: FlightStatus | FlightLegStatus;
-  route: string;
-  tailNumber: string;
-  aircraftId: string;
+export type CrewMemberContextFlight = Pick<
+  UpcomingCoverageFlight,
+  | "aircraftId"
+  | "coverage"
+  | "flightLegId"
+  | "flightNumber"
+  | "id"
+  | "route"
+  | "scheduledArrival"
+  | "scheduledDeparture"
+  | "status"
+  | "tailNumber"
+> & {
   seatRoles: SeatRole[];
-  coverage: FlightCoverage | null;
 };
 
 export type CrewMemberContextData = CrewMemberContextPayload & {
@@ -454,41 +389,6 @@ function hasActiveAssignment(
   now: Date,
 ): boolean {
   return assignment.startsAt <= now && (!assignment.endsAt || assignment.endsAt > now);
-}
-
-function normalizeFlight(
-  flight: FlightContextPayload,
-  coverage: FlightCoverage | null,
-): Omit<CrewMemberContextFlight, "seatRoles"> {
-  if (flight.flightLeg) {
-    const assignedAircraft = flight.flightLeg.aircraftAssignments[0]?.aircraft;
-
-    return {
-      id: flight.id,
-      flightLegId: flight.flightLeg.id,
-      flightNumber: flight.flightLeg.flightNumber ?? flight.flightNumber,
-      scheduledDeparture: flight.flightLeg.scheduledDeparture,
-      scheduledArrival: flight.flightLeg.scheduledArrival,
-      status: flight.flightLeg.status,
-      route: `${flight.flightLeg.departureStation.code} -> ${flight.flightLeg.arrivalStation.code}`,
-      tailNumber: assignedAircraft?.tailNumber ?? flight.aircraft.tailNumber,
-      aircraftId: assignedAircraft?.id ?? flight.aircraft.id,
-      coverage,
-    };
-  }
-
-  return {
-    id: flight.id,
-    flightLegId: null,
-    flightNumber: flight.flightNumber,
-    scheduledDeparture: flight.scheduledDeparture,
-    scheduledArrival: flight.scheduledArrival,
-    status: flight.status,
-    route: `${flight.departureStation.code} -> ${flight.arrivalStation.code}`,
-    tailNumber: flight.aircraft.tailNumber,
-    aircraftId: flight.aircraft.id,
-    coverage,
-  };
 }
 
 function hasQualificationWarning(
@@ -660,31 +560,14 @@ export async function getCrewMemberContextData(
   const aircraftIds = Array.from(
     new Set(activeAssignments.map((assignment) => assignment.aircraft.id)),
   );
-  const flights =
-    aircraftIds.length === 0
-      ? []
-      : await prisma.flight.findMany({
-          where: {
-            aircraftId: { in: aircraftIds },
-            scheduledDeparture: {
-              gte: now,
-              lt: windowEnd,
-            },
-          },
-          orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
-          select: flightContextSelect,
-        });
-
-  const flightsWithCoverage = await Promise.all(
-    flights.map(async (flight) => ({
-      flight,
-      coverage: await resolveFlightCoverage(coverageLookupId(flight)),
-    })),
+  const flightsWithCoverage = await getUpcomingCoverageFlightsForAircrafts(
+    aircraftIds,
+    now,
+    windowEnd,
   );
-  const upcomingFlights = flightsWithCoverage.flatMap(({ flight, coverage }) => {
-    const baseFlight = normalizeFlight(flight, coverage);
+  const upcomingFlights = flightsWithCoverage.flatMap((flight) => {
     const seatRoles =
-      coverage?.assignedCrew
+      flight.coverage?.assignedCrew
         .filter((assignment) => assignment.crewMemberId === crewMember.id)
         .map((assignment) => assignment.seatRole) ?? [];
 
@@ -692,7 +575,7 @@ export async function getCrewMemberContextData(
       return [];
     }
 
-    return [{ ...baseFlight, seatRoles }];
+    return [{ ...flight, seatRoles }];
   });
   const schedulesInWindow = crewMember.schedules;
   const scheduleEntriesInWindow = crewMember.scheduleEntries;

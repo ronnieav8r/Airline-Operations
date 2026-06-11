@@ -136,11 +136,84 @@ const schedulingFlightSelect = {
   },
 } satisfies Prisma.FlightSelect;
 
+const schedulingFlightLegSelect = {
+  id: true,
+  legacyFlightId: true,
+  flightNumber: true,
+  scheduledDeparture: true,
+  scheduledArrival: true,
+  actualDeparture: true,
+  actualArrival: true,
+  status: true,
+  notes: true,
+  departureStation: {
+    select: {
+      code: true,
+      city: true,
+      timezone: true,
+    },
+  },
+  arrivalStation: {
+    select: {
+      code: true,
+      city: true,
+      timezone: true,
+    },
+  },
+  aircraftAssignments: {
+    where: {
+      status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+    },
+    select: {
+      aircraft: {
+        select: {
+          id: true,
+          tailNumber: true,
+          type: true,
+          status: true,
+        },
+      },
+    },
+    orderBy: {
+      assignedAt: "desc",
+    },
+    take: 1,
+  },
+  operationalControlRecord: {
+    select: {
+      controllingEntity: true,
+      operatingAuthority: {
+        select: {
+          operatingPart: true,
+          displayName: true,
+        },
+      },
+      authorityRevision: {
+        select: {
+          revisionLabel: true,
+        },
+      },
+      release: {
+        select: {
+          status: true,
+          releasedAt: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.FlightLegSelect;
+
 type SchedulingFlightPayload = Prisma.FlightGetPayload<{
   select: typeof schedulingFlightSelect;
 }>;
 
-type SchedulingControlRecord = NonNullable<SchedulingFlightPayload["operationalControlRecord"]>;
+type SchedulingFlightLegPayload = Prisma.FlightLegGetPayload<{
+  select: typeof schedulingFlightLegSelect;
+}>;
+
+type SchedulingControlRecord = NonNullable<
+  SchedulingFlightPayload["operationalControlRecord"] | SchedulingFlightLegPayload["operationalControlRecord"]
+>;
 
 export type ScheduleAlert = {
   id: string;
@@ -242,30 +315,6 @@ function buildDayGroups(flights: ScheduleFlight[]): ScheduleDayGroup[] {
 }
 
 function normalizeFlight(flight: SchedulingFlightPayload): Omit<ScheduleFlight, "coverage" | "alerts"> {
-  if (flight.flightLeg) {
-    const assignedAircraft = flight.flightLeg.aircraftAssignments[0]?.aircraft ?? flight.aircraft;
-
-    return {
-      id: flight.id,
-      legacyFlightId: flight.id,
-      flightLegId: flight.flightLeg.id,
-      readSource: "FLIGHT_LEG",
-      flightNumber: flight.flightLeg.flightNumber ?? flight.flightNumber,
-      aircraftId: assignedAircraft.id,
-      scheduledDeparture: flight.flightLeg.scheduledDeparture,
-      scheduledArrival: flight.flightLeg.scheduledArrival,
-      actualDeparture: flight.flightLeg.actualDeparture,
-      actualArrival: flight.flightLeg.actualArrival,
-      status: flight.flightLeg.status,
-      notes: flight.notes,
-      departureStation: flight.flightLeg.departureStation,
-      arrivalStation: flight.flightLeg.arrivalStation,
-      aircraft: assignedAircraft,
-      operationalControlRecord:
-        flight.flightLeg.operationalControlRecord ?? flight.operationalControlRecord,
-    };
-  }
-
   return {
     id: flight.id,
     legacyFlightId: flight.id,
@@ -286,6 +335,37 @@ function normalizeFlight(flight: SchedulingFlightPayload): Omit<ScheduleFlight, 
   };
 }
 
+function normalizeFlightLeg(
+  flightLeg: SchedulingFlightLegPayload,
+): Omit<ScheduleFlight, "coverage" | "alerts"> | null {
+  const assignedAircraft = flightLeg.aircraftAssignments[0]?.aircraft;
+
+  if (!assignedAircraft) {
+    return null;
+  }
+
+  const legacyFlightId = flightLeg.legacyFlightId ?? flightLeg.id;
+
+  return {
+    id: legacyFlightId,
+    legacyFlightId,
+    flightLegId: flightLeg.id,
+    readSource: "FLIGHT_LEG",
+    flightNumber: flightLeg.flightNumber ?? "UNNUMBERED",
+    aircraftId: assignedAircraft.id,
+    scheduledDeparture: flightLeg.scheduledDeparture,
+    scheduledArrival: flightLeg.scheduledArrival,
+    actualDeparture: flightLeg.actualDeparture,
+    actualArrival: flightLeg.actualArrival,
+    status: flightLeg.status,
+    notes: flightLeg.notes,
+    departureStation: flightLeg.departureStation,
+    arrivalStation: flightLeg.arrivalStation,
+    aircraft: assignedAircraft,
+    operationalControlRecord: flightLeg.operationalControlRecord,
+  };
+}
+
 function coverageLookupId(flight: Pick<ScheduleFlight, "flightLegId" | "legacyFlightId">): string {
   return flight.flightLegId ?? flight.legacyFlightId;
 }
@@ -299,19 +379,46 @@ export async function getSchedulingData(): Promise<SchedulingData> {
   const windowEnd = new Date(now);
   windowEnd.setDate(windowEnd.getDate() + SCHEDULE_WINDOW_DAYS);
 
-  const flights = await prisma.flight.findMany({
-    where: {
-      scheduledDeparture: {
-        gte: now,
-        lt: windowEnd,
+  const [flightLegs, fallbackFlights] = await Promise.all([
+    prisma.flightLeg.findMany({
+      where: {
+        scheduledDeparture: {
+          gte: now,
+          lt: windowEnd,
+        },
       },
-    },
-    select: schedulingFlightSelect,
-    orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
-    take: SCHEDULE_LIMIT,
-  });
+      select: schedulingFlightLegSelect,
+      orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
+      take: SCHEDULE_LIMIT,
+    }),
+    prisma.flight.findMany({
+      where: {
+        flightLeg: null,
+        scheduledDeparture: {
+          gte: now,
+          lt: windowEnd,
+        },
+      },
+      select: schedulingFlightSelect,
+      orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
+      take: SCHEDULE_LIMIT,
+    }),
+  ]);
 
-  const normalizedBase = flights.map(normalizeFlight);
+  const normalizedBase = [
+    ...flightLegs.map(normalizeFlightLeg).filter((flight): flight is Omit<ScheduleFlight, "coverage" | "alerts"> => Boolean(flight)),
+    ...fallbackFlights.map(normalizeFlight),
+  ]
+    .sort((first, second) => {
+      const departureDelta = first.scheduledDeparture.getTime() - second.scheduledDeparture.getTime();
+
+      if (departureDelta !== 0) {
+        return departureDelta;
+      }
+
+      return first.flightNumber.localeCompare(second.flightNumber);
+    })
+    .slice(0, SCHEDULE_LIMIT);
   const legacyFlightIds = normalizedBase.map((flight) => flight.legacyFlightId);
   const aircraftIds = Array.from(new Set(normalizedBase.map((flight) => flight.aircraftId)));
 

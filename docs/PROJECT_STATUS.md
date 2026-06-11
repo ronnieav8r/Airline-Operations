@@ -1701,6 +1701,12 @@ only move remaining Flight-first internal read consumers to FlightLeg-primary
 reads while keeping bridge writes, compatibility APIs, seed/backfill behavior,
 parity diagnostics, and archive/history tables intact.
 
+Prompt 222 is complete. Crew roster, crew member context, crew scheduling
+planner, time-off conflict warnings, and scheduling board reads now prefer
+FlightLeg-primary coverage sources with legacy fallback for unbridged rows.
+Static checks, build, local DB prep, workflow smoke, route smoke, and browser
+smoke passed.
+
 Next FlightLeg cutover step:
 
 ```text

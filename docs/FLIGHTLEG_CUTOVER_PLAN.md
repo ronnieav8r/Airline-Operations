@@ -98,6 +98,9 @@ legacy API paths in the current macro scaffolding chain.
    FlightLeg-primary reads. Bridge writes, compatibility APIs, seed/backfill
    scripts, parity diagnostics, and archive/history tables remain legacy-aware.
 
+   Prompt 222 completed that consumer cutover for crew-facing planning
+   surfaces, time-off conflict warnings, and scheduling reads.
+
 ## Deferred
 
 - Dropping or renaming legacy `Flight`.

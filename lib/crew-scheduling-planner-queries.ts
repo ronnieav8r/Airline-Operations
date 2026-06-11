@@ -1,18 +1,18 @@
 import {
-  AssignmentStatus,
   CrewComplianceRecordStatus,
   CrewLogisticsNeedStatus,
   CrewScheduleEntryStatus,
   DutyStatus,
   EmploymentStatus,
-  FlightLegStatus,
-  FlightStatus,
   Prisma,
   SeatRole,
   TimeOffRequestStatus,
 } from "@prisma/client";
 
-import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
+import {
+  getUpcomingCoverageFlightsForAircrafts,
+  UpcomingCoverageFlight,
+} from "@/lib/flightleg-upcoming-coverage";
 import { prisma } from "@/lib/prisma";
 
 export const CREW_SCHEDULING_WINDOW_DAYS = 7;
@@ -226,87 +226,23 @@ const crewPlannerSelect = {
   },
 } satisfies Prisma.CrewMemberSelect;
 
-const flightPlannerSelect = {
-  id: true,
-  aircraftId: true,
-  flightNumber: true,
-  scheduledDeparture: true,
-  scheduledArrival: true,
-  status: true,
-  departureStation: {
-    select: {
-      code: true,
-    },
-  },
-  arrivalStation: {
-    select: {
-      code: true,
-    },
-  },
-  aircraft: {
-    select: {
-      tailNumber: true,
-    },
-  },
-  flightLeg: {
-    select: {
-      id: true,
-      flightNumber: true,
-      scheduledDeparture: true,
-      scheduledArrival: true,
-      status: true,
-      departureStation: {
-        select: {
-          code: true,
-        },
-      },
-      arrivalStation: {
-        select: {
-          code: true,
-        },
-      },
-      aircraftAssignments: {
-        where: {
-          status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
-        },
-        select: {
-          aircraft: {
-            select: {
-              id: true,
-              tailNumber: true,
-            },
-          },
-        },
-        orderBy: { assignedAt: "desc" },
-        take: 1,
-      },
-    },
-  },
-} satisfies Prisma.FlightSelect;
-
 type CrewPlannerPayload = Prisma.CrewMemberGetPayload<{
   select: typeof crewPlannerSelect;
 }>;
 
-type FlightPlannerPayload = Prisma.FlightGetPayload<{
-  select: typeof flightPlannerSelect;
-}>;
-
-function coverageLookupId(flight: FlightPlannerPayload): string {
-  return flight.flightLeg?.id ?? flight.id;
-}
-
-export type CrewPlannerFlight = {
-  id: string;
-  flightLegId: string | null;
-  flightNumber: string;
-  scheduledDeparture: Date;
-  scheduledArrival: Date;
-  status: FlightStatus | FlightLegStatus;
-  route: string;
-  tailNumber: string;
+export type CrewPlannerFlight = Pick<
+  UpcomingCoverageFlight,
+  | "coverage"
+  | "flightLegId"
+  | "flightNumber"
+  | "id"
+  | "route"
+  | "scheduledArrival"
+  | "scheduledDeparture"
+  | "status"
+  | "tailNumber"
+> & {
   seatRoles: SeatRole[];
-  coverage: FlightCoverage | null;
 };
 
 export type CrewPlannerMember = CrewPlannerPayload & {
@@ -378,39 +314,6 @@ function hasQualificationWarning(
 
     return !qualification || Boolean(qualification.expiresAt && qualification.expiresAt < flight.scheduledDeparture);
   });
-}
-
-function normalizeFlight(
-  flight: FlightPlannerPayload,
-  coverage: FlightCoverage | null,
-): Omit<CrewPlannerFlight, "seatRoles"> {
-  if (flight.flightLeg) {
-    const assignedAircraft = flight.flightLeg.aircraftAssignments[0]?.aircraft;
-
-    return {
-      id: flight.id,
-      flightLegId: flight.flightLeg.id,
-      flightNumber: flight.flightLeg.flightNumber ?? flight.flightNumber,
-      scheduledDeparture: flight.flightLeg.scheduledDeparture,
-      scheduledArrival: flight.flightLeg.scheduledArrival,
-      status: flight.flightLeg.status,
-      route: `${flight.flightLeg.departureStation.code} -> ${flight.flightLeg.arrivalStation.code}`,
-      tailNumber: assignedAircraft?.tailNumber ?? flight.aircraft.tailNumber,
-      coverage,
-    };
-  }
-
-  return {
-    id: flight.id,
-    flightLegId: null,
-    flightNumber: flight.flightNumber,
-    scheduledDeparture: flight.scheduledDeparture,
-    scheduledArrival: flight.scheduledArrival,
-    status: flight.status,
-    route: `${flight.departureStation.code} -> ${flight.arrivalStation.code}`,
-    tailNumber: flight.aircraft.tailNumber,
-    coverage,
-  };
 }
 
 function buildAvailabilityWarnings(
@@ -500,59 +403,52 @@ export async function getCrewSchedulingPlannerData(
   windowStart.setHours(0, 0, 0, 0);
   const windowDays = options.windowDays ?? CREW_SCHEDULING_WINDOW_DAYS;
   const windowEnd = addDays(windowStart, windowDays);
-  const [crewMembers, flights] = await Promise.all([
-    prisma.crewMember.findMany({
-      orderBy: [{ employmentStatus: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
-      select: {
-        ...crewPlannerSelect,
-        schedules: {
-          ...crewPlannerSelect.schedules,
-          where: {
-            date: {
-              gte: windowStart,
-              lt: windowEnd,
-            },
-          },
-        },
-        scheduleEntries: {
-          ...crewPlannerSelect.scheduleEntries,
-          where: {
-            status: {
-              in: [CrewScheduleEntryStatus.DRAFT, CrewScheduleEntryStatus.PUBLISHED],
-            },
-            date: {
-              gte: windowStart,
-              lt: windowEnd,
-            },
-          },
-        },
-        timeOffRequests: {
-          ...crewPlannerSelect.timeOffRequests,
-          where: {
-            status: { in: [TimeOffRequestStatus.PENDING, TimeOffRequestStatus.APPROVED] },
-            startDate: { lt: windowEnd },
-            endDate: { gte: windowStart },
+  const crewMembers = await prisma.crewMember.findMany({
+    orderBy: [{ employmentStatus: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
+    select: {
+      ...crewPlannerSelect,
+      schedules: {
+        ...crewPlannerSelect.schedules,
+        where: {
+          date: {
+            gte: windowStart,
+            lt: windowEnd,
           },
         },
       },
-    }),
-    prisma.flight.findMany({
-      where: {
-        scheduledDeparture: {
-          gte: windowStart,
-          lt: windowEnd,
+      scheduleEntries: {
+        ...crewPlannerSelect.scheduleEntries,
+        where: {
+          status: {
+            in: [CrewScheduleEntryStatus.DRAFT, CrewScheduleEntryStatus.PUBLISHED],
+          },
+          date: {
+            gte: windowStart,
+            lt: windowEnd,
+          },
         },
       },
-      orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
-      select: flightPlannerSelect,
-    }),
-  ]);
-
-  const flightsWithCoverage = await Promise.all(
-    flights.map(async (flight) => ({
-      flight,
-      coverage: await resolveFlightCoverage(coverageLookupId(flight)),
-    })),
+      timeOffRequests: {
+        ...crewPlannerSelect.timeOffRequests,
+        where: {
+          status: { in: [TimeOffRequestStatus.PENDING, TimeOffRequestStatus.APPROVED] },
+          startDate: { lt: windowEnd },
+          endDate: { gte: windowStart },
+        },
+      },
+    },
+  });
+  const aircraftIds = Array.from(
+    new Set(
+      crewMembers.flatMap((crewMember) =>
+        crewMember.assignments.map((assignment) => assignment.aircraft.id),
+      ),
+    ),
+  );
+  const flightsWithCoverage = await getUpcomingCoverageFlightsForAircrafts(
+    aircraftIds,
+    windowStart,
+    windowEnd,
   );
 
   const crewMembersWithPlanning = crewMembers.map((crewMember) => {
@@ -564,10 +460,9 @@ export async function getCrewSchedulingPlannerData(
     const timeOffInWindow = crewMember.timeOffRequests.filter((request) =>
       overlapsWindow(request.startDate, request.endDate, windowStart, windowEnd),
     );
-    const upcomingFlights = flightsWithCoverage.flatMap(({ flight, coverage }) => {
-      const baseFlight = normalizeFlight(flight, coverage);
+    const upcomingFlights = flightsWithCoverage.flatMap((flight) => {
       const seatRoles =
-        coverage?.assignedCrew
+        flight.coverage?.assignedCrew
           .filter((assignment) => assignment.crewMemberId === crewMember.id)
           .map((assignment) => assignment.seatRole) ?? [];
 
@@ -575,7 +470,7 @@ export async function getCrewSchedulingPlannerData(
         return [];
       }
 
-      return [{ ...baseFlight, seatRoles }];
+      return [{ ...flight, seatRoles }];
     });
     const complianceWarnings = buildComplianceWarnings(crewMember, now);
     const availabilityWarnings = buildAvailabilityWarnings(

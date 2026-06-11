@@ -1,5 +1,4 @@
 import {
-  AssignmentStatus,
   AircraftType,
   DutyStatus,
   EmploymentStatus,
@@ -10,7 +9,10 @@ import {
 import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
-import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
+import {
+  getUpcomingCoverageFlightsForAircrafts,
+  UpcomingCoverageFlight,
+} from "@/lib/flightleg-upcoming-coverage";
 
 export const dynamic = "force-dynamic";
 
@@ -21,19 +23,21 @@ type CrewMemberRow = Awaited<ReturnType<typeof getCrewRosterData>>["crewMembers"
 type CrewAssignmentRow = CrewMemberRow["assignments"][number];
 type QualificationRow = CrewMemberRow["qualifications"][number];
 
-type UpcomingFlightRow = {
-  id: string;
-  legacyFlightId: string;
-  flightLegId: string | null;
-  readSource: "FLIGHT_LEG" | "LEG_MISSING_FALLBACK_FLIGHT";
-  flightNumber: string;
-  scheduledDeparture: Date;
-  status: FlightStatus | FlightLegStatus;
-  departureCode: string;
-  arrivalCode: string;
-  tailNumber: string;
+type UpcomingFlightRow = Pick<
+  UpcomingCoverageFlight,
+  | "arrivalCode"
+  | "coverage"
+  | "departureCode"
+  | "flightLegId"
+  | "flightNumber"
+  | "id"
+  | "legacyFlightId"
+  | "readSource"
+  | "scheduledDeparture"
+  | "status"
+  | "tailNumber"
+> & {
   seatRoles: SeatRole[];
-  coverage: FlightCoverage | null;
 };
 
 function addDays(value: Date, days: number): Date {
@@ -261,13 +265,6 @@ function coverageBadgeClasses(flight: UpcomingFlightRow): string {
   return "border-rose-200 bg-rose-50 text-rose-700";
 }
 
-function coverageLookupId(flight: {
-  flightLeg: { id: string } | null;
-  id: string;
-}): string {
-  return flight.flightLeg?.id ?? flight.id;
-}
-
 async function getCrewRosterData() {
   const now = new Date();
   const upcomingEnd = addDays(now, UPCOMING_WINDOW_DAYS);
@@ -332,81 +329,10 @@ async function getCrewRosterData() {
     ),
   );
 
-  const upcomingFlights =
-    aircraftIds.length === 0
-      ? []
-      : await prisma.flight.findMany({
-          where: {
-            aircraftId: { in: aircraftIds },
-            scheduledDeparture: {
-              gte: now,
-              lt: upcomingEnd,
-            },
-          },
-          orderBy: { scheduledDeparture: "asc" },
-          select: {
-            id: true,
-            aircraftId: true,
-            flightNumber: true,
-            scheduledDeparture: true,
-            status: true,
-            departureStation: {
-              select: {
-                code: true,
-              },
-            },
-            arrivalStation: {
-              select: {
-                code: true,
-              },
-            },
-            aircraft: {
-              select: {
-                tailNumber: true,
-              },
-            },
-            flightLeg: {
-              select: {
-                id: true,
-                flightNumber: true,
-                scheduledDeparture: true,
-                status: true,
-                departureStation: {
-                  select: {
-                    code: true,
-                  },
-                },
-                arrivalStation: {
-                  select: {
-                    code: true,
-                  },
-                },
-                aircraftAssignments: {
-                  where: {
-                    status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
-                  },
-                  select: {
-                    aircraft: {
-                      select: {
-                        tailNumber: true,
-                      },
-                    },
-                  },
-                  orderBy: {
-                    assignedAt: "desc",
-                  },
-                  take: 1,
-                },
-              },
-            },
-          },
-        });
-
-  const flightsWithCoverage = await Promise.all(
-    upcomingFlights.map(async (flight) => ({
-      ...flight,
-      coverage: await resolveFlightCoverage(coverageLookupId(flight)),
-    })),
+  const flightsWithCoverage = await getUpcomingCoverageFlightsForAircrafts(
+    aircraftIds,
+    now,
+    upcomingEnd,
   );
 
   const upcomingFlightsByCrewId = new Map<string, UpcomingFlightRow[]>();
@@ -424,19 +350,15 @@ async function getCrewRosterData() {
       return [
         {
           id: flight.id,
-          legacyFlightId: flight.id,
-          flightLegId: flight.flightLeg?.id ?? null,
-          readSource: flight.flightLeg
-            ? ("FLIGHT_LEG" as const)
-            : ("LEG_MISSING_FALLBACK_FLIGHT" as const),
-          flightNumber: flight.flightLeg?.flightNumber ?? flight.flightNumber,
-          scheduledDeparture: flight.flightLeg?.scheduledDeparture ?? flight.scheduledDeparture,
-          status: flight.flightLeg?.status ?? flight.status,
-          departureCode: flight.flightLeg?.departureStation.code ?? flight.departureStation.code,
-          arrivalCode: flight.flightLeg?.arrivalStation.code ?? flight.arrivalStation.code,
-          tailNumber:
-            flight.flightLeg?.aircraftAssignments[0]?.aircraft.tailNumber ??
-            flight.aircraft.tailNumber,
+          legacyFlightId: flight.legacyFlightId,
+          flightLegId: flight.flightLegId,
+          readSource: flight.readSource,
+          flightNumber: flight.flightNumber,
+          scheduledDeparture: flight.scheduledDeparture,
+          status: flight.status,
+          departureCode: flight.departureCode,
+          arrivalCode: flight.arrivalCode,
+          tailNumber: flight.tailNumber,
           seatRoles,
           coverage: flight.coverage,
         },
