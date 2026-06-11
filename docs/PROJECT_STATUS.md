@@ -9,11 +9,12 @@ before starting a new AeroOps slice.
 
 The current active tracks are:
 
-- **Backend MVP completion**: Prompt 217 starts the backend-first completion
-  chain in `docs/BACKEND_MVP_COMPLETION_PLAN.md`. The next work should build a
-  full backend smoke harness, then finish FlightLeg cutover, release backend,
-  crew compliance admin, duty/rest QA/refinement, scheduling runtime hardening,
-  and logistics hardening before major frontend/UI polish.
+- **Backend MVP state**: backend MVP scaffolding is complete for the current
+  warning-first scope. See `docs/BACKEND_MVP_STATE.md`,
+  `docs/BACKEND_MVP_FINAL_SMOKE_QA.md`, and
+  `docs/BACKEND_MVP_GAP_REVIEW.md`.
+- **Frontend readiness**: Prompt 255 should plan the handoff into UI/frontend
+  work using the stable backend contracts.
 - **FlightLeg cutover**: Prompt 216 is implemented. Crew-heavy internal
   coverage consumers now prefer FlightLeg IDs while keeping legacy fallback and
   public API compatibility. Legacy `Flight` remains compatibility/archive.
@@ -31,15 +32,19 @@ Recent prompt-numbering note:
 - Prompt 214 planned the next FlightLeg coverage consumer cutover.
 - Prompt 217 starts the backend-MVP completion chain.
 - Prompt 218 plans the backend-MVP smoke harness expansion.
+- Prompt 252 completed the final backend MVP smoke pass.
+- Prompt 253 found no backend MVP blockers.
+- Prompt 254 cleaned up backend MVP status docs.
 
 ## Current State
 
 AeroOps Center is a Next.js, TypeScript, Prisma, PostgreSQL, and Render app for
 small airline, charter, or air taxi operations.
 
-The app is currently an operational console backed by live Prisma reads. Most
-surfaces remain read-focused, and Operations Control now has the first
-controlled FlightLeg create/edit workflow.
+The app is currently a backend-MVP-ready operational console backed by live
+Prisma reads/writes. It remains warning-first and intentionally avoids hard
+release blocking, legal signatures, provider integrations, file uploads, and
+destructive legacy `Flight` removal.
 
 It has:
 
@@ -1855,17 +1860,20 @@ Prompt 253 is complete. `docs/BACKEND_MVP_GAP_REVIEW.md` records no backend
 MVP blockers after the final smoke pass; remaining gaps are post-MVP or
 later-policy work.
 
+Prompt 254 is complete. Backend MVP status docs are cleaned up around
+`docs/BACKEND_MVP_STATE.md`.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 254: Backend MVP Status Cleanup
+Prompt 255: Frontend Readiness Planning
 ```
 
 Scope:
 
-- Clean up onboarding/status docs into a concise backend-MVP state.
-- Keep post-MVP gaps separated from active frontend readiness work.
-- Do not change app behavior.
+- Plan the handoff into frontend/UI work.
+- List stable backend contracts the frontend can rely on.
+- Identify the first UI polish tracks without changing app behavior.
 
 Next FlightLeg cutover step:
 

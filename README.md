@@ -20,19 +20,21 @@ reviewable slices and should not attempt the full product in one pass.
 - Smoke testing: [docs/SMOKE_TESTING.md](docs/SMOKE_TESTING.md)
 - Builder onboarding: [docs/BUILDER_ONBOARDING.md](docs/BUILDER_ONBOARDING.md)
 - Current project status: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
+- Backend MVP state: [docs/BACKEND_MVP_STATE.md](docs/BACKEND_MVP_STATE.md)
 - Macro scaffolding plan: [docs/MAJOR_SCAFFOLDING_MACRO_PLAN.md](docs/MAJOR_SCAFFOLDING_MACRO_PLAN.md)
 - Macro QA log: [docs/MACRO_SCAFFOLDING_QA_LOG.md](docs/MACRO_SCAFFOLDING_QA_LOG.md)
 - Current-state DBML: [docs/schema.current.dbml](docs/schema.current.dbml)
 - FlightLeg planning DBML: [docs/schema.planning.flightleg.dbml](docs/schema.planning.flightleg.dbml)
 
-The current implementation is a broad operational scaffolding slice, not the
-final regulatory product. It includes FlightLeg-centered operations control,
-release evidence, ReleasePackage previews, aircraft context, aircraft
+The current implementation is backend-MVP-ready for the warning-first
+operational scope. It includes FlightLeg-centered operations control, release
+evidence, ReleasePackage preview/final capture, aircraft context, aircraft
 airworthiness, crew assignment, crew compliance, crew scheduling lifecycle,
 crew self-service, and crew logistics foundations.
 
-Runtime QA for recent macro-chain work should be completed when Docker Desktop
-is available. Static validation currently passes.
+The latest backend MVP smoke pass completed with static, local DB, workflow,
+route, and browser smoke checks passing. Major remaining work should shift
+toward frontend/UI polish unless a new backend product decision is made.
 
 ## Core Schema Decision
 

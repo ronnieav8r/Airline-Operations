@@ -73,24 +73,29 @@ separate planning slice.
 
 ## Validation Status
 
-Latest macro QA static checks passed:
+Latest backend MVP QA passed:
 
 - `npm run prisma:validate`
 - `npm run typecheck`
 - `npm run lint`
 - `npm run build`
-
-Runtime DB/browser QA is now available locally through the smoke harness. Some
-older chains still need backend-MVP runtime QA catch-up because they were first
-implemented when Docker Desktop was unavailable.
+- local DB prep and seed,
+- focused backend workflow smokes,
+- role/route smoke,
+- browser smoke.
 
 Command-driven role smoke testing is available through
 `docs/SMOKE_TESTING.md`. The harness creates gated smoke users for every role
 and checks app routes with real DB-backed session cookies.
 
+The concise backend-MVP state is in `docs/BACKEND_MVP_STATE.md`. The final
+smoke QA is in `docs/BACKEND_MVP_FINAL_SMOKE_QA.md`, and remaining post-MVP
+gaps are in `docs/BACKEND_MVP_GAP_REVIEW.md`.
+
 ## Required Reading Before New Work
 
 - `docs/PROJECT_STATUS.md`
+- `docs/BACKEND_MVP_STATE.md`
 - `docs/SCHEMA_DECISIONS.md`
 - `docs/MAJOR_SCAFFOLDING_MACRO_PLAN.md`
 - `docs/BACKEND_MVP_COMPLETION_PLAN.md`
@@ -105,14 +110,14 @@ and checks app routes with real DB-backed session cookies.
 
 ## Next Safe Planning Choices
 
-The active priority is backend-MVP completion before major frontend/UI polish.
-Choose one narrow slice at a time from `docs/BACKEND_MVP_COMPLETION_PLAN.md`.
+The active priority is frontend readiness planning and then major frontend/UI
+polish. Choose one narrow slice at a time, and preserve the backend contracts
+documented in `docs/BACKEND_MVP_STATE.md`.
 
-- Backend smoke harness planning and implementation.
-- FlightLeg cutover QA and archive policy.
-- Release backend completion while staying warning-only.
-- Crew compliance admin workflows.
-- Duty/rest calculator QA/refinement.
-- Crew scheduling and logistics runtime hardening.
+- Frontend readiness planning.
+- Information architecture cleanup.
+- UI polish for dashboard, Operations Control, aircraft, crew, scheduling,
+  release evidence, compliance, and logistics.
+- Backend follow-ups only when they are explicit post-MVP decisions.
 
 Avoid broad multi-feature implementation without a fresh plan.

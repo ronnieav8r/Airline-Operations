@@ -250,7 +250,7 @@ Acceptance for this batch:
 
 - `252`: Backend MVP final smoke pass. Status: complete.
 - `253`: Backend MVP gap review. Status: complete.
-- `254`: Backend MVP status cleanup.
+- `254`: Backend MVP status cleanup. Status: complete.
 - `255`: Frontend readiness planning.
 
 Acceptance for this batch:
@@ -262,6 +262,9 @@ Acceptance for this batch:
 Prompt 253 found no backend MVP blockers after the final smoke pass. Remaining
 gaps are recorded in `docs/BACKEND_MVP_GAP_REVIEW.md` as post-MVP or
 later-policy work.
+
+Prompt 254 cleaned up the backend MVP state in `docs/BACKEND_MVP_STATE.md` and
+updated onboarding/status docs. Prompt 255 should plan the frontend/UI handoff.
 
 ## Global Validation Standard
 

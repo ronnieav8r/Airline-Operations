@@ -15,6 +15,15 @@ These decisions supersede the Bubble-derived reference docs where they differ.
   a separate app/database; `Operator` is a legal/business entity inside that
   deployment, not a SaaS tenant boundary.
 
+## Backend MVP State
+
+Backend MVP scaffolding is complete for the current warning-first operational
+scope. See `docs/BACKEND_MVP_STATE.md`, `docs/BACKEND_MVP_FINAL_SMOKE_QA.md`,
+and `docs/BACKEND_MVP_GAP_REVIEW.md`.
+
+Future schema changes should be treated as post-MVP backend work unless they
+are required to support approved frontend readiness or UI polish.
+
 ## Major Scaffolding Roadmap
 
 The remaining major scaffolding is now planned in
@@ -72,9 +81,10 @@ FlightLeg -> FlightLocatingRecord
 FlightLeg -> ReleasePackage
 ```
 
-The current `Flight` table remains the active UI/API read model. `FlightLeg`
-now exists additively as the future operational anchor, bridged by
-`FlightLeg.legacyFlightId`.
+`FlightLeg` is now the primary operational identity for new backend work. The
+legacy `Flight` table remains compatibility/archive, bridged by
+`FlightLeg.legacyFlightId`, and must not be destructively removed without a
+later retirement plan.
 
 Temporary write policy: the first FlightLeg write workflow maintains both
 records. Creating or editing a FlightLeg through Operations Control also
@@ -193,10 +203,10 @@ Required cockpit coverage for v1:
 - `CPT`
 - `FO`
 
-Coverage APIs accept either a legacy `Flight.id` or a `FlightLeg.id`. When a
-FlightLeg ID is provided, the resolver follows `FlightLeg.legacyFlight` and
-keeps the response shape keyed to the legacy Flight ID. Aircraft-block
-assignment remains the active crew source of truth.
+Coverage APIs accept either a legacy `Flight.id` or a `FlightLeg.id`. Responses
+include FlightLeg-primary identity aliases while preserving legacy fields and
+compatibility paths. Aircraft-block assignment remains the active crew source
+of truth.
 
 Missing roles should produce coverage warnings.
 
