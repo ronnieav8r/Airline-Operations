@@ -151,6 +151,11 @@ async function getTimeOffConflictWarnings(
         id: true,
         flightNumber: true,
         scheduledDeparture: true,
+        flightLeg: {
+          select: {
+            id: true,
+          },
+        },
       },
       orderBy: { scheduledDeparture: "asc" },
     }),
@@ -180,7 +185,7 @@ async function getTimeOffConflictWarnings(
 
   const assignedFlights = [];
   for (const flight of flights) {
-    const coverage = await resolveFlightCoverage(flight.id);
+    const coverage = await resolveFlightCoverage(flight.flightLeg?.id ?? flight.id);
     const isAssigned = coverage?.assignedCrew.some(
       (assignment) => assignment.crewMemberId === request.crewMemberId,
     );

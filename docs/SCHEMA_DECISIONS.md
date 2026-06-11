@@ -514,3 +514,7 @@ Prompt 214 plans the next cutover as internal-consumer migration only. Helpers
 and pages should prefer FlightLeg IDs for coverage lookups where bridges exist,
 while preserving legacy fallback rows, public compatibility paths, and legacy
 response fields.
+
+Prompt 216 implements that first internal-consumer migration for crew-heavy
+coverage callers. This remains a behavior-preserving cutover: no schema change,
+API path change, response-field removal, or legacy `Flight` retirement.

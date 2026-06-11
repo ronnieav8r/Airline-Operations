@@ -261,6 +261,13 @@ function coverageBadgeClasses(flight: UpcomingFlightRow): string {
   return "border-rose-200 bg-rose-50 text-rose-700";
 }
 
+function coverageLookupId(flight: {
+  flightLeg: { id: string } | null;
+  id: string;
+}): string {
+  return flight.flightLeg?.id ?? flight.id;
+}
+
 async function getCrewRosterData() {
   const now = new Date();
   const upcomingEnd = addDays(now, UPCOMING_WINDOW_DAYS);
@@ -398,7 +405,7 @@ async function getCrewRosterData() {
   const flightsWithCoverage = await Promise.all(
     upcomingFlights.map(async (flight) => ({
       ...flight,
-      coverage: await resolveFlightCoverage(flight.id),
+      coverage: await resolveFlightCoverage(coverageLookupId(flight)),
     })),
   );
 

@@ -87,8 +87,8 @@ legacy API paths in the current macro scaffolding chain.
    coverage consumers to prefer `FlightLeg.id` where a bridge exists, while
    preserving legacy `Flight.id` fallback and current API compatibility.
 
-   First implementation target should focus on crew-heavy read helpers and page
-   consumers. Parity diagnostics and backfill scripts should remain
+   Prompt 216 completed the first implementation target for crew-heavy read
+   helpers and page consumers. Parity diagnostics and backfill scripts remain
    legacy-aware because they intentionally compare or create bridge records.
 
 ## Deferred

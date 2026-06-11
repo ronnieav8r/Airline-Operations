@@ -286,6 +286,10 @@ function normalizeFlight(flight: SchedulingFlightPayload): Omit<ScheduleFlight, 
   };
 }
 
+function coverageLookupId(flight: Pick<ScheduleFlight, "flightLegId" | "legacyFlightId">): string {
+  return flight.flightLegId ?? flight.legacyFlightId;
+}
+
 function releaseStatus(flight: ScheduleFlight): ReleaseStatus | null {
   return flight.operationalControlRecord?.release?.status ?? null;
 }
@@ -333,7 +337,7 @@ export async function getSchedulingData(): Promise<SchedulingData> {
   const scheduleFlights: ScheduleFlight[] = await Promise.all(
     normalizedBase.map(async (flight) => ({
       ...flight,
-      coverage: await resolveFlightCoverage(flight.legacyFlightId),
+      coverage: await resolveFlightCoverage(coverageLookupId(flight)),
       alerts: alerts.filter(
         (alert) => alert.flightId === flight.legacyFlightId || alert.aircraftId === flight.aircraftId,
       ),

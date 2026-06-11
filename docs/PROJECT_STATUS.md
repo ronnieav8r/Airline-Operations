@@ -1654,20 +1654,27 @@ is internal-consumer migration: page/query helpers should prefer `FlightLeg.id`
 for coverage lookups when a bridge exists and keep legacy `Flight.id` fallback
 for unbridged rows. API paths and legacy response fields remain unchanged.
 
+Prompt 216 is complete. Crew-heavy internal coverage consumers now prefer
+FlightLeg IDs when a bridge exists and keep legacy Flight IDs as fallback for
+unbridged rows. Public `/api/flights/[id]/crew` and
+`/api/flights/[id]/coverage` compatibility paths and response fields remain
+unchanged.
+
 Prompt 215 is complete as a docs-only cleanup slice. The project status now
 calls out the recent Prompt 208 skip/pivot, the 209-213 logistics/FlightLeg
 detour, and the active next-step tracks.
 
-Next FlightLeg cutover implementation:
+Next FlightLeg cutover step:
 
 ```text
-Prompt 216: FlightLeg Coverage Consumer Cutover Foundation
+FlightLeg coverage consumer QA / legacy retirement planning checkpoint
 ```
 
 Scope:
 
-- Migrate internal crew-heavy coverage consumers to prefer FlightLeg IDs.
-- Preserve legacy fallback and all existing API compatibility.
+- Verify internal coverage consumers continue to match legacy resolver outputs.
+- Decide whether another read-consumer cutover remains before retirement
+  planning.
 - Keep destructive legacy `Flight` removal deferred until later.
 
 Deferred follow-up to keep on the roadmap:

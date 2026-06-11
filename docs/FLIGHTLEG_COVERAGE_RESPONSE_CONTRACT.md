@@ -82,3 +82,7 @@ legacy `Flight.id` fallback for unbridged rows.
 
 API paths and response fields remain compatibility-stable until a separate
 versioned API transition is planned.
+
+Prompt 216 implements the first internal consumer migration for crew-heavy
+coverage callers. New internal code should continue using FlightLeg IDs for
+coverage lookups whenever a bridge exists.

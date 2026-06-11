@@ -363,6 +363,10 @@ type FlightContextPayload = Prisma.FlightGetPayload<{
   select: typeof flightContextSelect;
 }>;
 
+function coverageLookupId(flight: FlightContextPayload): string {
+  return flight.flightLeg?.id ?? flight.id;
+}
+
 export type CrewMemberContextFlight = {
   id: string;
   flightLegId: string | null;
@@ -674,7 +678,7 @@ export async function getCrewMemberContextData(
   const flightsWithCoverage = await Promise.all(
     flights.map(async (flight) => ({
       flight,
-      coverage: await resolveFlightCoverage(flight.id),
+      coverage: await resolveFlightCoverage(coverageLookupId(flight)),
     })),
   );
   const upcomingFlights = flightsWithCoverage.flatMap(({ flight, coverage }) => {
