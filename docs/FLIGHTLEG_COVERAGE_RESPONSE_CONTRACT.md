@@ -72,3 +72,13 @@ Use these fields for new code:
 - Dropping `Flight`, `FlightPassenger`, or `CrewFlightLog`.
 - Removing `OperationalControlRecord.flightId`.
 - Removing `FlightLeg.legacyFlightId`.
+
+## Next Consumer Cutover
+
+Prompt 214 plans the next safe internal migration after the response aliases:
+page/query consumers should prefer `operationalFlightLegId` or known
+`FlightLeg.id` values for coverage lookups when a bridge exists, while keeping
+legacy `Flight.id` fallback for unbridged rows.
+
+API paths and response fields remain compatibility-stable until a separate
+versioned API transition is planned.

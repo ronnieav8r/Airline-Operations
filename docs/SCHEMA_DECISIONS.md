@@ -509,3 +509,8 @@ routes now expose the FlightLeg-primary aliases while preserving existing
 fields and accepting both `FlightLeg.id` and legacy `Flight.id` inputs. Legacy
 `Flight` remains compatibility/archive and should not be removed without a
 separate retirement plan.
+
+Prompt 214 plans the next cutover as internal-consumer migration only. Helpers
+and pages should prefer FlightLeg IDs for coverage lookups where bridges exist,
+while preserving legacy fallback rows, public compatibility paths, and legacy
+response fields.

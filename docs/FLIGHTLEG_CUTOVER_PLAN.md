@@ -82,6 +82,15 @@ legacy API paths in the current macro scaffolding chain.
    docs/FLIGHTLEG_COVERAGE_RESPONSE_CONTRACT.md
    ```
 
+5. **Internal Consumer Cutover**
+   Prompt 214 planned the next additive step after Prompt 213: migrate internal
+   coverage consumers to prefer `FlightLeg.id` where a bridge exists, while
+   preserving legacy `Flight.id` fallback and current API compatibility.
+
+   First implementation target should focus on crew-heavy read helpers and page
+   consumers. Parity diagnostics and backfill scripts should remain
+   legacy-aware because they intentionally compare or create bridge records.
+
 ## Deferred
 
 - Dropping or renaming legacy `Flight`.

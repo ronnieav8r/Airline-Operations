@@ -1627,17 +1627,22 @@ linked legacy Flight ID return equivalent crew/coverage data with the expected
 identity fields. This is a response contract transition only; legacy `Flight`
 remains compatibility/archive.
 
-Next FlightLeg cutover planning:
+Prompt 214 is complete as a docs/planning slice. The next safe post-213 cutover
+is internal-consumer migration: page/query helpers should prefer `FlightLeg.id`
+for coverage lookups when a bridge exists and keep legacy `Flight.id` fallback
+for unbridged rows. API paths and legacy response fields remain unchanged.
+
+Next FlightLeg cutover implementation:
 
 ```text
-Legacy Flight retirement planning checkpoint
+Prompt 216: FlightLeg Coverage Consumer Cutover Foundation
 ```
 
 Scope:
 
-- Decide the next safe read/API migration step after additive response aliases.
-- Keep destructive legacy `Flight` removal deferred until all callers and parity
-  diagnostics remain clean across multiple runtime QA passes.
+- Migrate internal crew-heavy coverage consumers to prefer FlightLeg IDs.
+- Preserve legacy fallback and all existing API compatibility.
+- Keep destructive legacy `Flight` removal deferred until later.
 
 Deferred follow-up to keep on the roadmap:
 
