@@ -229,6 +229,10 @@ Prompt 250 is complete. Crew logistics workbench runtime QA passed with a
 focused smoke for `/crew/logistics` filters, grouping, role gate redirects,
 and cross-link rendering.
 
+Prompt 251 is complete. Manual Crew Logistics is backend MVP-complete for the
+current manual coordination boundary and documented in
+`docs/CREW_LOGISTICS_MVP_STATUS.md`.
+
 - `248`: Logistics runtime QA planning.
 - `249`: Crew logistics workflow QA.
 - `250`: Logistics workbench QA and fixes.

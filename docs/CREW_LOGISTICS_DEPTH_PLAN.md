@@ -26,14 +26,13 @@ automation tool.
   `/crew/[crewMemberId]/logistics`.
 - Crew detail, crew planner, aircraft context, and aircraft crew assignment show
   logistics context and cross-links.
+- The central ops/admin `/crew/logistics` workbench is implemented and
+  runtime-tested for filters, grouping, role gates, and cross-links.
 
 ## Next Direction
 
-The next implementation should add a central `/crew/logistics` workbench for
-ops/admin users. It should be read-only for the central board and route users to
-existing crew-scoped edit pages for mutations.
-
-Minimum workbench behavior:
+The next logistics direction is post-MVP provider/automation planning only
+after the backend MVP closure pass. The current MVP workbench behavior is:
 
 - Summary cards for open, requested, booked, overdue, missing provider details,
   and missing crew location context.
@@ -53,6 +52,10 @@ existing crew-scoped management workflows. No schema, provider integration,
 booking automation, expense workflow, crew self-service logistics write,
 schedule mutation, aircraft assignment mutation, release mutation, or duty/rest
 mutation was added.
+
+Prompt 251 status: complete. Manual Crew Logistics is backend MVP-complete for
+the current manual coordination boundary. See
+`docs/CREW_LOGISTICS_MVP_STATUS.md`.
 
 ## Provider Integration Boundary
 

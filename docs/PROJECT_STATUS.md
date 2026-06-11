@@ -1843,19 +1843,21 @@ Prompt 250 is complete. `npm run smoke:crew-logistics-workbench` verifies the
 central logistics workbench filters, grouping modes, role gate redirect, and
 cross-link rendering.
 
+Prompt 251 is complete. Manual Crew Logistics is backend MVP-complete for the
+current coordination boundary and documented in
+`docs/CREW_LOGISTICS_MVP_STATUS.md`.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 251: Logistics Docs Refresh
+Prompt 252: Backend MVP Final Smoke Pass
 ```
 
 Scope:
 
-- Refresh logistics docs after runtime QA.
-- Mark manual crew logistics backend MVP-complete for the current scope if no
-  new QA blockers are found.
-- Keep provider integrations, live booking, expenses, crew self-service
-  logistics writes, and automatic positioning recommendations deferred.
+- Run the full backend MVP static, route, browser, and workflow smoke suite.
+- Document failures as Prompt 252 QA results.
+- Fix only clear bugs that do not require a product decision.
 
 Next FlightLeg cutover step:
 

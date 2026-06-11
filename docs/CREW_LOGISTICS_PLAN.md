@@ -62,6 +62,9 @@ Ops/admin write workflows should follow after read surfaces.
 
 ## Prompt Status
 
+Manual Crew Logistics backend MVP status: complete for the current manual
+coordination boundary. See `docs/CREW_LOGISTICS_MVP_STATUS.md`.
+
 Prompt 198 planning status: complete. Prompt 199 should implement additive
 schema only for crew location records and logistics needs.
 
@@ -141,3 +144,10 @@ verifies the central `/crew/logistics` workbench renders for admin/ops,
 redirects crew users, supports status/type/crew/aircraft/station filters,
 supports status/type/aircraft/needed-by grouping, and preserves workbench
 cross-links.
+
+Prompt 251 docs refresh status: complete. Manual Crew Logistics is documented
+as backend MVP-complete for the current manual coordination scope. Provider
+integrations, live booking, expense/payment workflow, file uploads, crew
+self-service logistics writes, automatic positioning recommendations, schedule
+mutation, aircraft assignment mutation, release behavior changes, and duty/rest
+hard enforcement remain post-MVP.

@@ -48,6 +48,8 @@ Verify:
 
 ## Prompt 251: Docs Refresh
 
+Status: complete.
+
 After runtime QA:
 
 - Update `docs/CREW_LOGISTICS_QA_LOG.md`.

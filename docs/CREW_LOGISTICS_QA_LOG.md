@@ -83,6 +83,30 @@ Runtime QA passed locally.
   workflow, FlightLeg detail where linked, and crew-scoped logistics
   management.
 
+## Prompt 251 Logistics Docs Refresh
+
+### Result
+
+Docs refresh complete.
+
+### Status
+
+Manual Crew Logistics is backend MVP-complete for the current manual
+coordination boundary.
+
+### Evidence
+
+- Workflow QA passed in Prompt 249.
+- Workbench QA passed in Prompt 250.
+- MVP status is recorded in `docs/CREW_LOGISTICS_MVP_STATUS.md`.
+
+### Deferred
+
+Provider integrations, live booking, expenses, file uploads, crew self-service
+logistics writes, automatic positioning recommendations, schedule mutation,
+aircraft assignment mutation, release behavior changes, and duty/rest hard
+enforcement remain post-MVP.
+
 ## Prompt 202 Static QA
 
 ### Scope Reviewed
