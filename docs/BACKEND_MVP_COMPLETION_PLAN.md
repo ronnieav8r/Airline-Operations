@@ -248,7 +248,7 @@ Acceptance for this batch:
 
 ## Batch 7: Backend MVP Closure
 
-- `252`: Backend MVP final smoke pass.
+- `252`: Backend MVP final smoke pass. Status: complete.
 - `253`: Backend MVP gap review.
 - `254`: Backend MVP status cleanup.
 - `255`: Frontend readiness planning.

@@ -1847,17 +1847,21 @@ Prompt 251 is complete. Manual Crew Logistics is backend MVP-complete for the
 current coordination boundary and documented in
 `docs/CREW_LOGISTICS_MVP_STATUS.md`.
 
+Prompt 252 is complete. The final backend MVP smoke pass is recorded in
+`docs/BACKEND_MVP_FINAL_SMOKE_QA.md`; all static, DB prep, workflow, route, and
+browser smoke checks passed.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 252: Backend MVP Final Smoke Pass
+Prompt 253: Backend MVP Gap Review
 ```
 
 Scope:
 
-- Run the full backend MVP static, route, browser, and workflow smoke suite.
-- Document failures as Prompt 252 QA results.
-- Fix only clear bugs that do not require a product decision.
+- Review remaining gaps after the full smoke pass.
+- Classify gaps as MVP blockers or post-MVP deferred work.
+- Do not add new backend features unless the gap blocks core MVP use.
 
 Next FlightLeg cutover step:
 
