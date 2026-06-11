@@ -1785,6 +1785,11 @@ Prompt 238 is complete. `/internal/duty-rest-scenarios` now provides a read-only
 diagnostic for seeded duty/rest scenario FlightLegs and their live evaluator
 findings.
 
+Prompt 239 is complete. The duty/rest calculator now treats current-leg
+scheduled-block estimates as passing when the visible FlightLeg block is within
+the one-pilot or two-pilot Part 135 unscheduled estimate, while keeping outside
+commercial flying and other unavailable inputs as warning/missing-input items.
+
 Next FlightLeg cutover step:
 
 ```text

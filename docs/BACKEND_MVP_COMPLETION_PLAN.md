@@ -147,6 +147,10 @@ duty-rest QA fixtures for those cases.
 Prompt 238 is complete. A read-only internal duty/rest scenario diagnostic now
 shows live evaluator output for seeded fixtures.
 
+Prompt 239 is complete. The calculator now separates current-leg scheduled-block
+estimate pass/fail from missing outside-commercial-flying ledger data, preserving
+warning-first behavior while making supported pass scenarios clearer.
+
 - `236`: Duty/rest scenario QA planning.
 - `237`: Duty/rest scenario seed foundation.
 - `238`: Duty/rest diagnostic foundation.

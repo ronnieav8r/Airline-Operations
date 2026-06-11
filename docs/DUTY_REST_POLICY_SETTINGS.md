@@ -139,3 +139,9 @@ duty/rest QA FlightLeg fixtures when `RUN_DUTY_REST_SCENARIOS=1` is set.
 
 Prompt 238 is complete. `/internal/duty-rest-scenarios` now shows read-only live
 evaluator output for seeded duty/rest scenarios.
+
+Prompt 239 is complete. Current-leg one-pilot and two-pilot scheduled-block
+estimates now pass when the visible FlightLeg scheduled block is within the
+Part 135 unscheduled estimate. Full rolling commercial totals still remain
+separate missing-input warnings through the outside-commercial-flying ledger
+finding.

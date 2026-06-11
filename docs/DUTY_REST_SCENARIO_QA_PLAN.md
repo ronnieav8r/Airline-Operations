@@ -50,6 +50,11 @@ Prompt 238 implementation status: complete. Use:
 The route evaluates seeded scenario FlightLegs live and shows expected outcome,
 finding status, message, rule key, and details JSON.
 
+Prompt 239 refinement status: complete. The Part 135 pass scenario should now
+show supported current-leg scheduled-block findings as `PASS` when the scheduled
+block is inside the one-pilot or two-pilot estimate, while outside commercial
+flying and transportation gaps remain visible as missing/deferred items.
+
 ## Deferred
 
 - Hard enforcement.

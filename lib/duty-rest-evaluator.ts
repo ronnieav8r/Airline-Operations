@@ -261,13 +261,14 @@ function evaluateScheduledBlockEstimate(
               "FAA-135-UNSCH-002",
               "Projected one-pilot Part 135 unscheduled flight time exceeds 8 hours in a rolling 24-hour window.",
             )
-          : "Current FlightLeg scheduled block is within the one-pilot 8-hour estimate; full rolling 24-hour commercial totals still require more data.",
+          : "Current FlightLeg scheduled block is within the one-pilot 8-hour estimate.",
       ruleKey: "FAA-135-UNSCH-002",
-      status: blockHours > onePilotLimit ? "WARNING" : "MISSING_INPUT",
+      status: blockHours > onePilotLimit ? "WARNING" : "PASS",
       details: {
         scheduledBlockHours: blockHours,
         limitHours: onePilotLimit,
-        limitation: "Current FlightLeg block only; no outside commercial flying or full rolling ledger.",
+        limitation:
+          "Current FlightLeg block only; outside commercial flying and full rolling ledgers are evaluated separately as missing-input checks.",
       },
     });
   }
@@ -276,19 +277,20 @@ function evaluateScheduledBlockEstimate(
     label: "Two-pilot scheduled-block estimate",
     message:
       blockHours > twoPilotLimit
-        ? ruleMessage(
-            detail,
-            "FAA-135-UNSCH-003",
-            "Projected two-pilot Part 135 unscheduled flight time exceeds 10 hours in a rolling 24-hour window.",
-          )
-        : "Current FlightLeg scheduled block is within the two-pilot 10-hour estimate; full rolling 24-hour commercial totals still require more data.",
+      ? ruleMessage(
+          detail,
+          "FAA-135-UNSCH-003",
+          "Projected two-pilot Part 135 unscheduled flight time exceeds 10 hours in a rolling 24-hour window.",
+        )
+      : "Current FlightLeg scheduled block is within the two-pilot 10-hour estimate.",
     ruleKey: "FAA-135-UNSCH-003",
-    status: blockHours > twoPilotLimit ? "WARNING" : "MISSING_INPUT",
+    status: blockHours > twoPilotLimit ? "WARNING" : "PASS",
     details: {
       scheduledBlockHours: blockHours,
       limitHours: twoPilotLimit,
       pilotCount,
-      limitation: "Current FlightLeg block only; no outside commercial flying or full rolling ledger.",
+      limitation:
+        "Current FlightLeg block only; outside commercial flying and full rolling ledgers are evaluated separately as missing-input checks.",
     },
   });
 }
