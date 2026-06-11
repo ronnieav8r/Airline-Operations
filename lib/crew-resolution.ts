@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 const REQUIRED_COCKPIT_ROLES: SeatRole[] = [SeatRole.CPT, SeatRole.FO];
 
 type AssignmentWarningCode = "MISSING_QUALIFICATION" | "EXPIRED_QUALIFICATION";
+type FlightCoverageIdentitySource = "FLIGHT_LEG_ID" | "LEGACY_FLIGHT_ID" | "LEGACY_FLIGHT_ONLY";
 
 export type QualificationWarning = {
   code: AssignmentWarningCode;
@@ -33,6 +34,10 @@ export type CoverageWarning = QualificationWarning & {
 export type FlightCoverage = {
   flightId: string;
   flightLegId: string | null;
+  identitySource: FlightCoverageIdentitySource;
+  inputId: string;
+  legacyFlightId: string | null;
+  operationalFlightLegId: string | null;
   readSource: "FLIGHT_LEG" | "LEGACY_FLIGHT";
   aircraftId: string;
   requiredRoles: SeatRole[];
@@ -45,6 +50,10 @@ export type FlightCoverage = {
 export type FlightCrew = {
   flightId: string;
   flightLegId: string | null;
+  identitySource: FlightCoverageIdentitySource;
+  inputId: string;
+  legacyFlightId: string | null;
+  operationalFlightLegId: string | null;
   readSource: "FLIGHT_LEG" | "LEGACY_FLIGHT";
   aircraftId: string;
   scheduledDeparture: Date;
@@ -120,6 +129,10 @@ async function resolveFlightContextForCoverage(inputId: string) {
       aircraftType: assignedAircraft.type,
       flightId: flightLeg.legacyFlightId ?? flightLeg.legacyFlight?.id ?? flightLeg.id,
       flightLegId: flightLeg.id,
+      identitySource: "FLIGHT_LEG_ID" as const,
+      inputId,
+      legacyFlightId: flightLeg.legacyFlightId ?? flightLeg.legacyFlight?.id ?? null,
+      operationalFlightLegId: flightLeg.id,
       readSource: "FLIGHT_LEG" as const,
       scheduledDeparture: flightLeg.scheduledDeparture,
     };
@@ -146,6 +159,12 @@ async function resolveFlightContextForCoverage(inputId: string) {
     aircraftType: directFlight.aircraft.type,
     flightId: directFlight.id,
     flightLegId: directFlight.flightLeg?.id ?? null,
+    identitySource: directFlight.flightLeg
+      ? ("LEGACY_FLIGHT_ID" as const)
+      : ("LEGACY_FLIGHT_ONLY" as const),
+    inputId,
+    legacyFlightId: directFlight.id,
+    operationalFlightLegId: directFlight.flightLeg?.id ?? null,
     readSource: directFlight.flightLeg ? ("FLIGHT_LEG" as const) : ("LEGACY_FLIGHT" as const),
     scheduledDeparture: directFlight.flightLeg
       ? directFlight.scheduledDeparture
@@ -169,6 +188,10 @@ export async function resolveFlightCrew(flightId: string): Promise<FlightCrew | 
   return {
     flightId: flight.flightId,
     flightLegId: flight.flightLegId,
+    identitySource: flight.identitySource,
+    inputId: flight.inputId,
+    legacyFlightId: flight.legacyFlightId,
+    operationalFlightLegId: flight.operationalFlightLegId,
     readSource: flight.readSource,
     aircraftId: flight.aircraftId,
     scheduledDeparture: flight.scheduledDeparture,
@@ -199,6 +222,10 @@ export async function resolveFlightCoverage(flightId: string): Promise<FlightCov
   return {
     flightId: crew.flightId,
     flightLegId: crew.flightLegId,
+    identitySource: crew.identitySource,
+    inputId: crew.inputId,
+    legacyFlightId: crew.legacyFlightId,
+    operationalFlightLegId: crew.operationalFlightLegId,
     readSource: crew.readSource,
     aircraftId: crew.aircraftId,
     requiredRoles: REQUIRED_COCKPIT_ROLES,

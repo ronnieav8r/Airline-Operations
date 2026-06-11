@@ -503,3 +503,9 @@ should add FlightLeg-primary identity aliases to crew/coverage API responses:
 `operationalFlightLegId`, `legacyFlightId`, `inputId`, and `identitySource`.
 Existing `flightId` and `flightLegId` fields remain for compatibility. This is
 an API contract transition only, not a table migration.
+
+Prompt 213 is implemented. The shared coverage resolver and compatibility API
+routes now expose the FlightLeg-primary aliases while preserving existing
+fields and accepting both `FlightLeg.id` and legacy `Flight.id` inputs. Legacy
+`Flight` remains compatibility/archive and should not be removed without a
+separate retirement plan.

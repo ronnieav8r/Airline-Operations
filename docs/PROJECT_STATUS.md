@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 This document is the quick onboarding note for planner and builder chats. Read it
 before starting a new AeroOps slice.
@@ -1614,18 +1614,24 @@ Prompt 213 should implement this in the shared crew-resolution helper and route
 responses without updating visible UI consumers except as needed for type
 compatibility.
 
-Next FlightLeg cutover implementation:
+Prompt 213 is complete. Crew and coverage API responses now include
+FlightLeg-primary identity aliases while preserving legacy compatibility fields
+and paths. The app smoke suite now verifies both a bridged FlightLeg ID and the
+linked legacy Flight ID return equivalent crew/coverage data with the expected
+identity fields. This is a response contract transition only; legacy `Flight`
+remains compatibility/archive.
+
+Next FlightLeg cutover planning:
 
 ```text
-Prompt 213: FlightLeg-Native Coverage Response Foundation
+Legacy Flight retirement planning checkpoint
 ```
 
 Scope:
 
-- Add the transitional identity fields to crew and coverage responses.
-- Add focused API smoke coverage for FlightLeg-ID and legacy-Flight-ID requests.
-- Do not remove or rename existing response fields, API paths, legacy tables, or
-  bridge writes.
+- Decide the next safe read/API migration step after additive response aliases.
+- Keep destructive legacy `Flight` removal deferred until all callers and parity
+  diagnostics remain clean across multiple runtime QA passes.
 
 Deferred follow-up to keep on the roadmap:
 

@@ -43,14 +43,101 @@ async function getDynamicRouteIds() {
   const [crewMembers, aircraft, flightLegs] = await Promise.all([
     prisma.crewMember.findMany({ orderBy: [{ lastName: "asc" }], select: { id: true }, take: 1 }),
     prisma.aircraft.findMany({ orderBy: [{ tailNumber: "asc" }], select: { id: true }, take: 1 }),
-    prisma.flightLeg.findMany({ orderBy: [{ scheduledDeparture: "asc" }], select: { id: true }, take: 1 }),
+    prisma.flightLeg.findMany({
+      orderBy: [{ scheduledDeparture: "asc" }],
+      select: { id: true, legacyFlightId: true },
+      take: 1,
+      where: { legacyFlightId: { not: null } },
+    }),
   ]);
+  const flightLeg = flightLegs[0];
+  if (!flightLeg?.legacyFlightId) {
+    throw new Error("No bridged FlightLeg record found for smoke testing. Seed demo data first.");
+  }
 
   return {
     aircraftId: await firstId(aircraft, "aircraft"),
     crewMemberId: await firstId(crewMembers, "crew member"),
-    flightLegId: await firstId(flightLegs, "FlightLeg"),
+    flightLegId: flightLeg.id,
+    legacyFlightId: flightLeg.legacyFlightId,
   };
+}
+
+type CoverageIdentityResponse = {
+  assignedCrew?: Array<{ crewMemberId: string; seatRole: string }>;
+  flightId: string;
+  flightLegId: string | null;
+  identitySource: "FLIGHT_LEG_ID" | "LEGACY_FLIGHT_ID" | "LEGACY_FLIGHT_ONLY";
+  inputId: string;
+  legacyFlightId: string | null;
+  operationalFlightLegId: string | null;
+  readSource: "FLIGHT_LEG" | "LEGACY_FLIGHT";
+};
+
+function comparableApiCrew(value: CoverageIdentityResponse) {
+  return {
+    assignedCrew: (value.assignedCrew ?? [])
+      .map((crew) => `${crew.crewMemberId}:${crew.seatRole}`)
+      .sort(),
+    flightId: value.flightId,
+    flightLegId: value.flightLegId,
+    legacyFlightId: value.legacyFlightId,
+    operationalFlightLegId: value.operationalFlightLegId,
+    readSource: value.readSource,
+  };
+}
+
+async function fetchJsonWithCookie<T>(path: string, cookie: string): Promise<T> {
+  const response = await fetchWithCookie(path, cookie);
+  if (response.status !== 200) {
+    throw new Error(`Expected ${path} to return 200, received ${response.status}.`);
+  }
+
+  return (await response.json()) as T;
+}
+
+async function runCoverageIdentitySmoke(
+  ids: Awaited<ReturnType<typeof getDynamicRouteIds>>,
+  cookie: string,
+) {
+  const checks = [
+    {
+      label: "coverage",
+      legacyPath: `/api/flights/${ids.legacyFlightId}/coverage`,
+      legPath: `/api/flights/${ids.flightLegId}/coverage`,
+    },
+    {
+      label: "crew",
+      legacyPath: `/api/flights/${ids.legacyFlightId}/crew`,
+      legPath: `/api/flights/${ids.flightLegId}/crew`,
+    },
+  ];
+
+  for (const check of checks) {
+    const byLeg = await fetchJsonWithCookie<CoverageIdentityResponse>(check.legPath, cookie);
+    const byLegacy = await fetchJsonWithCookie<CoverageIdentityResponse>(check.legacyPath, cookie);
+
+    if (
+      byLeg.identitySource !== "FLIGHT_LEG_ID" ||
+      byLegacy.identitySource !== "LEGACY_FLIGHT_ID" ||
+      byLeg.inputId !== ids.flightLegId ||
+      byLegacy.inputId !== ids.legacyFlightId ||
+      byLeg.operationalFlightLegId !== ids.flightLegId ||
+      byLegacy.operationalFlightLegId !== ids.flightLegId ||
+      byLeg.legacyFlightId !== ids.legacyFlightId ||
+      byLegacy.legacyFlightId !== ids.legacyFlightId
+    ) {
+      throw new Error(`${check.label} identity fields did not match the FlightLeg compatibility contract.`);
+    }
+
+    if (JSON.stringify(comparableApiCrew(byLeg)) !== JSON.stringify(comparableApiCrew(byLegacy))) {
+      throw new Error(`${check.label} API data differs between FlightLeg ID and legacy Flight ID requests.`);
+    }
+
+    console.log(
+      `PASS 200 ${check.label} identity aliases ${check.legPath} + ${check.legacyPath}`,
+    );
+  }
 }
 
 function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): RoleSmokePlan[] {
@@ -205,9 +292,15 @@ async function main() {
   const ids = await getDynamicRouteIds();
   const plans = buildSmokePlans(ids);
   const failures: Array<Awaited<ReturnType<typeof runCheck>>> = [];
+  const adminUser = SMOKE_TEST_USERS.find((item) => item.role === UserRole.ADMIN);
+  if (!adminUser) {
+    throw new Error("Missing admin smoke user.");
+  }
+  const adminSession = await createSmokeSession(prisma, adminUser.email);
 
   console.log(`Running AeroOps smoke checks against ${baseUrl}`);
   console.log(`Anonymous /login: ${anonymousLogin.status}`);
+  await runCoverageIdentitySmoke(ids, adminSession.cookie);
 
   for (const plan of plans) {
     const user = SMOKE_TEST_USERS.find((item) => item.role === plan.role);

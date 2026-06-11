@@ -40,6 +40,18 @@ Existing fields stay:
 - crew warnings
 - coverage missing-role fields
 
+## Prompt 213 Implementation
+
+Prompt 213 implements the additive aliases in the shared crew-resolution helper,
+so both compatibility API paths now return the same identity contract:
+
+- `/api/flights/[id]/crew`
+- `/api/flights/[id]/coverage`
+
+The smoke suite checks both a bridged `FlightLeg.id` request and its linked
+legacy `Flight.id` request, then confirms the new aliases resolve to the same
+operational leg and compatibility flight.
+
 ## Transitional Meaning
 
 For Prompt 213, `flightId` remains the compatibility legacy Flight ID when a

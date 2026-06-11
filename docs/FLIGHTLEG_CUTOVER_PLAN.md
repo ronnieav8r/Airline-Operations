@@ -69,9 +69,12 @@ legacy API paths in the current macro scaffolding chain.
    API paths should continue accepting both FlightLeg IDs and legacy Flight IDs,
    while response fields move toward FlightLeg-first naming with legacy aliases.
 
-   Prompt 212 completed this planning step. Prompt 213 should add
-   FlightLeg-primary identity aliases to the existing crew/coverage API
-   responses while preserving current `flightId` compatibility.
+   Prompt 212 completed this planning step.
+
+   Prompt 213 implemented FlightLeg-primary identity aliases on the existing
+   crew/coverage API responses while preserving current `flightId`
+   compatibility. The shared resolver and smoke suite now validate both
+   bridged `FlightLeg.id` requests and linked legacy `Flight.id` requests.
 
    Contract:
 
