@@ -1772,6 +1772,11 @@ training, checks, recency, duty, and rest records; hard enforcement,
 signatures, uploads, provider verification, imports, and crew self-service
 compliance uploads remain deferred.
 
+Prompt 236 is complete as planning. Duty/rest scenario QA should add local
+fixtures for ordinary Part 91 guardrails and Part 135 unscheduled pass,
+warning, missing-input, overlap, and deferred-data cases before refining the
+calculator.
+
 Next FlightLeg cutover step:
 
 ```text

@@ -1,0 +1,42 @@
+# Duty/Rest Scenario QA Plan
+
+Last updated: 2026-06-11
+
+## Purpose
+
+Create deterministic local scenarios for the warning-only duty/rest evaluator so
+future calculator refinements can be tested against known expected outcomes.
+
+## Scenario Matrix
+
+| Scenario | Authority | Expected Result |
+| --- | --- | --- |
+| Ordinary Part 91 guardrail | `PART_91` | Guardrail/info findings only; no Part 135 limits. |
+| Part 135 unscheduled pass | `PART_135` | Supported checks pass; missing external-flying/deferred checks remain visible. |
+| Part 135 missing rest warning | `PART_135` | 10-hour rest finding warns. |
+| Part 135 missing input | `PART_135` | Missing-input findings appear instead of false pass. |
+| Part 135 duty/rest overlap | `PART_135` | No-duty-during-rest finding warns. |
+| Deferred-data case | `PART_135` | Outside flying, reserve/standby, transportation, and actual-time gaps are readable deferred/missing-input findings. |
+
+## Fixture Policy
+
+- Local/demo only.
+- Idempotent.
+- Safe to rerun.
+- Do not run against Render unless explicitly gated.
+- No schema changes.
+
+## Diagnostic Policy
+
+Scenario QA should be inspectable from a read-only diagnostic route or script
+showing the FlightLeg, operating authority, assigned crew, duty periods, rest
+periods, and evaluator findings.
+
+## Deferred
+
+- Hard enforcement.
+- Outside commercial flying ledger.
+- Reserve/standby/transportation event schema.
+- Reduced-rest compensation tracking.
+- Actual airborne/aloft-time schema.
+- Legal signoff.
