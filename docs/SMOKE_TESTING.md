@@ -67,6 +67,7 @@ npm run db:local:up
 npm run db:local:migrate
 npm run db:local:seed
 npm run test:users:setup
+npm run smoke:workflows
 ```
 
 Start the app in another terminal:
@@ -82,6 +83,13 @@ $env:AEROOPS_ENABLE_TEST_AUTH="1"
 $env:AEROOPS_SMOKE_BASE_URL="http://127.0.0.1:3200"
 npm run smoke:app
 ```
+
+The workflow smoke command writes runtime QA records with `SMOKE-` identifiers.
+It verifies smoke-user credentials, creates and edits a FlightLeg compatibility
+bridge, publishes a crew schedule period into `CrewSchedule`, submits crew
+portal requests, creates and books a crew logistics need, and captures a
+ReleasePackage preview. It refuses non-local database URLs unless
+`AEROOPS_ALLOW_REMOTE_SMOKE=1` is explicitly set.
 
 ## What The Smoke Runner Checks
 
@@ -108,9 +116,9 @@ npm run smoke:app
 
 ## Limitations
 
-The current smoke runner is an HTTP route smoke test. It does not yet submit
-every server-action form. Deeper workflow automation should be added in a
-future slice if we want command-driven create/edit assertions for each module.
+The HTTP smoke runner checks route access and role gates. The workflow smoke
+runner checks representative database outcomes for core create/edit workflows,
+but it does not yet automate browser form submission.
 
 ## Current Runtime Note
 
