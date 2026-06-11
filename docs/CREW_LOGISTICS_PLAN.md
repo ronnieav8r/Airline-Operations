@@ -1,6 +1,6 @@
 # Crew Logistics Plan
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Purpose
 
@@ -102,3 +102,18 @@ Prompt 203 cross-link status: complete for static validation. Crew, aircraft,
 planner, assignment, and logistics surfaces now link to each other where useful
 without changing logistics, schedule, aircraft assignment, release, booking,
 expense, or duty/rest behavior.
+
+Prompt 209 planning status: complete. The next logistics depth step should be a
+central ops/admin `/crew/logistics` workbench before provider integrations. The
+workbench should summarize and filter open positioning, deadhead, airline
+ticket, hotel, ground transport, and other travel-support needs, while keeping
+actual create/edit workflows on `/crew/[crewMemberId]/logistics`. Provider
+integrations, booking automation, expenses, crew-created logistics records,
+schedule mutation, aircraft assignment mutation, release behavior, and
+duty/rest enforcement remain deferred.
+
+Detailed plan:
+
+```text
+docs/CREW_LOGISTICS_DEPTH_PLAN.md
+```

@@ -464,6 +464,12 @@ They do not replace `CrewScheduleEntry`, `CrewSchedule`,
 `AircraftCrewAssignment`, `CrewLegAssignment`, or crew duty/rest evidence, and
 they do not imply booking, expense, release, or assignment automation.
 
+Prompt 209 keeps the existing logistics schema for the next depth slice. The
+next implementation should add a central `/crew/logistics` workbench with
+filters, grouping, summary counts, and cross-links. No provider integration,
+booking table, itinerary attachment table, expense table, or automatic
+positioning recommendation schema is approved yet.
+
 Duty/rest policy settings now exist as an additive configuration foundation.
 `DutyRestPolicyProfile` stores authority-level calculation/enforcement settings
 and `DutyRestRuleSetting` stores report-derived rule settings such as Part 91

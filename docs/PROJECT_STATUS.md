@@ -1545,6 +1545,28 @@ Scope:
 - Treat missing inputs as explicit warning/deferred findings instead of legal
   pass/fail enforcement.
 
+Crew logistics depth planning is complete as Prompt 209. The selected next
+logistics direction is a central ops/admin `/crew/logistics` workbench before
+provider integrations. It should summarize and filter open positioning,
+deadhead, airline ticket, hotel, ground transport, and other travel-support
+needs, while keeping create/edit workflows on `/crew/[crewMemberId]/logistics`.
+No provider integration, booking automation, expense workflow, schedule
+mutation, aircraft assignment mutation, release behavior, duty/rest enforcement,
+or crew-created logistics records are approved for the first workbench slice.
+
+Next logistics slice:
+
+```text
+Prompt 210: Crew Logistics Workbench Foundation
+```
+
+Scope:
+
+- Add `/crew/logistics` for read-only ops/admin coordination.
+- Add URL-driven filtering/grouping and cross-links to existing crew, aircraft,
+  and FlightLeg contexts.
+- Do not add new schema or external provider calls.
+
 Deferred follow-up to keep on the roadmap:
 
 ```text
