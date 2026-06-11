@@ -399,6 +399,12 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
               crew, enforce duty/rest, sign releases, or block operations in
               this slice.
             </div>
+            <Link
+              className="mt-3 inline-flex rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+              href={`/crew/${crewMember.id}/compliance`}
+            >
+              Manage compliance records
+            </Link>
             {crewMember.complianceWarnings.length === 0 ? (
               <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
                 No compliance warnings found from recorded evidence.

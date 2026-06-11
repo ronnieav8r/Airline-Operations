@@ -190,3 +190,8 @@ certificate/medical, training/check/recency, duty/rest, QA, and docs refresh.
 Records remain evidence and warning inputs only; no hard enforcement,
 signatures, uploads, provider verification, or crew self-service compliance
 submission should be added.
+
+Prompt 231 implementation is complete. `/crew/[crewMemberId]/compliance` now
+supports admin/ops create, update, review, and void workflows for certificates
+and medicals only. Training, check, recency, duty, and rest admin workflows
+remain in later slices.

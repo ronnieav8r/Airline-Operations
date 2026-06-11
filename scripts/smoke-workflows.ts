@@ -1,5 +1,7 @@
 import {
   AssignmentStatus,
+  CrewCertificateType,
+  CrewComplianceRecordStatus,
   CrewLocationSource,
   CrewLogisticsNeedStatus,
   CrewLogisticsNeedType,
@@ -13,6 +15,7 @@ import {
   FlightLocatingStatus,
   FlightStatus,
   ManifestStatus,
+  MedicalCertificateClass,
   PrismaClient,
   ReleaseAuditEventType,
   ReleaseAuthorityClass,
@@ -825,6 +828,74 @@ async function smokeLogisticsWrites(context: SmokeContext, flightLegId: string) 
   console.log(`logistics: recorded location ${location.id} and booked need ${need.id}`);
 }
 
+async function smokeCrewComplianceAdmin(context: SmokeContext) {
+  const certificate = await prisma.crewCertificate.create({
+    data: {
+      certificateNumber: `${smokeLabel}-CERT`,
+      certificateType: CrewCertificateType.COMMERCIAL,
+      createdById: context.adminUserId,
+      crewMemberId: context.crewMemberId,
+      issuedAt: new Date(),
+      notes: `${smokeLabel} certificate admin smoke`,
+      ratingOrEndorsement: "Smoke check",
+      status: CrewComplianceRecordStatus.ACTIVE,
+    },
+    select: { id: true },
+  });
+
+  const medical = await prisma.crewMedical.create({
+    data: {
+      createdById: context.adminUserId,
+      crewMemberId: context.crewMemberId,
+      issuedAt: new Date(),
+      medicalClass: MedicalCertificateClass.SECOND_CLASS,
+      notes: `${smokeLabel} medical admin smoke`,
+      status: CrewComplianceRecordStatus.ACTIVE,
+    },
+    select: { id: true },
+  });
+
+  await prisma.crewCertificate.update({
+    where: { id: certificate.id },
+    data: {
+      status: CrewComplianceRecordStatus.VOIDED,
+      verifiedAt: new Date(),
+      verifiedById: context.adminUserId,
+    },
+  });
+
+  await prisma.crewMedical.update({
+    where: { id: medical.id },
+    data: {
+      status: CrewComplianceRecordStatus.VOIDED,
+      verifiedAt: new Date(),
+      verifiedById: context.adminUserId,
+    },
+  });
+
+  const verifiedCertificate = await prisma.crewCertificate.findUnique({
+    where: { id: certificate.id },
+    select: { createdById: true, status: true, verifiedById: true },
+  });
+  const verifiedMedical = await prisma.crewMedical.findUnique({
+    where: { id: medical.id },
+    select: { createdById: true, status: true, verifiedById: true },
+  });
+
+  if (
+    verifiedCertificate?.createdById !== context.adminUserId ||
+    verifiedCertificate.verifiedById !== context.adminUserId ||
+    verifiedCertificate.status !== CrewComplianceRecordStatus.VOIDED ||
+    verifiedMedical?.createdById !== context.adminUserId ||
+    verifiedMedical.verifiedById !== context.adminUserId ||
+    verifiedMedical.status !== CrewComplianceRecordStatus.VOIDED
+  ) {
+    throw new Error("Crew compliance admin smoke verification failed.");
+  }
+
+  console.log(`compliance: reviewed and voided certificate ${certificate.id} and medical ${medical.id}`);
+}
+
 async function smokeReleasePackageCapture(
   context: SmokeContext,
   flightLeg: SmokeFlightLegResult,
@@ -1017,6 +1088,7 @@ async function main() {
   await smokeSchedulingPublish(context);
   await smokeCrewPortalRequests(context);
   await smokeLogisticsWrites(context, flightLeg.flightLegId);
+  await smokeCrewComplianceAdmin(context);
   await smokeReleasePackageCapture(context, flightLeg, evidence);
   await smokeReleaseAudit(context, flightLeg, evidence.readinessSnapshotId);
 

@@ -1749,6 +1749,10 @@ Prompt 230 is complete as planning. Crew compliance admin workflows should add
 medicals, training, checks, recency, duty, and rest records. These workflows
 remain admin-managed evidence inputs and warning-only downstream signals.
 
+Prompt 231 is complete. `/crew/[crewMemberId]/compliance` now supports
+admin/ops certificate and medical create, update, review, and void workflows.
+The workflow uses existing schema only and remains warning-only downstream.
+
 Next FlightLeg cutover step:
 
 ```text

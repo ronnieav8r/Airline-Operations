@@ -106,6 +106,9 @@ Prompt 230 is complete as planning. Compliance admin workflows should use a
 crew-scoped `/crew/[crewMemberId]/compliance` surface and existing compliance
 tables only.
 
+Prompt 231 is complete. Certificate and medical admin workflows now exist under
+the crew-scoped compliance route.
+
 - `230`: Crew compliance admin workflow planning.
 - `231`: Certificate and medical admin foundation.
 - `232`: Training, check, and recency admin foundation.
