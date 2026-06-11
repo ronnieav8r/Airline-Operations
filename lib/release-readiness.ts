@@ -12,6 +12,7 @@ import {
   WeightBalanceStatus,
 } from "@prisma/client";
 
+import { evaluateDutyRestForFlightLeg } from "@/lib/duty-rest-evaluator";
 import { ReleaseEvidenceDetail } from "@/lib/release-evidence-detail-queries";
 
 export type ReleaseReadinessClassification = "READY" | "WOULD_BLOCK" | "WOULD_WARN";
@@ -205,6 +206,7 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
               : "airworthinessRelease.current.missing";
   const crewComplianceWarnings = buildCrewComplianceWarnings(detail);
   const crewComplianceReady = crewComplianceWarnings.length === 0;
+  const dutyRestEvaluation = evaluateDutyRestForFlightLeg(detail);
 
   return [
     {
@@ -267,6 +269,29 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
       readinessCategory: "crew-compliance",
       ready: crewComplianceReady,
       ruleKey: crewComplianceReady ? "crewCompliance.current.ready" : "crewCompliance.warning.exists",
+    },
+    {
+      classification: dutyRestEvaluation.ready ? "READY" : "WOULD_WARN",
+      details: {
+        findings: dutyRestEvaluation.findings.map((finding) => ({
+          ruleKey: finding.ruleKey,
+          label: finding.label,
+          status: finding.status,
+          severity: finding.severity,
+          message: finding.message,
+          evidenceRefType: finding.evidenceRefType ?? null,
+          evidenceRefId: finding.evidenceRefId ?? null,
+          details: finding.details ?? {},
+        })),
+        operatingPart: detail.operatingAuthority.operatingPart,
+        policyProfileKey: detail.operatingAuthority.dutyRestPolicyProfiles[0]?.profileKey ?? null,
+      },
+      evidenceRefType: detail.crewAssignments.length > 0 ? "CrewLegAssignment" : undefined,
+      label: "Duty/rest",
+      message: dutyRestEvaluation.message,
+      readinessCategory: "duty-rest",
+      ready: dutyRestEvaluation.ready,
+      ruleKey: dutyRestEvaluation.ruleKey,
     },
     {
       classification: manifestReady ? "READY" : "WOULD_BLOCK",

@@ -44,6 +44,42 @@ const releaseEvidenceDetailSelect = {
       id: true,
       displayName: true,
       operatingPart: true,
+      dutyRestPolicyProfiles: {
+        where: {
+          isDefault: true,
+          effectiveTo: null,
+        },
+        orderBy: {
+          effectiveFrom: "desc",
+        },
+        take: 1,
+        select: {
+          id: true,
+          profileKey: true,
+          operationKind: true,
+          calculationBasis: true,
+          enforcementMode: true,
+          outsideCommercialFlyingRequired: true,
+          ruleSettings: {
+            where: {
+              enabled: true,
+            },
+            orderBy: {
+              ruleKey: "asc",
+            },
+            select: {
+              ruleKey: true,
+              title: true,
+              warningMessage: true,
+              severity: true,
+              requiresExternalFlying: true,
+              calculationNotes: true,
+              passCondition: true,
+              sourceCitation: true,
+            },
+          },
+        },
+      },
     },
   },
   authorityRevision: {

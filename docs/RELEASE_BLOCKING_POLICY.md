@@ -34,6 +34,7 @@ The current FlightLeg release readiness checklist covers:
 - Aircraft maintenance airworthiness release.
 - Open/deferred discrepancies.
 - Active deferrals.
+- Warning-only duty/rest calculator findings.
 
 ## Future Blocking Classification
 
@@ -87,6 +88,9 @@ These should remain warnings for now:
   non-expired `RELEASED` aircraft release exists.
 - Missing crew qualification, recency, duty, or rest checks until richer crew
   compliance tables exist.
+- Duty/rest warning calculator findings until legal/operator review, outside
+  commercial flying, transportation classification, and enforcement policy are
+  complete.
 - Missing provider-backed verification, because provider integrations are not
   implemented yet.
 

@@ -176,3 +176,9 @@ be treated as legal enforcement, should not block release or assignment actions,
 and should report missing outside flying, reserve/standby detail,
 transportation classification, reduced-rest compensation, and actual
 flight-time data as missing-input or deferred findings.
+
+Prompt 208 duty/rest warning calculator foundation is complete. FlightLeg
+release readiness now includes one warning-only duty/rest item with detailed
+subfindings stored in readiness item details and captured by existing preview
+and release-attempt snapshots. The calculator remains an operational warning
+surface, not a legal enforcement engine.

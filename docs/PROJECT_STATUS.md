@@ -1525,25 +1525,31 @@ Prompt 207 is complete as a docs/planning slice. The selected first calculator
 scope is narrow: ordinary Part 91 guardrail/info findings plus Part 135
 unscheduled/on-demand warning checks using current `CrewDutyPeriod`,
 `CrewRestPeriod`, FlightLeg schedule, crew assignment, and duty/rest policy
-settings. Prompt 208 should surface one warning-only duty/rest item in
-FlightLeg release readiness and store captured details through existing
-`ReleaseReadinessSnapshot` / `ReleaseReadinessFinding` records. No new schema,
-hard blocking, legal signoff, outside flying ledger, reserve/standby detail
-tables, transportation classification, or dedicated `CrewDutyRestWarning` table
-is approved in this first calculator slice.
+settings.
 
-Next recommended slice:
+Prompt 208 is complete. FlightLeg release readiness now includes one
+warning-only duty/rest item backed by a reusable evaluator. The evaluator uses
+the default duty/rest policy profile, enabled rule settings, visible
+crew-duty/rest records, FlightLeg schedule, and crew snapshot assignments. It
+stores detailed `PASS`, `WARNING`, `MISSING_INPUT`, `NOT_APPLICABLE`, and
+`DEFERRED` subfindings in the existing readiness item details JSON, so explicit
+preview and release-attempt snapshots persist the same duty/rest finding
+through `ReleaseReadinessSnapshot` / `ReleaseReadinessFinding` records. No
+schema, hard blocking, legal signoff, outside flying ledger, transportation
+classification, duty/rest writes, or dedicated `CrewDutyRestWarning` table was
+added.
+
+Next recommended duty/rest follow-up:
 
 ```text
-Prompt 208: Duty/Rest Warning Calculator Foundation
+Duty/rest calculator QA and refinement
 ```
 
 Scope:
 
-- Implement the warning-only evaluator planned in Prompt 207.
-- Keep all release, schedule, assignment, and crew portal actions continueable.
-- Treat missing inputs as explicit warning/deferred findings instead of legal
-  pass/fail enforcement.
+- Verify multiple seeded Part 91 and Part 135-style scenarios.
+- Decide whether a later slice should add a dedicated duty/rest diagnostic page.
+- Keep release, schedule, assignment, and crew portal actions continueable.
 
 Crew logistics depth planning is complete as Prompt 209. The selected next
 logistics direction is a central ops/admin `/crew/logistics` workbench before

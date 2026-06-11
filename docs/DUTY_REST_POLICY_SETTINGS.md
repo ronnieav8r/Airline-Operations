@@ -56,6 +56,27 @@ Prompt 208 should produce readable `PASS`, `WARNING`, `MISSING_INPUT`,
 `NOT_APPLICABLE`, and `DEFERRED` findings. It must not hard-block release,
 schedule publishing, aircraft assignment, or crew portal actions.
 
+## Prompt 208 Implementation
+
+Prompt 208 implements the first warning-only evaluator and surfaces it as a
+single `duty-rest` readiness item on FlightLeg detail. The evaluator uses the
+default duty/rest policy profile, enabled duty/rest rule settings, FlightLeg
+schedule, crew snapshot assignments, and visible crew duty/rest periods.
+
+The readiness item stores evaluator subfindings in the existing readiness item
+details JSON. Explicit preview snapshots and release-attempt snapshots persist
+that same `duty-rest` item through existing `ReleaseReadinessSnapshot` and
+`ReleaseReadinessFinding` records.
+
+Current behavior remains warning-only:
+
+- Ordinary Part 91 shows guardrail/info behavior and does not apply Part 135
+  limits.
+- Part 135 unscheduled/on-demand shows warnings or missing-input/deferred
+  findings when visible data is incomplete.
+- Release actions, schedule publishing, aircraft assignment, and crew portal
+  actions remain continueable.
+
 ## Diagnostic
 
 Use:
