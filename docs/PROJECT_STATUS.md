@@ -46,6 +46,9 @@ Recent prompt-numbering note:
   258.
 - Prompt 258 implemented the compact dashboard ops foundation; frontend IA
   moves to Prompt 259.
+- Prompt 259 implemented release-readiness dashboard labels, MX beacons,
+  lookahead controls, and quick-review drawers; frontend IA moves to Prompt
+  260.
 
 ## Current State
 
@@ -1889,10 +1892,17 @@ Prompt 258 is complete. The dashboard now uses a compact ops command surface,
 clickable status tiles, above-the-fold active alerts and crew gaps, a condensed
 today flight board, and a slimmer app header. No backend behavior changed.
 
+Prompt 259 is complete. The dashboard now centers on Release Review instead of
+vague attention/evidence wording. It includes hour-based release lookahead
+controls, per-flight readiness beacons for Manifest, W&B, Flt Follow, Dispatch,
+MX, and Crew, plus URL-driven quick-review drawers for alerts, release review,
+FlightLeg summaries, and individual release components. No schema, release
+policy, or mutation behavior changed.
+
 Next recommended workstream:
 
 ```text
-Frontend/UI polish continuing with Prompt 259
+Frontend/UI polish continuing with Prompt 260
 ```
 
 Scope:
@@ -1900,6 +1910,8 @@ Scope:
 - Continue page-by-page frontend IA review and app-shell polish.
 - Preserve backend contracts in `docs/BACKEND_MVP_STATE.md`.
 - Keep backend post-MVP gaps deferred unless separately planned.
+- Plan operator-specific release UI/configuration rules before making release
+  component visibility or requirement state configurable.
 
 Next FlightLeg cutover step:
 
