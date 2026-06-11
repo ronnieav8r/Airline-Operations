@@ -463,3 +463,13 @@ travel-support placeholders. These records are planning/context data only.
 They do not replace `CrewScheduleEntry`, `CrewSchedule`,
 `AircraftCrewAssignment`, `CrewLegAssignment`, or crew duty/rest evidence, and
 they do not imply booking, expense, release, or assignment automation.
+
+Duty/rest policy settings now exist as an additive configuration foundation.
+`DutyRestPolicyProfile` stores authority-level calculation/enforcement settings
+and `DutyRestRuleSetting` stores report-derived rule settings such as Part 91
+guardrails, Part 135 unscheduled/on-demand warnings, and future Part 91K
+warnings. `DutyRule` remains as a shallow legacy/demo threshold table. The new
+settings do not perform legal calculations, persist warning snapshots, block
+schedule publication, block aircraft assignment, block release, or create
+signature semantics. All defaults are warning-only pending operator/legal
+review.

@@ -433,6 +433,36 @@ enum CrewRestPeriodStatus {
   CANCELLED
 }
 
+enum DutyRestOperationKind {
+  ORDINARY_PART_91
+  PART_91K_FRACTIONAL
+  PART_91K_AUGMENTED
+  PART_91K_FLIGHT_ATTENDANT
+  PART_135_SCHEDULED
+  PART_135_UNSCHEDULED
+  PART_135_AUGMENTED
+  PART_135_HEMES
+  PART_135_FLIGHT_ATTENDANT
+}
+
+enum DutyRestCalculationBasis {
+  UTC
+  LOCAL_STATION
+  HOME_BASE
+  OPERATOR_POLICY
+}
+
+enum DutyRestEnforcementMode {
+  WARNING_ONLY
+  ACKNOWLEDGMENT_REQUIRED
+  HARD_BLOCK_DEFERRED
+}
+
+enum DutyRestRuleSeverity {
+  WARN
+  INFO
+}
+
 enum ImportDomain {
   AIRCRAFT_MAINTENANCE_AIRWORTHINESS
   FLIGHTLEG_HISTORY
@@ -483,51 +513,54 @@ enum ImportMappingDecisionStatus {
 }
 
 model Operator {
-  id                    String                     @id @default(cuid())
-  name                  String
-  code                  String                     @unique
-  isActive              Boolean                    @default(true)
-  createdAt             DateTime                   @default(now())
-  updatedAt             DateTime                   @updatedAt
-  operatingAuthorities  OperatingAuthority[]
-  controlRecords        OperationalControlRecord[]
-  tripOrMissions        TripOrMission[]
-  flightLegs            FlightLeg[]
-  releasePolicyProfiles ReleasePolicyProfile[]
+  id                     String                     @id @default(cuid())
+  name                   String
+  code                   String                     @unique
+  isActive               Boolean                    @default(true)
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  operatingAuthorities   OperatingAuthority[]
+  controlRecords         OperationalControlRecord[]
+  tripOrMissions         TripOrMission[]
+  flightLegs             FlightLeg[]
+  releasePolicyProfiles  ReleasePolicyProfile[]
+  dutyRestPolicyProfiles DutyRestPolicyProfile[]
 }
 
 model OperatingAuthority {
-  id                    String                     @id @default(cuid())
-  operatorId            String
-  operatingPart         OperatingPart
-  displayName           String
-  status                AuthorityStatus            @default(DRAFT)
-  createdAt             DateTime                   @default(now())
-  updatedAt             DateTime                   @updatedAt
-  operator              Operator                   @relation(fields: [operatorId], references: [id], onDelete: Restrict)
-  revisions             AuthorityRevision[]
-  manuals               Manual[]
-  controlRecords        OperationalControlRecord[]
-  flightLegs            FlightLeg[]
-  releasePolicyProfiles ReleasePolicyProfile[]
+  id                     String                     @id @default(cuid())
+  operatorId             String
+  operatingPart          OperatingPart
+  displayName            String
+  status                 AuthorityStatus            @default(DRAFT)
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  operator               Operator                   @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  revisions              AuthorityRevision[]
+  manuals                Manual[]
+  controlRecords         OperationalControlRecord[]
+  flightLegs             FlightLeg[]
+  releasePolicyProfiles  ReleasePolicyProfile[]
+  dutyRestPolicyProfiles DutyRestPolicyProfile[]
 
   @@unique([operatorId, operatingPart])
   @@index([operatorId, status])
 }
 
 model AuthorityRevision {
-  id                   String                     @id @default(cuid())
-  operatingAuthorityId String
-  revisionLabel        String
-  effectiveStart       DateTime
-  effectiveEnd         DateTime?
-  status               AuthorityStatus            @default(DRAFT)
-  notes                String?
-  createdAt            DateTime                   @default(now())
-  updatedAt            DateTime                   @updatedAt
-  operatingAuthority   OperatingAuthority         @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
-  controlRecords       OperationalControlRecord[]
-  flightLegs           FlightLeg[]
+  id                     String                     @id @default(cuid())
+  operatingAuthorityId   String
+  revisionLabel          String
+  effectiveStart         DateTime
+  effectiveEnd           DateTime?
+  status                 AuthorityStatus            @default(DRAFT)
+  notes                  String?
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  operatingAuthority     OperatingAuthority         @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
+  controlRecords         OperationalControlRecord[]
+  flightLegs             FlightLeg[]
+  dutyRestPolicyProfiles DutyRestPolicyProfile[]
 
   @@unique([operatingAuthorityId, revisionLabel])
   @@index([operatingAuthorityId, status])
@@ -2159,4 +2192,68 @@ model DutyRule {
   updatedAt            DateTime @updatedAt
 
   @@index([isActive])
+}
+
+model DutyRestPolicyProfile {
+  id                                 String                   @id @default(cuid())
+  profileKey                         String                   @unique
+  operatorId                         String
+  operatingAuthorityId               String?
+  authorityRevisionId                String?
+  name                               String
+  operationKind                      DutyRestOperationKind
+  calculationBasis                   DutyRestCalculationBasis @default(UTC)
+  enforcementMode                    DutyRestEnforcementMode  @default(WARNING_ONLY)
+  ordinaryPart91PolicyEnabled        Boolean                  @default(false)
+  outsideCommercialFlyingRequired    Boolean                  @default(false)
+  reserveCountsAsRest                Boolean                  @default(false)
+  standbyCountsAsDuty                Boolean                  @default(true)
+  requiredTransportationCountsAsRest Boolean                  @default(false)
+  reducedRestRequiresReview          Boolean                  @default(true)
+  isDefault                          Boolean                  @default(false)
+  effectiveFrom                      DateTime                 @default(now())
+  effectiveTo                        DateTime?
+  sourceSummary                      String?
+  notes                              String?
+  createdAt                          DateTime                 @default(now())
+  updatedAt                          DateTime                 @updatedAt
+  operator                           Operator                 @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  operatingAuthority                 OperatingAuthority?      @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
+  authorityRevision                  AuthorityRevision?       @relation(fields: [authorityRevisionId], references: [id], onDelete: SetNull)
+  ruleSettings                       DutyRestRuleSetting[]
+
+  @@index([operatorId, isDefault])
+  @@index([operatingAuthorityId, isDefault])
+  @@index([authorityRevisionId])
+  @@index([operationKind])
+  @@index([effectiveFrom, effectiveTo])
+}
+
+model DutyRestRuleSetting {
+  id                     String                @id @default(cuid())
+  profileId              String
+  ruleKey                String
+  title                  String
+  regulationPart         String
+  crewRoleScope          String
+  triggerCondition       String?
+  requiredInputs         Json?
+  calculationNotes       String?
+  passCondition          String?
+  warningMessage         String
+  severity               DutyRestRuleSeverity  @default(WARN)
+  enabled                Boolean               @default(true)
+  requiresExternalFlying Boolean               @default(false)
+  requiresOperatorReview Boolean               @default(true)
+  implementationPhase    Int                   @default(1)
+  sourceCitation         String
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  profile                DutyRestPolicyProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, ruleKey])
+  @@index([ruleKey])
+  @@index([regulationPart])
+  @@index([enabled, severity])
+  @@index([requiresOperatorReview])
 }

@@ -1513,6 +1513,14 @@ Scope:
 - No booking, expense, assignment, schedule, release, or duty/rest behavior
   changes.
 
+Duty/rest policy settings foundation is complete from
+`docs/DUTY_REST_REGULATORY_RESEARCH.md`. The selected first step is additive
+warning-only settings: `DutyRestPolicyProfile` and `DutyRestRuleSetting`, seeded
+per operating authority, with `/internal/duty-rest-policy-readiness` diagnostics
+and `/api/health` counts. This does not calculate legal duty/rest compliance,
+block schedules, block aircraft assignments, block releases, or create legal
+signoff behavior.
+
 Deferred follow-up to keep on the roadmap:
 
 ```text

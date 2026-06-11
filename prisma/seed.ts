@@ -36,6 +36,7 @@ import {
 
 import { createPasswordHash } from "../lib/auth/password";
 import { seedCrewComplianceDemo } from "../lib/crew-compliance-demo-seed";
+import { seedDefaultDutyRestPolicies } from "../lib/duty-rest-policy-defaults";
 import { seedDefaultReleasePolicies } from "../lib/release-policy-defaults";
 
 const prisma = new PrismaClient();
@@ -910,6 +911,8 @@ async function main() {
   await prisma.releaseReadinessSnapshot.deleteMany();
   await prisma.releasePolicyRule.deleteMany();
   await prisma.releasePolicyProfile.deleteMany();
+  await prisma.dutyRestRuleSetting.deleteMany();
+  await prisma.dutyRestPolicyProfile.deleteMany();
   await prisma.turnaroundLink.deleteMany();
   await prisma.airworthinessRelease.deleteMany();
   await prisma.maintenanceEvent.deleteMany();
@@ -1644,6 +1647,7 @@ async function main() {
   await seedAirworthinessFoundation();
 
   await seedDefaultReleasePolicies(prisma);
+  await seedDefaultDutyRestPolicies(prisma);
 
   await prisma.timeOffRequest.create({
     data: {
