@@ -17,6 +17,7 @@ reviewable slices and should not attempt the full product in one pass.
 - Deferred: advanced reports, TV mode, uploads, rich analytics
 - Compliance roadmap: [docs/COMPLIANCE_ROADMAP.md](docs/COMPLIANCE_ROADMAP.md)
 - Local development: [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
+- Smoke testing: [docs/SMOKE_TESTING.md](docs/SMOKE_TESTING.md)
 - Builder onboarding: [docs/BUILDER_ONBOARDING.md](docs/BUILDER_ONBOARDING.md)
 - Current project status: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
 - Macro scaffolding plan: [docs/MAJOR_SCAFFOLDING_MACRO_PLAN.md](docs/MAJOR_SCAFFOLDING_MACRO_PLAN.md)

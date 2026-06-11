@@ -80,6 +80,30 @@ Open:
 http://127.0.0.1:3200
 ```
 
+## Command-Driven Smoke Testing
+
+Smoke-test users and route checks are documented in
+`docs/SMOKE_TESTING.md`.
+
+Create/update local smoke users:
+
+```powershell
+$env:AEROOPS_ENABLE_TEST_AUTH="1"
+npm run test:users:setup
+```
+
+With the local app running at `http://127.0.0.1:3200`, run:
+
+```powershell
+$env:AEROOPS_ENABLE_TEST_AUTH="1"
+$env:AEROOPS_SMOKE_BASE_URL="http://127.0.0.1:3200"
+npm run smoke:app
+```
+
+The smoke harness creates real DB-backed sessions for each test role and checks
+routes over HTTP. It is gated and should not be treated as a production
+backdoor.
+
 ## Daily Use
 
 1. Confirm Docker Desktop is running.

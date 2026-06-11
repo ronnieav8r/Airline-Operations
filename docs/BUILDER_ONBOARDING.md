@@ -79,12 +79,17 @@ Latest macro QA static checks passed:
 Runtime DB/browser QA remains pending for several recent chains because Docker
 Desktop was unavailable during implementation.
 
+Command-driven role smoke testing is available through
+`docs/SMOKE_TESTING.md`. The harness creates gated smoke users for every role
+and checks app routes with real DB-backed session cookies.
+
 ## Required Reading Before New Work
 
 - `docs/PROJECT_STATUS.md`
 - `docs/SCHEMA_DECISIONS.md`
 - `docs/MAJOR_SCAFFOLDING_MACRO_PLAN.md`
 - `docs/MACRO_SCAFFOLDING_QA_LOG.md`
+- `docs/SMOKE_TESTING.md`
 - Relevant domain doc for the slice, such as:
   - `docs/CREW_SCHEDULING_SYSTEM_ARCHITECTURE.md`
   - `docs/CREW_COMPLIANCE_PLAN.md`
