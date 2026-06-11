@@ -1718,6 +1718,11 @@ remains the release decision record, `ReleasePackage` remains the evidence
 bundle, release actions stay available despite warnings, and Prompt 225 should
 tighten release action attribution/audit/status behavior.
 
+Prompt 225 is complete. Existing release actions now carry actor user and role
+metadata into release-attempt snapshots and `ReleaseAuditEvent.actorRole`.
+Release behavior remains warning-only; no hard blocking, signatures, overrides,
+or final ReleasePackage capture were added.
+
 Next FlightLeg cutover step:
 
 ```text

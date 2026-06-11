@@ -71,3 +71,6 @@ Prompt 224 plans the MVP release lifecycle in
 `docs/MVP_RELEASE_LIFECYCLE_PLAN.md`. Prompt 225 should tighten the existing
 release action lifecycle and audit metadata while keeping release behavior
 warning-only.
+
+Prompt 225 implementation status: complete. Existing release actions now record
+actor role in release audit events and snapshot metadata.

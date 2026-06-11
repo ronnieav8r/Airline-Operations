@@ -41,6 +41,11 @@ Prompt 225 should ensure Mark Released, Cancel Release, and Void Release:
 - Keep release actions available even when readiness has warnings or future
   would-block findings.
 
+Prompt 225 implementation status: complete. Release attempt snapshots now store
+actor user and role metadata, release audit events store `actorRole`, and smoke
+workflow assertions verify release audit attribution while release actions
+remain warning-only.
+
 ## ReleasePackage Boundary
 
 Prompt 225 should not implement final ReleasePackage capture. Prompt 226 should

@@ -953,7 +953,7 @@ async function smokeReleaseAudit(context: SmokeContext, flightLeg: SmokeFlightLe
     select: {
       releaseAuditEvents: {
         where: { message: `${smokeLabel} release status smoke` },
-        select: { actorUserId: true, eventType: true, snapshotId: true },
+        select: { actorRole: true, actorUserId: true, eventType: true, snapshotId: true },
       },
       releasedById: true,
       status: true,
@@ -964,6 +964,7 @@ async function smokeReleaseAudit(context: SmokeContext, flightLeg: SmokeFlightLe
     !verified ||
     verified.status !== ReleaseStatus.RELEASED ||
     verified.releasedById !== context.adminUserId ||
+    verified.releaseAuditEvents[0]?.actorRole !== "ADMIN" ||
     verified.releaseAuditEvents[0]?.eventType !== ReleaseAuditEventType.RELEASE_COMPLETED ||
     verified.releaseAuditEvents[0]?.snapshotId !== snapshotId
   ) {

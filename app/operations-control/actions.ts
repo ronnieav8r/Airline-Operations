@@ -17,6 +17,7 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/guards";
+import type { CurrentUser } from "@/lib/auth/session";
 import { getReleaseEvidenceDetail } from "@/lib/release-evidence-detail-queries";
 import {
   getReleaseSnapshotStatus,
@@ -36,6 +37,8 @@ type SnapshotSummaryContext =
   | {
       attemptedAction: string;
       attemptedReleaseStatus: ReleaseStatus;
+      actorRole: UserRole;
+      actorUserId: string;
       capturedBeforeStatus: ReleaseStatus | null;
       source: "release-attempt";
     };
@@ -950,7 +953,7 @@ async function createReadinessSnapshot(
 async function captureReleaseAttemptSnapshot(
   flightLegId: string,
   status: ReleaseStatus,
-  currentUserId: string,
+  currentUser: CurrentUser,
 ): Promise<AttemptSnapshotResult> {
   const detail = await getReleaseEvidenceDetail(flightLegId);
   const capturedBeforeStatus = detail?.operationalControlRecord?.release?.status ?? null;
@@ -960,11 +963,13 @@ async function captureReleaseAttemptSnapshot(
     {
       attemptedAction: releaseAttemptAction(status),
       attemptedReleaseStatus: status,
+      actorRole: currentUser.role,
+      actorUserId: currentUser.id,
       capturedBeforeStatus,
       source: "release-attempt",
     },
     "best-effort",
-    currentUserId,
+    currentUser.id,
   );
 }
 
@@ -973,7 +978,7 @@ async function createReleaseAuditEvent(
   releaseId: string,
   status: ReleaseStatus,
   snapshot: AttemptSnapshotResult,
-  currentUserId: string,
+  currentUser: CurrentUser,
 ) {
   await prisma.$transaction(async (tx) => {
     await tx.releaseAuditEvent.create({
@@ -982,11 +987,14 @@ async function createReleaseAuditEvent(
         flightReleaseId: releaseId,
         snapshotId: snapshot.snapshotId,
         eventType: releaseAuditEventType(status),
-        actorUserId: currentUserId,
+        actorUserId: currentUser.id,
+        actorRole: currentUser.role,
         message: releaseAuditMessage(status, snapshot),
         metadata: {
           attemptedAction: releaseAttemptAction(status),
           attemptedReleaseStatus: status,
+          actorRole: currentUser.role,
+          actorUserId: currentUser.id,
           capturedBeforeStatus: snapshot.capturedBeforeStatus,
           snapshotCaptured: !!snapshot.snapshotId,
           snapshotSkippedReason: snapshot.skippedReason,
@@ -996,14 +1004,14 @@ async function createReleaseAuditEvent(
   });
 }
 
-async function runReleaseAction(flightLegId: string, status: ReleaseStatus, currentUserId: string) {
+async function runReleaseAction(flightLegId: string, status: ReleaseStatus, currentUser: CurrentUser) {
   let attemptSnapshot: AttemptSnapshotResult;
   let release: { id: string };
 
   try {
-    attemptSnapshot = await captureReleaseAttemptSnapshot(flightLegId, status, currentUserId);
-    release = await setFlightLegReleaseStatus(flightLegId, status, currentUserId);
-    await createReleaseAuditEvent(flightLegId, release.id, status, attemptSnapshot, currentUserId);
+    attemptSnapshot = await captureReleaseAttemptSnapshot(flightLegId, status, currentUser);
+    release = await setFlightLegReleaseStatus(flightLegId, status, currentUser.id);
+    await createReleaseAuditEvent(flightLegId, release.id, status, attemptSnapshot, currentUser);
   } catch (error) {
     redirect(`/operations-control/${flightLegId}?releaseError=${encodeError(error)}`);
   }
@@ -1015,17 +1023,17 @@ async function runReleaseAction(flightLegId: string, status: ReleaseStatus, curr
 
 export async function markFlightLegReleasedAction(flightLegId: string) {
   const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
-  await runReleaseAction(flightLegId, ReleaseStatus.RELEASED, currentUser.id);
+  await runReleaseAction(flightLegId, ReleaseStatus.RELEASED, currentUser);
 }
 
 export async function cancelFlightLegReleaseAction(flightLegId: string) {
   const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
-  await runReleaseAction(flightLegId, ReleaseStatus.CANCELLED, currentUser.id);
+  await runReleaseAction(flightLegId, ReleaseStatus.CANCELLED, currentUser);
 }
 
 export async function voidFlightLegReleaseAction(flightLegId: string) {
   const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
-  await runReleaseAction(flightLegId, ReleaseStatus.VOIDED, currentUser.id);
+  await runReleaseAction(flightLegId, ReleaseStatus.VOIDED, currentUser);
 }
 
 export async function captureReleasePreviewSnapshotAction(flightLegId: string) {

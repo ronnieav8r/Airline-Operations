@@ -68,6 +68,9 @@ Prompt 224 is complete. The MVP release lifecycle is planned in
 state alignment, attribution, readiness snapshot metadata, and audit metadata
 while keeping release warning-only.
 
+Prompt 225 is complete. Release action snapshots/audit events now include
+actor user and role metadata, and release actions remain warning-only.
+
 ## Batch 2: Release Backend Completion
 
 - `224`: MVP release lifecycle planning.
