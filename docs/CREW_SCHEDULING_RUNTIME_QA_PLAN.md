@@ -60,6 +60,8 @@ decisions.
 
 ## Prompt 245: Crew Request And Time-Off QA
 
+Status: complete.
+
 Verify:
 
 - Admin/ops can approve and deny submitted `CrewScheduleRequest` rows.

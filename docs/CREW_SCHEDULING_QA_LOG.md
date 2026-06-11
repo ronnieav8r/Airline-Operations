@@ -79,6 +79,35 @@ were required.
 - Re-running generation skips exact duplicate rows.
 - Pattern generation does not mutate `AircraftCrewAssignment` row counts.
 
+## Prompt 245: Crew Request And Time-Off QA
+
+### Result
+
+Runtime QA passed locally.
+
+### Validation
+
+- `npm run prisma:validate`: pass.
+- `npm run typecheck`: pass.
+- `npm run lint`: pass.
+- `npm run build`: pass.
+- `npm run db:local:up`: pass.
+- `npm run db:local:migrate`: pass.
+- `npm run db:local:seed`: pass.
+- `npm run smoke:crew-requests-time-off`: pass.
+- `npm run smoke:workflows`: pass.
+- `npm run smoke:app`: pass.
+- `npm run smoke:browser`: pass.
+
+### Verified Behavior
+
+- Submitted schedule requests can be approved and denied with review metadata.
+- Pending time-off requests can be approved, denied, and cancelled with review
+  metadata.
+- Request and time-off review do not create `CrewSchedule` bridge rows.
+- Request and time-off review do not create `CrewScheduleEntry` rows.
+- Request and time-off review do not mutate `AircraftCrewAssignment` row counts.
+
 ## Prompt 184: Schedule Publish QA
 
 ### Result

@@ -309,3 +309,7 @@ Prompt 244 runtime QA status: complete. Rotation pattern generation now has a
 focused smoke that verifies draft-only generation, duplicate skipping, pattern
 links, no pre-publish `CrewSchedule` bridge rows, and unchanged aircraft
 assignment counts.
+
+Prompt 245 runtime QA status: complete. Schedule request and time-off review
+now have a focused smoke that verifies status/review metadata and no
+`CrewSchedule`, `CrewScheduleEntry`, or `AircraftCrewAssignment` side effects.

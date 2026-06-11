@@ -1814,10 +1814,15 @@ pattern generation creates draft-only pattern-linked schedule entries, skips
 duplicate generation, creates no `CrewSchedule` bridge rows before publish, and
 does not mutate aircraft crew assignments.
 
+Prompt 245 is complete. `npm run smoke:crew-requests-time-off` verifies
+schedule request approval/denial and time-off approval/denial/cancellation
+persist review metadata without creating schedule bridge rows, schedule entries,
+or aircraft crew assignment side effects.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 245: Crew Request And Time-Off QA
+Prompt 246: Crew Portal Backend QA
 ```
 
 Scope:
