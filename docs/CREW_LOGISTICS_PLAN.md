@@ -117,3 +117,12 @@ Detailed plan:
 ```text
 docs/CREW_LOGISTICS_DEPTH_PLAN.md
 ```
+
+Prompt 210 implementation status: complete with local static and smoke
+validation. The central
+ops/admin `/crew/logistics` workbench now summarizes and filters logistics
+needs, groups them for dispatch-style scanning, and links back to crew,
+aircraft, aircraft crew, FlightLeg, and crew-scoped logistics management pages.
+It is read-only and does not add provider integrations, booking automation,
+expenses, schedule mutation, aircraft assignment mutation, release behavior, or
+duty/rest enforcement.

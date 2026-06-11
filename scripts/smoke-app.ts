@@ -73,6 +73,7 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
       role: UserRole.ADMIN,
       checks: [
         ...commonChecks,
+        { label: "crew logistics workbench", path: "/crew/logistics" },
         { label: "crew logistics manage", path: `/crew/${ids.crewMemberId}/logistics` },
         { label: "aircraft crew workflow", path: `/aircraft/${ids.aircraftId}/crew` },
         { label: "schedule periods", path: "/crew/scheduling/periods" },
@@ -82,6 +83,7 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
       role: UserRole.OPS,
       checks: [
         ...commonChecks,
+        { label: "crew logistics workbench", path: "/crew/logistics" },
         { label: "crew logistics manage", path: `/crew/${ids.crewMemberId}/logistics` },
         { label: "aircraft crew workflow", path: `/aircraft/${ids.aircraftId}/crew` },
         { label: "schedule periods", path: "/crew/scheduling/periods" },
@@ -100,6 +102,11 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
           path: `/crew/${ids.crewMemberId}/logistics`,
           expectedStatuses: [303, 307, 308],
         },
+        {
+          label: "crew logistics workbench blocked",
+          path: "/crew/logistics",
+          expectedStatuses: [303, 307, 308],
+        },
       ],
     },
     {
@@ -110,6 +117,11 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
         {
           label: "crew logistics blocked",
           path: `/crew/${ids.crewMemberId}/logistics`,
+          expectedStatuses: [303, 307, 308],
+        },
+        {
+          label: "crew logistics workbench blocked",
+          path: "/crew/logistics",
           expectedStatuses: [303, 307, 308],
         },
       ],
@@ -124,6 +136,11 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
           path: `/crew/${ids.crewMemberId}/logistics`,
           expectedStatuses: [303, 307, 308],
         },
+        {
+          label: "crew logistics workbench blocked",
+          path: "/crew/logistics",
+          expectedStatuses: [303, 307, 308],
+        },
       ],
     },
     {
@@ -135,6 +152,11 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
           path: `/crew/${ids.crewMemberId}/logistics`,
           expectedStatuses: [303, 307, 308],
         },
+        {
+          label: "crew logistics workbench blocked",
+          path: "/crew/logistics",
+          expectedStatuses: [303, 307, 308],
+        },
       ],
     },
     {
@@ -144,6 +166,11 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
         {
           label: "crew logistics blocked",
           path: `/crew/${ids.crewMemberId}/logistics`,
+          expectedStatuses: [303, 307, 308],
+        },
+        {
+          label: "crew logistics workbench blocked",
+          path: "/crew/logistics",
           expectedStatuses: [303, 307, 308],
         },
       ],

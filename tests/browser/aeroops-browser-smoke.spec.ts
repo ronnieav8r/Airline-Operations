@@ -77,6 +77,7 @@ test.describe.serial("AeroOps browser smoke", () => {
     await expectPageOk(page, "/operations-control");
     await expectPageOk(page, `/operations-control/${ids.flightLegId}`);
     await expectPageOk(page, "/crew/scheduling/periods");
+    await expectPageOk(page, "/crew/logistics");
     await expectPageOk(page, `/crew/${ids.crewMemberId}/logistics`);
     await expectPageOk(page, `/aircraft/${ids.aircraftId}/crew`);
   });
@@ -90,6 +91,10 @@ test.describe.serial("AeroOps browser smoke", () => {
     await expectPageOk(page, "/crew/portal");
 
     await page.goto(`/crew/${ids.crewMemberId}/logistics`);
+    await expect(page).toHaveURL(/authError=You%20do%20not%20have%20access/);
+    await expect(page.getByText("AeroOps Center").first()).toBeVisible();
+
+    await page.goto("/crew/logistics");
     await expect(page).toHaveURL(/authError=You%20do%20not%20have%20access/);
     await expect(page.getByText("AeroOps Center").first()).toBeVisible();
   });

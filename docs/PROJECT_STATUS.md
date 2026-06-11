@@ -1567,6 +1567,21 @@ Scope:
   and FlightLeg contexts.
 - Do not add new schema or external provider calls.
 
+Prompt 210 is complete with local static and smoke validation. `/crew/logistics`
+now gives ADMIN/OPS users a central read-only logistics workbench with summary
+cards, filters, grouping, logistics cards, latest location context, and links
+back to crew, aircraft, aircraft crew, FlightLeg, and crew-scoped logistics
+management. Provider integrations, live booking, expenses, crew self-service
+logistics writes, automatic positioning recommendations, schedule mutation,
+aircraft assignment mutation, release behavior changes, and duty/rest
+enforcement remain deferred.
+
+Next logistics QA slice:
+
+```text
+Prompt 211: Crew Logistics Workbench QA
+```
+
 Deferred follow-up to keep on the roadmap:
 
 ```text

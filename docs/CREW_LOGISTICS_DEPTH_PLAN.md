@@ -44,6 +44,16 @@ Minimum workbench behavior:
 - Cross-links to crew detail, crew logistics management, aircraft context,
   aircraft crew workflow, and FlightLeg detail.
 
+## Prompt 210 Status
+
+Implementation status: complete with local static and smoke validation.
+`/crew/logistics` now provides the central ops/admin workbench with summary
+cards, URL-driven filters, grouping, logistics cards, and cross-links back to
+existing crew-scoped management workflows. No schema, provider integration,
+booking automation, expense workflow, crew self-service logistics write,
+schedule mutation, aircraft assignment mutation, release mutation, or duty/rest
+mutation was added.
+
 ## Provider Integration Boundary
 
 Provider integrations should be planned after the workbench. Do not add live

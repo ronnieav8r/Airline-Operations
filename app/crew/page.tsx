@@ -500,6 +500,12 @@ export default async function CrewPage() {
               </Link>
               <Link
                 className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                href="/crew/logistics"
+              >
+                Logistics workbench
+              </Link>
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                 href="/crew/scheduling?assignment=assigned"
               >
                 Assigned crew

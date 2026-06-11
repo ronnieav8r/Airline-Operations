@@ -1,6 +1,6 @@
 # Smoke Testing
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Purpose
 
@@ -95,7 +95,7 @@ ReleasePackage preview. It refuses non-local database URLs unless
 `npm run smoke:browser` runs a Playwright Chromium browser smoke test. It logs
 in through the real `/login` form, opens protected admin workflow pages, opens
 the crew portal as a crew user, and confirms the crew user is redirected away
-from crew logistics management.
+from crew logistics management and the central logistics workbench.
 
 ## What The Smoke Runner Checks
 
@@ -114,9 +114,10 @@ from crew logistics management.
   - one aircraft context page
   - one crew detail page
 - Role-specific access is checked:
-  - `ADMIN` and `OPS` can open crew logistics management.
+  - `ADMIN` and `OPS` can open crew logistics management and `/crew/logistics`.
   - `CREW` can open `/crew/portal`.
-  - non-ops roles are redirected away from crew logistics management.
+  - non-ops roles are redirected away from crew logistics management and the
+    central logistics workbench.
   - dispatch, maintenance, safety, and viewer smoke their relevant read
     surfaces.
 
@@ -128,11 +129,6 @@ and the browser smoke runner checks real login/form navigation in Chromium.
 
 ## Current Runtime Note
 
-Recent attempts to start the local Docker database failed because Docker
-Desktop was unavailable:
-
-```text
-failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine
-```
-
-The smoke commands require the app and database to be running.
+Last checked during Prompt 210: local Docker Postgres, route smoke, and
+Playwright browser smoke passed with the explicit local database URL and
+`AEROOPS_ENABLE_TEST_AUTH=1`.
