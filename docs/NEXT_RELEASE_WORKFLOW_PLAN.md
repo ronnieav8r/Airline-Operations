@@ -85,3 +85,6 @@ backend.
 
 Prompt 228 QA status: complete. Release backend smoke verified preview/final
 package capture, release audit creation, route access, and browser login flows.
+
+Prompt 229 docs status: complete. The current release backend is documented as
+MVP-complete under warning-only policy.

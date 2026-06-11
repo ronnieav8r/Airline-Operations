@@ -1,6 +1,6 @@
 # AeroOps Builder Onboarding
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Current App State
 
@@ -13,7 +13,7 @@ Core surfaces:
 - `/`: dashboard and attention surface.
 - `/operations-control`: FlightLeg workbench.
 - `/operations-control/[flightLegId]`: FlightLeg detail, release readiness,
-  release evidence, ReleasePackage preview/capture, and audit context.
+  release evidence, ReleasePackage preview/final capture, and audit context.
 - `/aircraft`: fleet board.
 - `/aircraft/[aircraftId]`: aircraft operational context.
 - `/aircraft/[aircraftId]/crew`: aircraft-block crew assignment workflow.
@@ -33,8 +33,9 @@ Core surfaces:
 - Legacy `Flight` remains for compatibility/archive behavior until parity is
   proven and destructive removal is separately planned.
 - `FlightRelease` remains the release decision record.
-- `ReleasePackage` is an additive evidence bundle around `FlightRelease`; it
-  does not replace release decisions yet.
+- `ReleasePackage` is an additive evidence bundle around `FlightRelease`;
+  preview and final package capture are active, but it does not replace release
+  decisions.
 - `AircraftCrewAssignment` remains operational coverage truth.
 - `CrewLegAssignment` remains FlightLeg snapshot/evidence.
 - `CrewScheduleEntry` and `CrewSchedule` describe planning/availability, not

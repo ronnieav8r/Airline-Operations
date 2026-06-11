@@ -8,6 +8,8 @@ Last updated: 2026-06-10
 the current `FlightRelease`; it does not replace `FlightRelease` as the release
 decision/status record.
 
+MVP implementation status: preview capture and final capture are active.
+
 ## Purpose
 
 The package answers:

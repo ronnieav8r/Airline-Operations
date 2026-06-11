@@ -81,6 +81,9 @@ backend workflow and preserves warning-only release behavior.
 Prompt 228 is complete. Release backend QA passed locally across static checks,
 workflow smoke, route smoke, and browser smoke.
 
+Prompt 229 is complete. Release docs now mark the warning-only release backend
+as MVP-complete and keep post-MVP release items clearly deferred.
+
 ## Batch 2: Release Backend Completion
 
 - `224`: MVP release lifecycle planning.

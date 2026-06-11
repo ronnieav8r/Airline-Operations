@@ -1738,6 +1738,12 @@ workflow smoke, app route smoke, and browser smoke. The QA run verified preview
 and final ReleasePackage capture, release audit creation, and warning-only
 release behavior.
 
+Prompt 229 is complete. Release backend docs now identify the warning-only MVP
+release backend as complete: readiness, snapshots, release audit, preview
+package capture, and final package capture are active. Hard blocking,
+signatures, overrides, providers, file uploads, and generated documents remain
+post-MVP.
+
 Next FlightLeg cutover step:
 
 ```text

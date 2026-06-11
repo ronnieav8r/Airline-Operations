@@ -1,6 +1,6 @@
 # Release Attempt Snapshot Policy
 
-Last updated: 2026-06-07
+Last updated: 2026-06-11
 
 ## Decision
 
@@ -15,6 +15,10 @@ attempt snapshots and linked release audit events using existing tables.
 
 Prompt 81 validated release, cancel, and void attempt snapshots plus linked
 audit events in local QA.
+
+Prompt 225 tightened release audit attribution. Release attempt snapshots and
+audit metadata now include actor user and actor role, and release audit events
+store `actorRole`.
 
 ## Attempt Definition
 
@@ -46,6 +50,8 @@ Attempt context should be stored in `ReleaseReadinessSnapshot.summary` JSON:
 - `attemptedReleaseStatus`
 - `attemptedAction`
 - `capturedBeforeStatus`
+- `actorUserId`
+- `actorRole`
 
 Each release action should create a `ReleaseAuditEvent`:
 
@@ -55,6 +61,10 @@ Each release action should create a `ReleaseAuditEvent`:
 
 The audit event should link to the snapshot when capture succeeds. If capture
 is skipped, the audit event should include the skip reason in metadata.
+
+Release audit events should record the authenticated actor user and role when
+available. In the current MVP, Mark Released, Cancel Release, and Void Release
+require `ADMIN` or `OPS`.
 
 ## Missing Policy Profile
 
@@ -66,8 +76,7 @@ the skip reason in release audit metadata.
 
 - Hard release blocking.
 - Override workflow.
-- Auth, roles, permissions, and signatures.
+- Formal signatures.
 - Provider-backed verification.
 - File uploads.
-- `ReleasePackage`.
 - Snapshot drift enforcement.
