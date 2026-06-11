@@ -1829,10 +1829,15 @@ Prompt 247 is complete. Crew Scheduling backend is MVP-complete for the current
 planning/availability boundary and documented in
 `docs/CREW_SCHEDULING_MVP_STATUS.md`.
 
+Prompt 248 is complete as planning. Crew Logistics runtime hardening should now
+follow `docs/CREW_LOGISTICS_RUNTIME_QA_PLAN.md`: crew-scoped logistics writes
+and the central `/crew/logistics` workbench need DB-backed QA before manual
+logistics is marked backend MVP-complete.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 248: Logistics Runtime QA Planning
+Prompt 249: Crew Logistics Workflow QA
 ```
 
 Scope:

@@ -2,6 +2,26 @@
 
 Last updated: 2026-06-10
 
+## Prompt 248 Runtime QA Plan
+
+### Result
+
+Planning complete. The DB-backed runtime QA chain is documented in
+`docs/CREW_LOGISTICS_RUNTIME_QA_PLAN.md`.
+
+### Planned Runtime QA Slices
+
+- Prompt 249: crew logistics workflow QA.
+- Prompt 250: logistics workbench QA and fixes.
+- Prompt 251: logistics docs refresh.
+
+### Boundary
+
+The QA chain must verify logistics behavior without adding provider
+integrations, live booking, expense tracking, crew self-service logistics
+writes, automatic positioning recommendations, schedule mutation, aircraft
+assignment mutation, release behavior changes, or duty/rest hard enforcement.
+
 ## Prompt 202 Static QA
 
 ### Scope Reviewed

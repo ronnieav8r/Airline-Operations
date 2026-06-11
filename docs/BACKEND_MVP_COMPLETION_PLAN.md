@@ -218,6 +218,9 @@ Batch 5 status: complete for backend MVP. Next batch is logistics hardening.
 
 ## Batch 6: Logistics Hardening
 
+Prompt 248 is complete as planning. The DB-backed logistics runtime QA chain is
+defined in `docs/CREW_LOGISTICS_RUNTIME_QA_PLAN.md`.
+
 - `248`: Logistics runtime QA planning.
 - `249`: Crew logistics workflow QA.
 - `250`: Logistics workbench QA and fixes.

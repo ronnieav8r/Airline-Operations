@@ -126,3 +126,7 @@ aircraft, aircraft crew, FlightLeg, and crew-scoped logistics management pages.
 It is read-only and does not add provider integrations, booking automation,
 expenses, schedule mutation, aircraft assignment mutation, release behavior, or
 duty/rest enforcement.
+
+Prompt 248 planning status: complete. The next logistics backend-MVP chain
+should complete DB-backed runtime QA for crew-scoped logistics workflows and
+the central logistics workbench. See `docs/CREW_LOGISTICS_RUNTIME_QA_PLAN.md`.
