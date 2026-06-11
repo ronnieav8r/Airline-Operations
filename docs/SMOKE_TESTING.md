@@ -82,6 +82,7 @@ Then run:
 $env:AEROOPS_ENABLE_TEST_AUTH="1"
 $env:AEROOPS_SMOKE_BASE_URL="http://127.0.0.1:3200"
 npm run smoke:app
+npm run smoke:browser
 ```
 
 The workflow smoke command writes runtime QA records with `SMOKE-` identifiers.
@@ -90,6 +91,11 @@ bridge, publishes a crew schedule period into `CrewSchedule`, submits crew
 portal requests, creates and books a crew logistics need, and captures a
 ReleasePackage preview. It refuses non-local database URLs unless
 `AEROOPS_ALLOW_REMOTE_SMOKE=1` is explicitly set.
+
+`npm run smoke:browser` runs a Playwright Chromium browser smoke test. It logs
+in through the real `/login` form, opens protected admin workflow pages, opens
+the crew portal as a crew user, and confirms the crew user is redirected away
+from crew logistics management.
 
 ## What The Smoke Runner Checks
 
@@ -118,7 +124,7 @@ ReleasePackage preview. It refuses non-local database URLs unless
 
 The HTTP smoke runner checks route access and role gates. The workflow smoke
 runner checks representative database outcomes for core create/edit workflows,
-but it does not yet automate browser form submission.
+and the browser smoke runner checks real login/form navigation in Chromium.
 
 ## Current Runtime Note
 
