@@ -1851,17 +1851,21 @@ Prompt 252 is complete. The final backend MVP smoke pass is recorded in
 `docs/BACKEND_MVP_FINAL_SMOKE_QA.md`; all static, DB prep, workflow, route, and
 browser smoke checks passed.
 
+Prompt 253 is complete. `docs/BACKEND_MVP_GAP_REVIEW.md` records no backend
+MVP blockers after the final smoke pass; remaining gaps are post-MVP or
+later-policy work.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 253: Backend MVP Gap Review
+Prompt 254: Backend MVP Status Cleanup
 ```
 
 Scope:
 
-- Review remaining gaps after the full smoke pass.
-- Classify gaps as MVP blockers or post-MVP deferred work.
-- Do not add new backend features unless the gap blocks core MVP use.
+- Clean up onboarding/status docs into a concise backend-MVP state.
+- Keep post-MVP gaps separated from active frontend readiness work.
+- Do not change app behavior.
 
 Next FlightLeg cutover step:
 

@@ -249,7 +249,7 @@ Acceptance for this batch:
 ## Batch 7: Backend MVP Closure
 
 - `252`: Backend MVP final smoke pass. Status: complete.
-- `253`: Backend MVP gap review.
+- `253`: Backend MVP gap review. Status: complete.
 - `254`: Backend MVP status cleanup.
 - `255`: Frontend readiness planning.
 
@@ -258,6 +258,10 @@ Acceptance for this batch:
 - Backend MVP gaps are either fixed or explicitly deferred as post-MVP.
 - Project docs clearly identify stable backend contracts for frontend work.
 - The team can shift to frontend/UI polish without backend ambiguity.
+
+Prompt 253 found no backend MVP blockers after the final smoke pass. Remaining
+gaps are recorded in `docs/BACKEND_MVP_GAP_REVIEW.md` as post-MVP or
+later-policy work.
 
 ## Global Validation Standard
 
