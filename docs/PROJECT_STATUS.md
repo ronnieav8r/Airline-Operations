@@ -1707,6 +1707,11 @@ FlightLeg-primary coverage sources with legacy fallback for unbridged rows.
 Static checks, build, local DB prep, workflow smoke, route smoke, and browser
 smoke passed.
 
+Prompt 223 is complete. FlightLeg cutover QA passed after the remaining
+consumer cutover, and legacy `Flight` is now documented as compatibility/archive
+for backend MVP in `docs/FLIGHTLEG_LEGACY_ARCHIVE_POLICY.md`. Destructive
+legacy removal remains deferred.
+
 Next FlightLeg cutover step:
 
 ```text

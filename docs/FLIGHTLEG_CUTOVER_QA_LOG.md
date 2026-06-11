@@ -65,3 +65,31 @@ Decision: the app is ready for the next controlled FlightLeg-native coverage
 planning slice, but not for destructive legacy `Flight` removal. Keep `Flight`,
 `FlightPassenger`, `CrewFlightLog`, `OperationalControlRecord.flightId`,
 `FlightLeg.legacyFlightId`, and `/api/flights/[id]` compatibility paths.
+
+## Prompt 223
+
+Local runtime QA completed after Prompt 222 moved the remaining safe internal
+consumers to FlightLeg-primary reads.
+
+Passed:
+
+- `npm run prisma:validate`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+- `npm run db:local:up`
+- `npm run db:local:migrate`
+- `npm run db:local:seed`
+- `/internal/flightleg-parity`
+- `/internal/flightleg-write-readiness`
+- `npm run smoke:workflows`
+- `npm run smoke:app`
+- `npm run smoke:browser`
+
+Workflow smoke run label:
+
+- `SMOKE-20260611130557`
+
+Decision: FlightLeg is the preferred backend MVP operational identity. Legacy
+`Flight` remains compatibility/archive only and must not be destructively
+removed without a later retirement plan.

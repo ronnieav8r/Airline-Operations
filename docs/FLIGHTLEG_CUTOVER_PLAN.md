@@ -101,6 +101,11 @@ legacy API paths in the current macro scaffolding chain.
    Prompt 222 completed that consumer cutover for crew-facing planning
    surfaces, time-off conflict warnings, and scheduling reads.
 
+7. **MVP Archive Policy**
+   Prompt 223 passed cutover QA and documents the legacy archive policy in
+   `docs/FLIGHTLEG_LEGACY_ARCHIVE_POLICY.md`. Legacy `Flight` is now
+   compatibility/archive for MVP, not the preferred operational identity.
+
 ## Deferred
 
 - Dropping or renaming legacy `Flight`.

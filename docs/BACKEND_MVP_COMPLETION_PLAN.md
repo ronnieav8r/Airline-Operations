@@ -59,6 +59,10 @@ Prompt 222 is complete. Remaining safe internal consumers now prefer
 FlightLeg-primary reads while preserving legacy fallback and API compatibility.
 Prompt 223 should QA the cutover and document the MVP archive policy.
 
+Prompt 223 is complete. FlightLeg cutover QA passed, and legacy `Flight` is now
+documented as compatibility/archive for backend MVP in
+`docs/FLIGHTLEG_LEGACY_ARCHIVE_POLICY.md`.
+
 ## Batch 2: Release Backend Completion
 
 - `224`: MVP release lifecycle planning.

@@ -529,3 +529,8 @@ Prompt 222 completes the remaining safe internal consumer cutover without a
 schema change. FlightLeg is now the preferred internal read identity for the
 targeted crew, scheduling, and time-off surfaces; legacy `Flight` remains
 compatibility/archive.
+
+Prompt 223 documents the MVP archive policy in
+`docs/FLIGHTLEG_LEGACY_ARCHIVE_POLICY.md`. Legacy `Flight` is compatibility and
+archive state for MVP, not the preferred operational identity. This does not
+approve destructive removal.
