@@ -497,3 +497,9 @@ unchanged: legacy `Flight`, `FlightPassenger`, `CrewFlightLog`,
 `OperationalControlRecord.flightId`, and `FlightLeg.legacyFlightId` remain for
 compatibility/archive behavior. The next safe cutover step is response-shape and
 API compatibility planning, not table removal.
+
+Prompt 212 plans the response-shape cutover without schema changes. Prompt 213
+should add FlightLeg-primary identity aliases to crew/coverage API responses:
+`operationalFlightLegId`, `legacyFlightId`, `inputId`, and `identitySource`.
+Existing `flightId` and `flightLegId` fields remain for compatibility. This is
+an API contract transition only, not a table migration.

@@ -1605,6 +1605,28 @@ Scope:
 - Do not drop `Flight`, `FlightPassenger`, `CrewFlightLog`,
   `OperationalControlRecord.flightId`, or `FlightLeg.legacyFlightId`.
 
+Prompt 212 is complete as a docs/planning slice. The selected response strategy
+is additive: keep `/api/flights/[id]/crew` and `/api/flights/[id]/coverage`,
+continue accepting FlightLeg IDs and legacy Flight IDs, preserve current
+`flightId` behavior, and add FlightLeg-primary identity aliases:
+`operationalFlightLegId`, `legacyFlightId`, `inputId`, and `identitySource`.
+Prompt 213 should implement this in the shared crew-resolution helper and route
+responses without updating visible UI consumers except as needed for type
+compatibility.
+
+Next FlightLeg cutover implementation:
+
+```text
+Prompt 213: FlightLeg-Native Coverage Response Foundation
+```
+
+Scope:
+
+- Add the transitional identity fields to crew and coverage responses.
+- Add focused API smoke coverage for FlightLeg-ID and legacy-Flight-ID requests.
+- Do not remove or rename existing response fields, API paths, legacy tables, or
+  bridge writes.
+
 Deferred follow-up to keep on the roadmap:
 
 ```text
