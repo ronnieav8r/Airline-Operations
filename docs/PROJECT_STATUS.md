@@ -51,6 +51,8 @@ Recent prompt-numbering note:
   260.
 - Prompt 260 implemented dashboard body reflow and the first app-wide light/dark
   view toggle; frontend IA moves to Prompt 261.
+- Prompt 261 implemented the first Flights page drilldown foundation with
+  compact header, filters, interactive rows, and quick-review drawers.
 
 ## Current State
 
@@ -1907,10 +1909,15 @@ and Release Review remain available through top-tile drawers instead of visible
 body sections. The app shell now includes an app-wide Light/Dark view toggle
 with broad CSS-based dark-mode coverage.
 
+Prompt 261 is complete. `/flights` now has a compact header with summary chips,
+date/status/release/issue filters, a `New FlightLeg` action, interactive flight
+cards, and read-only quick-review drawers for flight, release/control, and crew
+qualification context.
+
 Next recommended workstream:
 
 ```text
-Frontend/UI polish continuing with Prompt 261
+Frontend/UI polish continuing with Prompt 262
 ```
 
 Scope:

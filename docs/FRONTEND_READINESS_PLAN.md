@@ -124,16 +124,17 @@ dashboard body and added the first app-wide light/dark view toggle.
 - Prompt 258: Dashboard Compact Ops Foundation.
 - Prompt 259: Dashboard Release Readiness Drawer Foundation.
 - Prompt 260: Dashboard Layout And Theme Foundation.
-- Prompt 261: Frontend IA Audit Planning.
-- Prompt 262: App Shell Navigation Polish.
-- Prompt 263: App Shell QA.
-- Prompt 264: Operator Release Configuration Planning.
-- Prompt 265: Dashboard Command Surface Follow-Up Planning.
-- Prompt 266: Dashboard Command Surface Follow-Up Foundation.
-- Prompt 267: Dashboard Command Surface QA.
-- Prompt 268: Operations Control Workbench Polish Planning.
-- Prompt 269: Operations Control Workbench Polish Foundation.
-- Prompt 270: Operations Control Workbench QA.
+- Prompt 261: Flights Page Drilldown Foundation.
+- Prompt 262: Frontend IA Audit Planning.
+- Prompt 263: App Shell Navigation Polish.
+- Prompt 264: App Shell QA.
+- Prompt 265: Operator Release Configuration Planning.
+- Prompt 266: Dashboard Command Surface Follow-Up Planning.
+- Prompt 267: Dashboard Command Surface Follow-Up Foundation.
+- Prompt 268: Dashboard Command Surface QA.
+- Prompt 269: Operations Control Workbench Polish Planning.
+- Prompt 270: Operations Control Workbench Polish Foundation.
+- Prompt 271: Operations Control Workbench QA.
 
 ## Backend Work To Avoid During UI Polish
 

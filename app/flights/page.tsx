@@ -1,9 +1,96 @@
 import { FlightLegStatus, FlightStatus, ReleaseStatus, SeatRole } from "@prisma/client";
+import Link from "next/link";
 
-import { FlightCoverage } from "@/lib/crew-resolution";
+import { FlightCoverage, ResolvedCrewAssignment } from "@/lib/crew-resolution";
 import { FlightListItem, getFlightListData } from "@/lib/flight-queries";
 
 export const dynamic = "force-dynamic";
+
+type PageProps = {
+  searchParams: Promise<{
+    from?: string | string[];
+    issue?: string | string[];
+    panel?: string | string[];
+    range?: string | string[];
+    release?: string | string[];
+    selected?: string | string[];
+    status?: string | string[];
+    to?: string | string[];
+  }>;
+};
+
+type DateRangeFilter = "7d" | "30d" | "custom" | "today" | "tomorrow";
+type FlightStatusFilter = "all" | "cancelled" | "complete" | "delayed" | "enroute" | "released" | "scheduled";
+type ReleaseFilter = "all" | "planned" | "released" | "unreleased";
+type IssueFilter = "all" | "coverage-gap" | "delayed" | "qualification-warning" | "release-review";
+type FlightPanel = "crew" | "flight" | "release";
+
+const RANGE_OPTIONS: Array<{ label: string; value: DateRangeFilter }> = [
+  { label: "Today", value: "today" },
+  { label: "Tomorrow", value: "tomorrow" },
+  { label: "7 days", value: "7d" },
+  { label: "30 days", value: "30d" },
+];
+
+const STATUS_OPTIONS: Array<{ label: string; value: FlightStatusFilter }> = [
+  { label: "All status", value: "all" },
+  { label: "Scheduled", value: "scheduled" },
+  { label: "Released", value: "released" },
+  { label: "Enroute", value: "enroute" },
+  { label: "Delayed", value: "delayed" },
+  { label: "Complete", value: "complete" },
+  { label: "Cancelled", value: "cancelled" },
+];
+
+const RELEASE_OPTIONS: Array<{ label: string; value: ReleaseFilter }> = [
+  { label: "All release", value: "all" },
+  { label: "Released", value: "released" },
+  { label: "Unreleased", value: "unreleased" },
+  { label: "Planned", value: "planned" },
+];
+
+const ISSUE_OPTIONS: Array<{ label: string; value: IssueFilter }> = [
+  { label: "All issues", value: "all" },
+  { label: "Release review", value: "release-review" },
+  { label: "Coverage gap", value: "coverage-gap" },
+  { label: "Qualification warning", value: "qualification-warning" },
+  { label: "Delayed", value: "delayed" },
+];
+
+function firstParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
+function oneOf<T extends string>(value: string | null, options: readonly T[], fallback: T): T {
+  return value && options.includes(value as T) ? (value as T) : fallback;
+}
+
+function startOfUtcDay(value: Date): Date {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+}
+
+function addDays(value: Date, days: number): Date {
+  const next = new Date(value);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+function parseDateInput(value: string | null): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function toDateInput(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
 
 function toDateTime(value: Date): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -35,6 +122,173 @@ function formatAircraftType(value: string): string {
   return value.replaceAll("_", "-");
 }
 
+function releaseStatus(flight: FlightListItem): ReleaseStatus | null {
+  return flight.operationalControlRecord?.release?.status ?? null;
+}
+
+function parseFilters(searchParams: Awaited<PageProps["searchParams"]>) {
+  const range = oneOf<DateRangeFilter>(
+    firstParam(searchParams.range),
+    ["today", "tomorrow", "7d", "30d", "custom"],
+    "7d",
+  );
+  const status = oneOf<FlightStatusFilter>(
+    firstParam(searchParams.status),
+    ["all", "cancelled", "complete", "delayed", "enroute", "released", "scheduled"],
+    "all",
+  );
+  const release = oneOf<ReleaseFilter>(
+    firstParam(searchParams.release),
+    ["all", "planned", "released", "unreleased"],
+    "all",
+  );
+  const issue = oneOf<IssueFilter>(
+    firstParam(searchParams.issue),
+    ["all", "coverage-gap", "delayed", "qualification-warning", "release-review"],
+    "all",
+  );
+  const panel = oneOf<FlightPanel | "none">(
+    firstParam(searchParams.panel),
+    ["crew", "flight", "release", "none"],
+    "none",
+  );
+  const today = startOfUtcDay(new Date());
+  const customStart = parseDateInput(firstParam(searchParams.from));
+  const customEnd = parseDateInput(firstParam(searchParams.to));
+  let start = today;
+  let end = addDays(today, 7);
+
+  if (range === "today") {
+    start = today;
+    end = addDays(today, 1);
+  } else if (range === "tomorrow") {
+    start = addDays(today, 1);
+    end = addDays(today, 2);
+  } else if (range === "30d") {
+    start = today;
+    end = addDays(today, 30);
+  } else if (range === "custom") {
+    start = customStart ?? today;
+    end = customEnd ? addDays(customEnd, 1) : addDays(start, 1);
+  }
+
+  return {
+    customEnd,
+    customStart,
+    end,
+    issue,
+    panel: panel === "none" ? null : panel,
+    range,
+    release,
+    selected: firstParam(searchParams.selected),
+    start,
+    status,
+  };
+}
+
+type Filters = ReturnType<typeof parseFilters>;
+
+function flightsHref(filters: Filters, next: Partial<Pick<Filters, "issue" | "range" | "release" | "selected" | "status">> & {
+  customEnd?: Date | null;
+  customStart?: Date | null;
+  panel?: FlightPanel | null;
+} = {}) {
+  const merged = { ...filters, ...next };
+  const params = new URLSearchParams();
+
+  if (merged.range !== "7d") {
+    params.set("range", merged.range);
+  }
+
+  if (merged.range === "custom") {
+    params.set("from", toDateInput(merged.customStart ?? merged.start));
+    params.set("to", toDateInput(merged.customEnd ?? addDays(merged.end, -1)));
+  }
+
+  if (merged.status !== "all") {
+    params.set("status", merged.status);
+  }
+
+  if (merged.release !== "all") {
+    params.set("release", merged.release);
+  }
+
+  if (merged.issue !== "all") {
+    params.set("issue", merged.issue);
+  }
+
+  if (next.panel) {
+    params.set("panel", next.panel);
+  }
+
+  if (merged.selected) {
+    params.set("selected", merged.selected);
+  }
+
+  const query = params.toString();
+  return query ? `/flights?${query}` : "/flights";
+}
+
+function flightStatusMatches(flight: FlightListItem, status: FlightStatusFilter) {
+  if (status === "all") {
+    return true;
+  }
+  if (status === "released") {
+    return flight.status === FlightLegStatus.RELEASED;
+  }
+  return flight.status.toLowerCase() === status;
+}
+
+function releaseMatches(flight: FlightListItem, release: ReleaseFilter) {
+  const releaseValue = releaseStatus(flight);
+
+  if (release === "all") {
+    return true;
+  }
+  if (release === "released") {
+    return releaseValue === ReleaseStatus.RELEASED;
+  }
+  if (release === "planned") {
+    return releaseValue === ReleaseStatus.PLANNED;
+  }
+  return releaseValue !== ReleaseStatus.RELEASED;
+}
+
+function hasReleaseReview(flight: FlightListItem) {
+  return (
+    releaseStatus(flight) !== ReleaseStatus.RELEASED ||
+    !flight.coverage ||
+    !flight.coverage.isCovered ||
+    flight.coverage.warnings.length > 0 ||
+    flight.status === FlightStatus.DELAYED
+  );
+}
+
+function issueMatches(flight: FlightListItem, issue: IssueFilter) {
+  if (issue === "all") {
+    return true;
+  }
+  if (issue === "coverage-gap") {
+    return Boolean(flight.coverage && !flight.coverage.isCovered);
+  }
+  if (issue === "qualification-warning") {
+    return Boolean(flight.coverage && flight.coverage.warnings.length > 0);
+  }
+  if (issue === "delayed") {
+    return flight.status === FlightStatus.DELAYED;
+  }
+  return hasReleaseReview(flight);
+}
+
+function filterFlights(flights: FlightListItem[], filters: Filters) {
+  return flights.filter(
+    (flight) =>
+      flightStatusMatches(flight, filters.status) &&
+      releaseMatches(flight, filters.release) &&
+      issueMatches(flight, filters.issue),
+  );
+}
+
 function statusBadgeClasses(status: FlightListItem["status"]): string {
   if (status === FlightStatus.ENROUTE) {
     return "border-blue-200 bg-blue-50 text-blue-700";
@@ -51,23 +305,7 @@ function statusBadgeClasses(status: FlightListItem["status"]): string {
   if (status === FlightStatus.COMPLETE) {
     return "border-slate-200 bg-slate-50 text-slate-600";
   }
-  return "border-emerald-200 bg-emerald-50 text-emerald-700";
-}
-
-function sourceBadgeClasses(readSource: FlightListItem["readSource"]): string {
-  if (readSource === "FLIGHT_LEG") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  }
-
-  return "border-amber-200 bg-amber-50 text-amber-800";
-}
-
-function sourceLabel(readSource: FlightListItem["readSource"]): string {
-  if (readSource === "FLIGHT_LEG") {
-    return "FlightLeg read";
-  }
-
-  return "Fallback Flight read";
+  return "border-zinc-200 bg-white text-zinc-700";
 }
 
 function coverageBadgeClasses(coverage: FlightCoverage | null): string {
@@ -112,30 +350,6 @@ function coverageLabel(coverage: FlightCoverage | null): string {
   return "Covered";
 }
 
-function crewLine(coverage: FlightCoverage | null): string {
-  if (!coverage || coverage.assignedCrew.length === 0) {
-    return "No active crew assignments";
-  }
-
-  return coverage.assignedCrew
-    .map((assignment) => `${formatRoleLabel(assignment.seatRole)} ${assignment.crewMemberName}`)
-    .join(" | ");
-}
-
-function releaseStatus(flight: FlightListItem): ReleaseStatus | null {
-  return flight.operationalControlRecord?.release?.status ?? null;
-}
-
-function controlLabel(flight: FlightListItem): string {
-  const control = flight.operationalControlRecord;
-
-  if (!control) {
-    return "No control record";
-  }
-
-  return `${control.controllingEntity} | ${control.operatingAuthority.operatingPart} | ${control.authorityRevision.revisionLabel}`;
-}
-
 function releaseLabel(flight: FlightListItem): string {
   const release = flight.operationalControlRecord?.release;
 
@@ -154,189 +368,525 @@ function releaseLabel(flight: FlightListItem): string {
   return release.status;
 }
 
+function controlLabel(flight: FlightListItem): string {
+  const control = flight.operationalControlRecord;
+
+  if (!control) {
+    return "No control record";
+  }
+
+  return `${control.controllingEntity} | ${control.operatingAuthority.operatingPart} | ${control.authorityRevision.revisionLabel}`;
+}
+
 function getSummary(flights: FlightListItem[]) {
   return {
-    total: flights.length,
-    scheduled: flights.filter((flight) => flight.status === FlightStatus.SCHEDULED).length,
-    enroute: flights.filter((flight) => flight.status === FlightStatus.ENROUTE).length,
-    delayed: flights.filter((flight) => flight.status === FlightStatus.DELAYED).length,
     coverageGaps: flights.filter((flight) => flight.coverage && !flight.coverage.isCovered).length,
+    delayed: flights.filter((flight) => flight.status === FlightStatus.DELAYED).length,
+    qualificationWarnings: flights.filter((flight) => flight.coverage && flight.coverage.warnings.length > 0).length,
     released: flights.filter((flight) => releaseStatus(flight) === ReleaseStatus.RELEASED).length,
+    releaseReview: flights.filter(hasReleaseReview).length,
+    scheduled: flights.filter((flight) => flight.status === "SCHEDULED").length,
+    total: flights.length,
+    unreleased: flights.filter((flight) => releaseStatus(flight) !== ReleaseStatus.RELEASED).length,
   };
 }
 
-export default async function FlightsPage() {
-  const { flights, readSummary } = await getFlightListData();
+function FilterLink({
+  active,
+  href,
+  label,
+}: {
+  active: boolean;
+  href: string;
+  label: string;
+}) {
+  return (
+    <Link
+      className={
+        active
+          ? "rounded-lg bg-zinc-950 px-2.5 py-1 text-xs font-semibold text-white"
+          : "rounded-lg px-2.5 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-100"
+      }
+      href={href}
+    >
+      {label}
+    </Link>
+  );
+}
+
+function SummaryChip({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+      <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-950">{value}</p>
+    </div>
+  );
+}
+
+function CrewName({
+  assignment,
+  filters,
+}: {
+  assignment: ResolvedCrewAssignment;
+  filters: Filters;
+}) {
+  const hasWarning = assignment.hasQualificationWarning;
+
+  return (
+    <Link
+      className={
+        hasWarning
+          ? "rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-900"
+          : "font-medium text-zinc-800 hover:text-zinc-950"
+      }
+      href={flightsHref(filters, {
+        panel: "crew",
+        selected: assignment.crewMemberId,
+      })}
+    >
+      {formatRoleLabel(assignment.seatRole)} {assignment.crewMemberName}
+    </Link>
+  );
+}
+
+function Drawer({
+  children,
+  closeHref,
+  title,
+}: {
+  children: React.ReactNode;
+  closeHref: string;
+  title: string;
+}) {
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end bg-zinc-950/35">
+      <Link aria-label="Close panel" className="absolute inset-0" href={closeHref} />
+      <aside className="relative z-10 flex h-full w-full max-w-xl flex-col border-l border-zinc-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-zinc-200 p-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Flights quick review
+            </p>
+            <h2 className="mt-1 text-xl font-semibold text-zinc-950">{title}</h2>
+          </div>
+          <Link
+            className="rounded-full border border-zinc-200 px-3 py-1 text-sm font-semibold text-zinc-600 hover:bg-zinc-50"
+            href={closeHref}
+          >
+            Close
+          </Link>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">{children}</div>
+      </aside>
+    </div>
+  );
+}
+
+function FlightsDrawer({
+  filters,
+  flights,
+}: {
+  filters: Filters;
+  flights: FlightListItem[];
+}) {
+  if (!filters.panel || !filters.selected) {
+    return null;
+  }
+
+  const closeHref = flightsHref(filters, { panel: null, selected: null });
+  const selectedFlight = flights.find(
+    (flight) => flight.flightLegId === filters.selected || flight.id === filters.selected || flight.legacyFlightId === filters.selected,
+  );
+  const selectedCrew = flights
+    .flatMap((flight) => flight.coverage?.assignedCrew ?? [])
+    .find((assignment) => assignment.crewMemberId === filters.selected);
+
+  if (filters.panel === "crew") {
+    if (!selectedCrew) {
+      return (
+        <Drawer closeHref={closeHref} title="Crew Member">
+          <p className="text-sm text-zinc-600">No crew member found for this selection.</p>
+        </Drawer>
+      );
+    }
+
+    return (
+      <Drawer closeHref={closeHref} title={selectedCrew.crewMemberName}>
+        <div className="space-y-4">
+          <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+            <p className="text-sm font-semibold text-zinc-950">
+              {formatRoleLabel(selectedCrew.seatRole)} assignment
+            </p>
+            <p className="mt-1 text-sm text-zinc-600">
+              Starts {toDateTime(selectedCrew.startsAt)}
+              {selectedCrew.endsAt ? ` | Ends ${toDateTime(selectedCrew.endsAt)}` : " | Open-ended block"}
+            </p>
+          </section>
+          <section className="rounded-xl border border-zinc-200 bg-white p-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              Qualification status
+            </h3>
+            {selectedCrew.qualificationWarnings.length === 0 ? (
+              <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                No qualification warnings for this selected assignment.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {selectedCrew.qualificationWarnings.map((warning) => (
+                  <li className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" key={warning.message}>
+                    <p className="font-semibold">{warning.code.replaceAll("_", " ")}</p>
+                    <p className="mt-1">{warning.message}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white"
+              href={`/crew/${selectedCrew.crewMemberId}`}
+            >
+              Open crew profile
+            </Link>
+          </div>
+        </div>
+      </Drawer>
+    );
+  }
+
+  if (!selectedFlight) {
+    return (
+      <Drawer closeHref={closeHref} title="Flight">
+        <p className="text-sm text-zinc-600">No flight found for this selection.</p>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Drawer
+      closeHref={closeHref}
+      title={`${selectedFlight.flightNumber} | ${selectedFlight.departureStation.code} -> ${selectedFlight.arrivalStation.code}`}
+    >
+      <div className="space-y-4">
+        <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+          <p className="text-sm font-semibold text-zinc-950">
+            {selectedFlight.aircraft.tailNumber} | {formatAircraftType(selectedFlight.aircraft.type)}
+          </p>
+          <p className="mt-1 text-sm text-zinc-600">
+            Out {toDateTime(selectedFlight.scheduledDeparture)} | In{" "}
+            {toDateTime(selectedFlight.scheduledArrival)}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadgeClasses(selectedFlight.status)}`}>
+              {selectedFlight.status}
+            </span>
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${releaseBadgeClasses(releaseStatus(selectedFlight))}`}>
+              {releaseLabel(selectedFlight)}
+            </span>
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${coverageBadgeClasses(selectedFlight.coverage)}`}>
+              {coverageLabel(selectedFlight.coverage)}
+            </span>
+          </div>
+        </section>
+        <section className="rounded-xl border border-zinc-200 bg-white p-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Crew</h3>
+          {selectedFlight.coverage?.assignedCrew.length ? (
+            <ul className="mt-2 space-y-2 text-sm">
+              {selectedFlight.coverage.assignedCrew.map((assignment) => (
+                <li className="rounded-lg border border-zinc-200 bg-zinc-50 p-2" key={assignment.assignmentId}>
+                  <CrewName assignment={assignment} filters={filters} />
+                  {assignment.qualificationWarnings.length > 0 ? (
+                    <p className="mt-1 text-xs text-amber-800">
+                      {assignment.qualificationWarnings.map((warning) => warning.message).join(" ")}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-zinc-600">No active crew assignments.</p>
+          )}
+        </section>
+        <section className="rounded-xl border border-zinc-200 bg-white p-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Control / Release
+          </h3>
+          <p className="mt-2 text-sm text-zinc-700">{controlLabel(selectedFlight)}</p>
+        </section>
+        <div className="flex flex-wrap gap-2">
+          {selectedFlight.flightLegId ? (
+            <>
+              <Link
+                className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white"
+                href={`/operations-control/${selectedFlight.flightLegId}`}
+              >
+                Open release workspace
+              </Link>
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"
+                href={`/operations-control/${selectedFlight.flightLegId}/edit`}
+              >
+                Edit FlightLeg
+              </Link>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </Drawer>
+  );
+}
+
+export default async function FlightsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const filters = parseFilters(params);
+  const { flights: rawFlights, readSummary } = await getFlightListData({
+    end: filters.end,
+    start: filters.start,
+    take: 220,
+  });
+  const flights = filterFlights(rawFlights, filters);
   const summary = getSummary(flights);
 
   return (
-    <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-zinc-100 px-4 py-4 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
-        <header className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Operations Flight Board
-          </p>
-          <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <header className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Flights
-              </h1>
-              <p className="mt-2 text-sm text-zinc-600">
-                Read-only operational list ordered by scheduled departure.
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                Operations Flight Board
+              </p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight">Flights</h1>
+              <p className="mt-1 text-sm text-zinc-600">
+                Drill-down flight list for schedules, release state, aircraft, and crew coverage.
               </p>
             </div>
-            <div className="text-sm text-zinc-500">Showing latest 80 scheduled rows</div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
+                href="/operations-control/new"
+              >
+                New FlightLeg
+              </Link>
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"
+                href="/operations-control"
+              >
+                Operations Control
+              </Link>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
+            <SummaryChip label="Flights" value={summary.total} />
+            <SummaryChip label="Scheduled" value={summary.scheduled} />
+            <SummaryChip label="Released" value={summary.released} />
+            <SummaryChip label="Unreleased" value={summary.unreleased} />
+            <SummaryChip label="Review" value={summary.releaseReview} />
+            <SummaryChip label="Crew gaps" value={summary.coverageGaps} />
+            <SummaryChip label="Qual warn" value={summary.qualificationWarnings} />
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-8">
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Flights</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.total}</p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Scheduled</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.scheduled}</p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Enroute</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.enroute}</p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Delayed</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.delayed}</p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Coverage gaps</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.coverageGaps}</p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Released</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.released}</p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">FlightLeg reads</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {readSummary.flightLegReads}
-            </p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Fallback reads</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {readSummary.fallbackFlightReads}
-            </p>
-          </article>
+        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="grid gap-4 xl:grid-cols-[1fr_auto]">
+            <div className="space-y-3">
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Date range
+                </p>
+                <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
+                  {RANGE_OPTIONS.map((option) => (
+                    <FilterLink
+                      active={filters.range === option.value}
+                      href={flightsHref(filters, { range: option.value })}
+                      key={option.value}
+                      label={option.label}
+                    />
+                  ))}
+                </div>
+              </div>
+              <form action="/flights" className="flex flex-wrap items-end gap-2">
+                <input name="range" type="hidden" value="custom" />
+                <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  From
+                  <input
+                    className="mt-1 block rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
+                    defaultValue={toDateInput(filters.customStart ?? filters.start)}
+                    name="from"
+                    type="date"
+                  />
+                </label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  To
+                  <input
+                    className="mt-1 block rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
+                    defaultValue={toDateInput(filters.customEnd ?? addDays(filters.end, -1))}
+                    name="to"
+                    type="date"
+                  />
+                </label>
+                <button
+                  className="rounded-md bg-zinc-950 px-3 py-2 text-xs font-semibold text-white"
+                  type="submit"
+                >
+                  Apply dates
+                </button>
+              </form>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[36rem]">
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Status</p>
+                <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
+                  {STATUS_OPTIONS.map((option) => (
+                    <FilterLink
+                      active={filters.status === option.value}
+                      href={flightsHref(filters, { status: option.value })}
+                      key={option.value}
+                      label={option.label}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Release</p>
+                <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
+                  {RELEASE_OPTIONS.map((option) => (
+                    <FilterLink
+                      active={filters.release === option.value}
+                      href={flightsHref(filters, { release: option.value })}
+                      key={option.value}
+                      label={option.label}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Issues</p>
+                <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
+                  {ISSUE_OPTIONS.map((option) => (
+                    <FilterLink
+                      active={filters.issue === option.value}
+                      href={flightsHref(filters, { issue: option.value })}
+                      key={option.value}
+                      label={option.label}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
-        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
           {flights.length === 0 ? (
             <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-              <p className="font-medium">No flights found.</p>
-              <p className="mt-1">
-                The read-only flight board is ready, but the database has no flight rows to display.
-              </p>
+              <p className="font-medium">No flights match the selected filters.</p>
+              <p className="mt-1">Change the date range or clear filters to broaden the view.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500">
-                    <th className="px-3 py-2 font-semibold">Flight</th>
-                    <th className="px-3 py-2 font-semibold">Route</th>
-                    <th className="px-3 py-2 font-semibold">Aircraft</th>
-                    <th className="px-3 py-2 font-semibold">Status</th>
-                    <th className="px-3 py-2 font-semibold">Schedule</th>
-                    <th className="px-3 py-2 font-semibold">Crew Coverage</th>
-                    <th className="px-3 py-2 font-semibold">Control / Release</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {flights.map((flight) => {
-                    const release = releaseStatus(flight);
+            <div className="max-h-[42rem] space-y-2 overflow-y-auto pr-1">
+              {flights.map((flight) => {
+                const release = releaseStatus(flight);
 
-                    return (
-                      <tr className="border-b border-zinc-100 align-top" key={flight.id}>
-                        <td className="whitespace-nowrap px-3 py-3">
-                          <div className="font-semibold text-zinc-950">{flight.flightNumber}</div>
-                          <div className="text-xs text-zinc-500">
-                            Flight {flight.legacyFlightId.slice(0, 8)}
-                          </div>
-                          <div className="text-xs text-zinc-500">
-                            Leg {flight.flightLegId ? flight.flightLegId.slice(0, 8) : "missing"}
-                          </div>
-                          <span
-                            className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceBadgeClasses(
-                              flight.readSource,
-                            )}`}
+                return (
+                  <article
+                    className="grid gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm lg:grid-cols-[minmax(10rem,0.8fr)_minmax(18rem,1.4fr)_minmax(15rem,1fr)_minmax(14rem,1fr)]"
+                    key={`${flight.readSource}-${flight.flightLegId ?? flight.legacyFlightId}`}
+                  >
+                    <div>
+                      <Link
+                        className="text-base font-semibold text-sky-700 hover:text-sky-900"
+                        href={flightsHref(filters, {
+                          panel: "flight",
+                          selected: flight.flightLegId ?? flight.legacyFlightId,
+                        })}
+                      >
+                        {flight.flightNumber}
+                      </Link>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {flight.departureStation.code} -&gt; {flight.arrivalStation.code}
+                      </p>
+                      <p className="mt-1 font-mono text-xs text-zinc-600">
+                        {flight.aircraft.tailNumber} | {formatAircraftType(flight.aircraft.type)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${statusBadgeClasses(flight.status)}`}>
+                          {flight.status}
+                        </span>
+                        <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${releaseBadgeClasses(release)}`}>
+                          {releaseLabel(flight)}
+                        </span>
+                        <Link
+                          className={`rounded-full border px-2.5 py-1 text-xs font-medium ${coverageBadgeClasses(flight.coverage)}`}
+                          href={flightsHref(filters, {
+                            panel: "flight",
+                            selected: flight.flightLegId ?? flight.legacyFlightId,
+                          })}
+                        >
+                          {coverageLabel(flight.coverage)}
+                        </Link>
+                      </div>
+                      <p className="mt-2 text-xs text-zinc-600">
+                        Out {toDateTime(flight.scheduledDeparture)} | In {toDateTime(flight.scheduledArrival)}
+                      </p>
+                      {(flight.actualDeparture || flight.actualArrival) && (
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Actual {toTime(flight.actualDeparture)} / {toTime(flight.actualArrival)}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Crew</p>
+                      {flight.coverage?.assignedCrew.length ? (
+                        <div className="mt-1 flex flex-wrap gap-1.5 text-xs leading-6 text-zinc-700">
+                          {flight.coverage.assignedCrew.map((assignment) => (
+                            <CrewName assignment={assignment} filters={filters} key={assignment.assignmentId} />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs text-zinc-500">No active crew assignments</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Control</p>
+                      <p className="mt-1 text-xs leading-5 text-zinc-600">{controlLabel(flight)}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Link
+                          className="rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700"
+                          href={flightsHref(filters, {
+                            panel: "release",
+                            selected: flight.flightLegId ?? flight.legacyFlightId,
+                          })}
+                        >
+                          Review
+                        </Link>
+                        {flight.flightLegId ? (
+                          <Link
+                            className="rounded-md bg-zinc-950 px-2.5 py-1 text-xs font-semibold text-white"
+                            href={`/operations-control/${flight.flightLegId}`}
                           >
-                            {sourceLabel(flight.readSource)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3">
-                          <div className="font-medium text-zinc-900">
-                            {flight.departureStation.code} -&gt; {flight.arrivalStation.code}
-                          </div>
-                          <div className="text-xs text-zinc-500">
-                            {flight.departureStation.city} to {flight.arrivalStation.city}
-                          </div>
-                        </td>
-                        <td className="px-3 py-3">
-                          <div className="font-mono text-zinc-900">{flight.aircraft.tailNumber}</div>
-                          <div className="text-xs text-zinc-500">
-                            {formatAircraftType(flight.aircraft.type)} | {flight.aircraft.status}
-                          </div>
-                        </td>
-                        <td className="px-3 py-3">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusBadgeClasses(
-                              flight.status,
-                            )}`}
-                          >
-                            {flight.status}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-zinc-700">
-                          <div>Out {toDateTime(flight.scheduledDeparture)}</div>
-                          <div>In {toDateTime(flight.scheduledArrival)}</div>
-                          {(flight.actualDeparture || flight.actualArrival) && (
-                            <div className="mt-1 text-xs text-zinc-500">
-                              Actual {toTime(flight.actualDeparture)} / {toTime(flight.actualArrival)}
-                            </div>
-                          )}
-                        </td>
-                        <td className="min-w-64 px-3 py-3">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${coverageBadgeClasses(
-                              flight.coverage,
-                            )}`}
-                          >
-                            {coverageLabel(flight.coverage)}
-                          </span>
-                          <div className="mt-2 text-xs leading-5 text-zinc-600">
-                            {crewLine(flight.coverage)}
-                          </div>
-                        </td>
-                        <td className="min-w-64 px-3 py-3">
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${releaseBadgeClasses(
-                              release,
-                            )}`}
-                          >
-                            {releaseLabel(flight)}
-                          </span>
-                          <div className="mt-2 text-xs leading-5 text-zinc-600">
-                            {controlLabel(flight)}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            Release
+                          </Link>
+                        ) : null}
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
+          <p className="mt-3 text-xs text-zinc-500">
+            Showing {flights.length} filtered rows from {readSummary.total} loaded rows.
+          </p>
         </section>
       </div>
+      <FlightsDrawer filters={filters} flights={flights} />
     </main>
   );
 }

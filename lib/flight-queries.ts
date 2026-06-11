@@ -210,6 +210,12 @@ export type FlightListData = {
   readSummary: FlightListSummary;
 };
 
+export type FlightListQueryOptions = {
+  end?: Date;
+  start?: Date;
+  take?: number;
+};
+
 function normalizeFlightLeg(flightLeg: FlightLegListPayload): FlightListItem {
   const legacyFlightId = flightLeg.legacyFlightId ?? flightLeg.legacyFlight?.id ?? flightLeg.id;
   const assignedAircraft =
@@ -270,20 +276,30 @@ export async function getFlightList(): Promise<FlightListItem[]> {
   return data.flights;
 }
 
-export async function getFlightListData(): Promise<FlightListData> {
+export async function getFlightListData(options: FlightListQueryOptions = {}): Promise<FlightListData> {
+  const scheduledDepartureWhere =
+    options.start || options.end
+      ? {
+          ...(options.start ? { gte: options.start } : {}),
+          ...(options.end ? { lt: options.end } : {}),
+        }
+      : undefined;
+  const take = options.take ?? 160;
   const [flightLegs, fallbackFlights] = await Promise.all([
     prisma.flightLeg.findMany({
+      where: scheduledDepartureWhere ? { scheduledDeparture: scheduledDepartureWhere } : undefined,
       select: flightLegListSelect,
       orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
-      take: 80,
+      take,
     }),
     prisma.flight.findMany({
       where: {
         flightLeg: null,
+        ...(scheduledDepartureWhere ? { scheduledDeparture: scheduledDepartureWhere } : {}),
       },
       select: fallbackFlightListSelect,
       orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
-      take: 80,
+      take,
     }),
   ]);
 
@@ -297,7 +313,7 @@ export async function getFlightListData(): Promise<FlightListData> {
 
       return first.flightNumber.localeCompare(second.flightNumber);
     })
-    .slice(0, 80);
+    .slice(0, take);
 
   const flightsWithCoverage = await Promise.all(
     normalizedFlights.map(async (flight) => ({
