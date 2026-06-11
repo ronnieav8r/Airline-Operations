@@ -623,7 +623,7 @@ export default async function Home({ searchParams }: PageProps) {
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
             <StatusTile
               href="/operations-control"
-              label="Flights today"
+              label="Flights in view"
               tone="zinc"
               value={dashboard.statusSummary.totalFlights}
             />
@@ -770,7 +770,7 @@ export default async function Home({ searchParams }: PageProps) {
         <section className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
           <MiniSection
             action={<DashboardActionLink href="/operations-control" label="Full workbench" />}
-            title="Today&apos;s flight board"
+            title="Flight board"
           >
             {dashboard.flights.length === 0 ? (
               <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">

@@ -585,7 +585,9 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
   const now = new Date();
   const selectedWindow = normalizeWindow(options.window);
   const releaseWindow = getReleaseWindow(now, selectedWindow);
-  const { start, end } = getTodayRange(now);
+  const { start, end: todayEnd } = getTodayRange(now);
+  const queryEnd =
+    releaseWindow.end.getTime() > todayEnd.getTime() ? releaseWindow.end : todayEnd;
   const [aircraftCount, crewCount, todayFlights, alerts, fleetStatusGroups] =
     await Promise.all([
       prisma.aircraft.count(),
@@ -595,7 +597,7 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
           where: {
             scheduledDeparture: {
               gte: start,
-              lt: end,
+              lt: queryEnd,
             },
           },
           select: dashboardFlightLegSelect,
@@ -606,7 +608,7 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
             flightLeg: null,
             scheduledDeparture: {
               gte: start,
-              lt: end,
+              lt: queryEnd,
             },
           },
           select: fallbackDashboardFlightSelect,

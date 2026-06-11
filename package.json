@@ -16,6 +16,7 @@
     "backfill:crew-compliance": "tsx scripts/backfill-crew-compliance-demo.ts",
     "backfill:duty-rest-policy": "tsx scripts/backfill-duty-rest-policy-demo.ts",
     "seed:duty-rest-scenarios": "tsx scripts/seed-duty-rest-scenarios.ts",
+    "seed:ops-month": "tsx scripts/seed-ops-month-demo.ts",
     "test:users:setup": "tsx scripts/setup-smoke-users.ts",
     "smoke:app": "tsx scripts/smoke-app.ts",
     "smoke:workflows": "tsx scripts/smoke-workflows.ts",
