@@ -37,27 +37,24 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-zinc-100">
       <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 shadow-sm backdrop-blur">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-2 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <Link className="group min-w-0" href="/">
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-zinc-500">
                 AeroOps Center
               </p>
               <div className="mt-0.5 flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.14)]" />
-                <span className="truncate text-base font-semibold tracking-tight text-zinc-950 group-hover:text-zinc-700">
+                <span className="truncate text-sm font-semibold tracking-tight text-zinc-950 group-hover:text-zinc-700">
                   Operations Console
                 </span>
               </div>
             </Link>
             <div className="flex flex-wrap items-center gap-2">
-              <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
-                FlightLeg write v1
-              </div>
               {currentUser ? (
                 <form action={logoutAction} className="flex items-center gap-2">
                   <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
-                    {currentUser.name} · {currentUser.role}
+                    {currentUser.name} | {currentUser.role}
                   </span>
                   <button
                     className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition hover:border-zinc-300 hover:text-zinc-950"

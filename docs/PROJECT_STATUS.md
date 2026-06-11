@@ -44,6 +44,8 @@ Recent prompt-numbering note:
 - Prompt 256 inserted ADS-B provider-neutral integration planning.
 - Prompt 257 cleaned up documentation navigation; frontend IA moves to Prompt
   258.
+- Prompt 258 implemented the compact dashboard ops foundation; frontend IA
+  moves to Prompt 259.
 
 ## Current State
 
@@ -1883,15 +1885,19 @@ schema, credential, polling, map, release-blocking, or UI behavior was added.
 Prompt 257 is complete as docs cleanup. `docs/README.md` is now the docs map,
 and `docs/DOCUMENTATION_AUDIT.md` explains stale-note handling.
 
+Prompt 258 is complete. The dashboard now uses a compact ops command surface,
+clickable status tiles, above-the-fold active alerts and crew gaps, a condensed
+today flight board, and a slimmer app header. No backend behavior changed.
+
 Next recommended workstream:
 
 ```text
-Frontend/UI polish beginning with Prompt 258
+Frontend/UI polish continuing with Prompt 259
 ```
 
 Scope:
 
-- Start with frontend IA/app-shell planning and polish.
+- Continue page-by-page frontend IA review and app-shell polish.
 - Preserve backend contracts in `docs/BACKEND_MVP_STATE.md`.
 - Keep backend post-MVP gaps deferred unless separately planned.
 
