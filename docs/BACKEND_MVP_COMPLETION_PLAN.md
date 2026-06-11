@@ -112,6 +112,9 @@ the crew-scoped compliance route.
 Prompt 232 is complete. Training, check, and recency admin workflows now exist
 under the same compliance route.
 
+Prompt 233 is complete. Duty and rest admin workflows now exist under the same
+compliance route and remain warning-only inputs.
+
 - `230`: Crew compliance admin workflow planning.
 - `231`: Certificate and medical admin foundation.
 - `232`: Training, check, and recency admin foundation.

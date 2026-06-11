@@ -1757,6 +1757,10 @@ Prompt 232 is complete. `/crew/[crewMemberId]/compliance` now also supports
 admin/ops training, check, and recency create, update, review, and void
 workflows. Duty/rest admin workflows remain next.
 
+Prompt 233 is complete. `/crew/[crewMemberId]/compliance` now supports
+admin/ops duty and rest create, update, review, and cancel workflows. Duty/rest
+records remain warning-calculator inputs only; no hard enforcement was added.
+
 Next FlightLeg cutover step:
 
 ```text

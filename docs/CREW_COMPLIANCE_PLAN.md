@@ -199,3 +199,7 @@ remain in later slices.
 Prompt 232 implementation is complete. The same compliance route now supports
 training, check, and recency create, update, review, and void workflows. Duty
 and rest admin workflows remain in Prompt 233.
+
+Prompt 233 implementation is complete. The same compliance route now supports
+duty and rest create, update, review, and cancel workflows. Duty/rest remains
+warning-only; this does not add regulatory hard enforcement.

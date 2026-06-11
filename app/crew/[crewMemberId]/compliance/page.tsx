@@ -4,8 +4,11 @@ import {
   CrewCertificateType,
   CrewComplianceRecordStatus,
   CrewComplianceResult,
+  CrewDutyPeriodStatus,
   CrewRecencyEventType,
+  CrewRestPeriodStatus,
   CrewTrainingEventType,
+  DutyStatus,
   MedicalCertificateClass,
   SeatRole,
   UserRole,
@@ -17,20 +20,28 @@ import { requireRole } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 
 import {
+  cancelCrewDutyPeriodAction,
+  cancelCrewRestPeriodAction,
   createCrewCertificateAction,
   createCrewCheckEventAction,
+  createCrewDutyPeriodAction,
   createCrewMedicalAction,
   createCrewRecencyEventAction,
+  createCrewRestPeriodAction,
   createCrewTrainingEventAction,
   reviewCrewCertificateAction,
   reviewCrewCheckEventAction,
+  reviewCrewDutyPeriodAction,
   reviewCrewMedicalAction,
   reviewCrewRecencyEventAction,
+  reviewCrewRestPeriodAction,
   reviewCrewTrainingEventAction,
   updateCrewCertificateAction,
   updateCrewCheckEventAction,
+  updateCrewDutyPeriodAction,
   updateCrewMedicalAction,
   updateCrewRecencyEventAction,
+  updateCrewRestPeriodAction,
   updateCrewTrainingEventAction,
   voidCrewCertificateAction,
   voidCrewCheckEventAction,
@@ -67,6 +78,10 @@ function dateInputValue(value: Date | null): string {
   return value ? value.toISOString().slice(0, 10) : "";
 }
 
+function dateTimeInputValue(value: Date | null): string {
+  return value ? value.toISOString().slice(0, 16) : "";
+}
+
 function dateLabel(value: Date | null): string {
   if (!value) {
     return "Not set";
@@ -79,7 +94,7 @@ function dateLabel(value: Date | null): string {
   }).format(value);
 }
 
-function statusBadgeClasses(status: CrewComplianceRecordStatus): string {
+function statusBadgeClasses(status: string): string {
   if (status === CrewComplianceRecordStatus.ACTIVE) {
     return "bg-emerald-100 text-emerald-800";
   }
@@ -478,6 +493,78 @@ function RecencyForm({
   );
 }
 
+function DutyPeriodForm({
+  action,
+  dutyPeriod,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  dutyPeriod?: {
+    dutyStatus: DutyStatus | null;
+    endsAt: Date | null;
+    notes: string | null;
+    source: string | null;
+    startsAt: Date;
+    status: CrewDutyPeriodStatus;
+  };
+}) {
+  return (
+    <form action={action} className="grid gap-3 md:grid-cols-2">
+      <SelectField
+        defaultValue={dutyPeriod?.status ?? CrewDutyPeriodStatus.PLANNED}
+        enumObject={CrewDutyPeriodStatus}
+        label="Status"
+        name="status"
+      />
+      <SelectField
+        defaultValue={dutyPeriod?.dutyStatus}
+        enumObject={DutyStatus}
+        includeBlank
+        label="Duty status"
+        name="dutyStatus"
+      />
+      <TextField defaultValue={dateTimeInputValue(dutyPeriod?.startsAt ?? null)} label="Starts" name="startsAt" type="datetime-local" />
+      <TextField defaultValue={dateTimeInputValue(dutyPeriod?.endsAt ?? null)} label="Ends" name="endsAt" type="datetime-local" />
+      <TextField defaultValue={dutyPeriod?.source} label="Source" name="source" />
+      <TextAreaField defaultValue={dutyPeriod?.notes} label="Notes" name="notes" />
+      <div className="md:col-span-2">
+        <FormButton>{dutyPeriod ? "Update duty period" : "Create duty period"}</FormButton>
+      </div>
+    </form>
+  );
+}
+
+function RestPeriodForm({
+  action,
+  restPeriod,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  restPeriod?: {
+    endsAt: Date | null;
+    notes: string | null;
+    source: string | null;
+    startsAt: Date;
+    status: CrewRestPeriodStatus;
+  };
+}) {
+  return (
+    <form action={action} className="grid gap-3 md:grid-cols-2">
+      <SelectField
+        defaultValue={restPeriod?.status ?? CrewRestPeriodStatus.PLANNED}
+        enumObject={CrewRestPeriodStatus}
+        label="Status"
+        name="status"
+      />
+      <TextField defaultValue={dateTimeInputValue(restPeriod?.startsAt ?? null)} label="Starts" name="startsAt" type="datetime-local" />
+      <TextField defaultValue={dateTimeInputValue(restPeriod?.endsAt ?? null)} label="Ends" name="endsAt" type="datetime-local" />
+      <TextField defaultValue={restPeriod?.source} label="Source" name="source" />
+      <TextAreaField defaultValue={restPeriod?.notes} label="Notes" name="notes" />
+      <div className="md:col-span-2">
+        <FormButton>{restPeriod ? "Update rest period" : "Create rest period"}</FormButton>
+      </div>
+    </form>
+  );
+}
+
 async function getCrewCompliancePageData(crewMemberId: string) {
   return prisma.crewMember.findUnique({
     where: { id: crewMemberId },
@@ -571,6 +658,31 @@ async function getCrewCompliancePageData(crewMemberId: string) {
           verifiedAt: true,
           windowEnd: true,
           windowStart: true,
+        },
+      },
+      dutyPeriods: {
+        orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          dutyStatus: true,
+          endsAt: true,
+          notes: true,
+          source: true,
+          startsAt: true,
+          status: true,
+          verifiedAt: true,
+        },
+      },
+      restPeriods: {
+        orderBy: [{ startsAt: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          endsAt: true,
+          notes: true,
+          source: true,
+          startsAt: true,
+          status: true,
+          verifiedAt: true,
         },
       },
     },
@@ -671,6 +783,26 @@ export default async function CrewCompliancePage({ params, searchParams }: PageP
           </p>
           <div className="mt-4">
             <RecencyForm action={createCrewRecencyEventAction.bind(null, crewMember.id)} />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Create Duty Period</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Add planned or actual duty evidence for warning-only duty/rest review.
+          </p>
+          <div className="mt-4">
+            <DutyPeriodForm action={createCrewDutyPeriodAction.bind(null, crewMember.id)} />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Create Rest Period</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Add rest evidence for warning-only duty/rest review.
+          </p>
+          <div className="mt-4">
+            <RestPeriodForm action={createCrewRestPeriodAction.bind(null, crewMember.id)} />
           </div>
         </section>
 
@@ -886,6 +1018,96 @@ export default async function CrewCompliancePage({ params, searchParams }: PageP
                   <RecencyForm
                     action={updateCrewRecencyEventAction.bind(null, crewMember.id, recency.id)}
                     recency={recency}
+                  />
+                </div>
+              </article>
+            ))
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Duty Periods</h2>
+          {crewMember.dutyPeriods.length === 0 ? (
+            <p className="rounded-md border border-zinc-200 bg-white p-4 text-sm text-zinc-600">
+              No duty periods yet.
+            </p>
+          ) : (
+            crewMember.dutyPeriods.map((dutyPeriod) => (
+              <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" key={dutyPeriod.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusBadgeClasses(dutyPeriod.status)}`}>
+                      {formatEnum(dutyPeriod.status)}
+                    </span>
+                    <h3 className="mt-2 font-semibold">
+                      {dutyPeriod.dutyStatus ? formatEnum(dutyPeriod.dutyStatus) : "Duty period"}
+                    </h3>
+                    <p className="text-sm text-zinc-600">
+                      {dateLabel(dutyPeriod.startsAt)} to {dateLabel(dutyPeriod.endsAt)} | reviewed{" "}
+                      {dateLabel(dutyPeriod.verifiedAt)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <form action={reviewCrewDutyPeriodAction.bind(null, crewMember.id, dutyPeriod.id)}>
+                      <button className="rounded-md border border-zinc-300 px-3 py-2 text-xs font-semibold" type="submit">
+                        Mark reviewed
+                      </button>
+                    </form>
+                    <form action={cancelCrewDutyPeriodAction.bind(null, crewMember.id, dutyPeriod.id)}>
+                      <button className="rounded-md border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700" type="submit">
+                        Cancel
+                      </button>
+                    </form>
+                  </div>
+                </div>
+                <div className="mt-4 border-t border-zinc-100 pt-4">
+                  <DutyPeriodForm
+                    action={updateCrewDutyPeriodAction.bind(null, crewMember.id, dutyPeriod.id)}
+                    dutyPeriod={dutyPeriod}
+                  />
+                </div>
+              </article>
+            ))
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Rest Periods</h2>
+          {crewMember.restPeriods.length === 0 ? (
+            <p className="rounded-md border border-zinc-200 bg-white p-4 text-sm text-zinc-600">
+              No rest periods yet.
+            </p>
+          ) : (
+            crewMember.restPeriods.map((restPeriod) => (
+              <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" key={restPeriod.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusBadgeClasses(restPeriod.status)}`}>
+                      {formatEnum(restPeriod.status)}
+                    </span>
+                    <h3 className="mt-2 font-semibold">Rest period</h3>
+                    <p className="text-sm text-zinc-600">
+                      {dateLabel(restPeriod.startsAt)} to {dateLabel(restPeriod.endsAt)} | reviewed{" "}
+                      {dateLabel(restPeriod.verifiedAt)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <form action={reviewCrewRestPeriodAction.bind(null, crewMember.id, restPeriod.id)}>
+                      <button className="rounded-md border border-zinc-300 px-3 py-2 text-xs font-semibold" type="submit">
+                        Mark reviewed
+                      </button>
+                    </form>
+                    <form action={cancelCrewRestPeriodAction.bind(null, crewMember.id, restPeriod.id)}>
+                      <button className="rounded-md border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700" type="submit">
+                        Cancel
+                      </button>
+                    </form>
+                  </div>
+                </div>
+                <div className="mt-4 border-t border-zinc-100 pt-4">
+                  <RestPeriodForm
+                    action={updateCrewRestPeriodAction.bind(null, crewMember.id, restPeriod.id)}
+                    restPeriod={restPeriod}
                   />
                 </div>
               </article>

@@ -6,8 +6,11 @@ import {
   CrewCertificateType,
   CrewComplianceRecordStatus,
   CrewComplianceResult,
+  CrewDutyPeriodStatus,
   CrewRecencyEventType,
+  CrewRestPeriodStatus,
   CrewTrainingEventType,
+  DutyStatus,
   MedicalCertificateClass,
   SeatRole,
   UserRole,
@@ -57,6 +60,32 @@ function optionalDate(formData: FormData, key: string, label: string): Date | nu
   }
 
   return date;
+}
+
+function optionalDateTime(formData: FormData, key: string, label: string): Date | null {
+  const value = optionalText(formData, key);
+
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new ComplianceFormError(`${label} is invalid.`);
+  }
+
+  return date;
+}
+
+function requiredDateTime(formData: FormData, key: string, label: string): Date {
+  const value = optionalDateTime(formData, key, label);
+
+  if (!value) {
+    throw new ComplianceFormError(`${label} is required.`);
+  }
+
+  return value;
 }
 
 function requiredDate(formData: FormData, key: string, label: string): Date {
@@ -240,6 +269,35 @@ function parseRecencyInput(formData: FormData) {
     status: enumValue(CrewComplianceRecordStatus, formData, "status", "Status"),
     windowEnd,
     windowStart,
+  };
+}
+
+function parseDutyPeriodInput(formData: FormData) {
+  const startsAt = requiredDateTime(formData, "startsAt", "Start time");
+  const endsAt = optionalDateTime(formData, "endsAt", "End time");
+  validateDateOrder(startsAt, endsAt, "start time", "end time");
+
+  return {
+    dutyStatus: optionalEnumValue(DutyStatus, formData, "dutyStatus", "Duty status"),
+    endsAt,
+    notes: optionalText(formData, "notes"),
+    source: optionalText(formData, "source"),
+    startsAt,
+    status: enumValue(CrewDutyPeriodStatus, formData, "status", "Status"),
+  };
+}
+
+function parseRestPeriodInput(formData: FormData) {
+  const startsAt = requiredDateTime(formData, "startsAt", "Start time");
+  const endsAt = optionalDateTime(formData, "endsAt", "End time");
+  validateDateOrder(startsAt, endsAt, "start time", "end time");
+
+  return {
+    endsAt,
+    notes: optionalText(formData, "notes"),
+    source: optionalText(formData, "source"),
+    startsAt,
+    status: enumValue(CrewRestPeriodStatus, formData, "status", "Status"),
   };
 }
 
@@ -671,4 +729,176 @@ export async function voidCrewRecencyEventAction(crewMemberId: string, recencyEv
   }
 
   redirect(`/crew/${crewMemberId}/compliance?message=Recency%20record%20voided.`);
+}
+
+export async function createCrewDutyPeriodAction(crewMemberId: string, formData: FormData) {
+  const currentUser = await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await assertCrewMemberExists(crewMemberId);
+    await prisma.crewDutyPeriod.create({
+      data: {
+        ...parseDutyPeriodInput(formData),
+        createdById: currentUser.id,
+        crewMemberId,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Duty%20period%20created.`);
+}
+
+export async function updateCrewDutyPeriodAction(
+  crewMemberId: string,
+  dutyPeriodId: string,
+  formData: FormData,
+) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewDutyPeriod.update({
+      where: {
+        id: dutyPeriodId,
+        crewMemberId,
+      },
+      data: parseDutyPeriodInput(formData),
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Duty%20period%20updated.`);
+}
+
+export async function reviewCrewDutyPeriodAction(crewMemberId: string, dutyPeriodId: string) {
+  const currentUser = await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewDutyPeriod.update({
+      where: {
+        id: dutyPeriodId,
+        crewMemberId,
+      },
+      data: {
+        verifiedAt: new Date(),
+        verifiedById: currentUser.id,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Duty%20period%20reviewed.`);
+}
+
+export async function cancelCrewDutyPeriodAction(crewMemberId: string, dutyPeriodId: string) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewDutyPeriod.update({
+      where: {
+        id: dutyPeriodId,
+        crewMemberId,
+      },
+      data: {
+        status: CrewDutyPeriodStatus.CANCELLED,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Duty%20period%20cancelled.`);
+}
+
+export async function createCrewRestPeriodAction(crewMemberId: string, formData: FormData) {
+  const currentUser = await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await assertCrewMemberExists(crewMemberId);
+    await prisma.crewRestPeriod.create({
+      data: {
+        ...parseRestPeriodInput(formData),
+        createdById: currentUser.id,
+        crewMemberId,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Rest%20period%20created.`);
+}
+
+export async function updateCrewRestPeriodAction(
+  crewMemberId: string,
+  restPeriodId: string,
+  formData: FormData,
+) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewRestPeriod.update({
+      where: {
+        id: restPeriodId,
+        crewMemberId,
+      },
+      data: parseRestPeriodInput(formData),
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Rest%20period%20updated.`);
+}
+
+export async function reviewCrewRestPeriodAction(crewMemberId: string, restPeriodId: string) {
+  const currentUser = await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewRestPeriod.update({
+      where: {
+        id: restPeriodId,
+        crewMemberId,
+      },
+      data: {
+        verifiedAt: new Date(),
+        verifiedById: currentUser.id,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Rest%20period%20reviewed.`);
+}
+
+export async function cancelCrewRestPeriodAction(crewMemberId: string, restPeriodId: string) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewRestPeriod.update({
+      where: {
+        id: restPeriodId,
+        crewMemberId,
+      },
+      data: {
+        status: CrewRestPeriodStatus.CANCELLED,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Rest%20period%20cancelled.`);
 }

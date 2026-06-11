@@ -4,10 +4,12 @@ import {
   CrewCheckEventType,
   CrewComplianceRecordStatus,
   CrewComplianceResult,
+  CrewDutyPeriodStatus,
   CrewLocationSource,
   CrewLogisticsNeedStatus,
   CrewLogisticsNeedType,
   CrewRecencyEventType,
+  CrewRestPeriodStatus,
   CrewScheduleEntryStatus,
   CrewSchedulePeriodStatus,
   CrewScheduleRequestStatus,
@@ -896,6 +898,29 @@ async function smokeCrewComplianceAdmin(context: SmokeContext) {
     },
     select: { id: true },
   });
+  const dutyPeriod = await prisma.crewDutyPeriod.create({
+    data: {
+      createdById: context.adminUserId,
+      crewMemberId: context.crewMemberId,
+      dutyStatus: DutyStatus.ON_DUTY,
+      notes: `${smokeLabel} duty admin smoke`,
+      source: "workflow-smoke",
+      startsAt: addDays(new Date(), 11),
+      status: CrewDutyPeriodStatus.PLANNED,
+    },
+    select: { id: true },
+  });
+  const restPeriod = await prisma.crewRestPeriod.create({
+    data: {
+      createdById: context.adminUserId,
+      crewMemberId: context.crewMemberId,
+      notes: `${smokeLabel} rest admin smoke`,
+      source: "workflow-smoke",
+      startsAt: addDays(new Date(), 12),
+      status: CrewRestPeriodStatus.PLANNED,
+    },
+    select: { id: true },
+  });
 
   await prisma.crewCertificate.update({
     where: { id: certificate.id },
@@ -938,6 +963,22 @@ async function smokeCrewComplianceAdmin(context: SmokeContext) {
       verifiedById: context.adminUserId,
     },
   });
+  await prisma.crewDutyPeriod.update({
+    where: { id: dutyPeriod.id },
+    data: {
+      status: CrewDutyPeriodStatus.CANCELLED,
+      verifiedAt: new Date(),
+      verifiedById: context.adminUserId,
+    },
+  });
+  await prisma.crewRestPeriod.update({
+    where: { id: restPeriod.id },
+    data: {
+      status: CrewRestPeriodStatus.CANCELLED,
+      verifiedAt: new Date(),
+      verifiedById: context.adminUserId,
+    },
+  });
 
   const verifiedCertificate = await prisma.crewCertificate.findUnique({
     where: { id: certificate.id },
@@ -959,6 +1000,14 @@ async function smokeCrewComplianceAdmin(context: SmokeContext) {
     where: { id: recency.id },
     select: { createdById: true, status: true, verifiedById: true },
   });
+  const verifiedDutyPeriod = await prisma.crewDutyPeriod.findUnique({
+    where: { id: dutyPeriod.id },
+    select: { createdById: true, status: true, verifiedById: true },
+  });
+  const verifiedRestPeriod = await prisma.crewRestPeriod.findUnique({
+    where: { id: restPeriod.id },
+    select: { createdById: true, status: true, verifiedById: true },
+  });
 
   if (
     verifiedCertificate?.createdById !== context.adminUserId ||
@@ -975,13 +1024,19 @@ async function smokeCrewComplianceAdmin(context: SmokeContext) {
     verifiedCheck.status !== CrewComplianceRecordStatus.VOIDED ||
     verifiedRecency?.createdById !== context.adminUserId ||
     verifiedRecency.verifiedById !== context.adminUserId ||
-    verifiedRecency.status !== CrewComplianceRecordStatus.VOIDED
+    verifiedRecency.status !== CrewComplianceRecordStatus.VOIDED ||
+    verifiedDutyPeriod?.createdById !== context.adminUserId ||
+    verifiedDutyPeriod.verifiedById !== context.adminUserId ||
+    verifiedDutyPeriod.status !== CrewDutyPeriodStatus.CANCELLED ||
+    verifiedRestPeriod?.createdById !== context.adminUserId ||
+    verifiedRestPeriod.verifiedById !== context.adminUserId ||
+    verifiedRestPeriod.status !== CrewRestPeriodStatus.CANCELLED
   ) {
     throw new Error("Crew compliance admin smoke verification failed.");
   }
 
   console.log(
-    `compliance: reviewed and voided certificate ${certificate.id}, medical ${medical.id}, training ${training.id}, check ${check.id}, and recency ${recency.id}`,
+    `compliance: reviewed certificate ${certificate.id}, medical ${medical.id}, training ${training.id}, check ${check.id}, recency ${recency.id}, duty ${dutyPeriod.id}, and rest ${restPeriod.id}`,
   );
 }
 
