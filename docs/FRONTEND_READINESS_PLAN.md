@@ -114,15 +114,18 @@ Suggested slices:
 
 ## Suggested First Frontend Chain
 
-- Prompt 256: Frontend IA Audit Planning.
-- Prompt 257: App Shell Navigation Polish.
-- Prompt 258: App Shell QA.
-- Prompt 259: Dashboard Command Surface Polish Planning.
-- Prompt 260: Dashboard Command Surface Foundation.
-- Prompt 261: Dashboard Command Surface QA.
-- Prompt 262: Operations Control Workbench Polish Planning.
-- Prompt 263: Operations Control Workbench Polish Foundation.
-- Prompt 264: Operations Control Workbench QA.
+Prompt 256 was inserted as ADS-B provider-neutral integration planning. The
+frontend chain should start after that side planning slice.
+
+- Prompt 257: Frontend IA Audit Planning.
+- Prompt 258: App Shell Navigation Polish.
+- Prompt 259: App Shell QA.
+- Prompt 260: Dashboard Command Surface Polish Planning.
+- Prompt 261: Dashboard Command Surface Foundation.
+- Prompt 262: Dashboard Command Surface QA.
+- Prompt 263: Operations Control Workbench Polish Planning.
+- Prompt 264: Operations Control Workbench Polish Foundation.
+- Prompt 265: Operations Control Workbench QA.
 
 ## Backend Work To Avoid During UI Polish
 

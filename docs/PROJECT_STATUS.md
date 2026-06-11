@@ -13,14 +13,15 @@ The current active tracks are:
   warning-first scope. See `docs/BACKEND_MVP_STATE.md`,
   `docs/BACKEND_MVP_FINAL_SMOKE_QA.md`, and
   `docs/BACKEND_MVP_GAP_REVIEW.md`.
-- **Frontend readiness**: Prompt 255 should plan the handoff into UI/frontend
-  work using the stable backend contracts.
+- **Frontend readiness**: Prompt 255 planned the handoff into UI/frontend work
+  using the stable backend contracts. Prompt 256 was inserted for ADS-B
+  provider-neutral planning; frontend IA should start at Prompt 257.
 - **FlightLeg cutover**: Prompt 216 is implemented. Crew-heavy internal
   coverage consumers now prefer FlightLeg IDs while keeping legacy fallback and
   public API compatibility. Legacy `Flight` remains compatibility/archive.
-- **Legacy imports and ADS-B**: keep lower priority. Import execution and ADS-B
-  provider integration should remain deferred until backend MVP workflows are
-  stable.
+- **Legacy imports and ADS-B**: import execution remains lower priority. ADS-B
+  is now planned as a provider-neutral, ops-only, warning-first future
+  integration; provider calls and credentials remain deferred.
 
 Recent prompt-numbering note:
 
@@ -35,6 +36,9 @@ Recent prompt-numbering note:
 - Prompt 252 completed the final backend MVP smoke pass.
 - Prompt 253 found no backend MVP blockers.
 - Prompt 254 cleaned up backend MVP status docs.
+- Prompt 255 planned frontend readiness.
+- Prompt 256 inserted ADS-B provider-neutral integration planning; frontend IA
+  moves to Prompt 257.
 
 ## Current State
 
@@ -1866,10 +1870,15 @@ Prompt 254 is complete. Backend MVP status docs are cleaned up around
 Prompt 255 is complete. Frontend readiness is documented in
 `docs/FRONTEND_READINESS_PLAN.md`.
 
+Prompt 256 is complete as planning. ADS-B/external tracking is documented in
+`docs/EXTERNAL_TRACKING_INTEGRATION_PLAN.md` using
+`docs/ADSB_DATA_SOURCE_OPTIONS_REPORT.md` as the source report. No provider,
+schema, credential, polling, map, release-blocking, or UI behavior was added.
+
 Next recommended workstream:
 
 ```text
-Frontend/UI polish beginning with Prompt 256
+Frontend/UI polish beginning with Prompt 257
 ```
 
 Scope:
