@@ -2,8 +2,12 @@
 
 import {
   AircraftType,
+  CrewCheckEventType,
   CrewCertificateType,
   CrewComplianceRecordStatus,
+  CrewComplianceResult,
+  CrewRecencyEventType,
+  CrewTrainingEventType,
   MedicalCertificateClass,
   SeatRole,
   UserRole,
@@ -53,6 +57,32 @@ function optionalDate(formData: FormData, key: string, label: string): Date | nu
   }
 
   return date;
+}
+
+function requiredDate(formData: FormData, key: string, label: string): Date {
+  const value = optionalDate(formData, key, label);
+
+  if (!value) {
+    throw new ComplianceFormError(`${label} is required.`);
+  }
+
+  return value;
+}
+
+function optionalInteger(formData: FormData, key: string, label: string): number | null {
+  const value = optionalText(formData, key);
+
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new ComplianceFormError(`${label} must be a non-negative whole number.`);
+  }
+
+  return parsed;
 }
 
 function enumValue<T extends Record<string, string>>(
@@ -152,6 +182,64 @@ function parseMedicalInput(formData: FormData) {
     medicalClass: enumValue(MedicalCertificateClass, formData, "medicalClass", "Medical class"),
     notes: optionalText(formData, "notes"),
     status: enumValue(CrewComplianceRecordStatus, formData, "status", "Status"),
+  };
+}
+
+function parseTrainingInput(formData: FormData) {
+  const completedAt = requiredDate(formData, "completedAt", "Completed date");
+  const expiresAt = optionalDate(formData, "expiresAt", "Expiration date");
+  validateDateOrder(completedAt, expiresAt, "completed date", "expiration date");
+
+  return {
+    aircraftType: optionalEnumValue(AircraftType, formData, "aircraftType", "Aircraft type"),
+    completedAt,
+    expiresAt,
+    instructorName: optionalText(formData, "instructorName"),
+    moduleName: optionalText(formData, "moduleName"),
+    notes: optionalText(formData, "notes"),
+    programName: requiredText(formData, "programName", "Program name"),
+    providerName: optionalText(formData, "providerName"),
+    result: enumValue(CrewComplianceResult, formData, "result", "Result"),
+    status: enumValue(CrewComplianceRecordStatus, formData, "status", "Status"),
+    trainingType: enumValue(CrewTrainingEventType, formData, "trainingType", "Training type"),
+  };
+}
+
+function parseCheckInput(formData: FormData) {
+  const completedAt = requiredDate(formData, "completedAt", "Completed date");
+  const expiresAt = optionalDate(formData, "expiresAt", "Expiration date");
+  validateDateOrder(completedAt, expiresAt, "completed date", "expiration date");
+
+  return {
+    aircraftType: optionalEnumValue(AircraftType, formData, "aircraftType", "Aircraft type"),
+    checkType: enumValue(CrewCheckEventType, formData, "checkType", "Check type"),
+    completedAt,
+    evaluatorName: optionalText(formData, "evaluatorName"),
+    expiresAt,
+    notes: optionalText(formData, "notes"),
+    providerName: optionalText(formData, "providerName"),
+    result: enumValue(CrewComplianceResult, formData, "result", "Result"),
+    seatRole: optionalEnumValue(SeatRole, formData, "seatRole", "Seat role"),
+    status: enumValue(CrewComplianceRecordStatus, formData, "status", "Status"),
+  };
+}
+
+function parseRecencyInput(formData: FormData) {
+  const windowStart = optionalDate(formData, "windowStart", "Window start");
+  const windowEnd = optionalDate(formData, "windowEnd", "Window end");
+  validateDateOrder(windowStart, windowEnd, "window start", "window end");
+
+  return {
+    aircraftType: optionalEnumValue(AircraftType, formData, "aircraftType", "Aircraft type"),
+    eventAt: requiredDate(formData, "eventAt", "Event date"),
+    notes: optionalText(formData, "notes"),
+    quantity: optionalInteger(formData, "quantity", "Quantity"),
+    recencyType: enumValue(CrewRecencyEventType, formData, "recencyType", "Recency type"),
+    result: enumValue(CrewComplianceResult, formData, "result", "Result"),
+    seatRole: optionalEnumValue(SeatRole, formData, "seatRole", "Seat role"),
+    status: enumValue(CrewComplianceRecordStatus, formData, "status", "Status"),
+    windowEnd,
+    windowStart,
   };
 }
 
@@ -325,4 +413,262 @@ export async function voidCrewMedicalAction(crewMemberId: string, medicalId: str
   }
 
   redirect(`/crew/${crewMemberId}/compliance?message=Medical%20record%20voided.`);
+}
+
+export async function createCrewTrainingEventAction(crewMemberId: string, formData: FormData) {
+  const currentUser = await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await assertCrewMemberExists(crewMemberId);
+    await prisma.crewTrainingEvent.create({
+      data: {
+        ...parseTrainingInput(formData),
+        createdById: currentUser.id,
+        crewMemberId,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Training%20record%20created.`);
+}
+
+export async function updateCrewTrainingEventAction(
+  crewMemberId: string,
+  trainingEventId: string,
+  formData: FormData,
+) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewTrainingEvent.update({
+      where: {
+        id: trainingEventId,
+        crewMemberId,
+      },
+      data: parseTrainingInput(formData),
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Training%20record%20updated.`);
+}
+
+export async function reviewCrewTrainingEventAction(crewMemberId: string, trainingEventId: string) {
+  const currentUser = await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewTrainingEvent.update({
+      where: {
+        id: trainingEventId,
+        crewMemberId,
+      },
+      data: {
+        verifiedAt: new Date(),
+        verifiedById: currentUser.id,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Training%20record%20reviewed.`);
+}
+
+export async function voidCrewTrainingEventAction(crewMemberId: string, trainingEventId: string) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewTrainingEvent.update({
+      where: {
+        id: trainingEventId,
+        crewMemberId,
+      },
+      data: {
+        status: CrewComplianceRecordStatus.VOIDED,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Training%20record%20voided.`);
+}
+
+export async function createCrewCheckEventAction(crewMemberId: string, formData: FormData) {
+  const currentUser = await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await assertCrewMemberExists(crewMemberId);
+    await prisma.crewCheckEvent.create({
+      data: {
+        ...parseCheckInput(formData),
+        createdById: currentUser.id,
+        crewMemberId,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Check%20record%20created.`);
+}
+
+export async function updateCrewCheckEventAction(
+  crewMemberId: string,
+  checkEventId: string,
+  formData: FormData,
+) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewCheckEvent.update({
+      where: {
+        id: checkEventId,
+        crewMemberId,
+      },
+      data: parseCheckInput(formData),
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Check%20record%20updated.`);
+}
+
+export async function reviewCrewCheckEventAction(crewMemberId: string, checkEventId: string) {
+  const currentUser = await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewCheckEvent.update({
+      where: {
+        id: checkEventId,
+        crewMemberId,
+      },
+      data: {
+        verifiedAt: new Date(),
+        verifiedById: currentUser.id,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Check%20record%20reviewed.`);
+}
+
+export async function voidCrewCheckEventAction(crewMemberId: string, checkEventId: string) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewCheckEvent.update({
+      where: {
+        id: checkEventId,
+        crewMemberId,
+      },
+      data: {
+        status: CrewComplianceRecordStatus.VOIDED,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Check%20record%20voided.`);
+}
+
+export async function createCrewRecencyEventAction(crewMemberId: string, formData: FormData) {
+  const currentUser = await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await assertCrewMemberExists(crewMemberId);
+    await prisma.crewRecencyEvent.create({
+      data: {
+        ...parseRecencyInput(formData),
+        createdById: currentUser.id,
+        crewMemberId,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Recency%20record%20created.`);
+}
+
+export async function updateCrewRecencyEventAction(
+  crewMemberId: string,
+  recencyEventId: string,
+  formData: FormData,
+) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewRecencyEvent.update({
+      where: {
+        id: recencyEventId,
+        crewMemberId,
+      },
+      data: parseRecencyInput(formData),
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Recency%20record%20updated.`);
+}
+
+export async function reviewCrewRecencyEventAction(crewMemberId: string, recencyEventId: string) {
+  const currentUser = await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewRecencyEvent.update({
+      where: {
+        id: recencyEventId,
+        crewMemberId,
+      },
+      data: {
+        verifiedAt: new Date(),
+        verifiedById: currentUser.id,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Recency%20record%20reviewed.`);
+}
+
+export async function voidCrewRecencyEventAction(crewMemberId: string, recencyEventId: string) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewRecencyEvent.update({
+      where: {
+        id: recencyEventId,
+        crewMemberId,
+      },
+      data: {
+        status: CrewComplianceRecordStatus.VOIDED,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Recency%20record%20voided.`);
 }

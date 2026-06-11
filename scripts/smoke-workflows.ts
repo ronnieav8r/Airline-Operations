@@ -1,14 +1,18 @@
 import {
   AssignmentStatus,
   CrewCertificateType,
+  CrewCheckEventType,
   CrewComplianceRecordStatus,
+  CrewComplianceResult,
   CrewLocationSource,
   CrewLogisticsNeedStatus,
   CrewLogisticsNeedType,
+  CrewRecencyEventType,
   CrewScheduleEntryStatus,
   CrewSchedulePeriodStatus,
   CrewScheduleRequestStatus,
   CrewScheduleRequestType,
+  CrewTrainingEventType,
   DispatchPackageStatus,
   DutyStatus,
   FlightLegStatus,
@@ -854,6 +858,44 @@ async function smokeCrewComplianceAdmin(context: SmokeContext) {
     },
     select: { id: true },
   });
+  const training = await prisma.crewTrainingEvent.create({
+    data: {
+      completedAt: new Date(),
+      createdById: context.adminUserId,
+      crewMemberId: context.crewMemberId,
+      notes: `${smokeLabel} training admin smoke`,
+      programName: `${smokeLabel} recurrent training`,
+      result: CrewComplianceResult.SATISFACTORY,
+      status: CrewComplianceRecordStatus.ACTIVE,
+      trainingType: CrewTrainingEventType.RECURRENT,
+    },
+    select: { id: true },
+  });
+  const check = await prisma.crewCheckEvent.create({
+    data: {
+      checkType: CrewCheckEventType.PROFICIENCY,
+      completedAt: new Date(),
+      createdById: context.adminUserId,
+      crewMemberId: context.crewMemberId,
+      notes: `${smokeLabel} check admin smoke`,
+      result: CrewComplianceResult.SATISFACTORY,
+      status: CrewComplianceRecordStatus.ACTIVE,
+    },
+    select: { id: true },
+  });
+  const recency = await prisma.crewRecencyEvent.create({
+    data: {
+      createdById: context.adminUserId,
+      crewMemberId: context.crewMemberId,
+      eventAt: new Date(),
+      notes: `${smokeLabel} recency admin smoke`,
+      quantity: 3,
+      recencyType: CrewRecencyEventType.TAKEOFF_LANDING,
+      result: CrewComplianceResult.SATISFACTORY,
+      status: CrewComplianceRecordStatus.ACTIVE,
+    },
+    select: { id: true },
+  });
 
   await prisma.crewCertificate.update({
     where: { id: certificate.id },
@@ -872,6 +914,30 @@ async function smokeCrewComplianceAdmin(context: SmokeContext) {
       verifiedById: context.adminUserId,
     },
   });
+  await prisma.crewTrainingEvent.update({
+    where: { id: training.id },
+    data: {
+      status: CrewComplianceRecordStatus.VOIDED,
+      verifiedAt: new Date(),
+      verifiedById: context.adminUserId,
+    },
+  });
+  await prisma.crewCheckEvent.update({
+    where: { id: check.id },
+    data: {
+      status: CrewComplianceRecordStatus.VOIDED,
+      verifiedAt: new Date(),
+      verifiedById: context.adminUserId,
+    },
+  });
+  await prisma.crewRecencyEvent.update({
+    where: { id: recency.id },
+    data: {
+      status: CrewComplianceRecordStatus.VOIDED,
+      verifiedAt: new Date(),
+      verifiedById: context.adminUserId,
+    },
+  });
 
   const verifiedCertificate = await prisma.crewCertificate.findUnique({
     where: { id: certificate.id },
@@ -881,6 +947,18 @@ async function smokeCrewComplianceAdmin(context: SmokeContext) {
     where: { id: medical.id },
     select: { createdById: true, status: true, verifiedById: true },
   });
+  const verifiedTraining = await prisma.crewTrainingEvent.findUnique({
+    where: { id: training.id },
+    select: { createdById: true, status: true, verifiedById: true },
+  });
+  const verifiedCheck = await prisma.crewCheckEvent.findUnique({
+    where: { id: check.id },
+    select: { createdById: true, status: true, verifiedById: true },
+  });
+  const verifiedRecency = await prisma.crewRecencyEvent.findUnique({
+    where: { id: recency.id },
+    select: { createdById: true, status: true, verifiedById: true },
+  });
 
   if (
     verifiedCertificate?.createdById !== context.adminUserId ||
@@ -888,12 +966,23 @@ async function smokeCrewComplianceAdmin(context: SmokeContext) {
     verifiedCertificate.status !== CrewComplianceRecordStatus.VOIDED ||
     verifiedMedical?.createdById !== context.adminUserId ||
     verifiedMedical.verifiedById !== context.adminUserId ||
-    verifiedMedical.status !== CrewComplianceRecordStatus.VOIDED
+    verifiedMedical.status !== CrewComplianceRecordStatus.VOIDED ||
+    verifiedTraining?.createdById !== context.adminUserId ||
+    verifiedTraining.verifiedById !== context.adminUserId ||
+    verifiedTraining.status !== CrewComplianceRecordStatus.VOIDED ||
+    verifiedCheck?.createdById !== context.adminUserId ||
+    verifiedCheck.verifiedById !== context.adminUserId ||
+    verifiedCheck.status !== CrewComplianceRecordStatus.VOIDED ||
+    verifiedRecency?.createdById !== context.adminUserId ||
+    verifiedRecency.verifiedById !== context.adminUserId ||
+    verifiedRecency.status !== CrewComplianceRecordStatus.VOIDED
   ) {
     throw new Error("Crew compliance admin smoke verification failed.");
   }
 
-  console.log(`compliance: reviewed and voided certificate ${certificate.id} and medical ${medical.id}`);
+  console.log(
+    `compliance: reviewed and voided certificate ${certificate.id}, medical ${medical.id}, training ${training.id}, check ${check.id}, and recency ${recency.id}`,
+  );
 }
 
 async function smokeReleasePackageCapture(

@@ -109,6 +109,9 @@ tables only.
 Prompt 231 is complete. Certificate and medical admin workflows now exist under
 the crew-scoped compliance route.
 
+Prompt 232 is complete. Training, check, and recency admin workflows now exist
+under the same compliance route.
+
 - `230`: Crew compliance admin workflow planning.
 - `231`: Certificate and medical admin foundation.
 - `232`: Training, check, and recency admin foundation.

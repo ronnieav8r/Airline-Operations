@@ -1753,6 +1753,10 @@ Prompt 231 is complete. `/crew/[crewMemberId]/compliance` now supports
 admin/ops certificate and medical create, update, review, and void workflows.
 The workflow uses existing schema only and remains warning-only downstream.
 
+Prompt 232 is complete. `/crew/[crewMemberId]/compliance` now also supports
+admin/ops training, check, and recency create, update, review, and void
+workflows. Duty/rest admin workflows remain next.
+
 Next FlightLeg cutover step:
 
 ```text

@@ -1,7 +1,11 @@
 import {
   AircraftType,
+  CrewCheckEventType,
   CrewCertificateType,
   CrewComplianceRecordStatus,
+  CrewComplianceResult,
+  CrewRecencyEventType,
+  CrewTrainingEventType,
   MedicalCertificateClass,
   SeatRole,
   UserRole,
@@ -14,13 +18,25 @@ import { prisma } from "@/lib/prisma";
 
 import {
   createCrewCertificateAction,
+  createCrewCheckEventAction,
   createCrewMedicalAction,
+  createCrewRecencyEventAction,
+  createCrewTrainingEventAction,
   reviewCrewCertificateAction,
+  reviewCrewCheckEventAction,
   reviewCrewMedicalAction,
+  reviewCrewRecencyEventAction,
+  reviewCrewTrainingEventAction,
   updateCrewCertificateAction,
+  updateCrewCheckEventAction,
   updateCrewMedicalAction,
+  updateCrewRecencyEventAction,
+  updateCrewTrainingEventAction,
   voidCrewCertificateAction,
+  voidCrewCheckEventAction,
   voidCrewMedicalAction,
+  voidCrewRecencyEventAction,
+  voidCrewTrainingEventAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -274,6 +290,194 @@ function MedicalForm({
   );
 }
 
+function TrainingForm({
+  action,
+  training,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  training?: {
+    aircraftType: AircraftType | null;
+    completedAt: Date;
+    expiresAt: Date | null;
+    instructorName: string | null;
+    moduleName: string | null;
+    notes: string | null;
+    programName: string;
+    providerName: string | null;
+    result: CrewComplianceResult;
+    status: CrewComplianceRecordStatus;
+    trainingType: CrewTrainingEventType;
+  };
+}) {
+  return (
+    <form action={action} className="grid gap-3 md:grid-cols-2">
+      <SelectField
+        defaultValue={training?.trainingType ?? CrewTrainingEventType.RECURRENT}
+        enumObject={CrewTrainingEventType}
+        label="Training type"
+        name="trainingType"
+      />
+      <SelectField
+        defaultValue={training?.status ?? CrewComplianceRecordStatus.ACTIVE}
+        enumObject={CrewComplianceRecordStatus}
+        label="Status"
+        name="status"
+      />
+      <TextField defaultValue={training?.programName} label="Program name" name="programName" />
+      <TextField defaultValue={training?.moduleName} label="Module name" name="moduleName" />
+      <SelectField
+        defaultValue={training?.aircraftType}
+        enumObject={AircraftType}
+        includeBlank
+        label="Aircraft type"
+        name="aircraftType"
+      />
+      <SelectField
+        defaultValue={training?.result ?? CrewComplianceResult.SATISFACTORY}
+        enumObject={CrewComplianceResult}
+        label="Result"
+        name="result"
+      />
+      <TextField defaultValue={dateInputValue(training?.completedAt ?? null)} label="Completed" name="completedAt" type="date" />
+      <TextField defaultValue={dateInputValue(training?.expiresAt ?? null)} label="Expires" name="expiresAt" type="date" />
+      <TextField defaultValue={training?.instructorName} label="Instructor" name="instructorName" />
+      <TextField defaultValue={training?.providerName} label="Provider" name="providerName" />
+      <TextAreaField defaultValue={training?.notes} label="Notes" name="notes" />
+      <div className="md:col-span-2">
+        <FormButton>{training ? "Update training" : "Create training"}</FormButton>
+      </div>
+    </form>
+  );
+}
+
+function CheckForm({
+  action,
+  check,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  check?: {
+    aircraftType: AircraftType | null;
+    checkType: CrewCheckEventType;
+    completedAt: Date;
+    evaluatorName: string | null;
+    expiresAt: Date | null;
+    notes: string | null;
+    providerName: string | null;
+    result: CrewComplianceResult;
+    seatRole: SeatRole | null;
+    status: CrewComplianceRecordStatus;
+  };
+}) {
+  return (
+    <form action={action} className="grid gap-3 md:grid-cols-2">
+      <SelectField
+        defaultValue={check?.checkType ?? CrewCheckEventType.PROFICIENCY}
+        enumObject={CrewCheckEventType}
+        label="Check type"
+        name="checkType"
+      />
+      <SelectField
+        defaultValue={check?.status ?? CrewComplianceRecordStatus.ACTIVE}
+        enumObject={CrewComplianceRecordStatus}
+        label="Status"
+        name="status"
+      />
+      <SelectField
+        defaultValue={check?.aircraftType}
+        enumObject={AircraftType}
+        includeBlank
+        label="Aircraft type"
+        name="aircraftType"
+      />
+      <SelectField
+        defaultValue={check?.seatRole}
+        enumObject={SeatRole}
+        includeBlank
+        label="Seat role"
+        name="seatRole"
+      />
+      <SelectField
+        defaultValue={check?.result ?? CrewComplianceResult.SATISFACTORY}
+        enumObject={CrewComplianceResult}
+        label="Result"
+        name="result"
+      />
+      <TextField defaultValue={dateInputValue(check?.completedAt ?? null)} label="Completed" name="completedAt" type="date" />
+      <TextField defaultValue={dateInputValue(check?.expiresAt ?? null)} label="Expires" name="expiresAt" type="date" />
+      <TextField defaultValue={check?.evaluatorName} label="Evaluator" name="evaluatorName" />
+      <TextField defaultValue={check?.providerName} label="Provider" name="providerName" />
+      <TextAreaField defaultValue={check?.notes} label="Notes" name="notes" />
+      <div className="md:col-span-2">
+        <FormButton>{check ? "Update check" : "Create check"}</FormButton>
+      </div>
+    </form>
+  );
+}
+
+function RecencyForm({
+  action,
+  recency,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  recency?: {
+    aircraftType: AircraftType | null;
+    eventAt: Date;
+    notes: string | null;
+    quantity: number | null;
+    recencyType: CrewRecencyEventType;
+    result: CrewComplianceResult;
+    seatRole: SeatRole | null;
+    status: CrewComplianceRecordStatus;
+    windowEnd: Date | null;
+    windowStart: Date | null;
+  };
+}) {
+  return (
+    <form action={action} className="grid gap-3 md:grid-cols-2">
+      <SelectField
+        defaultValue={recency?.recencyType ?? CrewRecencyEventType.TAKEOFF_LANDING}
+        enumObject={CrewRecencyEventType}
+        label="Recency type"
+        name="recencyType"
+      />
+      <SelectField
+        defaultValue={recency?.status ?? CrewComplianceRecordStatus.ACTIVE}
+        enumObject={CrewComplianceRecordStatus}
+        label="Status"
+        name="status"
+      />
+      <SelectField
+        defaultValue={recency?.aircraftType}
+        enumObject={AircraftType}
+        includeBlank
+        label="Aircraft type"
+        name="aircraftType"
+      />
+      <SelectField
+        defaultValue={recency?.seatRole}
+        enumObject={SeatRole}
+        includeBlank
+        label="Seat role"
+        name="seatRole"
+      />
+      <SelectField
+        defaultValue={recency?.result ?? CrewComplianceResult.SATISFACTORY}
+        enumObject={CrewComplianceResult}
+        label="Result"
+        name="result"
+      />
+      <TextField defaultValue={dateInputValue(recency?.eventAt ?? null)} label="Event date" name="eventAt" type="date" />
+      <TextField defaultValue={recency?.quantity?.toString() ?? ""} label="Quantity" name="quantity" type="number" />
+      <TextField defaultValue={dateInputValue(recency?.windowStart ?? null)} label="Window start" name="windowStart" type="date" />
+      <TextField defaultValue={dateInputValue(recency?.windowEnd ?? null)} label="Window end" name="windowEnd" type="date" />
+      <TextAreaField defaultValue={recency?.notes} label="Notes" name="notes" />
+      <div className="md:col-span-2">
+        <FormButton>{recency ? "Update recency" : "Create recency"}</FormButton>
+      </div>
+    </form>
+  );
+}
+
 async function getCrewCompliancePageData(crewMemberId: string) {
   return prisma.crewMember.findUnique({
     where: { id: crewMemberId },
@@ -315,6 +519,58 @@ async function getCrewCompliancePageData(crewMemberId: string) {
           notes: true,
           status: true,
           verifiedAt: true,
+        },
+      },
+      trainingEvents: {
+        orderBy: [{ status: "asc" }, { completedAt: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          aircraftType: true,
+          completedAt: true,
+          expiresAt: true,
+          instructorName: true,
+          moduleName: true,
+          notes: true,
+          programName: true,
+          providerName: true,
+          result: true,
+          status: true,
+          trainingType: true,
+          verifiedAt: true,
+        },
+      },
+      checkEvents: {
+        orderBy: [{ status: "asc" }, { completedAt: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          aircraftType: true,
+          checkType: true,
+          completedAt: true,
+          evaluatorName: true,
+          expiresAt: true,
+          notes: true,
+          providerName: true,
+          result: true,
+          seatRole: true,
+          status: true,
+          verifiedAt: true,
+        },
+      },
+      recencyEvents: {
+        orderBy: [{ status: "asc" }, { eventAt: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          aircraftType: true,
+          eventAt: true,
+          notes: true,
+          quantity: true,
+          recencyType: true,
+          result: true,
+          seatRole: true,
+          status: true,
+          verifiedAt: true,
+          windowEnd: true,
+          windowStart: true,
         },
       },
     },
@@ -385,6 +641,36 @@ export default async function CrewCompliancePage({ params, searchParams }: PageP
           </p>
           <div className="mt-4">
             <MedicalForm action={createCrewMedicalAction.bind(null, crewMember.id)} />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Create Training Record</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Add training program, module, completion, result, and expiration evidence.
+          </p>
+          <div className="mt-4">
+            <TrainingForm action={createCrewTrainingEventAction.bind(null, crewMember.id)} />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Create Check Record</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Add proficiency, competency, line, route, instrument, or checkride evidence.
+          </p>
+          <div className="mt-4">
+            <CheckForm action={createCrewCheckEventAction.bind(null, crewMember.id)} />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Create Recency Record</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Add landings, approaches, route exposure, flight-time, or other recency evidence.
+          </p>
+          <div className="mt-4">
+            <RecencyForm action={createCrewRecencyEventAction.bind(null, crewMember.id)} />
           </div>
         </section>
 
@@ -471,6 +757,136 @@ export default async function CrewCompliancePage({ params, searchParams }: PageP
                 </div>
                 <div className="mt-4 border-t border-zinc-100 pt-4">
                   <MedicalForm action={updateCrewMedicalAction.bind(null, crewMember.id, medical.id)} medical={medical} />
+                </div>
+              </article>
+            ))
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Training Records</h2>
+          {crewMember.trainingEvents.length === 0 ? (
+            <p className="rounded-md border border-zinc-200 bg-white p-4 text-sm text-zinc-600">
+              No training records yet.
+            </p>
+          ) : (
+            crewMember.trainingEvents.map((training) => (
+              <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" key={training.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusBadgeClasses(training.status)}`}>
+                      {formatEnum(training.status)}
+                    </span>
+                    <h3 className="mt-2 font-semibold">{training.programName}</h3>
+                    <p className="text-sm text-zinc-600">
+                      {formatEnum(training.trainingType)} | {formatEnum(training.result)} | completed{" "}
+                      {dateLabel(training.completedAt)} | expires {dateLabel(training.expiresAt)} | reviewed{" "}
+                      {dateLabel(training.verifiedAt)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <form action={reviewCrewTrainingEventAction.bind(null, crewMember.id, training.id)}>
+                      <button className="rounded-md border border-zinc-300 px-3 py-2 text-xs font-semibold" type="submit">
+                        Mark reviewed
+                      </button>
+                    </form>
+                    <form action={voidCrewTrainingEventAction.bind(null, crewMember.id, training.id)}>
+                      <button className="rounded-md border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700" type="submit">
+                        Void
+                      </button>
+                    </form>
+                  </div>
+                </div>
+                <div className="mt-4 border-t border-zinc-100 pt-4">
+                  <TrainingForm
+                    action={updateCrewTrainingEventAction.bind(null, crewMember.id, training.id)}
+                    training={training}
+                  />
+                </div>
+              </article>
+            ))
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Check Records</h2>
+          {crewMember.checkEvents.length === 0 ? (
+            <p className="rounded-md border border-zinc-200 bg-white p-4 text-sm text-zinc-600">
+              No check records yet.
+            </p>
+          ) : (
+            crewMember.checkEvents.map((check) => (
+              <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" key={check.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusBadgeClasses(check.status)}`}>
+                      {formatEnum(check.status)}
+                    </span>
+                    <h3 className="mt-2 font-semibold">{formatEnum(check.checkType)}</h3>
+                    <p className="text-sm text-zinc-600">
+                      {formatEnum(check.result)} | completed {dateLabel(check.completedAt)} | expires{" "}
+                      {dateLabel(check.expiresAt)} | reviewed {dateLabel(check.verifiedAt)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <form action={reviewCrewCheckEventAction.bind(null, crewMember.id, check.id)}>
+                      <button className="rounded-md border border-zinc-300 px-3 py-2 text-xs font-semibold" type="submit">
+                        Mark reviewed
+                      </button>
+                    </form>
+                    <form action={voidCrewCheckEventAction.bind(null, crewMember.id, check.id)}>
+                      <button className="rounded-md border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700" type="submit">
+                        Void
+                      </button>
+                    </form>
+                  </div>
+                </div>
+                <div className="mt-4 border-t border-zinc-100 pt-4">
+                  <CheckForm action={updateCrewCheckEventAction.bind(null, crewMember.id, check.id)} check={check} />
+                </div>
+              </article>
+            ))
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Recency Records</h2>
+          {crewMember.recencyEvents.length === 0 ? (
+            <p className="rounded-md border border-zinc-200 bg-white p-4 text-sm text-zinc-600">
+              No recency records yet.
+            </p>
+          ) : (
+            crewMember.recencyEvents.map((recency) => (
+              <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" key={recency.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusBadgeClasses(recency.status)}`}>
+                      {formatEnum(recency.status)}
+                    </span>
+                    <h3 className="mt-2 font-semibold">{formatEnum(recency.recencyType)}</h3>
+                    <p className="text-sm text-zinc-600">
+                      {formatEnum(recency.result)} | event {dateLabel(recency.eventAt)} | quantity{" "}
+                      {recency.quantity ?? "not set"} | reviewed {dateLabel(recency.verifiedAt)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <form action={reviewCrewRecencyEventAction.bind(null, crewMember.id, recency.id)}>
+                      <button className="rounded-md border border-zinc-300 px-3 py-2 text-xs font-semibold" type="submit">
+                        Mark reviewed
+                      </button>
+                    </form>
+                    <form action={voidCrewRecencyEventAction.bind(null, crewMember.id, recency.id)}>
+                      <button className="rounded-md border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700" type="submit">
+                        Void
+                      </button>
+                    </form>
+                  </div>
+                </div>
+                <div className="mt-4 border-t border-zinc-100 pt-4">
+                  <RecencyForm
+                    action={updateCrewRecencyEventAction.bind(null, crewMember.id, recency.id)}
+                    recency={recency}
+                  />
                 </div>
               </article>
             ))

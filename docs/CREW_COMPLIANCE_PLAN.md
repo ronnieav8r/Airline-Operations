@@ -195,3 +195,7 @@ Prompt 231 implementation is complete. `/crew/[crewMemberId]/compliance` now
 supports admin/ops create, update, review, and void workflows for certificates
 and medicals only. Training, check, recency, duty, and rest admin workflows
 remain in later slices.
+
+Prompt 232 implementation is complete. The same compliance route now supports
+training, check, and recency create, update, review, and void workflows. Duty
+and rest admin workflows remain in Prompt 233.
