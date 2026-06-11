@@ -108,6 +108,37 @@ Runtime QA passed locally.
 - Request and time-off review do not create `CrewScheduleEntry` rows.
 - Request and time-off review do not mutate `AircraftCrewAssignment` row counts.
 
+## Prompt 246: Crew Portal Backend QA
+
+### Result
+
+Runtime QA passed locally.
+
+### Validation
+
+- `npm run prisma:validate`: pass.
+- `npm run typecheck`: pass.
+- `npm run lint`: pass.
+- `npm run build`: pass.
+- `npm run db:local:up`: pass.
+- `npm run db:local:migrate`: pass.
+- `npm run db:local:seed`: pass.
+- `npm run smoke:crew-portal-backend`: pass.
+- `npm run smoke:workflows`: pass.
+- `npm run smoke:app`: pass.
+- `npm run smoke:browser`: pass.
+
+### Verified Behavior
+
+- The crew smoke user is linked to one `CrewMember`.
+- Crew portal-style time-off submissions remain pending and linked to the crew
+  user.
+- Crew portal-style schedule requests remain submitted and linked to the crew
+  user.
+- Crew portal submissions do not add review metadata.
+- Crew portal submissions do not mutate aircraft assignments, schedule entries,
+  schedule bridge rows, logistics records, or compliance records.
+
 ## Prompt 184: Schedule Publish QA
 
 ### Result

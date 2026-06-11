@@ -1819,10 +1819,16 @@ schedule request approval/denial and time-off approval/denial/cancellation
 persist review metadata without creating schedule bridge rows, schedule entries,
 or aircraft crew assignment side effects.
 
+Prompt 246 is complete. `npm run smoke:crew-portal-backend` verifies the crew
+portal submits pending/submitted requests for the linked crew member only and
+does not create review metadata, logistics records, compliance records,
+schedule entries, schedule bridge rows, or aircraft crew assignment side
+effects.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 246: Crew Portal Backend QA
+Prompt 247: Crew Scheduling Docs Refresh
 ```
 
 Scope:

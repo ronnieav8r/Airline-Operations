@@ -193,6 +193,9 @@ counts.
 Prompt 245 is complete. Crew request and time-off runtime QA passed with a
 focused smoke for review metadata and no scheduling/assignment side effects.
 
+Prompt 246 is complete. Crew portal backend QA passed with a focused smoke for
+linked-crew request submission and no restricted workflow side effects.
+
 - `242`: Crew scheduling runtime QA planning.
 - `243`: Schedule period and publishing QA.
 - `244`: Rotation pattern QA and fixes.

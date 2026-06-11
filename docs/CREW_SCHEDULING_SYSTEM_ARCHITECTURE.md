@@ -313,3 +313,7 @@ assignment counts.
 Prompt 245 runtime QA status: complete. Schedule request and time-off review
 now have a focused smoke that verifies status/review metadata and no
 `CrewSchedule`, `CrewScheduleEntry`, or `AircraftCrewAssignment` side effects.
+
+Prompt 246 runtime QA status: complete. Crew portal backend smoke verifies
+linked-crew request submission, pending/submitted states, no review metadata,
+and no restricted logistics/compliance/scheduling/assignment side effects.

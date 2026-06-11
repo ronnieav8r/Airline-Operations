@@ -75,6 +75,8 @@ Verify:
 
 ## Prompt 246: Crew Portal Backend QA
 
+Status: complete.
+
 Verify:
 
 - Crew users can access `/crew/portal` only for their linked crew member.
