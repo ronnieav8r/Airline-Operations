@@ -203,3 +203,6 @@ and rest admin workflows remain in Prompt 233.
 Prompt 233 implementation is complete. The same compliance route now supports
 duty and rest create, update, review, and cancel workflows. Duty/rest remains
 warning-only; this does not add regulatory hard enforcement.
+
+Prompt 234 QA is complete. Local static validation, workflow smoke, route
+smoke, and browser smoke passed for the compliance admin workflow chain.

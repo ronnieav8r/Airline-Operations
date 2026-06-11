@@ -115,6 +115,9 @@ under the same compliance route.
 Prompt 233 is complete. Duty and rest admin workflows now exist under the same
 compliance route and remain warning-only inputs.
 
+Prompt 234 is complete. Compliance admin workflow QA passed locally across
+static checks, workflow smoke, route smoke, and browser smoke.
+
 - `230`: Crew compliance admin workflow planning.
 - `231`: Certificate and medical admin foundation.
 - `232`: Training, check, and recency admin foundation.

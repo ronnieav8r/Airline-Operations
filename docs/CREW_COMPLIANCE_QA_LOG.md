@@ -1,5 +1,10 @@
 # Crew Compliance QA Log
 
+## Prompt 234: Admin Workflow Runtime QA
+
+Runtime QA is now current for the compliance admin chain. See
+`docs/CREW_COMPLIANCE_ADMIN_QA_LOG.md`.
+
 Last updated: 2026-06-10
 
 ## Prompt 180 Static QA

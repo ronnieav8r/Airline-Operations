@@ -1761,6 +1761,11 @@ Prompt 233 is complete. `/crew/[crewMemberId]/compliance` now supports
 admin/ops duty and rest create, update, review, and cancel workflows. Duty/rest
 records remain warning-calculator inputs only; no hard enforcement was added.
 
+Prompt 234 is complete. Crew compliance admin workflow QA passed locally across
+static validation, workflow smoke, app route smoke, and browser smoke. The QA
+confirmed admin/ops access, non-admin redirects, and compliance record
+write/review/status behavior.
+
 Next FlightLeg cutover step:
 
 ```text
