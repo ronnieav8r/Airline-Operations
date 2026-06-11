@@ -23,6 +23,33 @@ The QA chain must verify scheduling behavior without adding schema,
 assignment automation, duty/rest hard enforcement, provider integrations,
 imports, signatures, or frontend polish.
 
+## Prompt 243: Schedule Period And Publishing QA
+
+### Result
+
+Runtime QA passed locally.
+
+### Validation
+
+- `npm run prisma:validate`: pass.
+- `npm run typecheck`: pass.
+- `npm run lint`: pass.
+- `npm run build`: pass.
+- `npm run db:local:up`: pass.
+- `npm run db:local:migrate`: pass.
+- `npm run db:local:seed`: pass.
+- `npm run smoke:schedule-publishing`: pass.
+- `npm run smoke:workflows`: pass.
+- `npm run smoke:app`: pass.
+- `npm run smoke:browser`: pass.
+
+### Verified Behavior
+
+- A draft `CrewScheduleEntry` publishes into a linked `CrewSchedule` bridge row.
+- The parent period is marked `PUBLISHED`.
+- Re-running publish keeps the same bridge row and published timestamps.
+- Publishing does not mutate `AircraftCrewAssignment` row counts.
+
 ## Prompt 184: Schedule Publish QA
 
 ### Result

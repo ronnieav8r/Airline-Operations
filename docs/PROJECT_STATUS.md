@@ -1805,10 +1805,14 @@ now follow `docs/CREW_SCHEDULING_RUNTIME_QA_PLAN.md`: schedule publishing,
 rotation pattern draft generation, request/time-off workflows, and crew portal
 behavior need DB-backed QA before scheduling is marked backend MVP-complete.
 
+Prompt 243 is complete. `npm run smoke:schedule-publishing` verifies schedule
+period publishing creates stable linked `CrewSchedule` bridge rows, is
+idempotent on repeat publish, and does not mutate aircraft crew assignments.
+
 Next backend-MVP batch:
 
 ```text
-Prompt 243: Schedule Period And Publishing QA
+Prompt 244: Rotation Pattern QA And Fixes
 ```
 
 Scope:

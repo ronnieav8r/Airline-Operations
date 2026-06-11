@@ -300,3 +300,7 @@ Prompt 242 planning status: complete. The runtime hardening pass should verify
 the scheduling lifecycle with local DB-backed workflow checks before declaring
 the scheduling backend MVP-complete. The planned QA chain is documented in
 `docs/CREW_SCHEDULING_RUNTIME_QA_PLAN.md`.
+
+Prompt 243 runtime QA status: complete. Schedule publishing now has a focused
+smoke that verifies period/entry publishing, linked `CrewSchedule` bridge
+creation, idempotency, and unchanged aircraft assignment counts.

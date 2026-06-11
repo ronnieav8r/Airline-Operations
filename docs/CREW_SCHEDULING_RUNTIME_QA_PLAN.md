@@ -27,6 +27,8 @@ replace, or end `AircraftCrewAssignment` rows.
 
 ## Prompt 243: Schedule Period And Publishing QA
 
+Status: complete.
+
 Verify:
 
 - Admin/ops can create or use a schedule period.
