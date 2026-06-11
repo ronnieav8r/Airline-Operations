@@ -5,6 +5,28 @@ Last updated: 2026-06-11
 This document is the quick onboarding note for planner and builder chats. Read it
 before starting a new AeroOps slice.
 
+## Current Next Steps
+
+The current active tracks are:
+
+- **Duty/rest calculator follow-up**: Prompt 208 is implemented. Next work
+  should be QA/refinement only unless a new planning slice approves a dedicated
+  diagnostic page, additional data inputs, or enforcement behavior.
+- **FlightLeg cutover**: Prompt 214 planned the next implementation. Prompt 216
+  should migrate internal crew-heavy coverage consumers to prefer FlightLeg IDs
+  while keeping legacy fallback and public API compatibility.
+- **Legacy imports**: keep lower priority. Import execution should remain
+  deferred until core app workflows and operational screens are more stable.
+
+Recent prompt-numbering note:
+
+- Prompt 206 implemented duty/rest policy settings.
+- Prompt 207 planned the duty/rest warning calculator.
+- Prompt 208 was intentionally skipped during a pivot, then completed after
+  Prompt 213.
+- Prompts 209-213 were an intentional logistics and FlightLeg cutover pivot.
+- Prompt 214 planned the next FlightLeg coverage consumer cutover.
+
 ## Current State
 
 AeroOps Center is a Next.js, TypeScript, Prisma, PostgreSQL, and Render app for
@@ -1631,6 +1653,10 @@ Prompt 214 is complete as a docs/planning slice. The next safe post-213 cutover
 is internal-consumer migration: page/query helpers should prefer `FlightLeg.id`
 for coverage lookups when a bridge exists and keep legacy `Flight.id` fallback
 for unbridged rows. API paths and legacy response fields remain unchanged.
+
+Prompt 215 is complete as a docs-only cleanup slice. The project status now
+calls out the recent Prompt 208 skip/pivot, the 209-213 logistics/FlightLeg
+detour, and the active next-step tracks.
 
 Next FlightLeg cutover implementation:
 
