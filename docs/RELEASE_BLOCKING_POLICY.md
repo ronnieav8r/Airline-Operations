@@ -141,6 +141,10 @@ Prompt 52 added those records as an additive schema foundation. The app now
 stores default release policy profiles and rules, but it still does not enforce
 hard blocking or create release readiness snapshots/findings.
 
+Prompt 224 confirms the MVP release lifecycle remains warning-only. Release
+actions may capture readiness snapshots and audit events, but findings do not
+block Mark Released, Cancel Release, or Void Release in MVP.
+
 Prompt 53 validated the release policy defaults and diagnostic route in:
 
 ```text

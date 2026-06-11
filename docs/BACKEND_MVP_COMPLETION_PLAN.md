@@ -63,6 +63,11 @@ Prompt 223 is complete. FlightLeg cutover QA passed, and legacy `Flight` is now
 documented as compatibility/archive for backend MVP in
 `docs/FLIGHTLEG_LEGACY_ARCHIVE_POLICY.md`.
 
+Prompt 224 is complete. The MVP release lifecycle is planned in
+`docs/MVP_RELEASE_LIFECYCLE_PLAN.md`. Prompt 225 should tighten release action
+state alignment, attribution, readiness snapshot metadata, and audit metadata
+while keeping release warning-only.
+
 ## Batch 2: Release Backend Completion
 
 - `224`: MVP release lifecycle planning.

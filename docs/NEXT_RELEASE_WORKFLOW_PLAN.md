@@ -64,3 +64,10 @@ read-only Release Audit Timeline using existing audit events.
 - `ReleasePackage`.
 - Global audit console.
 - Schema changes.
+
+## Prompt 224 Update
+
+Prompt 224 plans the MVP release lifecycle in
+`docs/MVP_RELEASE_LIFECYCLE_PLAN.md`. Prompt 225 should tighten the existing
+release action lifecycle and audit metadata while keeping release behavior
+warning-only.

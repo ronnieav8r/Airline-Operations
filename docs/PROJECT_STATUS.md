@@ -1712,6 +1712,12 @@ consumer cutover, and legacy `Flight` is now documented as compatibility/archive
 for backend MVP in `docs/FLIGHTLEG_LEGACY_ARCHIVE_POLICY.md`. Destructive
 legacy removal remains deferred.
 
+Prompt 224 is complete as a docs/planning slice. The warning-only MVP release
+lifecycle is documented in `docs/MVP_RELEASE_LIFECYCLE_PLAN.md`: `FlightRelease`
+remains the release decision record, `ReleasePackage` remains the evidence
+bundle, release actions stay available despite warnings, and Prompt 225 should
+tighten release action attribution/audit/status behavior.
+
 Next FlightLeg cutover step:
 
 ```text

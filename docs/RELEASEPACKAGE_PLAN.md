@@ -55,6 +55,11 @@ evidence links without changing `FlightRelease.status`.
 Prompt 173 QA status: static validation complete. Runtime workflow smoke is
 pending because Docker Desktop was unavailable.
 
+Prompt 224 planning status: complete. `ReleasePackage` remains the evidence
+bundle around `FlightRelease`. Final package capture should be planned
+separately in Prompt 226 and must not replace `FlightRelease` or introduce hard
+blocking.
+
 ## First Workflow Direction
 
 Start with read-only preview, then explicit preview capture. Do not create
