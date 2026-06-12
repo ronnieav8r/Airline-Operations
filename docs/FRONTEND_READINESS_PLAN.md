@@ -119,15 +119,19 @@ Prompt 256 was inserted as ADS-B provider-neutral integration planning. Prompt
 implemented the first compact dashboard foundation after user dashboard review.
 Prompt 259 followed with release-readiness labels, MX visibility, hour-based
 lookahead controls, and dashboard quick-review drawers. Prompt 260 reflowed the
-dashboard body and added the first app-wide light/dark view toggle.
+dashboard body and added the first app-wide light/dark view toggle. Prompt 261
+added the Flights page drilldown foundation. Prompt 262 restored Render demo
+flight visibility and added shared compact drawer passes. Prompt 263 separated
+dashboard lifecycle and release actions. Prompt 264 upgraded dashboard
+FlightLeg drawers into the first object-action workspace pattern.
 
 - Prompt 258: Dashboard Compact Ops Foundation.
 - Prompt 259: Dashboard Release Readiness Drawer Foundation.
 - Prompt 260: Dashboard Layout And Theme Foundation.
 - Prompt 261: Flights Page Drilldown Foundation.
-- Prompt 262: Frontend IA Audit Planning.
-- Prompt 263: App Shell Navigation Polish.
-- Prompt 264: App Shell QA.
+- Prompt 262: Render Flights Data Restore And Shared Drawer Foundation.
+- Prompt 263: Dashboard Flight Card Release Action Cleanup.
+- Prompt 264: Object Action Drawer Architecture.
 - Prompt 265: Operator Release Configuration Planning.
 - Prompt 266: Dashboard Command Surface Follow-Up Planning.
 - Prompt 267: Dashboard Command Surface Follow-Up Foundation.

@@ -59,6 +59,10 @@ Recent prompt-numbering note:
 - Prompt 263 cleaned up dashboard flight cards by separating lifecycle status
   from release status, making cards open quick review, and adding manual
   dashboard release/void verification drawers with release audit tracking.
+- Prompt 264 upgraded the dashboard FlightLeg drawer into an object-action
+  workspace with URL-driven subviews, Back/Expand/Contract controls, release,
+  MX, crew, evidence, and audit drilldowns, while keeping full workflow pages as
+  fallbacks.
 
 ## Current State
 
@@ -89,6 +93,8 @@ It has:
 - Scheduling at `/scheduling`
 - Shared URL-driven quick-review drawers across Dashboard, Flights, Aircraft,
   Crew, and Scheduling
+- Dashboard FlightLeg object-action drawer with summary, release, MX, crew,
+  manifest, W&B, locating, dispatch, and audit subviews
 - Dashboard release pill workflow for ready/released flights, with authorized
   confirmation or credential-based release authorization
 - Health endpoint at `/api/health`

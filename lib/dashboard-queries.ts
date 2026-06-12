@@ -101,6 +101,17 @@ const dashboardFlightLegSelect = {
         select: {
           status: true,
           releasedAt: true,
+          releaseAuditEvents: {
+            orderBy: { createdAt: "desc" },
+            select: {
+              actorRole: true,
+              createdAt: true,
+              eventType: true,
+              id: true,
+              message: true,
+            },
+            take: 5,
+          },
         },
       },
     },
@@ -169,6 +180,13 @@ export type DashboardFlight = {
   releaseSummary: DashboardReleaseSummary;
   releaseStatus: ReleaseStatus | null;
   releasedAt: Date | null;
+  releaseAuditEvents: Array<{
+    actorRole: string | null;
+    createdAt: Date;
+    eventType: string;
+    id: string;
+    message: string;
+  }>;
 };
 
 export type DashboardReleaseEvidence = {
@@ -555,6 +573,14 @@ function normalizeFlightLeg(
         }
       : null,
     releaseEvidence: buildDashboardReleaseEvidence(flightLeg),
+    releaseAuditEvents:
+      flightLeg.operationalControlRecord?.release?.releaseAuditEvents.map((event) => ({
+        actorRole: event.actorRole,
+        createdAt: event.createdAt,
+        eventType: event.eventType,
+        id: event.id,
+        message: event.message,
+      })) ?? [],
     releaseStatus: flightLeg.operationalControlRecord?.release?.status ?? null,
     releasedAt: flightLeg.operationalControlRecord?.release?.releasedAt ?? null,
   };
@@ -576,6 +602,7 @@ function normalizeFallbackFlight(
     tailNumber: flight.aircraft.tailNumber,
     assignedAircraft: null,
     releaseEvidence: null,
+    releaseAuditEvents: [],
     releaseStatus: null,
     releasedAt: null,
   };
