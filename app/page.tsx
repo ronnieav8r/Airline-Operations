@@ -21,6 +21,7 @@ import {
   DashboardWindowValue,
   getDashboardData,
 } from "@/lib/dashboard-queries";
+import { formatFuelAmount, fuelReadyLabel } from "@/lib/fuel";
 import { getCurrentUser, type CurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,7 @@ type FlightLegDrawerView =
   | "audit"
   | "crew"
   | "dispatch"
+  | "fuel"
   | "locating"
   | "manifest"
   | "mx"
@@ -112,6 +114,7 @@ function parseFlightLegView(value: string | string[] | undefined): FlightLegDraw
     firstValue === "audit" ||
     firstValue === "crew" ||
     firstValue === "dispatch" ||
+    firstValue === "fuel" ||
     firstValue === "locating" ||
     firstValue === "manifest" ||
     firstValue === "mx" ||
@@ -382,6 +385,7 @@ function workflowHref(flight: DashboardFlight, component: DashboardReleaseCompon
   const suffix = {
     dispatch: "dispatch",
     "flight-following": "locating",
+    fuel: "fuel",
     manifest: "manifest",
     "weight-balance": "weight-balance",
   }[component.key];
@@ -678,6 +682,12 @@ function FlightLegDrawerHeader({ flight }: { flight: DashboardFlight }) {
           {releaseActionLabel(flight)}
         </span>
       </div>
+      {flight.releaseEvidence ? (
+        <p className="mt-2 text-xs font-medium text-zinc-600">
+          Fuel {formatFuelAmount(flight.releaseEvidence.fuelOnboardLbs, flight.releaseEvidence.fuelOnboardGallons)} |{" "}
+          {fuelReadyLabel(flight.releaseEvidence.fueledReady)}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -850,11 +860,46 @@ function ComponentDetailView({
           ) : null}
         </section>
       ) : null}
+      {component.key === "manifest" && flight.releaseEvidence ? (
+        <section className="rounded-xl border border-zinc-200 bg-white p-3 text-sm">
+          <p className="font-semibold text-zinc-950">Manifest load context</p>
+          <div className="mt-2 grid gap-1 text-zinc-600">
+            <p>Crew count: {flight.coverage?.assignedCrew.length ?? 0}</p>
+            <p>Passenger/manifest count: {flight.releaseEvidence.manifestItemCount}</p>
+            <p>Status: {statusText(flight.releaseEvidence.manifestStatus)}</p>
+          </div>
+        </section>
+      ) : null}
+      {component.key === "fuel" && flight.releaseEvidence ? (
+        <section className="rounded-xl border border-zinc-200 bg-white p-3 text-sm">
+          <p className="font-semibold text-zinc-950">Fuel release context</p>
+          <div className="mt-2 grid gap-1 text-zinc-600">
+            <p>
+              Release fuel:{" "}
+              {formatFuelAmount(
+                flight.releaseEvidence.fuelOnboardLbs,
+                flight.releaseEvidence.fuelOnboardGallons,
+              )}
+            </p>
+            <p>{fuelReadyLabel(flight.releaseEvidence.fueledReady)}</p>
+            <p>
+              Recorded:{" "}
+              {flight.releaseEvidence.fuelRecordedAt
+                ? flight.releaseEvidence.fuelRecordedAt.toLocaleString()
+                : "Missing"}
+            </p>
+          </div>
+        </section>
+      ) : null}
       {flight.releaseEvidence ? (
         <section className="rounded-xl border border-zinc-200 bg-white p-3 text-sm">
           <p className="font-semibold text-zinc-950">Evidence snapshot</p>
           <div className="mt-2 grid gap-1 text-zinc-600">
             <p>Manifest: {statusText(flight.releaseEvidence.manifestStatus)}</p>
+            <p>
+              Fuel: {formatFuelAmount(flight.releaseEvidence.fuelOnboardLbs, flight.releaseEvidence.fuelOnboardGallons)} |{" "}
+              {fuelReadyLabel(flight.releaseEvidence.fueledReady)}
+            </p>
             <p>W&B: {statusText(flight.releaseEvidence.weightBalanceStatus)}</p>
             <p>Locating: {statusText(flight.releaseEvidence.locatingStatus)}</p>
             <p>Dispatch: {flight.releaseEvidence.dispatchPackageReady ? "Ready" : "Incomplete"}</p>

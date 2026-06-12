@@ -88,6 +88,18 @@ const releaseEvidenceDetailSelect = {
       effectiveStart: true,
     },
   },
+  fuelEvents: {
+    orderBy: [{ recordedAt: "desc" }, { createdAt: "desc" }],
+    select: {
+      eventType: true,
+      fuelDensityLbsPerGallon: true,
+      fueledReady: true,
+      fuelOnboardGallons: true,
+      fuelOnboardLbs: true,
+      id: true,
+      recordedAt: true,
+    },
+  },
   aircraftAssignments: {
     where: {
       status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
@@ -101,6 +113,16 @@ const releaseEvidenceDetailSelect = {
           tailNumber: true,
           type: true,
           seats: true,
+          fuelEvents: {
+            orderBy: [{ recordedAt: "desc" }, { createdAt: "desc" }],
+            select: {
+              eventType: true,
+              fuelOnboardGallons: true,
+              fuelOnboardLbs: true,
+              recordedAt: true,
+            },
+            take: 1,
+          },
           configurations: {
             where: {
               status: AircraftConfigurationStatus.ACTIVE,

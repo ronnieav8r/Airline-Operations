@@ -300,6 +300,9 @@ function AircraftDrawer({
           <Link className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700" href={`/aircraft/${item.id}/crew`}>
             Manage crew
           </Link>
+          <Link className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700" href={`/aircraft/${item.id}/fuel`}>
+            Fuel ledger
+          </Link>
           <Link className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700" href={`/aircraft/${item.id}/airworthiness`}>
             MX release
           </Link>
@@ -495,6 +498,12 @@ export default async function AircraftPage({ searchParams }: PageProps) {
                         </Link>
                         <Link
                           className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                          href={`/aircraft/${item.id}/fuel`}
+                        >
+                          Fuel ledger
+                        </Link>
+                        <Link
+                          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                           href={`/crew/scheduling?aircraft=${item.id}&assignment=assigned`}
                         >
                           Crew planner
@@ -618,6 +627,12 @@ export default async function AircraftPage({ searchParams }: PageProps) {
                           href={`/aircraft/${item.id}/crew`}
                         >
                           Manage crew
+                        </Link>
+                        <Link
+                          className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                          href={`/aircraft/${item.id}/fuel`}
+                        >
+                          Fuel ledger
                         </Link>
                         <Link
                           className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"

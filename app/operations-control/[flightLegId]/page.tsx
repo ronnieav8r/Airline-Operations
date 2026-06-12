@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   AirworthinessReleaseStatus,
+  AircraftFuelEventType,
   DispatchPackageStatus,
   FlightLocatingStatus,
   ManifestStatus,
@@ -370,6 +371,10 @@ function ReleaseEvidenceActionPanel({
           : "Missing";
   const airworthinessReady =
     !!aircraft && !!configuration && !!currentAirworthinessRelease && !airworthinessExpired;
+  const releaseFuel =
+    detail.fuelEvents.find((event) => event.eventType === AircraftFuelEventType.RELEASE_ONBOARD) ??
+    null;
+  const fuelReady = !!releaseFuel && releaseFuel.fueledReady === true;
 
   return (
     <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
@@ -389,6 +394,19 @@ function ReleaseEvidenceActionPanel({
         </Link>
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <EvidenceActionCard
+          href={`/operations-control/${detail.id}/fuel`}
+          label="Fuel"
+          message={
+            fuelReady
+              ? `${releaseFuel.fuelOnboardLbs.toString()} lb onboard and fueled-ready confirmed.`
+              : releaseFuel
+                ? "Fuel onboard is recorded, but fueled-ready is not confirmed."
+                : "Release fuel onboard has not been recorded."
+          }
+          status={fuelReady ? "Ready" : releaseFuel ? "Needs attention" : "Missing"}
+          tone={fuelReady ? "good" : releaseFuel ? "warn" : "missing"}
+        />
         <EvidenceActionCard
           href={`/operations-control/${detail.id}/manifest`}
           label="Manifest"

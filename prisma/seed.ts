@@ -3,6 +3,7 @@ import {
   AlertSeverity,
   AlertStatus,
   AlertType,
+  AircraftFuelEventType,
   AircraftCapabilityStatus,
   AircraftConfigurationStatus,
   AssignmentStatus,
@@ -42,6 +43,7 @@ import { seedDefaultReleasePolicies } from "../lib/release-policy-defaults";
 const prisma = new PrismaClient();
 const DEFAULT_ADMIN_PASSWORD = "AeroOpsDemoAdmin!2026";
 const DEFAULT_OPS_PASSWORD = "AeroOpsDemoOps!2026";
+const DEFAULT_JET_A_DENSITY_LBS_PER_GALLON = 6.7;
 
 function addDays(date: Date, days: number): Date {
   const next = new Date(date);
@@ -66,6 +68,10 @@ function formatDateKey(date: Date): string {
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}${month}${day}`;
+}
+
+function fuelGallons(pounds: number): number {
+  return Number((pounds / DEFAULT_JET_A_DENSITY_LBS_PER_GALLON).toFixed(2));
 }
 
 function mapLegStatus(flightStatus: FlightStatus, releaseStatus: ReleaseStatus): FlightLegStatus {
@@ -559,6 +565,104 @@ async function seedReleaseEvidenceFoundation() {
   }
 }
 
+async function seedFuelFoundation() {
+  const operators = await prisma.operator.findMany({
+    orderBy: { code: "asc" },
+    select: { id: true },
+  });
+
+  for (const operator of operators) {
+    await prisma.operatorFuelSetting.upsert({
+      where: { operatorId: operator.id },
+      create: {
+        operatorId: operator.id,
+        defaultJetAFuelDensityLbsPerGallon: DEFAULT_JET_A_DENSITY_LBS_PER_GALLON.toFixed(3),
+      },
+      update: {},
+    });
+  }
+
+  const aircraft = await prisma.aircraft.findMany({
+    orderBy: { tailNumber: "asc" },
+    select: { id: true },
+  });
+
+  for (const [index, item] of aircraft.entries()) {
+    const onboard = 2800 + index * 350;
+
+    await prisma.aircraftFuelEvent.create({
+      data: {
+        aircraftId: item.id,
+        eventType: AircraftFuelEventType.CORRECTION,
+        fuelDensityLbsPerGallon: DEFAULT_JET_A_DENSITY_LBS_PER_GALLON.toFixed(3),
+        fuelOnboardGallons: fuelGallons(onboard),
+        fuelOnboardLbs: onboard,
+        notes: "Seeded current aircraft fuel state.",
+        recordedAt: addHours(new Date(), -6 + index),
+      },
+    });
+  }
+
+  const flightLegs = await prisma.flightLeg.findMany({
+    orderBy: { scheduledDeparture: "asc" },
+    select: {
+      aircraftAssignments: {
+        orderBy: { assignedAt: "desc" },
+        select: { aircraftId: true },
+        take: 1,
+      },
+      actualArrival: true,
+      id: true,
+      scheduledDeparture: true,
+      status: true,
+    },
+  });
+
+  for (const [index, flightLeg] of flightLegs.entries()) {
+    const aircraftId = flightLeg.aircraftAssignments[0]?.aircraftId;
+
+    if (!aircraftId) {
+      continue;
+    }
+
+    const onboard = 2600 + (index % 4) * 250;
+    const fueledReady = index % 3 !== 1;
+
+    await prisma.aircraftFuelEvent.create({
+      data: {
+        aircraftId,
+        eventType: AircraftFuelEventType.RELEASE_ONBOARD,
+        flightLegId: flightLeg.id,
+        fuelDensityLbsPerGallon: DEFAULT_JET_A_DENSITY_LBS_PER_GALLON.toFixed(3),
+        fueledReady,
+        fuelOnboardGallons: fuelGallons(onboard),
+        fuelOnboardLbs: onboard,
+        notes: fueledReady
+          ? "Seeded release fuel ready snapshot."
+          : "Seeded release fuel snapshot requiring fueled-ready confirmation.",
+        recordedAt: addHours(flightLeg.scheduledDeparture, -1),
+      },
+    });
+
+    if (flightLeg.status === FlightLegStatus.COMPLETE) {
+      const postflight = Math.max(0, onboard - 700);
+
+      await prisma.aircraftFuelEvent.create({
+        data: {
+          aircraftId,
+          eventType: AircraftFuelEventType.POSTFLIGHT_ONBOARD,
+          flightLegId: flightLeg.id,
+          fuelDensityLbsPerGallon: DEFAULT_JET_A_DENSITY_LBS_PER_GALLON.toFixed(3),
+          fuelOnboardGallons: fuelGallons(postflight),
+          fuelOnboardLbs: postflight,
+          notes: "Seeded postflight fuel snapshot.",
+          recordedAt: addHours(flightLeg.actualArrival ?? flightLeg.scheduledDeparture, 1),
+        },
+      });
+    }
+  }
+}
+
 async function seedAirworthinessFoundation() {
   const baselineStart = new Date(Date.UTC(2026, 0, 1, 0, 0, 0));
   const opsUser = await prisma.user.findUnique({
@@ -913,6 +1017,8 @@ async function main() {
   await prisma.releasePolicyProfile.deleteMany();
   await prisma.dutyRestRuleSetting.deleteMany();
   await prisma.dutyRestPolicyProfile.deleteMany();
+  await prisma.aircraftFuelEvent.deleteMany();
+  await prisma.operatorFuelSetting.deleteMany();
   await prisma.turnaroundLink.deleteMany();
   await prisma.airworthinessRelease.deleteMany();
   await prisma.maintenanceEvent.deleteMany();
@@ -1643,6 +1749,8 @@ async function main() {
   });
 
   await seedReleaseEvidenceFoundation();
+
+  await seedFuelFoundation();
 
   await seedAirworthinessFoundation();
 

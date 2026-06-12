@@ -27,6 +27,18 @@ const weightBalanceWorkflowSelect = {
       },
     },
   },
+  fuelEvents: {
+    orderBy: {
+      recordedAt: "desc",
+    },
+    select: {
+      eventType: true,
+      fuelOnboardGallons: true,
+      fuelOnboardLbs: true,
+      fueledReady: true,
+      recordedAt: true,
+    },
+  },
   weightBalanceRuns: {
     select: {
       id: true,

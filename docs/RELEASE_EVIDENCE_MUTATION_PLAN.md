@@ -1010,3 +1010,9 @@ Implementation status: complete.
 
 Prompt 85 validated Release Audit Timeline rendering, linked snapshot routes,
 actor placeholder display, and unchanged warning-only release behavior.
+
+Fuel evidence is now implemented as an aircraft fuel ledger and FlightLeg
+release/postflight fuel snapshot workflow. Release readiness treats Fuel as
+ready only when a `RELEASE_ONBOARD` fuel event exists for the FlightLeg and is
+marked fueled ready. W&B may display the release fuel snapshot for context, but
+fuel does not automatically calculate W&B and does not hard-block release.

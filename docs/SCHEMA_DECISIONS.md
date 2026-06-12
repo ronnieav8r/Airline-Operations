@@ -553,3 +553,13 @@ Prompt 223 documents the MVP archive policy in
 `docs/FLIGHTLEG_LEGACY_ARCHIVE_POLICY.md`. Legacy `Flight` is compatibility and
 archive state for MVP, not the preferred operational identity. This does not
 approve destructive removal.
+
+Fuel is modeled as an aircraft operational ledger plus FlightLeg release
+evidence. `OperatorFuelSetting` stores the operator default Jet A density for
+pounds-to-gallons conversion, and `AircraftFuelEvent` stores aircraft fuel
+events with the density used on each event. Pounds remain source-of-truth;
+gallons are approximate. FlightLeg release readiness uses
+`RELEASE_ONBOARD + fueledReady = true` as the fuel-ready signal, while
+`POSTFLIGHT_ONBOARD` supports consumed-fuel review after the leg. Fuel does not
+replace W&B records, aircraft airworthiness releases, or `FlightRelease`, and
+does not introduce hard release blocking.

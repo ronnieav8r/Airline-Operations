@@ -1,4 +1,4 @@
-import { WeightBalanceStatus } from "@prisma/client";
+import { AircraftFuelEventType, WeightBalanceStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -13,6 +13,7 @@ import {
   getWeightBalanceWorkflowData,
   WeightBalanceWorkflowData,
 } from "@/lib/weight-balance-workflow-queries";
+import { formatFuelAmount, fuelReadyLabel } from "@/lib/fuel";
 
 export const dynamic = "force-dynamic";
 
@@ -325,6 +326,9 @@ export default async function WeightBalanceWorkflowPage({ params, searchParams }
 
   const addAction = addWeightBalanceRunAction.bind(null, flightLegId);
   const latestRun = detail.weightBalanceRuns[0] ?? null;
+  const releaseFuel =
+    detail.fuelEvents.find((event) => event.eventType === AircraftFuelEventType.RELEASE_ONBOARD) ??
+    null;
   const warnings = workflowWarnings(detail, latestRun);
 
   return (
@@ -360,7 +364,7 @@ export default async function WeightBalanceWorkflowPage({ params, searchParams }
           </div>
         ) : null}
 
-        <section className="grid gap-3 md:grid-cols-4">
+        <section className="grid gap-3 md:grid-cols-5">
           <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-zinc-500">Latest status</p>
             <div className="mt-2">
@@ -375,6 +379,17 @@ export default async function WeightBalanceWorkflowPage({ params, searchParams }
             <p className="text-sm text-zinc-500">Manifest items</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
               {detail.manifest?.items.length ?? 0}
+            </p>
+          </article>
+          <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-sm text-zinc-500">Release fuel</p>
+            <p className="mt-2 text-sm font-semibold text-zinc-900">
+              {releaseFuel
+                ? formatFuelAmount(releaseFuel.fuelOnboardLbs, releaseFuel.fuelOnboardGallons)
+                : "Not recorded"}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              {releaseFuel ? fuelReadyLabel(releaseFuel.fueledReady) : "Fuel readiness missing"}
             </p>
           </article>
           <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">

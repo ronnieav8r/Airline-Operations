@@ -1,6 +1,6 @@
 # AeroOps Docs Map
 
-Last updated: 2026-06-11
+Last updated: 2026-06-12
 
 ## Start Here
 
@@ -44,6 +44,7 @@ planner chats:
   - `docs/AIRWORTHINESS_SCHEMA_DECISIONS.md`
   - `docs/AIRWORTHINESS_RELEASE_POLICY.md`
   - `docs/AIRWORTHINESS_MUTATION_PLAN.md`
+  - `docs/FUEL_LEDGER_RELEASE_READINESS.md`
 - Crew:
   - `docs/CREW_COMPLIANCE_PLAN.md`
   - `docs/CREW_COMPLIANCE_MVP_STATUS.md`

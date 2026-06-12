@@ -1,5 +1,6 @@
 import {
   AirworthinessReleaseStatus,
+  AircraftFuelEventType,
   AircraftStatus,
   AircraftType,
   AlertSeverity,
@@ -28,6 +29,7 @@ import {
 
 const prisma = new PrismaClient();
 const DEMO_PREFIX = "MONTHDEMO";
+const DEFAULT_JET_A_DENSITY_LBS_PER_GALLON = 6.7;
 
 type SeedContext = {
   aircraft: Array<{ id: string; tailNumber: string }>;
@@ -92,6 +94,10 @@ function decimal(value: number): Prisma.Decimal {
   return new Prisma.Decimal(value);
 }
 
+function fuelGallons(pounds: number): Prisma.Decimal {
+  return decimal(Number((pounds / DEFAULT_JET_A_DENSITY_LBS_PER_GALLON).toFixed(2)));
+}
+
 async function loadContext(): Promise<SeedContext> {
   await ensureMinimumDemoFoundation();
 
@@ -142,6 +148,15 @@ async function ensureMinimumDemoFoundation() {
       isActive: true,
       name: "AeroOps Demo Air",
     },
+  });
+
+  await prisma.operatorFuelSetting.upsert({
+    where: { operatorId: operator.id },
+    create: {
+      defaultJetAFuelDensityLbsPerGallon: decimal(DEFAULT_JET_A_DENSITY_LBS_PER_GALLON),
+      operatorId: operator.id,
+    },
+    update: {},
   });
 
   const stationSeeds = [
@@ -688,6 +703,72 @@ async function seedFlightEvidence(
   });
 }
 
+async function seedFlightFuelEvidence({
+  aircraftId,
+  flightLegId,
+  readinessCase,
+  scheduledArrival,
+  scheduledDeparture,
+}: {
+  aircraftId: string;
+  flightLegId: string;
+  readinessCase: ReadinessCase;
+  scheduledArrival: Date;
+  scheduledDeparture: Date;
+}) {
+  await prisma.aircraftFuelEvent.deleteMany({
+    where: {
+      eventType: {
+        in: [AircraftFuelEventType.RELEASE_ONBOARD, AircraftFuelEventType.POSTFLIGHT_ONBOARD],
+      },
+      flightLegId,
+    },
+  });
+
+  if (readinessCase === "follow-missing") {
+    return;
+  }
+
+  const releaseFuelLbs =
+    readinessCase === "mx-down" ? 2400 : readinessCase === "wb-draft" ? 3100 : 2800;
+  const postflightFuelLbs = Math.max(900, releaseFuelLbs - (750 + (scheduledDeparture.getUTCDate() % 4) * 90));
+  const fuelReady = readinessCase !== "dispatch-missing" && readinessCase !== "mx-down";
+
+  await prisma.aircraftFuelEvent.create({
+    data: {
+      aircraftId,
+      eventType: AircraftFuelEventType.RELEASE_ONBOARD,
+      flightLegId,
+      fuelChangeGallons: null,
+      fuelChangeLbs: null,
+      fuelDensityLbsPerGallon: decimal(DEFAULT_JET_A_DENSITY_LBS_PER_GALLON),
+      fuelOnboardGallons: fuelGallons(releaseFuelLbs),
+      fuelOnboardLbs: decimal(releaseFuelLbs),
+      fueledReady: fuelReady,
+      notes: `${DEMO_PREFIX} release fuel snapshot (${readinessCase}).`,
+      recordedAt: addHours(scheduledDeparture, -1),
+    },
+  });
+
+  if (readinessCase === "released-followup") {
+    await prisma.aircraftFuelEvent.create({
+      data: {
+        aircraftId,
+        eventType: AircraftFuelEventType.POSTFLIGHT_ONBOARD,
+        flightLegId,
+        fuelChangeGallons: null,
+        fuelChangeLbs: null,
+        fuelDensityLbsPerGallon: decimal(DEFAULT_JET_A_DENSITY_LBS_PER_GALLON),
+        fuelOnboardGallons: fuelGallons(postflightFuelLbs),
+        fuelOnboardLbs: decimal(postflightFuelLbs),
+        fueledReady: null,
+        notes: `${DEMO_PREFIX} postflight fuel snapshot.`,
+        recordedAt: addHours(scheduledArrival, 1),
+      },
+    });
+  }
+}
+
 async function seedFlight(
   context: SeedContext,
   dayIndex: number,
@@ -923,6 +1004,14 @@ async function seedFlight(
     departure.code,
     arrival.code,
   );
+
+  await seedFlightFuelEvidence({
+    aircraftId: aircraft.id,
+    flightLegId: flightLeg.id,
+    readinessCase,
+    scheduledArrival,
+    scheduledDeparture,
+  });
 
   if (readinessCase === "mx-down" || readinessCase === "released-followup") {
     await prisma.alert.upsert({

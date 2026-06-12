@@ -3,6 +3,7 @@ import {
   AlertSeverity,
   AlertStatus,
   AssignmentStatus,
+  AircraftFuelEventType,
   AircraftStatus,
   FlightLocatingStatus,
   FlightLegStatus,
@@ -89,6 +90,16 @@ const dashboardFlightLegSelect = {
       createdAt: "desc",
     },
     take: 1,
+  },
+  fuelEvents: {
+    orderBy: [{ recordedAt: "desc" }, { createdAt: "desc" }],
+    select: {
+      eventType: true,
+      fueledReady: true,
+      fuelOnboardGallons: true,
+      fuelOnboardLbs: true,
+      recordedAt: true,
+    },
   },
   flightLocatingRecord: {
     select: {
@@ -192,6 +203,10 @@ export type DashboardFlight = {
 export type DashboardReleaseEvidence = {
   manifestStatus: ManifestStatus | null;
   manifestItemCount: number;
+  fuelOnboardGallons: Prisma.Decimal | null;
+  fuelOnboardLbs: Prisma.Decimal | null;
+  fueledReady: boolean | null;
+  fuelRecordedAt: Date | null;
   weightBalanceStatus: WeightBalanceStatus | null;
   locatingStatus: string | null;
   dispatchPackageReady: boolean;
@@ -202,6 +217,7 @@ export type DashboardReleaseComponentKey =
   | "crew"
   | "dispatch"
   | "flight-following"
+  | "fuel"
   | "manifest"
   | "mx"
   | "weight-balance";
@@ -371,6 +387,9 @@ function buildDashboardReleaseEvidence(
   flightLeg: DashboardFlightLegPayload,
 ): DashboardReleaseEvidence {
   const weightBalanceStatus = flightLeg.weightBalanceRuns[0]?.status ?? null;
+  const releaseFuel =
+    flightLeg.fuelEvents.find((event) => event.eventType === AircraftFuelEventType.RELEASE_ONBOARD) ??
+    null;
   const dispatchPackageReady = Boolean(
     flightLeg.dispatchPackage?.weatherBriefingId &&
       flightLeg.dispatchPackage.notamSnapshotId &&
@@ -382,11 +401,16 @@ function buildDashboardReleaseEvidence(
     (weightBalanceStatus === WeightBalanceStatus.CALCULATED ||
       weightBalanceStatus === WeightBalanceStatus.APPROVED) &&
     Boolean(flightLeg.flightLocatingRecord) &&
+    releaseFuel?.fueledReady === true &&
     dispatchPackageReady;
 
   return {
     manifestStatus: flightLeg.manifest?.status ?? null,
     manifestItemCount: flightLeg.manifest?.items.length ?? 0,
+    fuelOnboardGallons: releaseFuel?.fuelOnboardGallons ?? null,
+    fuelOnboardLbs: releaseFuel?.fuelOnboardLbs ?? null,
+    fueledReady: releaseFuel?.fueledReady ?? null,
+    fuelRecordedAt: releaseFuel?.recordedAt ?? null,
     weightBalanceStatus,
     locatingStatus: flightLeg.flightLocatingRecord?.status ?? null,
     dispatchPackageReady,
@@ -421,6 +445,16 @@ function buildReleaseSummary(
     aircraft?.status === AircraftStatus.OUT_OF_SERVICE;
 
   const components: DashboardReleaseComponent[] = [
+    releaseComponent(
+      "fuel",
+      "Fuel",
+      evidence?.fueledReady === true ? "ready" : evidence?.fuelOnboardLbs ? "review" : "missing",
+      evidence?.fueledReady === true && evidence.fuelOnboardLbs
+        ? `Fuel onboard ${evidence.fuelOnboardLbs.toString()} lb and ready.`
+        : evidence?.fuelOnboardLbs
+          ? "Fuel onboard is recorded, but fueled-ready is not confirmed."
+          : "Release fuel is missing.",
+    ),
     releaseComponent(
       "manifest",
       "Manifest",

@@ -15,6 +15,7 @@ const navigationItems = [
   { label: "Aircraft", href: "/aircraft" },
   { label: "Crew", href: "/crew" },
   { label: "Scheduling", href: "/scheduling" },
+  { label: "Admin", href: "/admin/settings" },
 ];
 
 function isActiveRoute(pathname: string, href: string) {

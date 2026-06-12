@@ -400,6 +400,7 @@ export default async function AircraftContextPage({ params }: PageProps) {
                 label="Crew planner"
               />
               <ActionLink href={`/aircraft/${aircraft.id}/crew`} label="Crew assignment" />
+              <ActionLink href={`/aircraft/${aircraft.id}/fuel`} label="Fuel ledger" />
               <ActionLink
                 href={`/aircraft/${aircraft.id}/airworthiness`}
                 label="Airworthiness"
@@ -668,6 +669,7 @@ export default async function AircraftContextPage({ params }: PageProps) {
               label="Crew planner"
             />
             <ActionLink href={`/aircraft/${aircraft.id}/crew`} label="Crew assignment" />
+            <ActionLink href={`/aircraft/${aircraft.id}/fuel`} label="Fuel ledger" />
             <ActionLink href={`/aircraft/${aircraft.id}/airworthiness`} label="Airworthiness" />
             <ActionLink href="/scheduling" label="Scheduling" />
             <ActionLink href="/flights" label="Flights" />

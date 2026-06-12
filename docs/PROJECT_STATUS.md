@@ -1930,6 +1930,17 @@ date/status/release/issue filters, a `New FlightLeg` action, interactive flight
 cards, and read-only quick-review drawers for flight, release/control, and crew
 qualification context.
 
+Prompts 265-269 are complete. Fuel is now modeled as an aircraft operational
+ledger and FlightLeg release evidence item. `OperatorFuelSetting` stores the
+operator Jet A density default, `AircraftFuelEvent` stores uplift, defuel,
+correction, release-onboard, and postflight-onboard events, and the app
+calculates approximate gallons from pounds using the event-stored density.
+Implemented routes are `/admin/settings`, `/aircraft/[aircraftId]/fuel`, and
+`/operations-control/[flightLegId]/fuel`. Fuel is now a warning-first release
+readiness item and appears in dashboard drawer release context and W&B context.
+Release behavior remains warning-only; provider integrations, tickets, billing,
+range/endurance calculation, and hard release blocking remain deferred.
+
 Next recommended workstream:
 
 ```text

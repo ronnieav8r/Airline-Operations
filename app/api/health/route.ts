@@ -65,6 +65,8 @@ export async function GET() {
       dutyRestRuleSettingCount,
       crewLocationRecordCount,
       crewLogisticsNeedCount,
+      operatorFuelSettingCount,
+      aircraftFuelEventCount,
       userPasswordCredentialCount,
       userSessionCount,
     ] = await Promise.all([
@@ -127,6 +129,8 @@ export async function GET() {
       prisma.dutyRestRuleSetting.count(),
       prisma.crewLocationRecord.count(),
       prisma.crewLogisticsNeed.count(),
+      prisma.operatorFuelSetting.count(),
+      prisma.aircraftFuelEvent.count(),
       prisma.userPasswordCredential.count(),
       prisma.userSession.count(),
     ]);
@@ -194,6 +198,8 @@ export async function GET() {
         dutyRestRuleSettings: dutyRestRuleSettingCount,
         crewLocationRecords: crewLocationRecordCount,
         crewLogisticsNeeds: crewLogisticsNeedCount,
+        operatorFuelSettings: operatorFuelSettingCount,
+        aircraftFuelEvents: aircraftFuelEventCount,
         userPasswordCredentials: userPasswordCredentialCount,
         userSessions: userSessionCount,
       },

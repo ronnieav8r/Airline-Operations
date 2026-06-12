@@ -165,6 +165,9 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
         { label: "crew logistics manage", path: `/crew/${ids.crewMemberId}/logistics` },
         { label: "crew compliance manage", path: `/crew/${ids.crewMemberId}/compliance` },
         { label: "aircraft crew workflow", path: `/aircraft/${ids.aircraftId}/crew` },
+        { label: "aircraft fuel ledger", path: `/aircraft/${ids.aircraftId}/fuel` },
+        { label: "FlightLeg fuel workflow", path: `/operations-control/${ids.flightLegId}/fuel` },
+        { label: "admin settings", path: "/admin/settings" },
         { label: "schedule periods", path: "/crew/scheduling/periods" },
       ],
     },
@@ -176,7 +179,14 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
         { label: "crew logistics manage", path: `/crew/${ids.crewMemberId}/logistics` },
         { label: "crew compliance manage", path: `/crew/${ids.crewMemberId}/compliance` },
         { label: "aircraft crew workflow", path: `/aircraft/${ids.aircraftId}/crew` },
+        { label: "aircraft fuel ledger", path: `/aircraft/${ids.aircraftId}/fuel` },
+        { label: "FlightLeg fuel workflow", path: `/operations-control/${ids.flightLegId}/fuel` },
         { label: "schedule periods", path: "/crew/scheduling/periods" },
+        {
+          label: "admin settings blocked",
+          path: "/admin/settings",
+          expectedStatuses: [303, 307, 308],
+        },
       ],
     },
     {
@@ -186,7 +196,14 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
         { label: "dispatch evidence", path: `/operations-control/${ids.flightLegId}/dispatch` },
         { label: "manifest evidence", path: `/operations-control/${ids.flightLegId}/manifest` },
         { label: "W&B evidence", path: `/operations-control/${ids.flightLegId}/weight-balance` },
+        { label: "FlightLeg fuel workflow", path: `/operations-control/${ids.flightLegId}/fuel` },
+        { label: "aircraft fuel ledger", path: `/aircraft/${ids.aircraftId}/fuel` },
         { label: "locating evidence", path: `/operations-control/${ids.flightLegId}/locating` },
+        {
+          label: "admin settings blocked",
+          path: "/admin/settings",
+          expectedStatuses: [303, 307, 308],
+        },
         {
           label: "crew logistics blocked",
           path: `/crew/${ids.crewMemberId}/logistics`,
@@ -209,6 +226,13 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
       checks: [
         ...commonChecks,
         { label: "airworthiness workflow", path: `/aircraft/${ids.aircraftId}/airworthiness` },
+        { label: "aircraft fuel ledger", path: `/aircraft/${ids.aircraftId}/fuel` },
+        { label: "FlightLeg fuel workflow", path: `/operations-control/${ids.flightLegId}/fuel` },
+        {
+          label: "admin settings blocked",
+          path: "/admin/settings",
+          expectedStatuses: [303, 307, 308],
+        },
         {
           label: "crew logistics blocked",
           path: `/crew/${ids.crewMemberId}/logistics`,
@@ -231,6 +255,17 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
       checks: [
         ...commonChecks,
         { label: "crew portal", path: "/crew/portal" },
+        { label: "FlightLeg fuel workflow", path: `/operations-control/${ids.flightLegId}/fuel` },
+        {
+          label: "aircraft fuel ledger blocked",
+          path: `/aircraft/${ids.aircraftId}/fuel`,
+          expectedStatuses: [303, 307, 308],
+        },
+        {
+          label: "admin settings blocked",
+          path: "/admin/settings",
+          expectedStatuses: [303, 307, 308],
+        },
         {
           label: "crew logistics blocked",
           path: `/crew/${ids.crewMemberId}/logistics`,
@@ -253,6 +288,21 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
       checks: [
         ...commonChecks,
         {
+          label: "FlightLeg fuel workflow blocked",
+          path: `/operations-control/${ids.flightLegId}/fuel`,
+          expectedStatuses: [303, 307, 308],
+        },
+        {
+          label: "aircraft fuel ledger blocked",
+          path: `/aircraft/${ids.aircraftId}/fuel`,
+          expectedStatuses: [303, 307, 308],
+        },
+        {
+          label: "admin settings blocked",
+          path: "/admin/settings",
+          expectedStatuses: [303, 307, 308],
+        },
+        {
           label: "crew logistics blocked",
           path: `/crew/${ids.crewMemberId}/logistics`,
           expectedStatuses: [303, 307, 308],
@@ -273,6 +323,21 @@ function buildSmokePlans(ids: Awaited<ReturnType<typeof getDynamicRouteIds>>): R
       role: UserRole.VIEWER,
       checks: [
         ...commonChecks,
+        {
+          label: "FlightLeg fuel workflow blocked",
+          path: `/operations-control/${ids.flightLegId}/fuel`,
+          expectedStatuses: [303, 307, 308],
+        },
+        {
+          label: "aircraft fuel ledger blocked",
+          path: `/aircraft/${ids.aircraftId}/fuel`,
+          expectedStatuses: [303, 307, 308],
+        },
+        {
+          label: "admin settings blocked",
+          path: "/admin/settings",
+          expectedStatuses: [303, 307, 308],
+        },
         {
           label: "crew logistics blocked",
           path: `/crew/${ids.crewMemberId}/logistics`,

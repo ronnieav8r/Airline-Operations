@@ -1,5 +1,6 @@
 import {
   AirworthinessReleaseStatus,
+  AircraftFuelEventType,
   CrewComplianceRecordStatus,
   DispatchPackageStatus,
   FlightLocatingStatus,
@@ -160,6 +161,9 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
     !!currentAirworthinessRelease && !currentAirworthinessReleaseExpired;
   const latestUsableWeightBalanceRun =
     detail.weightBalanceRuns.find((run) => run.status !== WeightBalanceStatus.VOIDED) ?? null;
+  const releaseFuel =
+    detail.fuelEvents.find((event) => event.eventType === AircraftFuelEventType.RELEASE_ONBOARD) ??
+    null;
   const locating = detail.flightLocatingRecord;
   const dispatch = detail.dispatchPackage;
   const weather = dispatch?.weatherBriefing ?? null;
@@ -173,6 +177,7 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
     !!latestUsableWeightBalanceRun &&
     (latestUsableWeightBalanceRun.status === WeightBalanceStatus.CALCULATED ||
       latestUsableWeightBalanceRun.status === WeightBalanceStatus.APPROVED);
+  const fuelReady = !!releaseFuel && releaseFuel.fueledReady === true;
   const locatingReady =
     !!locating &&
     (locating.status === FlightLocatingStatus.FILED ||
@@ -292,6 +297,28 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
       readinessCategory: "duty-rest",
       ready: dutyRestEvaluation.ready,
       ruleKey: dutyRestEvaluation.ruleKey,
+    },
+    {
+      classification: fuelReady ? "READY" : "WOULD_BLOCK",
+      details: {
+        fuelOnboardLbs: releaseFuel?.fuelOnboardLbs?.toString() ?? null,
+        fuelOnboardGallons: releaseFuel?.fuelOnboardGallons?.toString() ?? null,
+        fuelDensityLbsPerGallon: releaseFuel?.fuelDensityLbsPerGallon?.toString() ?? null,
+        fueledReady: releaseFuel?.fueledReady ?? null,
+        recordedAt: releaseFuel?.recordedAt?.toISOString() ?? null,
+      },
+      evidenceRefId: releaseFuel?.id,
+      evidenceRefType: releaseFuel ? "AircraftFuelEvent" : undefined,
+      href: `/operations-control/${detail.id}/fuel`,
+      label: "Fuel",
+      message: fuelReady
+        ? `Release fuel onboard ${releaseFuel.fuelOnboardLbs.toString()} lb and fueled-ready is confirmed.`
+        : releaseFuel
+          ? "Release fuel onboard is recorded, but fueled-ready is not confirmed."
+          : "Needs release fuel onboard and fueled-ready confirmation.",
+      readinessCategory: "fuel",
+      ready: fuelReady,
+      ruleKey: releaseFuel ? "fuel.release.readyNotConfirmed" : "fuel.release.missing",
     },
     {
       classification: manifestReady ? "READY" : "WOULD_BLOCK",
