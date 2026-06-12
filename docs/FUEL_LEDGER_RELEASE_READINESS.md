@@ -37,6 +37,13 @@ Current aircraft fuel state is the latest `AircraftFuelEvent` by `recordedAt`.
 - `/operations-control/[flightLegId]/fuel`: FlightLeg release/postflight fuel
   workflow for admin, ops, dispatch, crew, and maintenance.
 
+## Demo / Render Backfill
+
+`npm run backfill:fuel` is included in `render-build`, but it is skipped by
+default. Set `RUN_FUEL_BACKFILL=1` only when demo/development data should be
+initialized with default operator fuel settings and release fuel snapshots for
+existing FlightLeg rows.
+
 ## Release Readiness
 
 Fuel is now a release readiness item. It is ready only when the FlightLeg has a
