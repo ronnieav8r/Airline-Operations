@@ -7,6 +7,7 @@ import {
 } from "@prisma/client";
 import Link from "next/link";
 
+import { ContextDrawer } from "@/components/context-drawer";
 import {
   getSchedulingData,
   SCHEDULE_WINDOW_DAYS,
@@ -15,6 +16,36 @@ import {
 import { FlightCoverage } from "@/lib/crew-resolution";
 
 export const dynamic = "force-dynamic";
+
+type PageProps = {
+  searchParams: Promise<{
+    panel?: string | string[];
+    selected?: string | string[];
+  }>;
+};
+
+function firstParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
+function schedulingHref(options: { panel?: "flight" | null; selected?: string | null } = {}) {
+  const params = new URLSearchParams();
+
+  if (options.panel) {
+    params.set("panel", options.panel);
+  }
+
+  if (options.selected) {
+    params.set("selected", options.selected);
+  }
+
+  const query = params.toString();
+  return query ? `/scheduling?${query}` : "/scheduling";
+}
 
 function toDateTime(value: Date): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -175,22 +206,127 @@ function controlLabel(flight: ScheduleFlight): string {
   )} | ${control.authorityRevision.revisionLabel}`;
 }
 
-export default async function SchedulingPage() {
-  const schedule = await getSchedulingData();
+function SchedulingDrawer({
+  flights,
+  selectedId,
+}: {
+  flights: ScheduleFlight[];
+  selectedId: string | null;
+}) {
+  if (!selectedId) {
+    return null;
+  }
+
+  const closeHref = schedulingHref();
+  const flight = flights.find(
+    (item) => item.flightLegId === selectedId || item.legacyFlightId === selectedId || item.id === selectedId,
+  );
+
+  if (!flight) {
+    return (
+      <ContextDrawer closeHref={closeHref} eyebrow="Schedule quick review" title="FlightLeg">
+        <p className="text-sm text-zinc-600">No scheduled leg found for this selection.</p>
+      </ContextDrawer>
+    );
+  }
+
+  const release = releaseStatus(flight);
 
   return (
-    <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
+    <ContextDrawer
+      closeHref={closeHref}
+      eyebrow="Schedule quick review"
+      title={`${flight.flightNumber} | ${flight.departureStation.code} -> ${flight.arrivalStation.code}`}
+    >
+      <div className="space-y-4">
+        <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+          <p className="text-sm font-semibold text-zinc-950">
+            {flight.aircraft.tailNumber} | {formatAircraftType(flight.aircraft.type)}
+          </p>
+          <p className="mt-1 text-sm text-zinc-600">
+            Out {toDateTime(flight.scheduledDeparture)} | In {toDateTime(flight.scheduledArrival)}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusBadgeClasses(flight.status)}`}>
+              {flight.status}
+            </span>
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${releaseBadgeClasses(release)}`}>
+              {releaseLabel(flight)}
+            </span>
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${coverageBadgeClasses(flight.coverage)}`}>
+              {coverageLabel(flight.coverage)}
+            </span>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Crew</h3>
+          <p className="mt-2 text-sm text-zinc-700">{crewLine(flight.coverage)}</p>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Control / Release
+          </h3>
+          <p className="mt-2 text-sm text-zinc-700">{controlLabel(flight)}</p>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Alerts
+          </h3>
+          {flight.alerts.length ? (
+            <ul className="mt-2 space-y-2">
+              {flight.alerts.map((alert) => (
+                <li className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-sm text-amber-900" key={alert.id}>
+                  <span className="font-semibold">{alert.severity}</span> {alert.title}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-zinc-600">No active alerts.</p>
+          )}
+        </section>
+
+        <div className="flex flex-wrap gap-2">
+          {flight.flightLegId ? (
+            <>
+              <Link className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white" href={`/operations-control/${flight.flightLegId}`}>
+                Release workspace
+              </Link>
+              <Link className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700" href={`/operations-control/${flight.flightLegId}/edit`}>
+                Edit FlightLeg
+              </Link>
+            </>
+          ) : null}
+          <Link className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700" href={`/aircraft/${flight.aircraft.id}`}>
+            Aircraft context
+          </Link>
+        </div>
+      </div>
+    </ContextDrawer>
+  );
+}
+
+export default async function SchedulingPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const schedule = await getSchedulingData();
+  const selectedId = firstParam(params.panel) === "flight" ? firstParam(params.selected) : null;
+  const allFlights = schedule.groups.flatMap((group) => group.flights);
+
+  return (
+    <main className="min-h-screen bg-zinc-100 px-4 py-4 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
-        <header className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
+        <header className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Scheduling
           </p>
           <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h1 className="text-2xl font-semibold tracking-tight">
                 Upcoming Leg Schedule
               </h1>
-              <p className="mt-2 max-w-3xl text-sm text-zinc-600">
+              <p className="mt-1 max-w-3xl text-xs text-zinc-600">
                 Read-only schedule view for upcoming flight legs, aircraft, crew
                 coverage, release status, and active operational alerts.
               </p>
@@ -207,44 +343,44 @@ export default async function SchedulingPage() {
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Upcoming legs</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{schedule.summary.total}</p>
+        <section className="grid gap-2 sm:grid-cols-3 lg:grid-cols-7">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Legs</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">{schedule.summary.total}</p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Delayed</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Delayed</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {schedule.summary.delayed}
             </p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Coverage gaps</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Crew gaps</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {schedule.summary.coverageGaps}
             </p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Released</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Released</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {schedule.summary.released}
             </p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Active alerts</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Alerts</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {schedule.summary.activeAlerts}
             </p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">FlightLeg reads</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">FlightLeg</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {schedule.summary.flightLegReads}
             </p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Fallback reads</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Fallback</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {schedule.summary.fallbackFlightReads}
             </p>
           </article>
@@ -305,9 +441,15 @@ export default async function SchedulingPage() {
                                 )}
                               </td>
                               <td className="whitespace-nowrap px-3 py-3">
-                                <div className="font-semibold text-zinc-950">
+                                <Link
+                                  className="font-semibold text-sky-700 hover:text-sky-900"
+                                  href={schedulingHref({
+                                    panel: "flight",
+                                    selected: flight.flightLegId ?? flight.legacyFlightId,
+                                  })}
+                                >
                                   {flight.flightNumber}
-                                </div>
+                                </Link>
                                 <div className="text-xs text-zinc-500">{toDateTime(flight.scheduledDeparture)}</div>
                                 <span
                                   className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceBadgeClasses(
@@ -399,6 +541,7 @@ export default async function SchedulingPage() {
             </div>
           )}
         </section>
+        <SchedulingDrawer flights={allFlights} selectedId={selectedId} />
       </div>
     </main>
   );

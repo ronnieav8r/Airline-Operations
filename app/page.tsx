@@ -7,6 +7,7 @@ import {
 } from "@prisma/client";
 import Link from "next/link";
 
+import { ContextDrawer } from "@/components/context-drawer";
 import {
   DashboardFlight,
   DashboardReleaseComponent,
@@ -357,39 +358,6 @@ function crewCoverageLabel(flight: DashboardFlight): string {
   return `Missing ${flight.coverage.missingRoles.map(formatRoleLabel).join(", ")}`;
 }
 
-function Drawer({
-  children,
-  closeHref,
-  title,
-}: {
-  children: React.ReactNode;
-  closeHref: string;
-  title: string;
-}) {
-  return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-zinc-950/35">
-      <Link aria-label="Close panel" className="absolute inset-0" href={closeHref} />
-      <aside className="relative z-10 flex h-full w-full max-w-xl flex-col border-l border-zinc-200 bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-200 p-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Dashboard quick review
-            </p>
-            <h2 className="mt-1 text-xl font-semibold text-zinc-950">{title}</h2>
-          </div>
-          <Link
-            className="rounded-full border border-zinc-200 px-3 py-1 text-sm font-semibold text-zinc-600 hover:bg-zinc-50"
-            href={closeHref}
-          >
-            Close
-          </Link>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
-      </aside>
-    </div>
-  );
-}
-
 function DashboardDrawer({
   dashboard,
   panel,
@@ -409,7 +377,7 @@ function DashboardDrawer({
 
   if (panel === "alerts") {
     return (
-      <Drawer closeHref={closeHref} title="Active Alerts">
+      <ContextDrawer closeHref={closeHref} eyebrow="Dashboard quick review" title="Active Alerts">
         {dashboard.alerts.length === 0 ? (
           <p className="text-sm text-zinc-600">No active alerts.</p>
         ) : (
@@ -439,13 +407,13 @@ function DashboardDrawer({
             ))}
           </ul>
         )}
-      </Drawer>
+      </ContextDrawer>
     );
   }
 
   if (panel === "release") {
     return (
-      <Drawer closeHref={closeHref} title={`Release Review | ${dashboard.releaseWindowLabel}`}>
+      <ContextDrawer closeHref={closeHref} eyebrow="Dashboard quick review" title={`Release Review | ${dashboard.releaseWindowLabel}`}>
         {dashboard.operationsAttention.priorityFlightLegs.length === 0 ? (
           <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
             No release review items inside this window.
@@ -482,15 +450,15 @@ function DashboardDrawer({
             ))}
           </ul>
         )}
-      </Drawer>
+      </ContextDrawer>
     );
   }
 
   if (!selectedFlight) {
     return (
-      <Drawer closeHref={closeHref} title="FlightLeg Review">
+      <ContextDrawer closeHref={closeHref} eyebrow="Dashboard quick review" title="FlightLeg Review">
         <p className="text-sm text-zinc-600">Select a FlightLeg from the dashboard to review details.</p>
-      </Drawer>
+      </ContextDrawer>
     );
   }
 
@@ -502,7 +470,7 @@ function DashboardDrawer({
   const fullWorkflowHref = selectedComponent ? workflowHref(selectedFlight, selectedComponent) : null;
 
   return (
-    <Drawer closeHref={closeHref} title={`${selectedFlight.flightNumber} | ${selectedFlight.departureCode} -> ${selectedFlight.arrivalCode}`}>
+    <ContextDrawer closeHref={closeHref} eyebrow="Dashboard quick review" title={`${selectedFlight.flightNumber} | ${selectedFlight.departureCode} -> ${selectedFlight.arrivalCode}`}>
       <div className="space-y-4">
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
           <p className="text-sm font-semibold text-zinc-950">
@@ -580,7 +548,7 @@ function DashboardDrawer({
           </div>
         )}
       </div>
-    </Drawer>
+    </ContextDrawer>
   );
 }
 

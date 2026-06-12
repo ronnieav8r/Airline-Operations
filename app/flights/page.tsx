@@ -1,6 +1,7 @@
 import { FlightLegStatus, FlightStatus, ReleaseStatus, SeatRole } from "@prisma/client";
 import Link from "next/link";
 
+import { ContextDrawer } from "@/components/context-drawer";
 import { FlightCoverage, ResolvedCrewAssignment } from "@/lib/crew-resolution";
 import { FlightListItem, getFlightListData } from "@/lib/flight-queries";
 
@@ -449,39 +450,6 @@ function CrewName({
   );
 }
 
-function Drawer({
-  children,
-  closeHref,
-  title,
-}: {
-  children: React.ReactNode;
-  closeHref: string;
-  title: string;
-}) {
-  return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-zinc-950/35">
-      <Link aria-label="Close panel" className="absolute inset-0" href={closeHref} />
-      <aside className="relative z-10 flex h-full w-full max-w-xl flex-col border-l border-zinc-200 bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-200 p-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Flights quick review
-            </p>
-            <h2 className="mt-1 text-xl font-semibold text-zinc-950">{title}</h2>
-          </div>
-          <Link
-            className="rounded-full border border-zinc-200 px-3 py-1 text-sm font-semibold text-zinc-600 hover:bg-zinc-50"
-            href={closeHref}
-          >
-            Close
-          </Link>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
-      </aside>
-    </div>
-  );
-}
-
 function FlightsDrawer({
   filters,
   flights,
@@ -504,14 +472,14 @@ function FlightsDrawer({
   if (filters.panel === "crew") {
     if (!selectedCrew) {
       return (
-        <Drawer closeHref={closeHref} title="Crew Member">
+        <ContextDrawer closeHref={closeHref} eyebrow="Flights quick review" title="Crew Member">
           <p className="text-sm text-zinc-600">No crew member found for this selection.</p>
-        </Drawer>
+        </ContextDrawer>
       );
     }
 
     return (
-      <Drawer closeHref={closeHref} title={selectedCrew.crewMemberName}>
+      <ContextDrawer closeHref={closeHref} eyebrow="Flights quick review" title={selectedCrew.crewMemberName}>
         <div className="space-y-4">
           <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
             <p className="text-sm font-semibold text-zinc-950">
@@ -550,21 +518,22 @@ function FlightsDrawer({
             </Link>
           </div>
         </div>
-      </Drawer>
+      </ContextDrawer>
     );
   }
 
   if (!selectedFlight) {
     return (
-      <Drawer closeHref={closeHref} title="Flight">
+      <ContextDrawer closeHref={closeHref} eyebrow="Flights quick review" title="Flight">
         <p className="text-sm text-zinc-600">No flight found for this selection.</p>
-      </Drawer>
+      </ContextDrawer>
     );
   }
 
   return (
-    <Drawer
+    <ContextDrawer
       closeHref={closeHref}
+      eyebrow="Flights quick review"
       title={`${selectedFlight.flightNumber} | ${selectedFlight.departureStation.code} -> ${selectedFlight.arrivalStation.code}`}
     >
       <div className="space-y-4">
@@ -632,7 +601,7 @@ function FlightsDrawer({
           ) : null}
         </div>
       </div>
-    </Drawer>
+    </ContextDrawer>
   );
 }
 
@@ -650,18 +619,27 @@ export default async function FlightsPage({ searchParams }: PageProps) {
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-4 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
-        <header className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div>
+        <header className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+          <div className="grid gap-3 xl:grid-cols-[minmax(14rem,0.8fr)_minmax(28rem,1.5fr)_auto] xl:items-center">
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
                 Operations Flight Board
               </p>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">Flights</h1>
-              <p className="mt-1 text-sm text-zinc-600">
+              <p className="mt-1 text-xs text-zinc-600">
                 Drill-down flight list for schedules, release state, aircraft, and crew coverage.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+              <SummaryChip label="Flights" value={summary.total} />
+              <SummaryChip label="Sched" value={summary.scheduled} />
+              <SummaryChip label="Released" value={summary.released} />
+              <SummaryChip label="Unrel" value={summary.unreleased} />
+              <SummaryChip label="Review" value={summary.releaseReview} />
+              <SummaryChip label="Crew gaps" value={summary.coverageGaps} />
+              <SummaryChip label="Qual" value={summary.qualificationWarnings} />
+            </div>
+            <div className="flex flex-wrap gap-2 xl:justify-end">
               <Link
                 className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
                 href="/operations-control/new"
@@ -676,50 +654,40 @@ export default async function FlightsPage({ searchParams }: PageProps) {
               </Link>
             </div>
           </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
-            <SummaryChip label="Flights" value={summary.total} />
-            <SummaryChip label="Scheduled" value={summary.scheduled} />
-            <SummaryChip label="Released" value={summary.released} />
-            <SummaryChip label="Unreleased" value={summary.unreleased} />
-            <SummaryChip label="Review" value={summary.releaseReview} />
-            <SummaryChip label="Crew gaps" value={summary.coverageGaps} />
-            <SummaryChip label="Qual warn" value={summary.qualificationWarnings} />
-          </div>
         </header>
 
-        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="grid gap-4 xl:grid-cols-[1fr_auto]">
-            <div className="space-y-3">
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Date range
-                </p>
-                <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
-                  {RANGE_OPTIONS.map((option) => (
-                    <FilterLink
-                      active={filters.range === option.value}
-                      href={flightsHref(filters, { range: option.value })}
-                      key={option.value}
-                      label={option.label}
-                    />
-                  ))}
-                </div>
+        <section className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-fit">
+              <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">
+                Range
+              </p>
+              <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
+                {RANGE_OPTIONS.map((option) => (
+                  <FilterLink
+                    active={filters.range === option.value}
+                    href={flightsHref(filters, { range: option.value })}
+                    key={option.value}
+                    label={option.label}
+                  />
+                ))}
               </div>
-              <form action="/flights" className="flex flex-wrap items-end gap-2">
+            </div>
+            <form action="/flights" className="flex flex-wrap items-end gap-2">
                 <input name="range" type="hidden" value="custom" />
-                <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <label className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">
                   From
                   <input
-                    className="mt-1 block rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
+                    className="mt-1 block w-32 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-900"
                     defaultValue={toDateInput(filters.customStart ?? filters.start)}
                     name="from"
                     type="date"
                   />
                 </label>
-                <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <label className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">
                   To
                   <input
-                    className="mt-1 block rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
+                    className="mt-1 block w-32 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-900"
                     defaultValue={toDateInput(filters.customEnd ?? addDays(filters.end, -1))}
                     name="to"
                     type="date"
@@ -732,11 +700,9 @@ export default async function FlightsPage({ searchParams }: PageProps) {
                   Apply dates
                 </button>
               </form>
-            </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[36rem]">
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Status</p>
+              <div className="min-w-fit">
+                <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Status</p>
                 <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
                   {STATUS_OPTIONS.map((option) => (
                     <FilterLink
@@ -748,8 +714,8 @@ export default async function FlightsPage({ searchParams }: PageProps) {
                   ))}
                 </div>
               </div>
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Release</p>
+              <div className="min-w-fit">
+                <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Release</p>
                 <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
                   {RELEASE_OPTIONS.map((option) => (
                     <FilterLink
@@ -761,8 +727,8 @@ export default async function FlightsPage({ searchParams }: PageProps) {
                   ))}
                 </div>
               </div>
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Issues</p>
+              <div className="min-w-fit">
+                <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Issues</p>
                 <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
                   {ISSUE_OPTIONS.map((option) => (
                     <FilterLink
@@ -774,7 +740,6 @@ export default async function FlightsPage({ searchParams }: PageProps) {
                   ))}
                 </div>
               </div>
-            </div>
           </div>
         </section>
 

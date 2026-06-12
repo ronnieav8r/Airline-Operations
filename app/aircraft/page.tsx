@@ -9,9 +9,42 @@ import {
 } from "@prisma/client";
 import Link from "next/link";
 
+import { ContextDrawer } from "@/components/context-drawer";
 import { getAircraftBoard } from "@/lib/aircraft-queries";
 
 export const dynamic = "force-dynamic";
+
+type PageProps = {
+  searchParams: Promise<{
+    panel?: string | string[];
+    selected?: string | string[];
+  }>;
+};
+
+type AircraftBoardRow = Awaited<ReturnType<typeof getAircraftBoard>>["aircraft"][number];
+
+function firstParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
+function aircraftHref(options: { panel?: "aircraft" | null; selected?: string | null } = {}) {
+  const params = new URLSearchParams();
+
+  if (options.panel) {
+    params.set("panel", options.panel);
+  }
+
+  if (options.selected) {
+    params.set("selected", options.selected);
+  }
+
+  const query = params.toString();
+  return query ? `/aircraft?${query}` : "/aircraft";
+}
 
 function toDateTime(value: Date): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -143,23 +176,158 @@ function missingCockpitRoles(assignments: Array<{ seatRole: SeatRole }>): SeatRo
   return [SeatRole.CPT, SeatRole.FO].filter((role) => !assignedRoles.has(role));
 }
 
-export default async function AircraftPage() {
-  const { aircraft, summary } = await getAircraftBoard();
+function AircraftDrawer({
+  aircraft,
+  selectedId,
+}: {
+  aircraft: AircraftBoardRow[];
+  selectedId: string | null;
+}) {
+  if (!selectedId) {
+    return null;
+  }
+
+  const item = aircraft.find((aircraftRow) => aircraftRow.id === selectedId);
+  const closeHref = aircraftHref();
+
+  if (!item) {
+    return (
+      <ContextDrawer closeHref={closeHref} eyebrow="Aircraft quick review" title="Aircraft">
+        <p className="text-sm text-zinc-600">No aircraft found for this selection.</p>
+      </ContextDrawer>
+    );
+  }
+
   const now = new Date();
+  const currentFlight =
+    item.flights.find(
+      (flight) =>
+        flight.status === FlightStatus.ENROUTE ||
+        (flight.scheduledDeparture <= now && flight.scheduledArrival >= now),
+    ) ?? null;
+  const nextFlight = item.flights.find((flight) => flight.scheduledDeparture > now) ?? null;
+  const displayedFlight = currentFlight ?? nextFlight;
+  const currentAirworthinessRelease =
+    item.airworthinessReleases.find(
+      (release) => release.status === AirworthinessReleaseStatus.RELEASED,
+    ) ?? null;
+  const latestAirworthinessRelease = item.airworthinessReleases[0] ?? null;
+  const currentAirworthinessReleaseUsable = isCurrentAirworthinessRelease(
+    currentAirworthinessRelease,
+  );
 
   return (
-    <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
+    <ContextDrawer
+      closeHref={closeHref}
+      eyebrow="Aircraft quick review"
+      title={`${item.tailNumber} | ${formatAircraftType(item.type)}`}
+    >
+      <div className="space-y-4">
+        <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+          <div className="flex flex-wrap gap-2">
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${aircraftStatusBadgeClasses(item.status)}`}>
+              {item.status}
+            </span>
+            <span
+              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                currentAirworthinessReleaseUsable
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-amber-200 bg-amber-50 text-amber-800"
+              }`}
+            >
+              MX {currentAirworthinessReleaseUsable ? "Current" : "Review"}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-zinc-600">
+            Home station {item.homeStation ? `${item.homeStation.code} - ${item.homeStation.city}` : "not assigned"}
+          </p>
+          <p className="mt-1 text-sm text-zinc-600">
+            {airworthinessReleaseStatusLabel(latestAirworthinessRelease, currentAirworthinessRelease)}
+          </p>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Current / next leg
+          </h3>
+          {displayedFlight ? (
+            <div className="mt-2 text-sm">
+              <p className="font-semibold text-zinc-950">
+                {displayedFlight.flightNumber} | {displayedFlight.departureStation.code} -&gt;{" "}
+                {displayedFlight.arrivalStation.code}
+              </p>
+              <p className="mt-1 text-zinc-600">
+                Out {toDateTime(displayedFlight.scheduledDeparture)} | In{" "}
+                {toDateTime(displayedFlight.scheduledArrival)}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-zinc-600">No current or upcoming leg in view.</p>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Crew block
+          </h3>
+          {item.crewAssignments.length ? (
+            <ul className="mt-2 space-y-1 text-sm text-zinc-700">
+              {item.crewAssignments.map((assignment) => (
+                <li key={assignment.id}>
+                  {formatRoleLabel(assignment.seatRole)} {assignment.crewMember.firstName}{" "}
+                  {assignment.crewMember.lastName}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-zinc-600">No active aircraft crew block.</p>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            MX signals
+          </h3>
+          <p className="mt-2 text-sm text-zinc-700">
+            {item.discrepancies.length} open discrepancies | {item.deferrals.length} active deferrals
+          </p>
+        </section>
+
+        <div className="flex flex-wrap gap-2">
+          <Link className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white" href={`/aircraft/${item.id}`}>
+            Aircraft context
+          </Link>
+          <Link className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700" href={`/aircraft/${item.id}/crew`}>
+            Manage crew
+          </Link>
+          <Link className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700" href={`/aircraft/${item.id}/airworthiness`}>
+            MX release
+          </Link>
+        </div>
+      </div>
+    </ContextDrawer>
+  );
+}
+
+export default async function AircraftPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const { aircraft, summary } = await getAircraftBoard();
+  const now = new Date();
+  const selectedId = firstParam(params.panel) === "aircraft" ? firstParam(params.selected) : null;
+
+  return (
+    <main className="min-h-screen bg-zinc-100 px-4 py-4 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
-        <header className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
+        <header className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Fleet Operations Board
           </p>
           <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h1 className="text-2xl font-semibold tracking-tight">
                 Aircraft
               </h1>
-              <p className="mt-2 text-sm text-zinc-600">
+              <p className="mt-1 text-xs text-zinc-600">
                 Read-only aircraft status, crew blocks, and upcoming flight context.
               </p>
             </div>
@@ -175,64 +343,64 @@ export default async function AircraftPage() {
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Aircraft</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.total}</p>
+        <section className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Aircraft</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.total}</p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Available</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.available}</p>
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Available</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.available}</p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">In flight</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.inFlight}</p>
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">In flight</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.inFlight}</p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Maintenance signals</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.maintenance}</p>
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">MX signals</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.maintenance}</p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Active alerts</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.activeAlerts}</p>
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Alerts</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.activeAlerts}</p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Crew gaps</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{summary.crewGaps}</p>
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Crew gaps</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.crewGaps}</p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">FlightLeg reads</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">FlightLeg</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {summary.flightLegReads}
             </p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Fallback reads</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Fallback</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {summary.fallbackFlightReads}
             </p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Configured</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Configured</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {summary.configuredAircraft}
             </p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Current A/W releases</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">MX releases</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {summary.aircraftWithAirworthinessRelease}
             </p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Open discrepancies</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Discrepancies</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {summary.aircraftWithOpenDiscrepancies}
             </p>
           </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Active deferrals</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Deferrals</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
               {summary.aircraftWithActiveDeferrals}
             </p>
           </article>
@@ -284,9 +452,12 @@ export default async function AircraftPage() {
                   <div className="flex flex-col gap-3 border-b border-zinc-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="font-mono text-xl font-semibold tracking-tight text-zinc-950">
+                        <Link
+                          className="font-mono text-xl font-semibold tracking-tight text-sky-700 hover:text-sky-900"
+                          href={aircraftHref({ panel: "aircraft", selected: item.id })}
+                        >
                           {item.tailNumber}
-                        </h2>
+                        </Link>
                         <span
                           className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${aircraftStatusBadgeClasses(
                             item.status,
@@ -660,6 +831,7 @@ export default async function AircraftPage() {
             })}
           </section>
         )}
+        <AircraftDrawer aircraft={aircraft} selectedId={selectedId} />
       </div>
     </main>
   );

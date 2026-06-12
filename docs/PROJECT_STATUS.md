@@ -53,6 +53,9 @@ Recent prompt-numbering note:
   view toggle; frontend IA moves to Prompt 261.
 - Prompt 261 implemented the first Flights page drilldown foundation with
   compact header, filters, interactive rows, and quick-review drawers.
+- Prompt 262 restored next-30-day demo flights in the Render database and
+  added the shared drawer shell plus compact drawer passes for Flights,
+  Dashboard, Aircraft, Crew, and Scheduling.
 
 ## Current State
 
@@ -81,6 +84,8 @@ It has:
 - Aircraft at `/aircraft`
 - Crew at `/crew`
 - Scheduling at `/scheduling`
+- Shared URL-driven quick-review drawers across Dashboard, Flights, Aircraft,
+  Crew, and Scheduling
 - Health endpoint at `/api/health`
 - Hidden FlightLeg parity diagnostic at `/internal/flightleg-parity`
 - Hidden FlightLeg write-readiness diagnostic at
