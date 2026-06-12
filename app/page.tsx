@@ -4,9 +4,14 @@ import {
   FlightStatus,
   ReleaseStatus,
   SeatRole,
+  UserRole,
 } from "@prisma/client";
 import Link from "next/link";
 
+import {
+  dashboardReleaseFlightAction,
+  dashboardVoidReleaseAction,
+} from "@/app/dashboard-actions";
 import { ContextDrawer } from "@/components/context-drawer";
 import {
   DashboardFlight,
@@ -15,6 +20,7 @@ import {
   DashboardWindowValue,
   getDashboardData,
 } from "@/lib/dashboard-queries";
+import { getCurrentUser, type CurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +28,7 @@ type PageProps = {
   searchParams: Promise<{
     leg?: string | string[];
     panel?: string | string[];
+    releaseError?: string | string[];
     window?: string | string[];
   }>;
 };
@@ -35,6 +42,8 @@ type DashboardPanel =
   | "manifest"
   | "mx"
   | "release"
+  | "release-confirm"
+  | "void-confirm"
   | "weight-balance";
 
 const WINDOW_OPTIONS: Array<{ label: string; value: DashboardWindowValue }> = [
@@ -83,6 +92,8 @@ function parsePanel(value: string | string[] | undefined): DashboardPanel | null
     firstValue === "manifest" ||
     firstValue === "mx" ||
     firstValue === "release" ||
+    firstValue === "release-confirm" ||
+    firstValue === "void-confirm" ||
     firstValue === "weight-balance"
   ) {
     return firstValue;
@@ -129,9 +140,6 @@ function statusBadgeClasses(status: DashboardFlight["status"]): string {
   if (status === FlightStatus.ENROUTE) {
     return "border-blue-200 bg-blue-50 text-blue-700";
   }
-  if (status === FlightLegStatus.RELEASED || status === FlightLegStatus.READY_FOR_RELEASE) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  }
   if (status === FlightStatus.DELAYED) {
     return "border-rose-200 bg-rose-50 text-rose-700";
   }
@@ -139,6 +147,14 @@ function statusBadgeClasses(status: DashboardFlight["status"]): string {
     return "border-zinc-200 bg-zinc-50 text-zinc-500";
   }
   return "border-zinc-200 bg-white text-zinc-700";
+}
+
+function lifecycleStatusLabel(status: DashboardFlight["status"]): string {
+  if (status === FlightLegStatus.RELEASED || status === FlightLegStatus.READY_FOR_RELEASE) {
+    return "SCHEDULED";
+  }
+
+  return status;
 }
 
 function severityBadgeClasses(severity: AlertSeverity): string {
@@ -165,6 +181,38 @@ function releaseBadgeClasses(status: ReleaseStatus | null): string {
     return "border-zinc-200 bg-zinc-50 text-zinc-500";
   }
   return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
+function releaseActionLabel(flight: DashboardFlight): string {
+  if (flight.releaseStatus === ReleaseStatus.RELEASED) {
+    return "Released";
+  }
+
+  if (flight.releaseSummary.allReady) {
+    return "Ready for release";
+  }
+
+  return "Release review";
+}
+
+function releaseActionClasses(flight: DashboardFlight): string {
+  if (flight.releaseStatus === ReleaseStatus.RELEASED) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-300";
+  }
+
+  if (flight.releaseSummary.allReady) {
+    return "border-sky-200 bg-sky-50 text-sky-800 hover:border-sky-300";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-900 hover:border-amber-300";
+}
+
+function releasePanelForFlight(flight: DashboardFlight): DashboardPanel {
+  if (flight.releaseStatus === ReleaseStatus.RELEASED) {
+    return "void-confirm";
+  }
+
+  return flight.releaseSummary.allReady ? "release-confirm" : "flight";
 }
 
 function componentToneClasses(status: DashboardReleaseComponentStatus): string {
@@ -310,39 +358,22 @@ function workflowHref(flight: DashboardFlight, component: DashboardReleaseCompon
 
 function ReleaseStrip({
   flight,
-  selectedWindow,
 }: {
   flight: DashboardFlight;
-  selectedWindow: DashboardWindowValue;
 }) {
-  if (flight.releaseStatus === ReleaseStatus.RELEASED && flight.releaseSummary.allReady) {
-    return (
-      <Link
-        className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 hover:border-emerald-300"
-        href={dashboardHref(selectedWindow, { leg: flight.flightLegId, panel: "flight" })}
-      >
-        Released | release all clear
-      </Link>
-    );
-  }
-
   return (
     <div className="flex flex-wrap gap-1.5">
       {flight.releaseSummary.components.map((component) => (
-        <Link
+        <span
           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${componentToneClasses(
             component.status,
           )}`}
-          href={dashboardHref(selectedWindow, {
-            leg: flight.flightLegId,
-            panel: componentPanel(component),
-          })}
           key={component.key}
           title={component.message}
         >
           <span className={`h-2 w-2 rounded-full ${componentDotClasses(component.status)}`} />
           {component.label}
-        </Link>
+        </span>
       ))}
     </div>
   );
@@ -358,14 +389,204 @@ function crewCoverageLabel(flight: DashboardFlight): string {
   return `Missing ${flight.coverage.missingRoles.map(formatRoleLabel).join(", ")}`;
 }
 
+function isCurrentUserReleaseAuthorized(currentUser: CurrentUser | null): boolean {
+  return currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.OPS;
+}
+
+function ReleaseCredentialFields({ show }: { show: boolean }) {
+  if (!show) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+      <p className="text-sm font-semibold text-amber-950">Authorized release credentials required</p>
+      <p className="mt-1 text-xs text-amber-900">
+        Enter an ADMIN or OPS username and password to authorize this action.
+      </p>
+      <label className="mt-3 block text-xs font-semibold uppercase tracking-wide text-amber-950">
+        Username / email
+        <input
+          className="mt-1 w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-zinc-950"
+          name="authorizerEmail"
+          type="email"
+        />
+      </label>
+      <label className="mt-3 block text-xs font-semibold uppercase tracking-wide text-amber-950">
+        Password
+        <input
+          className="mt-1 w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-zinc-950"
+          name="authorizerPassword"
+          type="password"
+        />
+      </label>
+    </div>
+  );
+}
+
+function ReleaseVerificationPanel({
+  currentUser,
+  releaseError,
+  selectedFlight,
+  selectedWindow,
+}: {
+  currentUser: CurrentUser | null;
+  releaseError: string | null;
+  selectedFlight: DashboardFlight;
+  selectedWindow: DashboardWindowValue;
+}) {
+  const action = dashboardReleaseFlightAction.bind(null, selectedFlight.flightLegId ?? "");
+  const authorized = isCurrentUserReleaseAuthorized(currentUser);
+  const returnTo = dashboardHref(selectedWindow, {
+    leg: selectedFlight.flightLegId,
+    panel: "flight",
+  });
+
+  if (!selectedFlight.releaseSummary.allReady) {
+    return (
+      <div className="space-y-4">
+        {releaseError ? (
+          <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+            {releaseError}
+          </p>
+        ) : null}
+        <section className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-semibold">This flight is not ready for dashboard release.</p>
+          <p className="mt-1">
+            Review the release beacons below or open the full release workspace for warning-first
+            operational handling.
+          </p>
+        </section>
+        <ReleaseStrip flight={selectedFlight} />
+        <div className="flex flex-wrap gap-2">
+          <Link
+            className="rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white"
+            href={`/operations-control/${selectedFlight.flightLegId}`}
+          >
+            Open release workspace
+          </Link>
+          <Link
+            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+            href={returnTo}
+          >
+            Go back
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form action={action} className="space-y-4">
+      <input name="returnTo" type="hidden" value={returnTo} />
+      {releaseError ? (
+        <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+          {releaseError}
+        </p>
+      ) : null}
+      <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm">
+        <p className="font-semibold text-zinc-950">
+          Release {selectedFlight.flightNumber}?
+        </p>
+        <p className="mt-1 text-zinc-600">
+          {selectedFlight.departureCode} -&gt; {selectedFlight.arrivalCode} |{" "}
+          {selectedFlight.tailNumber} | {toTime(selectedFlight.scheduledDeparture)}
+        </p>
+      </section>
+      <ReleaseStrip flight={selectedFlight} />
+      <ReleaseCredentialFields show={!authorized} />
+      <div className="flex flex-wrap gap-2">
+        <button
+          className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+          type="submit"
+        >
+          Confirm release
+        </button>
+        <Link
+          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+          href={dashboardHref(selectedWindow, { leg: selectedFlight.flightLegId, panel: "flight" })}
+        >
+          No, go back
+        </Link>
+      </div>
+    </form>
+  );
+}
+
+function VoidReleasePanel({
+  currentUser,
+  releaseError,
+  selectedFlight,
+  selectedWindow,
+}: {
+  currentUser: CurrentUser | null;
+  releaseError: string | null;
+  selectedFlight: DashboardFlight;
+  selectedWindow: DashboardWindowValue;
+}) {
+  const action = dashboardVoidReleaseAction.bind(null, selectedFlight.flightLegId ?? "");
+  const authorized = isCurrentUserReleaseAuthorized(currentUser);
+  const returnTo = dashboardHref(selectedWindow, {
+    leg: selectedFlight.flightLegId,
+    panel: "flight",
+  });
+
+  return (
+    <form action={action} className="space-y-4">
+      <input name="returnTo" type="hidden" value={returnTo} />
+      {releaseError ? (
+        <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+          {releaseError}
+        </p>
+      ) : null}
+      <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm">
+        <p className="font-semibold text-zinc-950">
+          Void release for {selectedFlight.flightNumber}?
+        </p>
+        <p className="mt-1 text-zinc-600">
+          This does not erase the release history. It changes the active release status to VOIDED
+          and adds a release audit event.
+        </p>
+      </section>
+      <label className="block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        Void reason
+        <textarea
+          className="mt-1 min-h-24 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+          name="reason"
+          required
+        />
+      </label>
+      <ReleaseCredentialFields show={!authorized} />
+      <div className="flex flex-wrap gap-2">
+        <button
+          className="rounded-md bg-rose-700 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-800"
+          type="submit"
+        >
+          Confirm void
+        </button>
+        <Link
+          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+          href={dashboardHref(selectedWindow, { leg: selectedFlight.flightLegId, panel: "flight" })}
+        >
+          No, go back
+        </Link>
+      </div>
+    </form>
+  );
+}
+
 function DashboardDrawer({
   dashboard,
+  currentUser,
   panel,
+  releaseError,
   selectedFlight,
   selectedWindow,
 }: {
   dashboard: Awaited<ReturnType<typeof getDashboardData>>;
+  currentUser: CurrentUser | null;
   panel: DashboardPanel | null;
+  releaseError: string | null;
   selectedFlight: DashboardFlight | null;
   selectedWindow: DashboardWindowValue;
 }) {
@@ -458,6 +679,40 @@ function DashboardDrawer({
     return (
       <ContextDrawer closeHref={closeHref} eyebrow="Dashboard quick review" title="FlightLeg Review">
         <p className="text-sm text-zinc-600">Select a FlightLeg from the dashboard to review details.</p>
+      </ContextDrawer>
+    );
+  }
+
+  if (panel === "release-confirm") {
+    return (
+      <ContextDrawer closeHref={closeHref} eyebrow="Release verification" title="Ready for release">
+        {selectedFlight.flightLegId ? (
+          <ReleaseVerificationPanel
+            currentUser={currentUser}
+            releaseError={releaseError}
+            selectedFlight={selectedFlight}
+            selectedWindow={selectedWindow}
+          />
+        ) : (
+          <p className="text-sm text-zinc-600">This row is not backed by a FlightLeg release workflow.</p>
+        )}
+      </ContextDrawer>
+    );
+  }
+
+  if (panel === "void-confirm") {
+    return (
+      <ContextDrawer closeHref={closeHref} eyebrow="Release verification" title="Void release">
+        {selectedFlight.flightLegId ? (
+          <VoidReleasePanel
+            currentUser={currentUser}
+            releaseError={releaseError}
+            selectedFlight={selectedFlight}
+            selectedWindow={selectedWindow}
+          />
+        ) : (
+          <p className="text-sm text-zinc-600">This row is not backed by a FlightLeg release workflow.</p>
+        )}
       </ContextDrawer>
     );
   }
@@ -557,7 +812,11 @@ export default async function Home({ searchParams }: PageProps) {
   const selectedWindow = parseWindow(params.window);
   const panel = parsePanel(params.panel);
   const selectedLegId = firstParam(params.leg);
-  const dashboard = await getDashboardData({ window: selectedWindow });
+  const releaseError = firstParam(params.releaseError);
+  const [dashboard, currentUser] = await Promise.all([
+    getDashboardData({ window: selectedWindow }),
+    getCurrentUser(),
+  ]);
   const visibleFlights = dashboard.flights;
   const selectedFlight =
     dashboard.flights.find((flight) => flight.flightLegId === selectedLegId || flight.id === selectedLegId) ??
@@ -639,23 +898,27 @@ export default async function Home({ searchParams }: PageProps) {
               <div className="max-h-[34rem] space-y-2 overflow-y-auto pr-1">
                 {visibleFlights.map((flight) => (
                   <article
-                    className="grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm md:grid-cols-[auto_1fr_auto]"
+                    className="relative grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm transition hover:border-sky-300 hover:bg-sky-50/40 md:grid-cols-[auto_1fr]"
                     key={flight.id}
                   >
-                    <div className="font-mono text-base font-semibold text-zinc-950">
+                    {flight.flightLegId ? (
+                      <Link
+                        aria-label={`Open quick review for ${flight.flightNumber}`}
+                        className="absolute inset-0 z-0 rounded-lg"
+                        href={dashboardHref(dashboard.selectedWindow, {
+                          leg: flight.flightLegId,
+                          panel: "flight",
+                        })}
+                      />
+                    ) : null}
+                    <div className="pointer-events-none relative z-10 font-mono text-base font-semibold text-zinc-950">
                       {toTime(flight.scheduledDeparture)}
                     </div>
-                    <div className="min-w-0">
+                    <div className="pointer-events-none relative z-10 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Link
-                          className="font-semibold text-sky-700 hover:text-sky-900"
-                          href={dashboardHref(dashboard.selectedWindow, {
-                            leg: flight.flightLegId,
-                            panel: "flight",
-                          })}
-                        >
+                        <span className="font-semibold text-zinc-950">
                           {flight.flightNumber}
-                        </Link>
+                        </span>
                         <span className="text-zinc-500">
                           {flight.departureCode} -&gt; {flight.arrivalCode}
                         </span>
@@ -667,15 +930,21 @@ export default async function Home({ searchParams }: PageProps) {
                             flight.status,
                           )}`}
                         >
-                          {flight.status}
+                          {lifecycleStatusLabel(flight.status)}
                         </span>
-                        <span
-                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${releaseBadgeClasses(
-                            flight.releaseStatus,
-                          )}`}
-                        >
-                          {flight.releaseStatus ?? "NO RELEASE"}
-                        </span>
+                        {flight.flightLegId ? (
+                          <Link
+                            className={`pointer-events-auto relative z-20 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${releaseActionClasses(
+                              flight,
+                            )}`}
+                            href={dashboardHref(dashboard.selectedWindow, {
+                              leg: flight.flightLegId,
+                              panel: releasePanelForFlight(flight),
+                            })}
+                          >
+                            {releaseActionLabel(flight)}
+                          </Link>
+                        ) : null}
                         <span
                           className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
                             flight.coverage?.isCovered
@@ -689,28 +958,8 @@ export default async function Home({ searchParams }: PageProps) {
                         </span>
                       </div>
                       <div className="mt-2">
-                        <ReleaseStrip flight={flight} selectedWindow={dashboard.selectedWindow} />
+                        <ReleaseStrip flight={flight} />
                       </div>
-                    </div>
-                    <div className="flex flex-wrap items-start justify-end gap-2">
-                      {flight.flightLegId ? (
-                        <>
-                          <DashboardActionLink
-                            href={dashboardHref(dashboard.selectedWindow, {
-                              leg: flight.flightLegId,
-                              panel: "flight",
-                            })}
-                            label="Quick review"
-                            primary
-                          />
-                          <DashboardActionLink
-                            href={`/operations-control/${flight.flightLegId}`}
-                            label="Release workspace"
-                          />
-                        </>
-                      ) : (
-                        <span className="text-xs text-zinc-400">No FlightLeg actions</span>
-                      )}
                     </div>
                   </article>
                 ))}
@@ -761,7 +1010,9 @@ export default async function Home({ searchParams }: PageProps) {
 
       <DashboardDrawer
         dashboard={dashboard}
+        currentUser={currentUser}
         panel={panel}
+        releaseError={releaseError}
         selectedFlight={selectedFlight}
         selectedWindow={dashboard.selectedWindow}
       />

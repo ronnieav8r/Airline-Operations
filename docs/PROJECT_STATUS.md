@@ -56,6 +56,9 @@ Recent prompt-numbering note:
 - Prompt 262 restored next-30-day demo flights in the Render database and
   added the shared drawer shell plus compact drawer passes for Flights,
   Dashboard, Aircraft, Crew, and Scheduling.
+- Prompt 263 cleaned up dashboard flight cards by separating lifecycle status
+  from release status, making cards open quick review, and adding manual
+  dashboard release/void verification drawers with release audit tracking.
 
 ## Current State
 
@@ -86,6 +89,8 @@ It has:
 - Scheduling at `/scheduling`
 - Shared URL-driven quick-review drawers across Dashboard, Flights, Aircraft,
   Crew, and Scheduling
+- Dashboard release pill workflow for ready/released flights, with authorized
+  confirmation or credential-based release authorization
 - Health endpoint at `/api/health`
 - Hidden FlightLeg parity diagnostic at `/internal/flightleg-parity`
 - Hidden FlightLeg write-readiness diagnostic at

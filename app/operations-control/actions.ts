@@ -771,8 +771,17 @@ async function setFlightLegReleaseStatus(
       where: { operationalControlRecordId: controlRecord.id },
       update: {
         status,
-        releasedAt: status === ReleaseStatus.RELEASED ? new Date() : null,
-        releasedById: status === ReleaseStatus.RELEASED ? currentUserId : null,
+        ...(status === ReleaseStatus.RELEASED
+          ? {
+              releasedAt: new Date(),
+              releasedById: currentUserId,
+            }
+          : status === ReleaseStatus.CANCELLED
+            ? {
+                releasedAt: null,
+                releasedById: null,
+              }
+            : {}),
       },
       create: {
         operationalControlRecordId: controlRecord.id,
@@ -818,19 +827,24 @@ function releaseAttemptAction(status: ReleaseStatus): string {
   return "void-release";
 }
 
-function releaseAuditMessage(status: ReleaseStatus, snapshot: AttemptSnapshotResult): string {
+function releaseAuditMessage(
+  status: ReleaseStatus,
+  snapshot: AttemptSnapshotResult,
+  reason?: string | null,
+): string {
   const action =
     status === ReleaseStatus.RELEASED
       ? "marked released"
       : status === ReleaseStatus.CANCELLED
         ? "cancelled"
         : "voided";
+  const reasonNote = reason ? ` Reason: ${reason}` : "";
 
   if (snapshot.snapshotId) {
-    return `FlightLeg release ${action}; pre-action readiness snapshot captured.`;
+    return `FlightLeg release ${action}.${reasonNote} Pre-action readiness snapshot captured.`;
   }
 
-  return `FlightLeg release ${action}; pre-action readiness snapshot skipped.`;
+  return `FlightLeg release ${action}.${reasonNote} Pre-action readiness snapshot skipped.`;
 }
 
 async function createReadinessSnapshot(
@@ -979,6 +993,8 @@ async function createReleaseAuditEvent(
   status: ReleaseStatus,
   snapshot: AttemptSnapshotResult,
   currentUser: CurrentUser,
+  reason?: string | null,
+  workstationUser?: CurrentUser | null,
 ) {
   await prisma.$transaction(async (tx) => {
     await tx.releaseAuditEvent.create({
@@ -989,36 +1005,61 @@ async function createReleaseAuditEvent(
         eventType: releaseAuditEventType(status),
         actorUserId: currentUser.id,
         actorRole: currentUser.role,
-        message: releaseAuditMessage(status, snapshot),
+        message: releaseAuditMessage(status, snapshot, reason),
         metadata: {
           attemptedAction: releaseAttemptAction(status),
           attemptedReleaseStatus: status,
           actorRole: currentUser.role,
           actorUserId: currentUser.id,
           capturedBeforeStatus: snapshot.capturedBeforeStatus,
+          reason: reason ?? null,
           snapshotCaptured: !!snapshot.snapshotId,
           snapshotSkippedReason: snapshot.skippedReason,
+          workstationUserId:
+            workstationUser && workstationUser.id !== currentUser.id ? workstationUser.id : null,
+          workstationUserRole:
+            workstationUser && workstationUser.id !== currentUser.id ? workstationUser.role : null,
         },
       },
     });
   });
 }
 
-async function runReleaseAction(flightLegId: string, status: ReleaseStatus, currentUser: CurrentUser) {
+export async function runReleaseAction(
+  flightLegId: string,
+  status: ReleaseStatus,
+  currentUser: CurrentUser,
+  options: {
+    reason?: string | null;
+    redirectTo?: string;
+    workstationUser?: CurrentUser | null;
+  } = {},
+) {
   let attemptSnapshot: AttemptSnapshotResult;
   let release: { id: string };
 
   try {
     attemptSnapshot = await captureReleaseAttemptSnapshot(flightLegId, status, currentUser);
     release = await setFlightLegReleaseStatus(flightLegId, status, currentUser.id);
-    await createReleaseAuditEvent(flightLegId, release.id, status, attemptSnapshot, currentUser);
+    await createReleaseAuditEvent(
+      flightLegId,
+      release.id,
+      status,
+      attemptSnapshot,
+      currentUser,
+      options.reason,
+      options.workstationUser,
+    );
   } catch (error) {
-    redirect(`/operations-control/${flightLegId}?releaseError=${encodeError(error)}`);
+    const redirectTo = options.redirectTo ?? `/operations-control/${flightLegId}`;
+    const separator = redirectTo.includes("?") ? "&" : "?";
+    redirect(`${redirectTo}${separator}releaseError=${encodeError(error)}`);
   }
 
   revalidateFlightLegWorkflowPaths();
   revalidatePath(`/operations-control/${flightLegId}`);
-  redirect(`/operations-control/${flightLegId}`);
+  revalidatePath("/");
+  redirect(options.redirectTo ?? `/operations-control/${flightLegId}`);
 }
 
 export async function markFlightLegReleasedAction(flightLegId: string) {
