@@ -507,7 +507,7 @@ export default async function CrewLogisticsWorkbenchPage({ searchParams }: PageP
   const missingLocationCrew = crewMembers.filter((crewMember) => crewMember.locationRecords.length === 0);
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto min-h-screen w-full max-w-[1680px] px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link className="text-sm font-medium text-zinc-500 hover:text-zinc-800" href="/crew">

@@ -1323,7 +1323,7 @@ export default async function Home({ searchParams }: PageProps) {
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-4 text-zinc-950 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-4">
         <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>

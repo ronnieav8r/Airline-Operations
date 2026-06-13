@@ -143,7 +143,7 @@ export default async function CrewSchedulePeriodsPage({ searchParams }: PageProp
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-4">
         <header className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>

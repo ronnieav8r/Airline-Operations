@@ -39,7 +39,7 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-zinc-100">
       <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 shadow-sm backdrop-blur">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-2 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-2 px-4 py-2 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Link className="group min-w-0" href="/">
               <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-zinc-500">
