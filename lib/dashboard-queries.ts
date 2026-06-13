@@ -5,10 +5,13 @@ import {
   AssignmentStatus,
   AircraftFuelEventType,
   AircraftStatus,
-  FlightLocatingStatus,
+  DispatchPackageStatus,
+  FaaFlightPlanStatus,
   FlightLegStatus,
   FlightStatus,
+  FlightPhaseStatus,
   ManifestStatus,
+  OperatorManifestMode,
   Prisma,
   ReleaseStatus,
   SeatRole,
@@ -16,6 +19,16 @@ import {
 } from "@prisma/client";
 
 import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
+import {
+  isDispatchReady,
+  isFlightPlanBasisReady,
+  isLocatingReady,
+  isLocatingRequired,
+  isManifestReady,
+  isPostflightComplete,
+  isPreflightComplete,
+  resolveOperatorReleaseSetting,
+} from "@/lib/flight-workflow";
 import { prisma } from "@/lib/prisma";
 
 const dashboardFlightLegSelect = {
@@ -24,6 +37,17 @@ const dashboardFlightLegSelect = {
   flightNumber: true,
   scheduledDeparture: true,
   status: true,
+  faaFlightPlanStatus: true,
+  operator: {
+    select: {
+      releaseSetting: {
+        select: {
+          dispatcherEnabled: true,
+          manifestMode: true,
+        },
+      },
+    },
+  },
   departureStation: {
     select: { code: true },
   },
@@ -130,9 +154,26 @@ const dashboardFlightLegSelect = {
   dispatchPackage: {
     select: {
       id: true,
+      status: true,
       weatherBriefingId: true,
       notamSnapshotId: true,
       flightPlanReferenceId: true,
+    },
+  },
+  preflightRecord: {
+    select: {
+      status: true,
+      manifestVerified: true,
+    },
+  },
+  postflightRecord: {
+    select: {
+      status: true,
+      outTime: true,
+      offTime: true,
+      onTime: true,
+      inTime: true,
+      delayNotes: true,
     },
   },
 } satisfies Prisma.FlightLegSelect;
@@ -171,6 +212,7 @@ export type DashboardFlight = {
   flightNumber: string;
   scheduledDeparture: Date;
   status: FlightStatus | FlightLegStatus;
+  faaFlightPlanStatus: FaaFlightPlanStatus;
   departureCode: string;
   arrivalCode: string;
   tailNumber: string;
@@ -188,6 +230,10 @@ export type DashboardFlight = {
   } | null;
   coverage: FlightCoverage | null;
   releaseEvidence: DashboardReleaseEvidence | null;
+  releaseSetting: {
+    dispatcherEnabled: boolean;
+    manifestMode: OperatorManifestMode;
+  };
   releaseSummary: DashboardReleaseSummary;
   releaseStatus: ReleaseStatus | null;
   releasedAt: Date | null;
@@ -210,6 +256,11 @@ export type DashboardReleaseEvidence = {
   weightBalanceStatus: WeightBalanceStatus | null;
   locatingStatus: string | null;
   dispatchPackageReady: boolean;
+  dispatchStatus: DispatchPackageStatus | null;
+  preflightComplete: boolean;
+  postflightComplete: boolean;
+  preflightStatus: FlightPhaseStatus | null;
+  postflightStatus: FlightPhaseStatus | null;
   complete: boolean;
 };
 
@@ -220,6 +271,8 @@ export type DashboardReleaseComponentKey =
   | "fuel"
   | "manifest"
   | "mx"
+  | "postflight"
+  | "preflight"
   | "weight-balance";
 
 export type DashboardReleaseComponentStatus = "missing" | "ready" | "review" | "warning";
@@ -387,22 +440,22 @@ function buildDashboardReleaseEvidence(
   flightLeg: DashboardFlightLegPayload,
 ): DashboardReleaseEvidence {
   const weightBalanceStatus = flightLeg.weightBalanceRuns[0]?.status ?? null;
+  const releaseSetting = resolveOperatorReleaseSetting(flightLeg.operator.releaseSetting);
   const releaseFuel =
     flightLeg.fuelEvents.find((event) => event.eventType === AircraftFuelEventType.RELEASE_ONBOARD) ??
     null;
-  const dispatchPackageReady = Boolean(
-    flightLeg.dispatchPackage?.weatherBriefingId &&
-      flightLeg.dispatchPackage.notamSnapshotId &&
-      flightLeg.dispatchPackage.flightPlanReferenceId,
-  );
-  const complete =
-    (flightLeg.manifest?.status === ManifestStatus.READY ||
-      flightLeg.manifest?.status === ManifestStatus.LOCKED) &&
-    (weightBalanceStatus === WeightBalanceStatus.CALCULATED ||
-      weightBalanceStatus === WeightBalanceStatus.APPROVED) &&
-    Boolean(flightLeg.flightLocatingRecord) &&
-    releaseFuel?.fueledReady === true &&
-    dispatchPackageReady;
+  const dispatchPackageReady = isDispatchReady(flightLeg.dispatchPackage);
+  const preflightComplete = isPreflightComplete({
+    fuelEvents: flightLeg.fuelEvents,
+    manifestMode: releaseSetting.manifestMode,
+    preflightRecord: flightLeg.preflightRecord,
+    weightBalanceStatus,
+  });
+  const postflightComplete = isPostflightComplete({
+    flightStatus: flightLeg.status,
+    fuelEvents: flightLeg.fuelEvents,
+    postflightRecord: flightLeg.postflightRecord,
+  });
 
   return {
     manifestStatus: flightLeg.manifest?.status ?? null,
@@ -414,7 +467,12 @@ function buildDashboardReleaseEvidence(
     weightBalanceStatus,
     locatingStatus: flightLeg.flightLocatingRecord?.status ?? null,
     dispatchPackageReady,
-    complete,
+    dispatchStatus: flightLeg.dispatchPackage?.status ?? null,
+    preflightComplete,
+    postflightComplete,
+    preflightStatus: flightLeg.preflightRecord?.status ?? null,
+    postflightStatus: flightLeg.postflightRecord?.status ?? null,
+    complete: preflightComplete && postflightComplete,
   };
 }
 
@@ -425,19 +483,6 @@ function releaseComponent(
   message: string,
 ): DashboardReleaseComponent {
   return { key, label, message, status };
-}
-
-function formatDashboardFuel(lbs: Prisma.Decimal | null, gallons: Prisma.Decimal | null) {
-  if (!lbs) {
-    return null;
-  }
-
-  const poundsLabel = `${Math.round(Number(lbs)).toLocaleString("en-US")} lb`;
-  const gallonsLabel = gallons
-    ? ` / ${Math.round(Number(gallons)).toLocaleString("en-US")} gal approx`
-    : "";
-
-  return `${poundsLabel}${gallonsLabel}`;
 }
 
 function buildReleaseSummary(
@@ -456,78 +501,50 @@ function buildReleaseSummary(
   const mxBlockingStatus =
     aircraft?.status === AircraftStatus.IN_MAINTENANCE ||
     aircraft?.status === AircraftStatus.OUT_OF_SERVICE;
-  const fuelLabel = evidence
-    ? formatDashboardFuel(evidence.fuelOnboardLbs, evidence.fuelOnboardGallons)
-    : null;
   const firstCrewWarning = coverage?.warnings[0]?.message;
+  const releaseSetting = flight.releaseSetting;
+  const manifestReady = isManifestReady(
+    evidence?.manifestStatus,
+    evidence?.manifestItemCount ?? 0,
+  );
+  const locatingReady = isLocatingReady(evidence?.locatingStatus);
+  const locatingRequired = isLocatingRequired(flight.faaFlightPlanStatus);
+  const mxReady = Boolean(
+    aircraft &&
+      currentAirworthinessRelease &&
+      !airworthinessExpired &&
+      !mxBlockingStatus &&
+      aircraft.discrepancyCount === 0 &&
+      aircraft.deferralCount === 0,
+  );
+  const crewStatus: DashboardReleaseComponentStatus = !coverage
+    ? "missing"
+    : coverage.isCovered && coverage.warnings.length === 0
+      ? "ready"
+      : coverage.isCovered
+        ? "warning"
+        : "missing";
 
   const components: DashboardReleaseComponent[] = [
     releaseComponent(
-      "fuel",
-      "Fuel",
-      evidence?.fueledReady === true ? "ready" : evidence?.fuelOnboardLbs ? "review" : "missing",
-      evidence?.fueledReady === true && fuelLabel
-        ? `${fuelLabel} | Fuel ready. Endurance/range not configured yet.`
-        : evidence?.fuelOnboardLbs
-          ? `${fuelLabel ?? "Fuel onboard recorded"} | Fuel-ready not confirmed.`
-          : "Release fuel is missing.",
-    ),
-    releaseComponent(
-      "manifest",
-      "Manifest",
-      evidence?.manifestStatus === ManifestStatus.READY ||
-        evidence?.manifestStatus === ManifestStatus.LOCKED
-        ? "ready"
-        : evidence?.manifestStatus
-          ? "review"
-          : "missing",
-      evidence?.manifestStatus
-        ? `Crew ${coverage?.assignedCrew.length ?? 0} | Pax ${evidence.manifestItemCount} | ${evidence.manifestStatus}.`
-        : "Manifest is missing.",
-    ),
-    releaseComponent(
-      "weight-balance",
-      "W&B",
-      evidence?.weightBalanceStatus === WeightBalanceStatus.CALCULATED ||
-        evidence?.weightBalanceStatus === WeightBalanceStatus.APPROVED
-        ? "ready"
-        : evidence?.weightBalanceStatus
-          ? "review"
-          : "missing",
-      evidence?.weightBalanceStatus
-        ? `Weight and balance is ${evidence.weightBalanceStatus}.`
-        : "Weight and balance is missing.",
-    ),
-    releaseComponent(
-      "flight-following",
-      "Flt Follow",
-      evidence?.locatingStatus === FlightLocatingStatus.FILED ||
-        evidence?.locatingStatus === FlightLocatingStatus.ACTIVE ||
-        evidence?.locatingStatus === FlightLocatingStatus.CLOSED
-        ? "ready"
-        : evidence?.locatingStatus
-          ? "review"
-          : "missing",
-      evidence?.locatingStatus
-        ? `Flight following record is ${evidence.locatingStatus}.`
-        : "Flight following record is missing.",
-    ),
-    releaseComponent(
-      "dispatch",
-      "Dispatch",
-      evidence?.dispatchPackageReady ? "ready" : "missing",
-      evidence?.dispatchPackageReady
-        ? "Dispatch package has core current-information records."
-        : "Dispatch package is incomplete.",
+      "crew",
+      "Crew",
+      crewStatus,
+      !coverage
+        ? "Crew coverage has not been resolved."
+        : coverage.isCovered && coverage.warnings.length === 0
+          ? "Required crew roles are covered."
+          : coverage.isCovered
+            ? firstCrewWarning ??
+              `${coverage.warnings.length} crew qualification warning${coverage.warnings.length === 1 ? "" : "s"}.`
+            : coverage.pendingAssignments.length > 0
+              ? `${coverage.pendingAssignments.length} planned crew assignment(s) are pending eligibility.`
+              : `Missing ${coverage.missingRoles.join(", ")} crew coverage.`,
     ),
     releaseComponent(
       "mx",
       "MX",
-      !aircraft || !currentAirworthinessRelease || airworthinessExpired
-        ? "missing"
-        : mxBlockingStatus || aircraft.discrepancyCount > 0 || aircraft.deferralCount > 0
-          ? "warning"
-          : "ready",
+      mxReady ? "ready" : !aircraft || !currentAirworthinessRelease || airworthinessExpired ? "missing" : "warning",
       !aircraft
         ? "No assigned aircraft for MX review."
         : !currentAirworthinessRelease
@@ -540,26 +557,55 @@ function buildReleaseSummary(
                 ? `${aircraft.tailNumber} has ${aircraft.discrepancyCount} open discrepancy and ${aircraft.deferralCount} active deferral record(s).`
                 : `${aircraft.tailNumber} has current MX release ${currentAirworthinessRelease.releaseNumber}.`,
     ),
-    releaseComponent(
-      "crew",
-      "Crew",
-      !coverage
-        ? "missing"
-        : coverage.isCovered && coverage.warnings.length === 0
-          ? "ready"
-          : coverage.isCovered
-            ? "warning"
-            : "missing",
-      !coverage
-        ? "Crew coverage has not been resolved."
-        : coverage.isCovered && coverage.warnings.length === 0
-          ? "Required crew roles are covered."
-          : coverage.isCovered
-            ? firstCrewWarning ??
-              `${coverage.warnings.length} crew qualification warning${coverage.warnings.length === 1 ? "" : "s"}.`
-            : `Missing ${coverage.missingRoles.join(", ")} crew coverage.`,
-    ),
   ];
+
+  if (releaseSetting.manifestMode === OperatorManifestMode.OPS_REQUIRED) {
+    components.push(
+      releaseComponent(
+        "manifest",
+        "Manifest",
+        manifestReady ? "ready" : evidence?.manifestStatus ? "review" : "missing",
+        manifestReady
+          ? `Manifest ready with ${evidence?.manifestItemCount ?? 0} item(s).`
+          : "Ops Release requires a READY or LOCKED manifest.",
+      ),
+    );
+  }
+
+  if (!isFlightPlanBasisReady(flight.faaFlightPlanStatus)) {
+    components.push(
+      releaseComponent(
+        "flight-following",
+        "Flight plan",
+        "missing",
+        "FAA flight-plan status must be set before Ops Release.",
+      ),
+    );
+  } else if (locatingRequired) {
+    components.push(
+      releaseComponent(
+        "flight-following",
+        "Locating",
+        locatingReady ? "ready" : evidence?.locatingStatus ? "review" : "missing",
+        locatingReady
+          ? `No FAA flight plan filed; locating record is ${evidence?.locatingStatus}.`
+          : "No FAA flight plan filed; locating record is required.",
+      ),
+    );
+  }
+
+  if (releaseSetting.dispatcherEnabled) {
+    components.push(
+      releaseComponent(
+        "dispatch",
+        "Dispatch",
+        evidence?.dispatchPackageReady ? "ready" : "missing",
+        evidence?.dispatchPackageReady
+          ? "Dispatch package has weather, NOTAM, and flight-plan evidence."
+          : "Dispatcher is enabled; dispatch package is required.",
+      ),
+    );
+  }
   const reviewReasons = components
     .filter((component) => component.status !== "ready")
     .map((component) => `${component.label}: ${component.message}`);
@@ -618,6 +664,7 @@ function normalizeFlightLeg(
     flightNumber: flightLeg.flightNumber ?? flightLeg.legacyFlight?.flightNumber ?? "UNNUMBERED",
     scheduledDeparture: flightLeg.scheduledDeparture,
     status: flightLeg.status,
+    faaFlightPlanStatus: flightLeg.faaFlightPlanStatus,
     departureCode: flightLeg.departureStation.code,
     arrivalCode: flightLeg.arrivalStation.code,
     tailNumber:
@@ -633,6 +680,7 @@ function normalizeFlightLeg(
         }
       : null,
     releaseEvidence: buildDashboardReleaseEvidence(flightLeg),
+    releaseSetting: resolveOperatorReleaseSetting(flightLeg.operator.releaseSetting),
     releaseAuditEvents:
       flightLeg.operationalControlRecord?.release?.releaseAuditEvents.map((event) => ({
         actorRole: event.actorRole,
@@ -657,11 +705,13 @@ function normalizeFallbackFlight(
     flightNumber: flight.flightNumber,
     scheduledDeparture: flight.scheduledDeparture,
     status: flight.status,
+    faaFlightPlanStatus: FaaFlightPlanStatus.NOT_APPLICABLE,
     departureCode: flight.departureStation.code,
     arrivalCode: flight.arrivalStation.code,
     tailNumber: flight.aircraft.tailNumber,
     assignedAircraft: null,
     releaseEvidence: null,
+    releaseSetting: resolveOperatorReleaseSetting(null),
     releaseAuditEvents: [],
     releaseStatus: null,
     releasedAt: null,

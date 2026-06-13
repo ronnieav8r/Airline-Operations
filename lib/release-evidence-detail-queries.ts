@@ -18,6 +18,7 @@ const releaseEvidenceDetailSelect = {
   scheduledArrival: true,
   actualDeparture: true,
   actualArrival: true,
+  faaFlightPlanStatus: true,
   departureStation: {
     select: {
       code: true,
@@ -37,6 +38,12 @@ const releaseEvidenceDetailSelect = {
       id: true,
       name: true,
       code: true,
+      releaseSetting: {
+        select: {
+          dispatcherEnabled: true,
+          manifestMode: true,
+        },
+      },
     },
   },
   operatingAuthority: {
@@ -361,6 +368,10 @@ const releaseEvidenceDetailSelect = {
   },
   dispatchPackage: {
     select: {
+      id: true,
+      weatherBriefingId: true,
+      notamSnapshotId: true,
+      flightPlanReferenceId: true,
       performanceData: true,
       status: true,
       readyAt: true,
@@ -390,6 +401,27 @@ const releaseEvidenceDetailSelect = {
           routeText: true,
         },
       },
+    },
+  },
+  preflightRecord: {
+    select: {
+      status: true,
+      manifestVerified: true,
+      manifestNotes: true,
+      completedAt: true,
+      notes: true,
+    },
+  },
+  postflightRecord: {
+    select: {
+      status: true,
+      outTime: true,
+      offTime: true,
+      onTime: true,
+      inTime: true,
+      delayNotes: true,
+      completedAt: true,
+      notes: true,
     },
   },
   readinessSnapshots: {

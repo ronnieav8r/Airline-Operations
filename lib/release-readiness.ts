@@ -5,6 +5,7 @@ import {
   DispatchPackageStatus,
   FlightLocatingStatus,
   ManifestStatus,
+  OperatorManifestMode,
   Prisma,
   ReleaseFindingStatus,
   ReleaseRuleSeverity,
@@ -14,6 +15,11 @@ import {
 } from "@prisma/client";
 
 import { evaluateDutyRestForFlightLeg } from "@/lib/duty-rest-evaluator";
+import {
+  isFlightPlanBasisReady,
+  isLocatingRequired,
+  resolveOperatorReleaseSetting,
+} from "@/lib/flight-workflow";
 import { ReleaseEvidenceDetail } from "@/lib/release-evidence-detail-queries";
 
 export type ReleaseReadinessClassification = "READY" | "WOULD_BLOCK" | "WOULD_WARN";
@@ -166,6 +172,7 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
     null;
   const locating = detail.flightLocatingRecord;
   const dispatch = detail.dispatchPackage;
+  const releaseSetting = resolveOperatorReleaseSetting(detail.operator.releaseSetting);
   const weather = dispatch?.weatherBriefing ?? null;
   const notam = dispatch?.notamSnapshot ?? null;
   const flightPlan = dispatch?.flightPlanReference ?? null;
@@ -183,6 +190,8 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
     (locating.status === FlightLocatingStatus.FILED ||
       locating.status === FlightLocatingStatus.ACTIVE ||
       locating.status === FlightLocatingStatus.CLOSED);
+  const flightPlanBasisReady = isFlightPlanBasisReady(detail.faaFlightPlanStatus);
+  const locatingApplies = isLocatingRequired(detail.faaFlightPlanStatus);
   const dispatchNotVoided = dispatch?.status !== DispatchPackageStatus.VOIDED;
   const dispatchReady = !!dispatch && dispatchNotVoided && !!weather && !!notam && !!flightPlan;
   const weatherReady = !!weather?.routeSummary;
@@ -299,7 +308,7 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
       ruleKey: dutyRestEvaluation.ruleKey,
     },
     {
-      classification: fuelReady ? "READY" : "WOULD_BLOCK",
+      classification: fuelReady ? "READY" : "WOULD_WARN",
       details: {
         fuelOnboardLbs: releaseFuel?.fuelOnboardLbs?.toString() ?? null,
         fuelOnboardGallons: releaseFuel?.fuelOnboardGallons?.toString() ?? null,
@@ -312,16 +321,23 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
       href: `/operations-control/${detail.id}/fuel`,
       label: "Fuel",
       message: fuelReady
-        ? `Release fuel onboard ${releaseFuel.fuelOnboardLbs.toString()} lb and fueled-ready is confirmed.`
+        ? `Preflight fuel onboard ${releaseFuel.fuelOnboardLbs.toString()} lb and fueled-ready is confirmed.`
         : releaseFuel
           ? "Release fuel onboard is recorded, but fueled-ready is not confirmed."
-          : "Needs release fuel onboard and fueled-ready confirmation.",
+          : "Preflight needs fuel onboard and fueled-ready confirmation.",
       readinessCategory: "fuel",
       ready: fuelReady,
-      ruleKey: releaseFuel ? "fuel.release.readyNotConfirmed" : "fuel.release.missing",
+      ruleKey: releaseFuel ? "preflight.fuel.readyNotConfirmed" : "preflight.fuel.missing",
     },
     {
-      classification: manifestReady ? "READY" : "WOULD_BLOCK",
+      classification:
+        releaseSetting.manifestMode === OperatorManifestMode.NOT_REQUIRED
+          ? "READY"
+          : manifestReady
+            ? "READY"
+            : releaseSetting.manifestMode === OperatorManifestMode.OPS_REQUIRED
+              ? "WOULD_BLOCK"
+              : "WOULD_WARN",
       details: {
         itemCount: manifest?.items.length ?? 0,
         status: manifest?.status ?? null,
@@ -329,15 +345,25 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
       evidenceRefType: manifest ? "Manifest" : undefined,
       href: `/operations-control/${detail.id}/manifest`,
       label: "Manifest",
-      message: manifestReady
-        ? `${manifest.items.length} item(s), status ${manifest.status}.`
-        : "Needs a READY or LOCKED manifest with at least one item.",
+      message:
+        releaseSetting.manifestMode === OperatorManifestMode.NOT_REQUIRED
+          ? "Manifest is not required by operator release settings."
+          : manifestReady
+            ? `${manifest.items.length} item(s), status ${manifest.status}.`
+            : releaseSetting.manifestMode === OperatorManifestMode.OPS_REQUIRED
+              ? "Ops Release requires a READY or LOCKED manifest with at least one item."
+              : "Preflight requires manifest verification.",
       readinessCategory: "manifest",
-      ready: manifestReady,
-      ruleKey: !manifest ? "manifest.current.missing" : "manifest.current.empty",
+      ready: releaseSetting.manifestMode === OperatorManifestMode.NOT_REQUIRED || manifestReady,
+      ruleKey:
+        releaseSetting.manifestMode === OperatorManifestMode.OPS_REQUIRED
+          ? !manifest
+            ? "manifest.current.missing"
+            : "manifest.current.empty"
+          : "preflight.manifest.verification.missing",
     },
     {
-      classification: weightBalanceReady ? "READY" : "WOULD_BLOCK",
+      classification: weightBalanceReady ? "READY" : "WOULD_WARN",
       details: {
         runLabel: latestUsableWeightBalanceRun?.runLabel ?? null,
         status: latestUsableWeightBalanceRun?.status ?? null,
@@ -348,31 +374,47 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
       label: "Weight and balance",
       message: weightBalanceReady
         ? `${latestUsableWeightBalanceRun.runLabel} is ${latestUsableWeightBalanceRun.status}.`
-        : "Needs a latest non-voided W&B run marked CALCULATED or APPROVED.",
+        : "Preflight needs a latest non-voided W&B run marked CALCULATED or APPROVED.",
       readinessCategory: "weight-balance",
       ready: weightBalanceReady,
       ruleKey: !latestUsableWeightBalanceRun
-        ? "weightBalance.current.missing"
-        : "weightBalance.current.notCalculated",
+        ? "preflight.weightBalance.current.missing"
+        : "preflight.weightBalance.current.notCalculated",
     },
     {
-      classification: locatingReady ? "READY" : "WOULD_BLOCK",
+      classification:
+        !flightPlanBasisReady
+          ? "WOULD_BLOCK"
+          : !locatingApplies
+            ? "READY"
+            : locatingReady
+              ? "READY"
+              : "WOULD_BLOCK",
       details: {
+        faaFlightPlanStatus: detail.faaFlightPlanStatus,
         status: locating?.status ?? null,
       },
       evidenceRefType: locating ? "FlightLocatingRecord" : undefined,
       href: `/operations-control/${detail.id}/locating`,
       label: "Flight locating",
-      message: locatingReady
-        ? `Locating status is ${locating.status}.`
-        : "Needs locating status FILED, ACTIVE, or CLOSED.",
+      message: !flightPlanBasisReady
+        ? "FAA flight-plan status must be set before Ops Release."
+        : !locatingApplies
+          ? "FAA flight plan filed or locating not applicable; no locating record is required."
+          : locatingReady
+            ? `No FAA flight plan filed; locating status is ${locating.status}.`
+            : "No FAA flight plan filed; needs locating status FILED, ACTIVE, or CLOSED.",
       readinessCategory: "locating",
-      ready: locatingReady,
-      ruleKey: "flightLocating.record.missing",
+      ready: flightPlanBasisReady && (!locatingApplies || locatingReady),
+      ruleKey: !flightPlanBasisReady
+        ? "flightPlanReference.status.unknown"
+        : "flightLocating.record.missing",
     },
     {
-      classification: dispatchReady ? "READY" : "WOULD_BLOCK",
+      classification:
+        !releaseSetting.dispatcherEnabled ? "READY" : dispatchReady ? "READY" : "WOULD_BLOCK",
       details: {
+        dispatcherEnabled: releaseSetting.dispatcherEnabled,
         hasWeather: !!weather,
         hasNotam: !!notam,
         hasFlightPlan: !!flightPlan,
@@ -381,13 +423,15 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
       evidenceRefType: dispatch ? "DispatchPackage" : undefined,
       href: `/operations-control/${detail.id}/dispatch`,
       label: "Dispatch package",
-      message: dispatchReady
-        ? "Dispatch package links weather, NOTAM, and flight-plan evidence."
-        : dispatch?.status === DispatchPackageStatus.VOIDED
-          ? "Dispatch package is voided."
-          : "Needs a dispatch package linked to weather, NOTAM, and flight-plan evidence.",
+      message: !releaseSetting.dispatcherEnabled
+        ? "Dispatcher is disabled; dispatch package is not required for Ops Release."
+        : dispatchReady
+          ? "Dispatch package links weather, NOTAM, and flight-plan evidence."
+          : dispatch?.status === DispatchPackageStatus.VOIDED
+            ? "Dispatch package is voided."
+            : "Dispatcher is enabled; needs dispatch package linked to weather, NOTAM, and flight-plan evidence.",
       readinessCategory: "dispatch",
-      ready: dispatchReady,
+      ready: !releaseSetting.dispatcherEnabled || dispatchReady,
       ruleKey: "dispatchPackage.current.missing",
     },
     {

@@ -287,6 +287,24 @@ enum DispatchPackageStatus {
   VOIDED
 }
 
+enum OperatorManifestMode {
+  OPS_REQUIRED
+  PREFLIGHT_VERIFY
+  NOT_REQUIRED
+}
+
+enum FaaFlightPlanStatus {
+  UNKNOWN
+  FILED
+  NOT_FILED
+  NOT_APPLICABLE
+}
+
+enum FlightPhaseStatus {
+  NOT_STARTED
+  COMPLETE
+}
+
 enum ReleaseAuthorityClass {
   PART_91_BASELINE
   PART_91K_FRACTIONAL
@@ -551,6 +569,7 @@ model Operator {
   releasePolicyProfiles  ReleasePolicyProfile[]
   dutyRestPolicyProfiles DutyRestPolicyProfile[]
   fuelSetting            OperatorFuelSetting?
+  releaseSetting         OperatorReleaseSetting?
 }
 
 model OperatingAuthority {
@@ -731,7 +750,10 @@ model User {
   crewLocationRecordsCreated    CrewLocationRecord[]       @relation("CrewLocationRecordCreatedBy")
   crewLogisticsNeedsCreated     CrewLogisticsNeed[]        @relation("CrewLogisticsNeedCreatedBy")
   operatorFuelSettingsUpdated   OperatorFuelSetting[]      @relation("OperatorFuelSettingUpdatedBy")
+  operatorReleaseSettingsUpdated OperatorReleaseSetting[]   @relation("OperatorReleaseSettingUpdatedBy")
   aircraftFuelEventsRecorded    AircraftFuelEvent[]        @relation("AircraftFuelEventRecordedBy")
+  flightPreflightRecordsCompleted FlightPreflightRecord[]   @relation("FlightPreflightRecordCompletedBy")
+  flightPostflightRecordsCompleted FlightPostflightRecord[] @relation("FlightPostflightRecordCompletedBy")
 }
 
 model OperatorFuelSetting {
@@ -743,6 +765,20 @@ model OperatorFuelSetting {
   updatedAt                           DateTime @updatedAt
   operator                            Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
   updatedBy                           User?    @relation("OperatorFuelSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([updatedById])
+}
+
+model OperatorReleaseSetting {
+  id                String               @id @default(cuid())
+  operatorId        String               @unique
+  dispatcherEnabled Boolean              @default(false)
+  manifestMode      OperatorManifestMode @default(PREFLIGHT_VERIFY)
+  updatedById       String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  operator          Operator             @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  updatedBy         User?                @relation("OperatorReleaseSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@index([updatedById])
 }
@@ -1307,6 +1343,7 @@ model FlightLeg {
   scheduledArrival         DateTime
   actualDeparture          DateTime?
   actualArrival            DateTime?
+  faaFlightPlanStatus      FaaFlightPlanStatus        @default(UNKNOWN)
   status                   FlightLegStatus            @default(SCHEDULED)
   notes                    String?
   createdAt                DateTime                   @default(now())
@@ -1335,13 +1372,59 @@ model FlightLeg {
   releasePackages          ReleasePackage[]
   crewLogisticsNeeds       CrewLogisticsNeed[]
   fuelEvents               AircraftFuelEvent[]
+  preflightRecord          FlightPreflightRecord?
+  postflightRecord         FlightPostflightRecord?
 
   @@index([scheduledDeparture])
   @@index([status, scheduledDeparture])
+  @@index([faaFlightPlanStatus])
   @@index([operatorId, scheduledDeparture])
   @@index([operatingAuthorityId, scheduledDeparture])
   @@index([departureStationId, scheduledDeparture])
   @@index([arrivalStationId, scheduledArrival])
+}
+
+model FlightPreflightRecord {
+  id               String            @id @default(cuid())
+  flightLegId      String            @unique
+  status           FlightPhaseStatus @default(NOT_STARTED)
+  manifestVerified Boolean           @default(false)
+  manifestNotes    String?
+  completedById    String?
+  completedAt      DateTime?
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  flightLeg        FlightLeg         @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  completedBy      User?             @relation("FlightPreflightRecordCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([completedById])
+}
+
+model FlightPostflightRecord {
+  id            String            @id @default(cuid())
+  flightLegId   String            @unique
+  status        FlightPhaseStatus @default(NOT_STARTED)
+  outTime       DateTime?
+  offTime       DateTime?
+  onTime        DateTime?
+  inTime        DateTime?
+  delayNotes    String?
+  completedById String?
+  completedAt   DateTime?
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  flightLeg     FlightLeg         @relation(fields: [flightLegId], references: [id], onDelete: Cascade)
+  completedBy   User?             @relation("FlightPostflightRecordCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([completedById])
+  @@index([outTime])
+  @@index([offTime])
+  @@index([onTime])
+  @@index([inTime])
 }
 
 model Discrepancy {

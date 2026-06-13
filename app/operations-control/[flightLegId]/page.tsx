@@ -4,8 +4,10 @@ import {
   AirworthinessReleaseStatus,
   AircraftFuelEventType,
   DispatchPackageStatus,
+  FaaFlightPlanStatus,
   FlightLocatingStatus,
   ManifestStatus,
+  OperatorManifestMode,
   ReleasePackageStatus,
   ReleaseStatus,
   WeightBalanceStatus,
@@ -13,10 +15,13 @@ import {
 
 import {
   cancelFlightLegReleaseAction,
+  completePostflightAction,
+  completePreflightAction,
   captureReleasePackageFinalAction,
   captureReleasePackagePreviewAction,
   captureReleasePreviewSnapshotAction,
   markFlightLegReleasedAction,
+  updateFlightPlanBasisAction,
   voidFlightLegReleaseAction,
 } from "@/app/operations-control/actions";
 
@@ -28,6 +33,14 @@ import {
   getReleaseReadinessItems,
   ReleaseReadinessItem,
 } from "@/lib/release-readiness";
+import {
+  isManifestReady,
+  isPostflightComplete,
+  isPreflightComplete,
+  isReleaseFuelReady,
+  isWeightBalanceReady,
+  resolveOperatorReleaseSetting,
+} from "@/lib/flight-workflow";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +69,15 @@ function toDateTimeLabel(value: Date | null): string {
     minute: "2-digit",
     hour12: false,
   }).format(value);
+}
+
+function toDateTimeInput(value: Date | null): string {
+  if (!value) {
+    return "";
+  }
+
+  const offsetMs = value.getTimezoneOffset() * 60 * 1000;
+  return new Date(value.getTime() - offsetMs).toISOString().slice(0, 16);
 }
 
 function positionReportFreshnessLabel(reportedAt: Date, now: Date): string {
@@ -471,6 +493,157 @@ function ReleaseEvidenceActionPanel({
           status={latestSnapshot ? latestSnapshot.snapshotStatus : "Missing"}
           tone={latestSnapshot ? (latestSnapshot.snapshotStatus === "PASS" ? "good" : "warn") : "missing"}
         />
+      </div>
+    </section>
+  );
+}
+
+function FlightWorkflowPhases({ detail }: { detail: ReleaseEvidenceDetail }) {
+  const releaseSetting = resolveOperatorReleaseSetting(detail.operator.releaseSetting);
+  const latestUsableWeightBalanceRun =
+    detail.weightBalanceRuns.find((run) => run.status !== WeightBalanceStatus.VOIDED) ?? null;
+  const releaseFuelReady = isReleaseFuelReady(detail.fuelEvents);
+  const weightBalanceReady = isWeightBalanceReady(latestUsableWeightBalanceRun?.status);
+  const manifestReady = isManifestReady(detail.manifest?.status, detail.manifest?.items.length ?? 0);
+  const preflightComplete = isPreflightComplete({
+    fuelEvents: detail.fuelEvents,
+    manifestMode: releaseSetting.manifestMode,
+    preflightRecord: detail.preflightRecord,
+    weightBalanceStatus: latestUsableWeightBalanceRun?.status ?? null,
+  });
+  const postflightComplete = isPostflightComplete({
+    flightStatus: detail.status,
+    fuelEvents: detail.fuelEvents,
+    postflightRecord: detail.postflightRecord,
+  });
+  const flightPlanAction = updateFlightPlanBasisAction.bind(null, detail.id);
+  const preflightAction = completePreflightAction.bind(null, detail.id);
+  const postflightAction = completePostflightAction.bind(null, detail.id);
+
+  return (
+    <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Flight workflow</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Ops Release, Preflight, and Postflight are tracked separately.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs font-semibold">
+          <span className={`rounded-full border px-2.5 py-1 ${preflightComplete ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+            Preflight {preflightComplete ? "complete" : "open"}
+          </span>
+          <span className={`rounded-full border px-2.5 py-1 ${postflightComplete ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+            Postflight {postflightComplete ? "complete" : "open"}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 xl:grid-cols-3">
+        <form action={flightPlanAction} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+          <h3 className="font-semibold text-zinc-950">Ops Release basis</h3>
+          <p className="mt-1 text-xs text-zinc-600">
+            Locating is required when no FAA flight plan is filed.
+          </p>
+          <label className="mt-3 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            FAA flight plan
+            <select
+              className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+              defaultValue={detail.faaFlightPlanStatus}
+              name="faaFlightPlanStatus"
+            >
+              <option value={FaaFlightPlanStatus.UNKNOWN}>Unknown</option>
+              <option value={FaaFlightPlanStatus.FILED}>Filed</option>
+              <option value={FaaFlightPlanStatus.NOT_FILED}>Not filed</option>
+              <option value={FaaFlightPlanStatus.NOT_APPLICABLE}>Not applicable</option>
+            </select>
+          </label>
+          <button
+            className="mt-3 rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+            type="submit"
+          >
+            Save basis
+          </button>
+        </form>
+
+        <form action={preflightAction} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+          <h3 className="font-semibold text-zinc-950">Preflight</h3>
+          <div className="mt-2 grid gap-1 text-xs text-zinc-600">
+            <p>Fuel onboard: {releaseFuelReady ? "Ready" : "Open"}</p>
+            <p>W&B: {weightBalanceReady ? "Ready" : "Open"}</p>
+            <p>
+              Manifest:{" "}
+              {releaseSetting.manifestMode === OperatorManifestMode.PREFLIGHT_VERIFY
+                ? detail.preflightRecord?.manifestVerified
+                  ? "Verified"
+                  : "Verification needed"
+                : manifestReady
+                  ? "Ready"
+                  : "Not a Preflight verification item"}
+            </p>
+          </div>
+          {releaseSetting.manifestMode === OperatorManifestMode.PREFLIGHT_VERIFY ? (
+            <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-zinc-800">
+              <input
+                className="h-4 w-4"
+                defaultChecked={detail.preflightRecord?.manifestVerified ?? false}
+                name="manifestVerified"
+                type="checkbox"
+              />
+              Manifest verified
+            </label>
+          ) : null}
+          <label className="mt-3 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Notes
+            <textarea
+              className="mt-1 min-h-16 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+              defaultValue={detail.preflightRecord?.notes ?? ""}
+              name="notes"
+            />
+          </label>
+          <button
+            className="mt-3 rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+            type="submit"
+          >
+            Mark Preflight complete
+          </button>
+        </form>
+
+        <form action={postflightAction} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+          <h3 className="font-semibold text-zinc-950">Postflight</h3>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {[
+              { label: "OUT", name: "outTime", value: detail.postflightRecord?.outTime ?? null },
+              { label: "OFF", name: "offTime", value: detail.postflightRecord?.offTime ?? detail.actualDeparture },
+              { label: "ON", name: "onTime", value: detail.postflightRecord?.onTime ?? detail.actualArrival },
+              { label: "IN", name: "inTime", value: detail.postflightRecord?.inTime ?? null },
+            ].map((item) => (
+              <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500" key={item.name}>
+                {item.label}
+                <input
+                  className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-950"
+                  defaultValue={toDateTimeInput(item.value)}
+                  name={item.name}
+                  type="datetime-local"
+                />
+              </label>
+            ))}
+          </div>
+          <label className="mt-3 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Delay notes
+            <textarea
+              className="mt-1 min-h-16 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+              defaultValue={detail.postflightRecord?.delayNotes ?? ""}
+              name="delayNotes"
+            />
+          </label>
+          <button
+            className="mt-3 rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+            type="submit"
+          >
+            Mark Postflight complete
+          </button>
+        </form>
       </div>
     </section>
   );
@@ -1468,9 +1641,12 @@ export default async function ReleaseEvidenceDetailPage({ params, searchParams }
           id="command-center"
           title="Command Center"
         >
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-            <ReleaseEvidenceActionPanel detail={detail} now={now} />
-            <ReleaseControlActions detail={detail} />
+          <div className="grid gap-4">
+            <FlightWorkflowPhases detail={detail} />
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+              <ReleaseEvidenceActionPanel detail={detail} now={now} />
+              <ReleaseControlActions detail={detail} />
+            </div>
           </div>
         </SectionGroup>
 

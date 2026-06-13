@@ -1,7 +1,11 @@
-import { UserRole } from "@prisma/client";
+import { OperatorManifestMode, UserRole } from "@prisma/client";
 
-import { updateOperatorFuelSettingAction } from "@/app/admin/settings/actions";
+import {
+  updateOperatorFuelSettingAction,
+  updateOperatorReleaseSettingAction,
+} from "@/app/admin/settings/actions";
 import { DEFAULT_JET_A_DENSITY_LBS_PER_GALLON } from "@/lib/fuel";
+import { DEFAULT_OPERATOR_RELEASE_SETTING } from "@/lib/flight-workflow";
 import { requireRole } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
 
@@ -38,6 +42,18 @@ export default async function AdminSettingsPage({ searchParams }: PageProps) {
           },
         },
       },
+      releaseSetting: {
+        select: {
+          dispatcherEnabled: true,
+          manifestMode: true,
+          updatedAt: true,
+          updatedBy: {
+            select: {
+              email: true,
+            },
+          },
+        },
+      },
       id: true,
       isActive: true,
       name: true,
@@ -63,6 +79,77 @@ export default async function AdminSettingsPage({ searchParams }: PageProps) {
             {decodeURIComponent(error)}
           </p>
         ) : null}
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Release workflow</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Controls which items belong to Ops Release versus Preflight. Dispatcher support starts
+            as a release-package toggle; dispatcher-assisted fuel and W&B remain future workflow.
+          </p>
+          <div className="mt-4 grid gap-3">
+            {operators.map((operator) => {
+              const action = updateOperatorReleaseSettingAction.bind(null, operator.id);
+              const dispatcherEnabled =
+                operator.releaseSetting?.dispatcherEnabled ??
+                DEFAULT_OPERATOR_RELEASE_SETTING.dispatcherEnabled;
+              const manifestMode =
+                operator.releaseSetting?.manifestMode ??
+                DEFAULT_OPERATOR_RELEASE_SETTING.manifestMode;
+
+              return (
+                <form
+                  action={action}
+                  className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"
+                  key={operator.id}
+                >
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
+                    <div>
+                      <p className="font-semibold text-zinc-950">
+                        {operator.name} <span className="font-mono text-sm text-zinc-500">{operator.code}</span>
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {operator.isActive ? "Active" : "Inactive"} | Last updated{" "}
+                        {operator.releaseSetting?.updatedAt.toLocaleString() ?? "never"}
+                        {operator.releaseSetting?.updatedBy?.email
+                          ? ` by ${operator.releaseSetting.updatedBy.email}`
+                          : ""}
+                      </p>
+                    </div>
+                    <label className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-800">
+                      <input
+                        className="h-4 w-4"
+                        defaultChecked={dispatcherEnabled}
+                        name="dispatcherEnabled"
+                        type="checkbox"
+                      />
+                      Dispatcher enabled
+                    </label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                      Manifest
+                      <select
+                        className="mt-1 block w-48 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+                        defaultValue={manifestMode}
+                        name="manifestMode"
+                      >
+                        <option value={OperatorManifestMode.PREFLIGHT_VERIFY}>Preflight verifies</option>
+                        <option value={OperatorManifestMode.OPS_REQUIRED}>Ops release requires</option>
+                        <option value={OperatorManifestMode.NOT_REQUIRED}>Not required</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      className="rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+                      type="submit"
+                    >
+                      Save release setting
+                    </button>
+                  </div>
+                </form>
+              );
+            })}
+          </div>
+        </section>
 
         <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
           <h2 className="text-lg font-semibold">Fuel conversion</h2>

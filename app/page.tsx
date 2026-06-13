@@ -2,6 +2,7 @@ import {
   AlertSeverity,
   FlightLegStatus,
   FlightStatus,
+  OperatorManifestMode,
   ReleaseStatus,
   SeatRole,
   UserRole,
@@ -49,6 +50,8 @@ type FlightLegDrawerView =
   | "locating"
   | "manifest"
   | "mx"
+  | "postflight"
+  | "preflight"
   | "release"
   | "release-confirm"
   | "summary"
@@ -118,6 +121,8 @@ function parseFlightLegView(value: string | string[] | undefined): FlightLegDraw
     firstValue === "locating" ||
     firstValue === "manifest" ||
     firstValue === "mx" ||
+    firstValue === "postflight" ||
+    firstValue === "preflight" ||
     firstValue === "release" ||
     firstValue === "release-confirm" ||
     firstValue === "void-confirm" ||
@@ -221,10 +226,10 @@ function releaseActionLabel(flight: DashboardFlight): string {
   }
 
   if (flight.releaseSummary.allReady) {
-    return "Ready for release";
+    return "Ops release ready";
   }
 
-  return "Release review";
+  return "Ops release review";
 }
 
 function releaseActionClasses(flight: DashboardFlight): string {
@@ -362,6 +367,10 @@ function WindowControls({ selectedWindow }: { selectedWindow: DashboardWindowVal
 }
 
 function componentView(component: DashboardReleaseComponent): FlightLegDrawerView {
+  if (component.key === "preflight" || component.key === "postflight") {
+    return component.key;
+  }
+
   if (component.key === "flight-following") {
     return "locating";
   }
@@ -387,6 +396,8 @@ function workflowHref(flight: DashboardFlight, component: DashboardReleaseCompon
     "flight-following": "locating",
     fuel: "fuel",
     manifest: "manifest",
+    postflight: "fuel",
+    preflight: "fuel",
     "weight-balance": "weight-balance",
   }[component.key];
 
@@ -423,12 +434,18 @@ function summaryComponentHref(
 
 function ReleaseStrip({
   flight,
+  hideCrew = false,
 }: {
   flight: DashboardFlight;
+  hideCrew?: boolean;
 }) {
+  const components = hideCrew
+    ? flight.releaseSummary.components.filter((component) => component.key !== "crew")
+    : flight.releaseSummary.components;
+
   return (
     <div className="flex flex-wrap gap-1.5">
-      {flight.releaseSummary.components.map((component) => (
+      {components.map((component) => (
         <span
           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${componentToneClasses(
             component.status,
@@ -528,9 +545,9 @@ function ReleaseVerificationPanel({
           </p>
         ) : null}
         <section className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          <p className="font-semibold">This flight is not ready for dashboard release.</p>
+          <p className="font-semibold">This flight is not ready for Ops Release.</p>
           <p className="mt-1">
-            Review the release beacons below or open the full release workspace for warning-first
+            Review the Ops Release items below or open the full workspace for warning-first
             operational handling.
           </p>
         </section>
@@ -563,7 +580,7 @@ function ReleaseVerificationPanel({
       ) : null}
       <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm">
         <p className="font-semibold text-zinc-950">
-          Release {selectedFlight.flightNumber}?
+          Ops Release {selectedFlight.flightNumber}?
         </p>
         <p className="mt-1 text-zinc-600">
           {selectedFlight.departureCode} -&gt; {selectedFlight.arrivalCode} |{" "}
@@ -577,7 +594,7 @@ function ReleaseVerificationPanel({
           className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
           type="submit"
         >
-          Confirm release
+          Confirm Ops Release
         </button>
         <Link
           className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
@@ -685,6 +702,41 @@ function componentTone(component: DashboardReleaseComponent): "amber" | "emerald
   return component.status === "missing" ? "rose" : "amber";
 }
 
+function preflightSummary(flight: DashboardFlight): { message: string; ready: boolean } {
+  const evidence = flight.releaseEvidence;
+
+  if (!evidence) {
+    return { message: "Preflight evidence is not available.", ready: false };
+  }
+
+  const required = ["fuel onboard", "W&B"];
+  if (flight.releaseSetting.manifestMode === OperatorManifestMode.PREFLIGHT_VERIFY) {
+    required.push("manifest verification");
+  }
+
+  return {
+    message: evidence.preflightComplete
+      ? "Fuel, W&B, and required Preflight checks are complete."
+      : `Needs ${required.join(", ")}.`,
+    ready: evidence.preflightComplete,
+  };
+}
+
+function postflightSummary(flight: DashboardFlight): { message: string; ready: boolean } {
+  const evidence = flight.releaseEvidence;
+
+  if (!evidence) {
+    return { message: "Postflight evidence is not available.", ready: false };
+  }
+
+  return {
+    message: evidence.postflightComplete
+      ? "Times, landing fuel, and required notes are complete."
+      : "Needs OUT/OFF/ON/IN, landing fuel, and delay notes when applicable.",
+    ready: evidence.postflightComplete,
+  };
+}
+
 function FlightLegDrawerHeader({ flight }: { flight: DashboardFlight }) {
   return (
     <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
@@ -710,14 +762,10 @@ function FlightLegDrawerHeader({ flight }: { flight: DashboardFlight }) {
           {releaseActionLabel(flight)}
         </span>
       </div>
-      {flight.releaseEvidence?.fuelOnboardLbs ? (
-        <p className="mt-2 text-xs font-medium text-zinc-600">
-          Fuel {formatFuelAmount(flight.releaseEvidence.fuelOnboardLbs, flight.releaseEvidence.fuelOnboardGallons)} |{" "}
-          {fuelReadyLabel(flight.releaseEvidence.fueledReady)}
-        </p>
-      ) : (
-        <p className="mt-2 text-xs font-medium text-zinc-600">Fuel not recorded</p>
-      )}
+      <p className="mt-2 text-xs font-medium text-zinc-600">
+        Preflight {flight.releaseEvidence?.preflightComplete ? "complete" : "open"} | Postflight{" "}
+        {flight.releaseEvidence?.postflightComplete ? "complete" : "open"}
+      </p>
     </div>
   );
 }
@@ -748,6 +796,30 @@ function FlightLegSummaryView({
             <p className="mt-1 text-xs opacity-80">{component.message}</p>
           </DrawerSectionLink>
         ))}
+        <DrawerSectionLink
+          href={dashboardHref(selectedWindow, {
+            id: flight.flightLegId,
+            object: "flightLeg",
+            size,
+            view: "preflight",
+          })}
+          tone={preflightSummary(flight).ready ? "emerald" : "amber"}
+        >
+          <p className="font-semibold">Preflight</p>
+          <p className="mt-1 text-xs opacity-80">{preflightSummary(flight).message}</p>
+        </DrawerSectionLink>
+        <DrawerSectionLink
+          href={dashboardHref(selectedWindow, {
+            id: flight.flightLegId,
+            object: "flightLeg",
+            size,
+            view: "postflight",
+          })}
+          tone={postflightSummary(flight).ready ? "emerald" : "amber"}
+        >
+          <p className="font-semibold">Postflight</p>
+          <p className="mt-1 text-xs opacity-80">{postflightSummary(flight).message}</p>
+        </DrawerSectionLink>
         <DrawerSectionLink
           href={dashboardHref(selectedWindow, {
             id: flight.flightLegId,
@@ -817,13 +889,72 @@ function ReleaseDetailView({
     <div className="space-y-4">
       <FlightLegDrawerHeader flight={flight} />
       <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-        This FlightLeg is not ready for dashboard release. Review the items below or open the full
+        This FlightLeg is not ready for Ops Release. Review the items below or open the full
         workspace for warning-first operational handling.
       </p>
       <ReleaseStrip flight={flight} />
       {flight.flightLegId ? (
         <DashboardActionLink href={`/operations-control/${flight.flightLegId}`} label="Open release workspace" primary />
       ) : null}
+    </div>
+  );
+}
+
+function PhaseDetailView({
+  flight,
+  phase,
+}: {
+  flight: DashboardFlight;
+  phase: "postflight" | "preflight";
+}) {
+  const summary = phase === "preflight" ? preflightSummary(flight) : postflightSummary(flight);
+  const href = flight.flightLegId
+    ? phase === "preflight"
+      ? `/operations-control/${flight.flightLegId}`
+      : `/operations-control/${flight.flightLegId}`
+    : null;
+
+  return (
+    <div className="space-y-4">
+      <FlightLegDrawerHeader flight={flight} />
+      <section
+        className={`rounded-xl border p-3 text-sm ${
+          summary.ready
+            ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+            : "border-amber-200 bg-amber-50 text-amber-900"
+        }`}
+      >
+        <p className="font-semibold">{phase === "preflight" ? "Preflight" : "Postflight"}</p>
+        <p className="mt-1">{summary.message}</p>
+      </section>
+      {phase === "preflight" && flight.releaseEvidence ? (
+        <section className="rounded-xl border border-zinc-200 bg-white p-3 text-sm">
+          <p className="font-semibold text-zinc-950">Preflight evidence</p>
+          <div className="mt-2 grid gap-1 text-zinc-600">
+            <p>
+              Fuel: {formatFuelAmount(flight.releaseEvidence.fuelOnboardLbs, flight.releaseEvidence.fuelOnboardGallons)} |{" "}
+              {fuelReadyLabel(flight.releaseEvidence.fueledReady)}
+            </p>
+            <p>W&B: {statusText(flight.releaseEvidence.weightBalanceStatus)}</p>
+            <p>
+              Manifest:{" "}
+              {flight.releaseSetting.manifestMode === OperatorManifestMode.PREFLIGHT_VERIFY
+                ? "Preflight verification required"
+                : "Not a Preflight verification item"}
+            </p>
+          </div>
+        </section>
+      ) : null}
+      {phase === "postflight" && flight.releaseEvidence ? (
+        <section className="rounded-xl border border-zinc-200 bg-white p-3 text-sm">
+          <p className="font-semibold text-zinc-950">Postflight evidence</p>
+          <div className="mt-2 grid gap-1 text-zinc-600">
+            <p>Postflight fuel: {flight.releaseEvidence.postflightComplete ? "Recorded" : "Open"}</p>
+            <p>OUT/OFF/ON/IN: {flight.releaseEvidence.postflightStatus ?? "Not started"}</p>
+          </div>
+        </section>
+      ) : null}
+      {href ? <DashboardActionLink href={href} label="Open full workflow" primary /> : null}
     </div>
   );
 }
@@ -1024,10 +1155,10 @@ function DashboardDrawer({
 
   if (panel === "release") {
     return (
-      <ContextDrawer closeHref={closeHref} eyebrow="Dashboard quick review" title={`Release Review | ${dashboard.releaseWindowLabel}`}>
+      <ContextDrawer closeHref={closeHref} eyebrow="Dashboard quick review" title={`Ops Release Review | ${dashboard.releaseWindowLabel}`}>
         {dashboard.operationsAttention.priorityFlightLegs.length === 0 ? (
           <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-            No release review items inside this window.
+            No Ops Release review items inside this window.
           </p>
         ) : (
           <ul className="space-y-3">
@@ -1045,8 +1176,8 @@ function DashboardDrawer({
                     {flightLeg.releaseStatus === ReleaseStatus.RELEASED
                       ? "Released"
                       : flightLeg.releaseSummary.allReady
-                        ? "Ready for release"
-                        : "Release review"}
+                        ? "Ops release ready"
+                        : "Ops release review"}
                   </span>
                 </div>
                 <ul className="mt-3 space-y-1 text-sm text-zinc-700">
@@ -1106,7 +1237,7 @@ function DashboardDrawer({
 
   if (drawerView === "release-confirm") {
     eyebrow = "Release verification";
-    title = "Ready for release";
+    title = "Ops release ready";
     content = selectedFlight.flightLegId ? (
       <ReleaseVerificationPanel
         currentUser={currentUser}
@@ -1139,6 +1270,8 @@ function DashboardDrawer({
         selectedWindow={selectedWindow}
       />
     );
+  } else if (drawerView === "preflight" || drawerView === "postflight") {
+    content = <PhaseDetailView flight={selectedFlight} phase={drawerView} />;
   } else if (drawerView === "audit") {
     content = <AuditDetailView flight={selectedFlight} />;
   } else if (component) {
@@ -1201,7 +1334,7 @@ export default async function Home({ searchParams }: PageProps) {
                 Dashboard | {dashboard.dateLabel}
               </h1>
               <p className="mt-1 text-sm text-zinc-600">
-                Release review window: {dashboard.releaseWindowLabel}
+            Ops release window: {dashboard.releaseWindowLabel}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -1220,19 +1353,19 @@ export default async function Home({ searchParams }: PageProps) {
             />
             <StatusTile
               href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
-              label="Release review"
+              label="Ops review"
               tone={dashboard.statusSummary.releaseReviewNeeded > 0 ? "amber" : "emerald"}
               value={dashboard.statusSummary.releaseReviewNeeded}
             />
             <StatusTile
               href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
-              label="Ready for release"
+              label="Ops ready"
               tone="emerald"
               value={dashboard.statusSummary.releaseReady}
             />
             <StatusTile
               href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
-              label="Unreleased"
+              label="Needs release"
               tone={dashboard.statusSummary.plannedOrUnreleased > 0 ? "sky" : "emerald"}
               value={dashboard.statusSummary.plannedOrUnreleased}
             />
@@ -1326,7 +1459,7 @@ export default async function Home({ searchParams }: PageProps) {
                         </span>
                       </div>
                       <div className="mt-2">
-                        <ReleaseStrip flight={flight} />
+                        <ReleaseStrip flight={flight} hideCrew />
                       </div>
                     </div>
                   </article>

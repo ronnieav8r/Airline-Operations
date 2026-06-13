@@ -2,8 +2,11 @@
 
 import {
   AssignmentStatus,
+  FaaFlightPlanStatus,
   FlightLegStatus,
+  FlightPhaseStatus,
   FlightStatus,
+  OperatorManifestMode,
   Prisma,
   ReleaseAuditEventType,
   ReleaseFindingStatus,
@@ -25,6 +28,11 @@ import {
   mapReadinessClassificationToSeverity,
   mapReleaseReadinessFindingStatus,
 } from "@/lib/release-readiness";
+import {
+  isPostflightFuelReady,
+  isPreflightComplete,
+  resolveOperatorReleaseSetting,
+} from "@/lib/flight-workflow";
 
 class FlightLegFormError extends Error {}
 
@@ -696,6 +704,252 @@ function revalidateFlightLegWorkflowPaths() {
   revalidatePath("/crew");
   revalidatePath("/api/health");
   revalidatePath("/internal/flightleg-parity");
+}
+
+function revalidateSingleFlightLegWorkflowPaths(flightLegId: string) {
+  revalidateFlightLegWorkflowPaths();
+  revalidatePath(`/operations-control/${flightLegId}`);
+}
+
+function parseFaaFlightPlanStatus(value: FormDataEntryValue | null): FaaFlightPlanStatus {
+  if (
+    value === FaaFlightPlanStatus.UNKNOWN ||
+    value === FaaFlightPlanStatus.FILED ||
+    value === FaaFlightPlanStatus.NOT_FILED ||
+    value === FaaFlightPlanStatus.NOT_APPLICABLE
+  ) {
+    return value;
+  }
+
+  throw new FlightLegFormError("FAA flight-plan status is invalid.");
+}
+
+function parseRequiredDateTimeFormValue(formData: FormData, key: string, label: string): Date {
+  return parseDateTime(getRequiredText(formData, key, label), label);
+}
+
+function assertChronologicalTimes(times: {
+  inTime: Date;
+  offTime: Date;
+  onTime: Date;
+  outTime: Date;
+}) {
+  if (times.offTime.getTime() < times.outTime.getTime()) {
+    throw new FlightLegFormError("OFF time must be after OUT time.");
+  }
+
+  if (times.onTime.getTime() < times.offTime.getTime()) {
+    throw new FlightLegFormError("ON time must be after OFF time.");
+  }
+
+  if (times.inTime.getTime() < times.onTime.getTime()) {
+    throw new FlightLegFormError("IN time must be after ON time.");
+  }
+}
+
+export async function updateFlightPlanBasisAction(flightLegId: string, formData: FormData) {
+  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH, UserRole.CREW]);
+
+  try {
+    const faaFlightPlanStatus = parseFaaFlightPlanStatus(formData.get("faaFlightPlanStatus"));
+
+    await prisma.flightLeg.update({
+      where: { id: flightLegId },
+      data: { faaFlightPlanStatus },
+    });
+  } catch (error) {
+    redirect(`/operations-control/${flightLegId}?releaseError=${encodeError(error)}`);
+  }
+
+  revalidateSingleFlightLegWorkflowPaths(flightLegId);
+  redirect(`/operations-control/${flightLegId}`);
+}
+
+export async function completePreflightAction(flightLegId: string, formData: FormData) {
+  const currentUser = await requireRole([
+    UserRole.ADMIN,
+    UserRole.OPS,
+    UserRole.DISPATCH,
+    UserRole.CREW,
+  ]);
+
+  try {
+    const flightLeg = await prisma.flightLeg.findUnique({
+      where: { id: flightLegId },
+      select: {
+        fuelEvents: {
+          orderBy: [{ recordedAt: "desc" }, { createdAt: "desc" }],
+          select: {
+            eventType: true,
+            fueledReady: true,
+            fuelOnboardLbs: true,
+          },
+        },
+        operator: {
+          select: {
+            releaseSetting: {
+              select: {
+                dispatcherEnabled: true,
+                manifestMode: true,
+              },
+            },
+          },
+        },
+        preflightRecord: {
+          select: {
+            status: true,
+            manifestVerified: true,
+          },
+        },
+        weightBalanceRuns: {
+          orderBy: { createdAt: "desc" },
+          select: { status: true },
+          take: 1,
+        },
+      },
+    });
+
+    if (!flightLeg) {
+      throw new FlightLegFormError("FlightLeg was not found.");
+    }
+
+    const releaseSetting = resolveOperatorReleaseSetting(flightLeg.operator.releaseSetting);
+    const manifestVerified =
+      releaseSetting.manifestMode === OperatorManifestMode.PREFLIGHT_VERIFY
+        ? formData.get("manifestVerified") === "on"
+        : false;
+    const candidateRecord = {
+      manifestVerified,
+      status: FlightPhaseStatus.COMPLETE,
+    };
+
+    if (
+      !isPreflightComplete({
+        fuelEvents: flightLeg.fuelEvents,
+        manifestMode: releaseSetting.manifestMode,
+        preflightRecord: candidateRecord,
+        weightBalanceStatus: flightLeg.weightBalanceRuns[0]?.status ?? null,
+      })
+    ) {
+      throw new FlightLegFormError(
+        "Preflight requires release fuel ready, calculated or approved W&B, and manifest verification when configured.",
+      );
+    }
+
+    await prisma.flightPreflightRecord.upsert({
+      where: { flightLegId },
+      create: {
+        completedAt: new Date(),
+        completedById: currentUser.id,
+        flightLegId,
+        manifestNotes: getOptionalText(formData, "manifestNotes"),
+        manifestVerified,
+        notes: getOptionalText(formData, "notes"),
+        status: FlightPhaseStatus.COMPLETE,
+      },
+      update: {
+        completedAt: new Date(),
+        completedById: currentUser.id,
+        manifestNotes: getOptionalText(formData, "manifestNotes"),
+        manifestVerified,
+        notes: getOptionalText(formData, "notes"),
+        status: FlightPhaseStatus.COMPLETE,
+      },
+    });
+  } catch (error) {
+    redirect(`/operations-control/${flightLegId}?releaseError=${encodeError(error)}`);
+  }
+
+  revalidateSingleFlightLegWorkflowPaths(flightLegId);
+  redirect(`/operations-control/${flightLegId}`);
+}
+
+export async function completePostflightAction(flightLegId: string, formData: FormData) {
+  const currentUser = await requireRole([
+    UserRole.ADMIN,
+    UserRole.OPS,
+    UserRole.DISPATCH,
+    UserRole.CREW,
+  ]);
+
+  try {
+    const outTime = parseRequiredDateTimeFormValue(formData, "outTime", "OUT time");
+    const offTime = parseRequiredDateTimeFormValue(formData, "offTime", "OFF time");
+    const onTime = parseRequiredDateTimeFormValue(formData, "onTime", "ON time");
+    const inTime = parseRequiredDateTimeFormValue(formData, "inTime", "IN time");
+    const delayNotes = getOptionalText(formData, "delayNotes");
+    const notes = getOptionalText(formData, "notes");
+
+    assertChronologicalTimes({ inTime, offTime, onTime, outTime });
+
+    const flightLeg = await prisma.flightLeg.findUnique({
+      where: { id: flightLegId },
+      select: {
+        fuelEvents: {
+          orderBy: [{ recordedAt: "desc" }, { createdAt: "desc" }],
+          select: {
+            eventType: true,
+            fueledReady: true,
+            fuelOnboardLbs: true,
+          },
+        },
+        status: true,
+      },
+    });
+
+    if (!flightLeg) {
+      throw new FlightLegFormError("FlightLeg was not found.");
+    }
+
+    if (flightLeg.status === FlightLegStatus.DELAYED && !delayNotes) {
+      throw new FlightLegFormError("Delay notes are required for delayed flights.");
+    }
+
+    if (!isPostflightFuelReady(flightLeg.fuelEvents)) {
+      throw new FlightLegFormError("Postflight requires landing/postflight fuel.");
+    }
+
+    await prisma.$transaction([
+      prisma.flightPostflightRecord.upsert({
+        where: { flightLegId },
+        create: {
+          completedAt: new Date(),
+          completedById: currentUser.id,
+          delayNotes,
+          flightLegId,
+          inTime,
+          notes,
+          offTime,
+          onTime,
+          outTime,
+          status: FlightPhaseStatus.COMPLETE,
+        },
+        update: {
+          completedAt: new Date(),
+          completedById: currentUser.id,
+          delayNotes,
+          inTime,
+          notes,
+          offTime,
+          onTime,
+          outTime,
+          status: FlightPhaseStatus.COMPLETE,
+        },
+      }),
+      prisma.flightLeg.update({
+        where: { id: flightLegId },
+        data: {
+          actualArrival: onTime,
+          actualDeparture: offTime,
+        },
+      }),
+    ]);
+  } catch (error) {
+    redirect(`/operations-control/${flightLegId}?releaseError=${encodeError(error)}`);
+  }
+
+  revalidateSingleFlightLegWorkflowPaths(flightLegId);
+  redirect(`/operations-control/${flightLegId}`);
 }
 
 function packageDateKey(date: Date): string {
