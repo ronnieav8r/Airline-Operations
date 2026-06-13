@@ -29,6 +29,7 @@ import {
   isPreflightComplete,
   resolveOperatorReleaseSetting,
 } from "@/lib/flight-workflow";
+import { timeOperation } from "@/lib/performance-monitor";
 import { prisma } from "@/lib/prisma";
 
 const dashboardFlightLegSelect = {
@@ -728,84 +729,104 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
   const queryEnd =
     releaseWindow.end.getTime() > todayEnd.getTime() ? releaseWindow.end : todayEnd;
   const [aircraftCount, crewCount, todayFlights, alerts, fleetStatusGroups] =
-    await Promise.all([
-      prisma.aircraft.count(),
-      prisma.crewMember.count(),
-      Promise.all([
-        prisma.flightLeg.findMany({
-          where: {
-            scheduledDeparture: {
-              gte: start,
-              lt: queryEnd,
-            },
-          },
-          select: dashboardFlightLegSelect,
-          orderBy: { scheduledDeparture: "asc" },
-        }),
-        prisma.flight.findMany({
-          where: {
-            flightLeg: null,
-            scheduledDeparture: {
-              gte: start,
-              lt: queryEnd,
-            },
-          },
-          select: fallbackDashboardFlightSelect,
-          orderBy: { scheduledDeparture: "asc" },
-        }),
-      ]).then(([flightLegs, fallbackFlights]) =>
-        [...flightLegs.map(normalizeFlightLeg), ...fallbackFlights.map(normalizeFallbackFlight)].sort(
-          (first, second) => {
-            const departureDelta =
-              first.scheduledDeparture.getTime() - second.scheduledDeparture.getTime();
+    await timeOperation(
+      "dashboard.database",
+      () =>
+        Promise.all([
+          prisma.aircraft.count(),
+          prisma.crewMember.count(),
+          Promise.all([
+            prisma.flightLeg.findMany({
+              where: {
+                scheduledDeparture: {
+                  gte: start,
+                  lt: queryEnd,
+                },
+              },
+              select: dashboardFlightLegSelect,
+              orderBy: { scheduledDeparture: "asc" },
+            }),
+            prisma.flight.findMany({
+              where: {
+                flightLeg: null,
+                scheduledDeparture: {
+                  gte: start,
+                  lt: queryEnd,
+                },
+              },
+              select: fallbackDashboardFlightSelect,
+              orderBy: { scheduledDeparture: "asc" },
+            }),
+          ]).then(([flightLegs, fallbackFlights]) =>
+            [...flightLegs.map(normalizeFlightLeg), ...fallbackFlights.map(normalizeFallbackFlight)].sort(
+              (first, second) => {
+                const departureDelta =
+                  first.scheduledDeparture.getTime() - second.scheduledDeparture.getTime();
 
-            if (departureDelta !== 0) {
-              return departureDelta;
-            }
+                if (departureDelta !== 0) {
+                  return departureDelta;
+                }
 
-            return first.flightNumber.localeCompare(second.flightNumber);
-          },
-        ),
+                return first.flightNumber.localeCompare(second.flightNumber);
+              },
+            ),
+          ),
+          prisma.alert.findMany({
+            where: {
+              status: AlertStatus.ACTIVE,
+            },
+            select: {
+              id: true,
+              type: true,
+              severity: true,
+              title: true,
+              message: true,
+              flight: {
+                select: {
+                  flightNumber: true,
+                },
+              },
+              aircraft: {
+                select: {
+                  tailNumber: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+          }),
+          prisma.aircraft.groupBy({
+            by: ["status"],
+            _count: { _all: true },
+          }),
+        ]),
+      {
+        metadata: {
+          selectedWindow,
+          queryEnd: queryEnd.toISOString(),
+        },
+      },
+    );
+
+  const flightsWithCoverage: DashboardFlight[] = await timeOperation(
+    "dashboard.crewCoverage",
+    () =>
+      Promise.all(
+        todayFlights.map(async (flight) => {
+          const coverage = await resolveFlightCoverage(flight.flightLegId ?? flight.legacyFlightId);
+
+          return {
+            ...flight,
+            coverage,
+            releaseSummary: buildReleaseSummary(flight, coverage, now),
+          };
+        }),
       ),
-      prisma.alert.findMany({
-        where: {
-          status: AlertStatus.ACTIVE,
-        },
-        select: {
-          id: true,
-          type: true,
-          severity: true,
-          title: true,
-          message: true,
-          flight: {
-            select: {
-              flightNumber: true,
-            },
-          },
-          aircraft: {
-            select: {
-              tailNumber: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.aircraft.groupBy({
-        by: ["status"],
-        _count: { _all: true },
-      }),
-    ]);
-
-  const flightsWithCoverage: DashboardFlight[] = await Promise.all(
-    todayFlights.map(async (flight) => {
-      const coverage = await resolveFlightCoverage(flight.flightLegId ?? flight.legacyFlightId);
-
-      return {
-        ...flight,
-        coverage,
-        releaseSummary: buildReleaseSummary(flight, coverage, now),
-      };
-    }),
+    {
+      metadata: {
+        flightCount: todayFlights.length,
+        selectedWindow,
+      },
+    },
   );
   const flightsInReleaseWindow = flightsWithCoverage.filter(
     (flight) =>

@@ -1,6 +1,7 @@
 import { AssignmentStatus, FlightLegStatus, FlightStatus, Prisma } from "@prisma/client";
 
 import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
+import { timeOperation } from "@/lib/performance-monitor";
 import { prisma } from "@/lib/prisma";
 
 const flightLegListSelect = {
@@ -286,23 +287,33 @@ export async function getFlightListData(options: FlightListQueryOptions = {}): P
         }
       : undefined;
   const take = options.take ?? 160;
-  const [flightLegs, fallbackFlights] = await Promise.all([
-    prisma.flightLeg.findMany({
-      where: scheduledDepartureWhere ? { scheduledDeparture: scheduledDepartureWhere } : undefined,
-      select: flightLegListSelect,
-      orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
-      take,
-    }),
-    prisma.flight.findMany({
-      where: {
-        flightLeg: null,
-        ...(scheduledDepartureWhere ? { scheduledDeparture: scheduledDepartureWhere } : {}),
+  const [flightLegs, fallbackFlights] = await timeOperation(
+    "flights.list.database",
+    () =>
+      Promise.all([
+        prisma.flightLeg.findMany({
+          where: scheduledDepartureWhere ? { scheduledDeparture: scheduledDepartureWhere } : undefined,
+          select: flightLegListSelect,
+          orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
+          take,
+        }),
+        prisma.flight.findMany({
+          where: {
+            flightLeg: null,
+            ...(scheduledDepartureWhere ? { scheduledDeparture: scheduledDepartureWhere } : {}),
+          },
+          select: fallbackFlightListSelect,
+          orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
+          take,
+        }),
+      ]),
+    {
+      metadata: {
+        hasDateRange: Boolean(scheduledDepartureWhere),
+        take,
       },
-      select: fallbackFlightListSelect,
-      orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
-      take,
-    }),
-  ]);
+    },
+  );
 
   const normalizedFlights = [...flightLegs.map(normalizeFlightLeg), ...fallbackFlights.map(normalizeFallbackFlight)]
     .sort((first, second) => {
@@ -335,10 +346,19 @@ export async function getFlightListData(options: FlightListQueryOptions = {}): P
 }
 
 export async function resolveFlightListCoverage(flights: FlightListItem[]): Promise<FlightListItem[]> {
-  return Promise.all(
-    flights.map(async (flight) => ({
-      ...flight,
-      coverage: await resolveFlightCoverage(flight.flightLegId ?? flight.legacyFlightId),
-    })),
+  return timeOperation(
+    "flights.list.crewCoverage",
+    () =>
+      Promise.all(
+        flights.map(async (flight) => ({
+          ...flight,
+          coverage: await resolveFlightCoverage(flight.flightLegId ?? flight.legacyFlightId),
+        })),
+      ),
+    {
+      metadata: {
+        flightCount: flights.length,
+      },
+    },
   );
 }
