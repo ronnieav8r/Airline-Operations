@@ -418,9 +418,12 @@ function workflowHref(flight: DashboardFlight, component: DashboardReleaseCompon
     return null;
   }
 
+  if (component.key === "flight-following") {
+    return null;
+  }
+
   const suffix = {
     dispatch: "dispatch",
-    "flight-following": "locating",
     fuel: "fuel",
     manifest: "manifest",
     postflight: "fuel",
