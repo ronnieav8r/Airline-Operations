@@ -565,6 +565,7 @@ model Operator {
   updatedAt              DateTime                   @updatedAt
   operatingAuthorities   OperatingAuthority[]
   controlRecords         OperationalControlRecord[]
+  customers              Customer[]
   tripOrMissions         TripOrMission[]
   flightLegs             FlightLeg[]
   releasePolicyProfiles  ReleasePolicyProfile[]
@@ -612,6 +613,25 @@ model AuthorityRevision {
   @@index([operatingAuthorityId, status])
 }
 
+model Customer {
+  id                        String                     @id @default(cuid())
+  operatorId                String
+  name                      String
+  customerCode              String?
+  contactName               String?
+  contactEmail              String?
+  contactPhone              String?
+  notes                     String?
+  isActive                  Boolean                    @default(true)
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  operator                  Operator                   @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  operationalControlRecords OperationalControlRecord[]
+
+  @@unique([operatorId, name])
+  @@index([operatorId, isActive])
+}
+
 model Manual {
   id                   String             @id @default(cuid())
   operatingAuthorityId String
@@ -649,6 +669,7 @@ model OperationalControlRecord {
   operatorId           String
   operatingAuthorityId String
   authorityRevisionId  String
+  customerId           String?
   controllingEntity    String
   controlNotes         String?
   createdById          String?
@@ -659,6 +680,7 @@ model OperationalControlRecord {
   operator             Operator           @relation(fields: [operatorId], references: [id], onDelete: Restrict)
   operatingAuthority   OperatingAuthority @relation(fields: [operatingAuthorityId], references: [id], onDelete: Restrict)
   authorityRevision    AuthorityRevision  @relation(fields: [authorityRevisionId], references: [id], onDelete: Restrict)
+  customer             Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
   createdBy            User?              @relation("OperationalControlRecordCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   release              FlightRelease?
   releasePackages      ReleasePackage[]
@@ -666,6 +688,7 @@ model OperationalControlRecord {
   @@index([operatorId])
   @@index([operatingAuthorityId])
   @@index([authorityRevisionId])
+  @@index([customerId])
 }
 
 model FlightRelease {

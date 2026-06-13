@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { OperatingPart } from "@prisma/client";
 
 import { FlightLegEditData, FlightLegFormOptions } from "@/lib/flightleg-form-queries";
 
@@ -10,6 +11,7 @@ type FlightLegFormProps = {
   initial?: FlightLegEditData | null;
   mode: "create" | "edit";
   options: FlightLegFormOptions;
+  variant?: "drawer" | "page";
 };
 
 function formatDateTimeInput(value: Date | null | undefined): string {
@@ -28,11 +30,52 @@ function selectedAircraftId(initial?: FlightLegEditData | null): string {
   return initial?.aircraftAssignments[0]?.aircraftId ?? "";
 }
 
-function selectedControlValue(
-  initial: FlightLegEditData | null | undefined,
-  key: "controllingEntity" | "controlNotes",
+function selectedControlNotes(initial: FlightLegEditData | null | undefined): string {
+  return initial?.operationalControlRecord?.controlNotes ?? "";
+}
+
+function selectedCustomerName(initial: FlightLegEditData | null | undefined): string {
+  return (
+    initial?.operationalControlRecord?.customer?.name ??
+    initial?.operationalControlRecord?.controllingEntity ??
+    ""
+  );
+}
+
+function formatOperatingPart(part: OperatingPart): string {
+  return part.replace("PART_", "Part ");
+}
+
+function authorityLabel(
+  authority: FlightLegFormOptions["operatingAuthorities"][number],
 ): string {
-  return initial?.operationalControlRecord?.[key] ?? "";
+  return `${formatOperatingPart(authority.operatingPart)}${
+    authority.status === "ACTIVE" ? "" : ` (${authority.status.toLowerCase()})`
+  }`;
+}
+
+function selectedOperatingAuthorityId(
+  initial: FlightLegEditData | null | undefined,
+  options: FlightLegFormOptions,
+): string {
+  if (initial?.operatingAuthorityId) {
+    return initial.operatingAuthorityId;
+  }
+
+  return options.operatingAuthorities.find((authority) => authority.status === "ACTIVE")?.id ?? "";
+}
+
+function visibleAuthorities(
+  options: FlightLegFormOptions,
+  selectedAuthorityId: string,
+): FlightLegFormOptions["operatingAuthorities"] {
+  return options.operatingAuthorities.filter(
+    (authority) => authority.status === "ACTIVE" || authority.id === selectedAuthorityId,
+  );
+}
+
+function customerOptionLabel(customer: FlightLegFormOptions["customers"][number]): string {
+  return customer.customerCode ? `${customer.name} (${customer.customerCode})` : customer.name;
 }
 
 export function FlightLegForm({
@@ -43,24 +86,37 @@ export function FlightLegForm({
   initial,
   mode,
   options,
+  variant = "page",
 }: FlightLegFormProps) {
-  const title = mode === "create" ? "New FlightLeg" : "Edit FlightLeg";
-  const submitLabel = mode === "create" ? "Create FlightLeg" : "Save FlightLeg";
+  const title = mode === "create" ? "New flight leg" : "Edit flight leg";
+  const submitLabel = mode === "create" ? "Create flight leg" : "Save flight leg";
+  const selectedAuthorityId = selectedOperatingAuthorityId(initial, options);
+  const authorityOptions = visibleAuthorities(options, selectedAuthorityId);
+  const isDrawer = variant === "drawer";
 
   return (
-    <form action={action} className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
+    <form
+      action={action}
+      className={
+        isDrawer
+          ? "rounded-md border border-zinc-200 bg-white p-4 shadow-sm"
+          : "rounded-md border border-zinc-200 bg-white p-5 shadow-sm"
+      }
+    >
       <div className="flex flex-col gap-2 border-b border-zinc-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Operations Control
+            Flight setup
           </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-950">
+          <h1 className={isDrawer ? "mt-1 text-xl font-semibold tracking-tight text-zinc-950" : "mt-1 text-2xl font-semibold tracking-tight text-zinc-950"}>
             {title}
           </h1>
-          <p className="mt-2 max-w-3xl text-sm text-zinc-600">
-            Creates or updates the FlightLeg anchor, compatibility Flight row, aircraft
-            assignment, trip container, and operational-control record together.
-          </p>
+          {isDrawer ? null : (
+            <p className="mt-2 max-w-3xl text-sm text-zinc-600">
+              Creates or updates the flight leg, aircraft assignment, customer link, and
+              operating authority together.
+            </p>
+          )}
         </div>
         <Link className="text-sm font-medium text-sky-700 hover:text-sky-900" href={backHref}>
           Back to board
@@ -82,6 +138,25 @@ export function FlightLegForm({
             name="flightNumber"
             required
           />
+        </label>
+
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">Customer</span>
+          <input
+            autoComplete="off"
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+            defaultValue={selectedCustomerName(initial)}
+            list="customer-options"
+            name="customerName"
+            required
+          />
+          <datalist id="customer-options">
+            {options.customers.map((customer) => (
+              <option key={customer.id} value={customer.name}>
+                {customerOptionLabel(customer)}
+              </option>
+            ))}
+          </datalist>
         </label>
 
         <label className="block">
@@ -158,72 +233,22 @@ export function FlightLegForm({
         </label>
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-700">Operator</span>
-          <select
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-            defaultValue={initial?.operatorId ?? ""}
-            name="operatorId"
-            required
-          >
-            <option value="">Select operator</option>
-            {options.operators.map((operator) => (
-              <option key={operator.id} value={operator.id}>
-                {operator.code} - {operator.name}
-                {operator.isActive ? "" : " (inactive)"}
-              </option>
-            ))}
-          </select>
-        </label>
-
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <label className="block">
           <span className="text-sm font-medium text-zinc-700">Operating authority</span>
           <select
             className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-            defaultValue={initial?.operatingAuthorityId ?? ""}
+            defaultValue={selectedAuthorityId}
             name="operatingAuthorityId"
             required
           >
             <option value="">Select authority</option>
-            {options.operatingAuthorities.map((authority) => (
+            {authorityOptions.map((authority) => (
               <option key={authority.id} value={authority.id}>
-                {authority.operator.code} - {authority.operatingPart} - {authority.displayName}
-                {authority.status === "ACTIVE" ? "" : ` (${authority.status})`}
+                {authorityLabel(authority)}
               </option>
             ))}
           </select>
-        </label>
-
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-700">Authority revision</span>
-          <select
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-            defaultValue={initial?.authorityRevisionId ?? ""}
-            name="authorityRevisionId"
-            required
-          >
-            <option value="">Select revision</option>
-            {options.authorityRevisions.map((revision) => (
-              <option key={revision.id} value={revision.id}>
-                {revision.operatingAuthority.operator.code} -{" "}
-                {revision.operatingAuthority.operatingPart} - {revision.revisionLabel}
-                {revision.status === "ACTIVE" ? "" : ` (${revision.status})`}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-700">Controlling entity</span>
-          <input
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-            defaultValue={selectedControlValue(initial, "controllingEntity")}
-            name="controllingEntity"
-            required
-          />
         </label>
 
         <label className="block">
@@ -240,7 +265,7 @@ export function FlightLegForm({
         <span className="text-sm font-medium text-zinc-700">Control notes</span>
         <textarea
           className="mt-1 min-h-24 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-          defaultValue={selectedControlValue(initial, "controlNotes")}
+          defaultValue={selectedControlNotes(initial)}
           name="controlNotes"
         />
       </label>

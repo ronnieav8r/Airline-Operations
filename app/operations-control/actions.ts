@@ -2,6 +2,7 @@
 
 import {
   AssignmentStatus,
+  AuthorityStatus,
   FaaFlightPlanStatus,
   FlightLegStatus,
   FlightPhaseStatus,
@@ -72,12 +73,15 @@ type FlightLegFormInput = {
   arrivalStationId: string;
   scheduledDeparture: Date;
   scheduledArrival: Date;
-  operatorId: string;
   operatingAuthorityId: string;
-  authorityRevisionId: string;
-  controllingEntity: string;
+  customerName: string;
   notes: string | null;
   controlNotes: string | null;
+};
+
+type FlightLegAuthorityContext = {
+  authorityRevisionId: string;
+  operatorId: string;
 };
 
 function getRequiredText(formData: FormData, key: string, label: string): string {
@@ -132,10 +136,8 @@ function parseFlightLegForm(formData: FormData): FlightLegFormInput {
     arrivalStationId: getRequiredText(formData, "arrivalStationId", "Arrival station"),
     scheduledDeparture,
     scheduledArrival,
-    operatorId: getRequiredText(formData, "operatorId", "Operator"),
     operatingAuthorityId: getRequiredText(formData, "operatingAuthorityId", "Operating authority"),
-    authorityRevisionId: getRequiredText(formData, "authorityRevisionId", "Authority revision"),
-    controllingEntity: getRequiredText(formData, "controllingEntity", "Controlling entity"),
+    customerName: getRequiredText(formData, "customerName", "Customer"),
     notes: getOptionalText(formData, "notes"),
     controlNotes: getOptionalText(formData, "controlNotes"),
   };
@@ -186,20 +188,18 @@ function encodeError(error: unknown): string {
   throw error;
 }
 
-async function validateReferences(tx: Prisma.TransactionClient, input: FlightLegFormInput) {
-  const [aircraft, departureStation, arrivalStation, operator, operatingAuthority, authorityRevision] =
+async function validateReferences(
+  tx: Prisma.TransactionClient,
+  input: FlightLegFormInput,
+): Promise<FlightLegAuthorityContext> {
+  const [aircraft, departureStation, arrivalStation, operatingAuthority] =
     await Promise.all([
       tx.aircraft.findUnique({ where: { id: input.aircraftId }, select: { id: true } }),
       tx.station.findUnique({ where: { id: input.departureStationId }, select: { id: true } }),
       tx.station.findUnique({ where: { id: input.arrivalStationId }, select: { id: true } }),
-      tx.operator.findUnique({ where: { id: input.operatorId }, select: { id: true } }),
       tx.operatingAuthority.findUnique({
         where: { id: input.operatingAuthorityId },
         select: { id: true, operatorId: true },
-      }),
-      tx.authorityRevision.findUnique({
-        where: { id: input.authorityRevisionId },
-        select: { id: true, operatingAuthorityId: true },
       }),
     ]);
 
@@ -215,39 +215,80 @@ async function validateReferences(tx: Prisma.TransactionClient, input: FlightLeg
     throw new FlightLegFormError("Selected arrival station was not found.");
   }
 
-  if (!operator) {
-    throw new FlightLegFormError("Selected operator was not found.");
-  }
-
   if (!operatingAuthority) {
     throw new FlightLegFormError("Selected operating authority was not found.");
   }
 
-  if (operatingAuthority.operatorId !== input.operatorId) {
-    throw new FlightLegFormError("Selected operating authority does not belong to the operator.");
-  }
+  const authorityRevision =
+    (await tx.authorityRevision.findFirst({
+      where: {
+        operatingAuthorityId: input.operatingAuthorityId,
+        status: AuthorityStatus.ACTIVE,
+        effectiveStart: { lte: input.scheduledDeparture },
+        OR: [{ effectiveEnd: null }, { effectiveEnd: { gte: input.scheduledDeparture } }],
+      },
+      orderBy: { effectiveStart: "desc" },
+      select: { id: true },
+    })) ??
+    (await tx.authorityRevision.findFirst({
+      where: {
+        operatingAuthorityId: input.operatingAuthorityId,
+        status: AuthorityStatus.ACTIVE,
+      },
+      orderBy: { effectiveStart: "desc" },
+      select: { id: true },
+    }));
 
   if (!authorityRevision) {
-    throw new FlightLegFormError("Selected authority revision was not found.");
+    throw new FlightLegFormError("No active authority revision was found for that authority.");
   }
 
-  if (authorityRevision.operatingAuthorityId !== input.operatingAuthorityId) {
-    throw new FlightLegFormError(
-      "Selected authority revision does not belong to the operating authority.",
-    );
+  return {
+    authorityRevisionId: authorityRevision.id,
+    operatorId: operatingAuthority.operatorId,
+  };
+}
+
+async function ensureCustomer(
+  tx: Prisma.TransactionClient,
+  operatorId: string,
+  customerName: string,
+) {
+  const existingCustomer = await tx.customer.findUnique({
+    where: {
+      operatorId_name: {
+        operatorId,
+        name: customerName,
+      },
+    },
+    select: { id: true, name: true },
+  });
+
+  if (existingCustomer) {
+    return existingCustomer;
   }
+
+  return tx.customer.create({
+    data: {
+      operatorId,
+      name: customerName,
+    },
+    select: { id: true, name: true },
+  });
 }
 
 async function ensureTripOrMission(
   tx: Prisma.TransactionClient,
   input: FlightLegFormInput,
+  operatorId: string,
   existingTripOrMissionId?: string | null,
 ) {
   if (existingTripOrMissionId) {
     return tx.tripOrMission.update({
       where: { id: existingTripOrMissionId },
       data: {
-        operatorId: input.operatorId,
+        customerName: input.customerName,
+        operatorId,
         tripNumber: buildTripNumber(input),
         requestedStart: input.scheduledDeparture,
         requestedEnd: input.scheduledArrival,
@@ -260,17 +301,19 @@ async function ensureTripOrMission(
   return tx.tripOrMission.upsert({
     where: {
       operatorId_tripNumber: {
-        operatorId: input.operatorId,
+        operatorId,
         tripNumber: buildTripNumber(input),
       },
     },
     update: {
+      customerName: input.customerName,
       requestedStart: input.scheduledDeparture,
       requestedEnd: input.scheduledArrival,
       notes: input.notes,
     },
     create: {
-      operatorId: input.operatorId,
+      customerName: input.customerName,
+      operatorId,
       tripNumber: buildTripNumber(input),
       requestedStart: input.scheduledDeparture,
       requestedEnd: input.scheduledArrival,
@@ -449,10 +492,11 @@ async function syncCrewLegAssignments(
 
 async function createFlightLeg(input: FlightLegFormInput, currentUserId: string): Promise<string> {
   return prisma.$transaction(async (tx) => {
-    await validateReferences(tx, input);
+    const authorityContext = await validateReferences(tx, input);
+    const customer = await ensureCustomer(tx, authorityContext.operatorId, input.customerName);
     await assertNoDuplicateLegacyFlight(tx, input);
 
-    const trip = await ensureTripOrMission(tx, input);
+    const trip = await ensureTripOrMission(tx, input, authorityContext.operatorId);
     const legacyFlight = await tx.flight.create({
       data: {
         flightNumber: input.flightNumber,
@@ -471,9 +515,9 @@ async function createFlightLeg(input: FlightLegFormInput, currentUserId: string)
       data: {
         legacyFlightId: legacyFlight.id,
         tripOrMissionId: trip.id,
-        operatorId: input.operatorId,
+        operatorId: authorityContext.operatorId,
         operatingAuthorityId: input.operatingAuthorityId,
-        authorityRevisionId: input.authorityRevisionId,
+        authorityRevisionId: authorityContext.authorityRevisionId,
         flightNumber: input.flightNumber,
         departureStationId: input.departureStationId,
         arrivalStationId: input.arrivalStationId,
@@ -497,10 +541,11 @@ async function createFlightLeg(input: FlightLegFormInput, currentUserId: string)
       data: {
         flightId: legacyFlight.id,
         flightLegId: flightLeg.id,
-        operatorId: input.operatorId,
+        operatorId: authorityContext.operatorId,
         operatingAuthorityId: input.operatingAuthorityId,
-        authorityRevisionId: input.authorityRevisionId,
-        controllingEntity: input.controllingEntity,
+        authorityRevisionId: authorityContext.authorityRevisionId,
+        customerId: customer.id,
+        controllingEntity: customer.name,
         controlNotes: input.controlNotes,
         createdById: currentUserId,
       },
@@ -534,7 +579,8 @@ async function updateFlightLeg(
   currentUserId: string,
 ): Promise<string> {
   return prisma.$transaction(async (tx) => {
-    await validateReferences(tx, input);
+    const authorityContext = await validateReferences(tx, input);
+    const customer = await ensureCustomer(tx, authorityContext.operatorId, input.customerName);
 
     const existing = await tx.flightLeg.findUnique({
       where: { id: flightLegId },
@@ -555,7 +601,12 @@ async function updateFlightLeg(
 
     await assertNoDuplicateLegacyFlight(tx, input, existing.legacyFlightId);
 
-    const trip = await ensureTripOrMission(tx, input, existing.tripOrMissionId);
+    const trip = await ensureTripOrMission(
+      tx,
+      input,
+      authorityContext.operatorId,
+      existing.tripOrMissionId,
+    );
     const legacyFlight = existing.legacyFlightId
       ? await tx.flight.update({
           where: { id: existing.legacyFlightId },
@@ -590,9 +641,9 @@ async function updateFlightLeg(
       data: {
         legacyFlightId: legacyFlight.id,
         tripOrMissionId: trip.id,
-        operatorId: input.operatorId,
+        operatorId: authorityContext.operatorId,
         operatingAuthorityId: input.operatingAuthorityId,
-        authorityRevisionId: input.authorityRevisionId,
+        authorityRevisionId: authorityContext.authorityRevisionId,
         flightNumber: input.flightNumber,
         departureStationId: input.departureStationId,
         arrivalStationId: input.arrivalStationId,
@@ -641,10 +692,11 @@ async function updateFlightLeg(
         data: {
           flightId: legacyFlight.id,
           flightLegId,
-          operatorId: input.operatorId,
+          operatorId: authorityContext.operatorId,
           operatingAuthorityId: input.operatingAuthorityId,
-          authorityRevisionId: input.authorityRevisionId,
-          controllingEntity: input.controllingEntity,
+          authorityRevisionId: authorityContext.authorityRevisionId,
+          customerId: customer.id,
+          controllingEntity: customer.name,
           controlNotes: input.controlNotes,
           createdById: currentUserId,
         },
@@ -663,10 +715,11 @@ async function updateFlightLeg(
         data: {
           flightId: legacyFlight.id,
           flightLegId,
-          operatorId: input.operatorId,
+          operatorId: authorityContext.operatorId,
           operatingAuthorityId: input.operatingAuthorityId,
-          authorityRevisionId: input.authorityRevisionId,
-          controllingEntity: input.controllingEntity,
+          authorityRevisionId: authorityContext.authorityRevisionId,
+          customerId: customer.id,
+          controllingEntity: customer.name,
           controlNotes: input.controlNotes,
           createdById: currentUserId,
         },

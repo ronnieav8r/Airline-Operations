@@ -1568,12 +1568,60 @@ async function main() {
     }),
   ]);
 
+  const [summitEnergy, metroMedical, harborCapital] = await Promise.all([
+    prisma.customer.upsert({
+      where: {
+        operatorId_name: {
+          operatorId: operator.id,
+          name: "Summit Energy",
+        },
+      },
+      update: { isActive: true },
+      create: {
+        operatorId: operator.id,
+        name: "Summit Energy",
+        customerCode: "SUMMIT",
+        isActive: true,
+      },
+    }),
+    prisma.customer.upsert({
+      where: {
+        operatorId_name: {
+          operatorId: operator.id,
+          name: "Metro Medical Transport",
+        },
+      },
+      update: { isActive: true },
+      create: {
+        operatorId: operator.id,
+        name: "Metro Medical Transport",
+        customerCode: "MMT",
+        isActive: true,
+      },
+    }),
+    prisma.customer.upsert({
+      where: {
+        operatorId_name: {
+          operatorId: operator.id,
+          name: "Harbor Capital",
+        },
+      },
+      update: { isActive: true },
+      create: {
+        operatorId: operator.id,
+        name: "Harbor Capital",
+        customerCode: "HARBOR",
+        isActive: true,
+      },
+    }),
+  ]);
+
   const flightControlBlueprints = [
     {
       flightId: flights[0].id,
       authority: authority91,
       revision: revision91,
-      controllingEntity: "AeroOps Flight Ops - AO Dispatch",
+      customer: harborCapital,
       controlNotes: "Corporate part 91 release policy path.",
       releaseStatus: ReleaseStatus.RELEASED,
     },
@@ -1581,7 +1629,7 @@ async function main() {
       flightId: flights[1].id,
       authority: authority135,
       revision: revision135,
-      controllingEntity: "AeroOps Dispatch - Part 135 Desk",
+      customer: summitEnergy,
       controlNotes: "Charter flight under Part 135 authority.",
       releaseStatus: ReleaseStatus.RELEASED,
     },
@@ -1589,7 +1637,7 @@ async function main() {
       flightId: flights[2].id,
       authority: authority91,
       revision: revision91,
-      controllingEntity: "AeroOps Dispatch - AO Ops Desk",
+      customer: harborCapital,
       controlNotes: "Part 91 operation with known scheduling risk.",
       releaseStatus: ReleaseStatus.PLANNED,
     },
@@ -1597,7 +1645,7 @@ async function main() {
       flightId: flights[3].id,
       authority: authority135,
       revision: revision135,
-      controllingEntity: "AeroOps Dispatch - Part 135 Desk",
+      customer: metroMedical,
       controlNotes: "Future charter slot with planned release.",
       releaseStatus: ReleaseStatus.PLANNED,
     },
@@ -1605,7 +1653,7 @@ async function main() {
       flightId: flights[4].id,
       authority: authority91,
       revision: revision91,
-      controllingEntity: "AeroOps Dispatch - AO Ops Desk",
+      customer: harborCapital,
       controlNotes: "Corporate route with planned release.",
       releaseStatus: ReleaseStatus.PLANNED,
     },
@@ -1619,7 +1667,8 @@ async function main() {
         operatorId: operator.id,
         operatingAuthorityId: control.authority.id,
         authorityRevisionId: control.revision.id,
-        controllingEntity: control.controllingEntity,
+        customerId: control.customer.id,
+        controllingEntity: control.customer.name,
         controlNotes: control.controlNotes,
         createdById: opsUser.id,
       },
@@ -1627,7 +1676,8 @@ async function main() {
         operatorId: operator.id,
         operatingAuthorityId: control.authority.id,
         authorityRevisionId: control.revision.id,
-        controllingEntity: control.controllingEntity,
+        customerId: control.customer.id,
+        controllingEntity: control.customer.name,
         controlNotes: control.controlNotes,
         createdById: opsUser.id,
       },

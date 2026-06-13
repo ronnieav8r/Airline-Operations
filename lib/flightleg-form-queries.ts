@@ -24,12 +24,14 @@ const flightLegFormOptionsSelect = {
       seats: true,
     },
   }),
-  operators: prisma.operator.findMany({
-    orderBy: { code: "asc" },
+  customers: prisma.customer.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
     select: {
       id: true,
+      operatorId: true,
       name: true,
-      code: true,
+      customerCode: true,
       isActive: true,
     },
   }),
@@ -45,28 +47,6 @@ const flightLegFormOptionsSelect = {
         select: {
           code: true,
           name: true,
-        },
-      },
-    },
-  }),
-  authorityRevisions: prisma.authorityRevision.findMany({
-    orderBy: [{ operatingAuthority: { operator: { code: "asc" } } }, { effectiveStart: "desc" }],
-    select: {
-      id: true,
-      operatingAuthorityId: true,
-      revisionLabel: true,
-      effectiveStart: true,
-      effectiveEnd: true,
-      status: true,
-      operatingAuthority: {
-        select: {
-          displayName: true,
-          operatingPart: true,
-          operator: {
-            select: {
-              code: true,
-            },
-          },
         },
       },
     },
@@ -97,6 +77,12 @@ const flightLegEditSelect = {
   },
   operationalControlRecord: {
     select: {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
       controllingEntity: true,
       controlNotes: true,
     },
@@ -106,9 +92,8 @@ const flightLegEditSelect = {
 export type FlightLegFormOptions = {
   stations: Awaited<typeof flightLegFormOptionsSelect.stations>;
   aircraft: Awaited<typeof flightLegFormOptionsSelect.aircraft>;
-  operators: Awaited<typeof flightLegFormOptionsSelect.operators>;
+  customers: Awaited<typeof flightLegFormOptionsSelect.customers>;
   operatingAuthorities: Awaited<typeof flightLegFormOptionsSelect.operatingAuthorities>;
-  authorityRevisions: Awaited<typeof flightLegFormOptionsSelect.authorityRevisions>;
 };
 
 export type FlightLegEditData = Prisma.FlightLegGetPayload<{
@@ -116,21 +101,19 @@ export type FlightLegEditData = Prisma.FlightLegGetPayload<{
 }>;
 
 export async function getFlightLegFormOptions(): Promise<FlightLegFormOptions> {
-  const [stations, aircraft, operators, operatingAuthorities, authorityRevisions] =
+  const [stations, aircraft, customers, operatingAuthorities] =
     await prisma.$transaction([
       flightLegFormOptionsSelect.stations,
       flightLegFormOptionsSelect.aircraft,
-      flightLegFormOptionsSelect.operators,
+      flightLegFormOptionsSelect.customers,
       flightLegFormOptionsSelect.operatingAuthorities,
-      flightLegFormOptionsSelect.authorityRevisions,
     ]);
 
   return {
     stations,
     aircraft,
-    operators,
+    customers,
     operatingAuthorities,
-    authorityRevisions,
   };
 }
 

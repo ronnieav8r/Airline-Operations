@@ -510,6 +510,7 @@ function FlightsDrawer({
             cancelHref={closeHref}
             mode="create"
             options={formOptions}
+            variant="drawer"
           />
         ) : (
           <p className="text-sm text-zinc-600">FlightLeg form options are not available.</p>
