@@ -400,7 +400,7 @@ function workflowHref(flight: DashboardFlight, component: DashboardReleaseCompon
   }
 
   if (component.key === "crew") {
-    return flight.assignedAircraft ? `/aircraft/${flight.assignedAircraft.id}/crew` : null;
+    return null;
   }
 
   const suffix = {
@@ -430,10 +430,6 @@ function summaryComponentHref(
 
   if (component.key === "mx" && flight.assignedAircraft) {
     return `/aircraft/${flight.assignedAircraft.id}/airworthiness`;
-  }
-
-  if (component.key === "crew" && flight.assignedAircraft) {
-    return `/aircraft/${flight.assignedAircraft.id}/crew`;
   }
 
   return dashboardHref(selectedWindow, {
@@ -1364,15 +1360,6 @@ export default async function Home({ searchParams }: PageProps) {
               value={dashboard.statusSummary.totalFlights}
             />
             <StatusTile
-              href={dashboardHref(dashboard.selectedWindow, { panel: "alerts" })}
-              label="Active alerts"
-              tone={activeAlertsTone(
-                dashboard.statusSummary.activeAlerts,
-                dashboard.statusSummary.activeAlertsInView,
-              )}
-              value={dashboard.statusSummary.activeAlerts}
-            />
-            <StatusTile
               href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
               label="Ops review"
               tone={dashboard.statusSummary.releaseReviewNeeded > 0 ? "amber" : "emerald"}
@@ -1389,6 +1376,15 @@ export default async function Home({ searchParams }: PageProps) {
               label="Released"
               tone="emerald"
               value={dashboard.statusSummary.released}
+            />
+            <StatusTile
+              href={dashboardHref(dashboard.selectedWindow, { panel: "alerts" })}
+              label="Active alerts"
+              tone={activeAlertsTone(
+                dashboard.statusSummary.activeAlerts,
+                dashboard.statusSummary.activeAlertsInView,
+              )}
+              value={dashboard.statusSummary.activeAlerts}
             />
             <StatusTile
               href="/flights?status=enroute"
