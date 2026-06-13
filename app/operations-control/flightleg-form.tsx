@@ -4,6 +4,8 @@ import { FlightLegEditData, FlightLegFormOptions } from "@/lib/flightleg-form-qu
 
 type FlightLegFormProps = {
   action: (formData: FormData) => Promise<void>;
+  backHref?: string;
+  cancelHref?: string;
   error?: string | null;
   initial?: FlightLegEditData | null;
   mode: "create" | "edit";
@@ -33,7 +35,15 @@ function selectedControlValue(
   return initial?.operationalControlRecord?.[key] ?? "";
 }
 
-export function FlightLegForm({ action, error, initial, mode, options }: FlightLegFormProps) {
+export function FlightLegForm({
+  action,
+  backHref = "/operations-control",
+  cancelHref = "/operations-control",
+  error,
+  initial,
+  mode,
+  options,
+}: FlightLegFormProps) {
   const title = mode === "create" ? "New FlightLeg" : "Edit FlightLeg";
   const submitLabel = mode === "create" ? "Create FlightLeg" : "Save FlightLeg";
 
@@ -52,7 +62,7 @@ export function FlightLegForm({ action, error, initial, mode, options }: FlightL
             assignment, trip container, and operational-control record together.
           </p>
         </div>
-        <Link className="text-sm font-medium text-sky-700 hover:text-sky-900" href="/operations-control">
+        <Link className="text-sm font-medium text-sky-700 hover:text-sky-900" href={backHref}>
           Back to board
         </Link>
       </div>
@@ -244,7 +254,7 @@ export function FlightLegForm({ action, error, initial, mode, options }: FlightL
         </button>
         <Link
           className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
-          href="/operations-control"
+          href={cancelHref}
         >
           Cancel
         </Link>

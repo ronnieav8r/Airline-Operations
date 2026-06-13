@@ -1,9 +1,12 @@
 import { FlightLegStatus, FlightStatus, ReleaseStatus, SeatRole } from "@prisma/client";
 import Link from "next/link";
 
+import { createFlightLegAction } from "@/app/operations-control/actions";
+import { FlightLegForm } from "@/app/operations-control/flightleg-form";
 import { ContextDrawer } from "@/components/context-drawer";
 import { FlightCoverage, ResolvedCrewAssignment } from "@/lib/crew-resolution";
-import { FlightListItem, getFlightListData } from "@/lib/flight-queries";
+import { FlightListItem, getFlightListData, resolveFlightListCoverage } from "@/lib/flight-queries";
+import { getFlightLegFormOptions, FlightLegFormOptions } from "@/lib/flightleg-form-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -20,17 +23,18 @@ type PageProps = {
   }>;
 };
 
-type DateRangeFilter = "7d" | "30d" | "custom" | "today" | "tomorrow";
+type DateRangeFilter = "7d" | "30d" | "all" | "custom" | "today" | "tomorrow";
 type FlightStatusFilter = "all" | "cancelled" | "complete" | "delayed" | "enroute" | "released" | "scheduled";
 type ReleaseFilter = "all" | "released" | "unreleased";
 type IssueFilter = "all" | "crew-open" | "crew-pending" | "crew-warning" | "delayed" | "release-review";
-type FlightPanel = "crew" | "flight" | "release";
+type FlightPanel = "crew" | "flight" | "new-flight" | "release";
 
 const RANGE_OPTIONS: Array<{ label: string; value: DateRangeFilter }> = [
   { label: "Today", value: "today" },
   { label: "Tomorrow", value: "tomorrow" },
   { label: "7 days", value: "7d" },
   { label: "30 days", value: "30d" },
+  { label: "All time", value: "all" },
 ];
 
 const STATUS_OPTIONS: Array<{ label: string; value: FlightStatusFilter }> = [
@@ -130,7 +134,7 @@ function releaseStatus(flight: FlightListItem): ReleaseStatus | null {
 function parseFilters(searchParams: Awaited<PageProps["searchParams"]>) {
   const range = oneOf<DateRangeFilter>(
     firstParam(searchParams.range),
-    ["today", "tomorrow", "7d", "30d", "custom"],
+    ["today", "tomorrow", "7d", "30d", "all", "custom"],
     "7d",
   );
   const status = oneOf<FlightStatusFilter>(
@@ -150,14 +154,14 @@ function parseFilters(searchParams: Awaited<PageProps["searchParams"]>) {
   );
   const panel = oneOf<FlightPanel | "none">(
     firstParam(searchParams.panel),
-    ["crew", "flight", "release", "none"],
+    ["crew", "flight", "new-flight", "release", "none"],
     "none",
   );
   const today = startOfUtcDay(new Date());
   const customStart = parseDateInput(firstParam(searchParams.from));
   const customEnd = parseDateInput(firstParam(searchParams.to));
-  let start = today;
-  let end = addDays(today, 7);
+  let start: Date | undefined = today;
+  let end: Date | undefined = addDays(today, 7);
 
   if (range === "today") {
     start = today;
@@ -168,6 +172,9 @@ function parseFilters(searchParams: Awaited<PageProps["searchParams"]>) {
   } else if (range === "30d") {
     start = today;
     end = addDays(today, 30);
+  } else if (range === "all") {
+    start = undefined;
+    end = undefined;
   } else if (range === "custom") {
     start = customStart ?? today;
     end = customEnd ? addDays(customEnd, 1) : addDays(start, 1);
@@ -202,8 +209,10 @@ function flightsHref(filters: Filters, next: Partial<Pick<Filters, "issue" | "ra
   }
 
   if (merged.range === "custom") {
-    params.set("from", toDateInput(merged.customStart ?? merged.start));
-    params.set("to", toDateInput(merged.customEnd ?? addDays(merged.end, -1)));
+    const fallbackStart = merged.start ?? startOfUtcDay(new Date());
+    const fallbackEnd = merged.end ?? addDays(fallbackStart, 1);
+    params.set("from", toDateInput(merged.customStart ?? fallbackStart));
+    params.set("to", toDateInput(merged.customEnd ?? addDays(fallbackEnd, -1)));
   }
 
   if (merged.status !== "all") {
@@ -299,6 +308,12 @@ function filterFlights(flights: FlightListItem[], filters: Filters) {
       flightStatusMatches(flight, filters.status) &&
       releaseMatches(flight, filters.release) &&
       issueMatches(flight, filters.issue),
+  );
+}
+
+function filterFlightsBeforeCoverage(flights: FlightListItem[], filters: Filters) {
+  return flights.filter(
+    (flight) => flightStatusMatches(flight, filters.status) && releaseMatches(flight, filters.release),
   );
 }
 
@@ -473,15 +488,40 @@ function CrewName({
 function FlightsDrawer({
   filters,
   flights,
+  formOptions,
 }: {
   filters: Filters;
   flights: FlightListItem[];
+  formOptions: FlightLegFormOptions | null;
 }) {
-  if (!filters.panel || !filters.selected) {
+  if (!filters.panel) {
     return null;
   }
 
   const closeHref = flightsHref(filters, { panel: null, selected: null });
+
+  if (filters.panel === "new-flight") {
+    return (
+      <ContextDrawer closeHref={closeHref} eyebrow="Flights" size="expanded" title="New FlightLeg">
+        {formOptions ? (
+          <FlightLegForm
+            action={createFlightLegAction}
+            backHref={closeHref}
+            cancelHref={closeHref}
+            mode="create"
+            options={formOptions}
+          />
+        ) : (
+          <p className="text-sm text-zinc-600">FlightLeg form options are not available.</p>
+        )}
+      </ContextDrawer>
+    );
+  }
+
+  if (!filters.selected) {
+    return null;
+  }
+
   const selectedFlight = flights.find(
     (flight) => flight.flightLegId === filters.selected || flight.id === filters.selected || flight.legacyFlightId === filters.selected,
   );
@@ -630,10 +670,15 @@ export default async function FlightsPage({ searchParams }: PageProps) {
   const filters = parseFilters(params);
   const { flights: rawFlights, readSummary } = await getFlightListData({
     end: filters.end,
+    includeCoverage: false,
     start: filters.start,
-    take: 220,
+    take: filters.range === "all" ? 1000 : 220,
   });
-  const flights = filterFlights(rawFlights, filters);
+  const candidateFlights = filterFlightsBeforeCoverage(rawFlights, filters);
+  const flightsWithCoverage = await resolveFlightListCoverage(candidateFlights);
+  const flights = filterFlights(flightsWithCoverage, filters);
+  const formOptions =
+    filters.panel === "new-flight" ? await getFlightLegFormOptions() : null;
   const summary = getSummary(flights);
 
   return (
@@ -662,7 +707,7 @@ export default async function FlightsPage({ searchParams }: PageProps) {
             <div className="flex flex-wrap gap-2 xl:justify-end">
               <Link
                 className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
-                href="/operations-control/new"
+                href={flightsHref(filters, { panel: "new-flight", selected: null })}
               >
                 New FlightLeg
               </Link>
@@ -699,7 +744,7 @@ export default async function FlightsPage({ searchParams }: PageProps) {
                   From
                   <input
                     className="mt-1 block w-32 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-900"
-                    defaultValue={toDateInput(filters.customStart ?? filters.start)}
+                    defaultValue={toDateInput(filters.customStart ?? filters.start ?? startOfUtcDay(new Date()))}
                     name="from"
                     type="date"
                   />
@@ -708,7 +753,10 @@ export default async function FlightsPage({ searchParams }: PageProps) {
                   To
                   <input
                     className="mt-1 block w-32 rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-900"
-                    defaultValue={toDateInput(filters.customEnd ?? addDays(filters.end, -1))}
+                    defaultValue={toDateInput(
+                      filters.customEnd ??
+                        (filters.end ? addDays(filters.end, -1) : startOfUtcDay(new Date())),
+                    )}
                     name="to"
                     type="date"
                   />
@@ -867,11 +915,12 @@ export default async function FlightsPage({ searchParams }: PageProps) {
             </div>
           )}
           <p className="mt-3 text-xs text-zinc-500">
-            Showing {flights.length} filtered rows from {readSummary.total} loaded rows.
+            Showing {flights.length} filtered rows from {readSummary.total} loaded rows
+            {filters.range === "all" ? " (All time capped at 1,000 rows for this view)." : "."}
           </p>
         </section>
       </div>
-      <FlightsDrawer filters={filters} flights={flights} />
+      <FlightsDrawer filters={filters} flights={flights} formOptions={formOptions} />
     </main>
   );
 }

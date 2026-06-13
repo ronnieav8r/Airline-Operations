@@ -319,6 +319,8 @@ export type DashboardData = {
     totalFlights: number;
     enroute: number;
     delayed: number;
+    complete: number;
+    cancelled: number;
     activeAlerts: number;
     aircraftCount: number;
     crewCount: number;
@@ -840,6 +842,8 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
   const plannedOrUnreleased = flightsInReleaseWindow.filter(
     (flight) => flight.releaseStatus !== ReleaseStatus.RELEASED,
   ).length;
+  const statusCount = (status: string) =>
+    flightsWithCoverage.filter((flight) => String(flight.status) === status).length;
 
   return {
     dateLabel: toDateLabel(now),
@@ -847,10 +851,10 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
     selectedWindow,
     statusSummary: {
       totalFlights: flightsWithCoverage.length,
-      enroute: flightsWithCoverage.filter((flight) => flight.status === FlightStatus.ENROUTE)
-        .length,
-      delayed: flightsWithCoverage.filter((flight) => flight.status === FlightStatus.DELAYED)
-        .length,
+      enroute: statusCount("ENROUTE"),
+      delayed: statusCount("DELAYED"),
+      complete: statusCount("COMPLETE"),
+      cancelled: statusCount("CANCELLED"),
       activeAlerts: alerts.length,
       aircraftCount,
       crewCount,

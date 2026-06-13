@@ -212,6 +212,7 @@ export type FlightListData = {
 
 export type FlightListQueryOptions = {
   end?: Date;
+  includeCoverage?: boolean;
   start?: Date;
   take?: number;
 };
@@ -315,12 +316,10 @@ export async function getFlightListData(options: FlightListQueryOptions = {}): P
     })
     .slice(0, take);
 
-  const flightsWithCoverage = await Promise.all(
-    normalizedFlights.map(async (flight) => ({
-      ...flight,
-      coverage: await resolveFlightCoverage(flight.flightLegId ?? flight.legacyFlightId),
-    })),
-  );
+  const flightsWithCoverage =
+    options.includeCoverage === false
+      ? normalizedFlights
+      : await resolveFlightListCoverage(normalizedFlights);
 
   return {
     flights: flightsWithCoverage,
@@ -333,4 +332,13 @@ export async function getFlightListData(options: FlightListQueryOptions = {}): P
       ).length,
     },
   };
+}
+
+export async function resolveFlightListCoverage(flights: FlightListItem[]): Promise<FlightListItem[]> {
+  return Promise.all(
+    flights.map(async (flight) => ({
+      ...flight,
+      coverage: await resolveFlightCoverage(flight.flightLegId ?? flight.legacyFlightId),
+    })),
+  );
 }

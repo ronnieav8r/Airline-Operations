@@ -315,9 +315,9 @@ function StatusTile({
   }[tone];
 
   return (
-    <Link className={`rounded-xl border p-3 shadow-sm transition ${toneClasses}`} href={href}>
+    <Link className={`rounded-lg border px-2.5 py-2 shadow-sm transition ${toneClasses}`} href={href}>
       <p className="text-[0.68rem] font-semibold uppercase tracking-wide opacity-70">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      <p className="mt-0.5 text-xl font-semibold tabular-nums">{value}</p>
     </Link>
   );
 }
@@ -1344,12 +1344,24 @@ export default async function Home({ searchParams }: PageProps) {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-11">
             <StatusTile
               href="/operations-control"
               label="Flights in view"
               tone="zinc"
               value={dashboard.statusSummary.totalFlights}
+            />
+            <StatusTile
+              href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
+              label="Released"
+              tone="emerald"
+              value={dashboard.statusSummary.released}
+            />
+            <StatusTile
+              href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
+              label="Needs release"
+              tone={dashboard.statusSummary.plannedOrUnreleased > 0 ? "sky" : "emerald"}
+              value={dashboard.statusSummary.plannedOrUnreleased}
             />
             <StatusTile
               href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
@@ -1364,10 +1376,28 @@ export default async function Home({ searchParams }: PageProps) {
               value={dashboard.statusSummary.releaseReady}
             />
             <StatusTile
-              href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
-              label="Needs release"
-              tone={dashboard.statusSummary.plannedOrUnreleased > 0 ? "sky" : "emerald"}
-              value={dashboard.statusSummary.plannedOrUnreleased}
+              href="/flights?status=enroute"
+              label="Enroute"
+              tone={dashboard.statusSummary.enroute > 0 ? "sky" : "zinc"}
+              value={dashboard.statusSummary.enroute}
+            />
+            <StatusTile
+              href="/flights?status=delayed"
+              label="Delayed"
+              tone={dashboard.statusSummary.delayed > 0 ? "rose" : "zinc"}
+              value={dashboard.statusSummary.delayed}
+            />
+            <StatusTile
+              href="/flights?status=complete"
+              label="Complete"
+              tone="zinc"
+              value={dashboard.statusSummary.complete}
+            />
+            <StatusTile
+              href="/flights?status=cancelled"
+              label="Cancelled"
+              tone={dashboard.statusSummary.cancelled > 0 ? "rose" : "zinc"}
+              value={dashboard.statusSummary.cancelled}
             />
             <StatusTile
               href={dashboardHref(dashboard.selectedWindow, { panel: "alerts" })}
