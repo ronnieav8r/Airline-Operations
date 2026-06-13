@@ -1034,14 +1034,24 @@ function packageEvidenceLink(
 export async function createFlightLegAction(formData: FormData) {
   const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS]);
   let flightLegId: string;
+  const afterCreate = getOptionalText(formData, "afterCreate");
 
   try {
     flightLegId = await createFlightLeg(parseFlightLegForm(formData), currentUser.id);
   } catch (error) {
+    if (afterCreate === "flight-drawer") {
+      redirect(`/flights?panel=new-flight&error=${encodeError(error)}`);
+    }
+
     redirect(`/operations-control/new?error=${encodeError(error)}`);
   }
 
   revalidateFlightLegWorkflowPaths();
+
+  if (afterCreate === "flight-drawer") {
+    redirect(`/flights?range=all&panel=flight&selected=${flightLegId}&created=1`);
+  }
+
   redirect(`/operations-control/${flightLegId}`);
 }
 

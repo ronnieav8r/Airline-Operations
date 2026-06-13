@@ -13,6 +13,8 @@ export const dynamic = "force-dynamic";
 type PageProps = {
   searchParams: Promise<{
     from?: string | string[];
+    created?: string | string[];
+    error?: string | string[];
     issue?: string | string[];
     panel?: string | string[];
     range?: string | string[];
@@ -183,7 +185,9 @@ function parseFilters(searchParams: Awaited<PageProps["searchParams"]>) {
   return {
     customEnd,
     customStart,
+    created: firstParam(searchParams.created) === "1",
     end,
+    error: firstParam(searchParams.error),
     issue,
     panel: panel === "none" ? null : panel,
     range,
@@ -196,7 +200,7 @@ function parseFilters(searchParams: Awaited<PageProps["searchParams"]>) {
 
 type Filters = ReturnType<typeof parseFilters>;
 
-function flightsHref(filters: Filters, next: Partial<Pick<Filters, "issue" | "range" | "release" | "selected" | "status">> & {
+function flightsHref(filters: Filters, next: Partial<Pick<Filters, "created" | "error" | "issue" | "range" | "release" | "selected" | "status">> & {
   customEnd?: Date | null;
   customStart?: Date | null;
   panel?: FlightPanel | null;
@@ -225,6 +229,14 @@ function flightsHref(filters: Filters, next: Partial<Pick<Filters, "issue" | "ra
 
   if (merged.issue !== "all") {
     params.set("issue", merged.issue);
+  }
+
+  if (next.created) {
+    params.set("created", "1");
+  }
+
+  if (next.error) {
+    params.set("error", next.error);
   }
 
   if (next.panel) {
@@ -502,12 +514,14 @@ function FlightsDrawer({
 
   if (filters.panel === "new-flight") {
     return (
-      <ContextDrawer closeHref={closeHref} eyebrow="Flights" size="expanded" title="New FlightLeg">
+      <ContextDrawer closeHref={closeHref} eyebrow="Flights" size="wide" title="New flight leg">
         {formOptions ? (
           <FlightLegForm
             action={createFlightLegAction}
             backHref={closeHref}
             cancelHref={closeHref}
+            createReturnMode="flight-drawer"
+            error={filters.error}
             mode="create"
             options={formOptions}
             variant="drawer"
@@ -643,14 +657,46 @@ function FlightsDrawer({
           </h3>
           <p className="mt-2 text-sm text-zinc-700">{controlLabel(selectedFlight)}</p>
         </section>
+        {filters.created ? (
+          <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+            <p className="font-semibold">Flight leg created</p>
+            <p className="mt-1">
+              Continue with the items below as they become applicable for this flight.
+            </p>
+          </section>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           {selectedFlight.flightLegId ? (
             <>
               <Link
                 className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white"
+                href={`/operations-control/${selectedFlight.flightLegId}/manifest`}
+              >
+                Manifest / passengers
+              </Link>
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"
                 href={`/operations-control/${selectedFlight.flightLegId}`}
               >
-                Open release workspace
+                Release workspace
+              </Link>
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"
+                href={`/operations-control/${selectedFlight.flightLegId}/fuel`}
+              >
+                Fuel
+              </Link>
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"
+                href={`/operations-control/${selectedFlight.flightLegId}/weight-balance`}
+              >
+                Weight & balance
+              </Link>
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"
+                href={`/operations-control/${selectedFlight.flightLegId}`}
+              >
+                Preflight / Postflight
               </Link>
               <Link
                 className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"

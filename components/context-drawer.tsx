@@ -9,7 +9,7 @@ type ContextDrawerProps = {
   contractHref?: string;
   eyebrow?: string;
   expandHref?: string;
-  size?: "expanded" | "standard";
+  size?: "expanded" | "standard" | "wide";
   title: string;
 };
 
@@ -26,8 +26,10 @@ export function ContextDrawer({
 }: ContextDrawerProps) {
   const drawerSizeClasses =
     size === "expanded"
-      ? "h-full w-full border-l border-zinc-200 bg-white shadow-2xl"
-      : "h-full w-full max-w-xl border-l border-zinc-200 bg-white shadow-2xl";
+      ? "h-full w-[min(100vw,72rem)] border-l border-zinc-200 bg-white shadow-2xl"
+      : size === "wide"
+        ? "h-full w-[min(100vw,56rem)] border-l border-zinc-200 bg-white shadow-2xl"
+        : "h-full w-full max-w-xl border-l border-zinc-200 bg-white shadow-2xl";
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-zinc-950/35">

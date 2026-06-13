@@ -7,6 +7,7 @@ type FlightLegFormProps = {
   action: (formData: FormData) => Promise<void>;
   backHref?: string;
   cancelHref?: string;
+  createReturnMode?: "default" | "flight-drawer";
   error?: string | null;
   initial?: FlightLegEditData | null;
   mode: "create" | "edit";
@@ -82,6 +83,7 @@ export function FlightLegForm({
   action,
   backHref = "/operations-control",
   cancelHref = "/operations-control",
+  createReturnMode = "default",
   error,
   initial,
   mode,
@@ -103,6 +105,10 @@ export function FlightLegForm({
           : "rounded-md border border-zinc-200 bg-white p-5 shadow-sm"
       }
     >
+      {mode === "create" && createReturnMode !== "default" ? (
+        <input name="afterCreate" type="hidden" value={createReturnMode} />
+      ) : null}
+
       <div className="flex flex-col gap-2 border-b border-zinc-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">

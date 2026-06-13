@@ -881,7 +881,7 @@ export default async function OperationsControlPage({ searchParams }: PageProps)
             </div>
             <Link
               className="inline-flex rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
-              href="/operations-control/new"
+              href="/flights?panel=new-flight"
             >
               New FlightLeg
             </Link>

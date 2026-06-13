@@ -1596,7 +1596,7 @@ export default async function Home({ searchParams }: PageProps) {
             <div className="flex flex-wrap items-center gap-2">
               <WindowControls selectedWindow={dashboard.selectedWindow} />
               <DashboardActionLink href="/operations-control" label="Open workbench" primary />
-              <DashboardActionLink href="/operations-control/new" label="New FlightLeg" />
+              <DashboardActionLink href="/flights?panel=new-flight" label="New FlightLeg" />
             </div>
           </div>
 
