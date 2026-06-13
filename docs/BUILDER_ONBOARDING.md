@@ -1,6 +1,6 @@
 # AeroOps Builder Onboarding
 
-Last updated: 2026-06-11
+Last updated: 2026-06-13
 
 ## Current App State
 
@@ -18,6 +18,9 @@ Core surfaces:
 - `/aircraft/[aircraftId]`: aircraft operational context.
 - `/aircraft/[aircraftId]/crew`: aircraft-block crew assignment workflow.
 - `/aircraft/[aircraftId]/airworthiness`: aircraft airworthiness workflow.
+- `/aircraft/[aircraftId]/fuel`: aircraft fuel ledger.
+- `/admin/settings`: admin settings, currently operator Jet A density.
+- `/operations-control/[flightLegId]/fuel`: FlightLeg release/postflight fuel.
 - `/crew`: crew roster.
 - `/crew/[crewMemberId]`: crew member context.
 - `/crew/[crewMemberId]/compliance`: ops/admin crew compliance management.
@@ -48,6 +51,9 @@ Core surfaces:
   book travel, create expenses, or automate positioning.
 - Crew Compliance tracks certificates, medicals, training, checks, recency,
   duty, and rest as admin-managed evidence and warning inputs only.
+- Fuel is aircraft state first and FlightLeg release evidence second. Pounds
+  are source-of-truth; approximate gallons use the operator Jet A density saved
+  on each fuel event.
 
 ## Auth And Roles
 
@@ -95,6 +101,7 @@ gaps are in `docs/BACKEND_MVP_GAP_REVIEW.md`.
 ## Required Reading Before New Work
 
 - `docs/README.md`
+- `docs/CURRENT_HANDOFF.md`
 - `docs/PROJECT_STATUS.md`
 - `docs/BACKEND_MVP_STATE.md`
 - `docs/SCHEMA_DECISIONS.md`
@@ -109,12 +116,12 @@ gaps are in `docs/BACKEND_MVP_GAP_REVIEW.md`.
   - `docs/CREW_LOGISTICS_PLAN.md`
   - `docs/RELEASEPACKAGE_PLAN.md`
   - `docs/FLIGHTLEG_CUTOVER_PLAN.md`
+  - `docs/FUEL_LEDGER_RELEASE_READINESS.md`
 
 ## Next Safe Planning Choices
 
-The active priority is frontend/UI polish after Prompt 257 documentation
-cleanup. Choose one narrow slice at a time, and preserve the backend contracts
-documented in `docs/BACKEND_MVP_STATE.md`.
+The active priority is frontend/UI polish. Choose one narrow slice at a time,
+and preserve the backend contracts documented in `docs/BACKEND_MVP_STATE.md`.
 
 - Frontend information architecture cleanup.
 - UI polish for dashboard, Operations Control, aircraft, crew, scheduling,

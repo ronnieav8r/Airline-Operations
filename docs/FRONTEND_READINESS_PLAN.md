@@ -120,25 +120,21 @@ implemented the first compact dashboard foundation after user dashboard review.
 Prompt 259 followed with release-readiness labels, MX visibility, hour-based
 lookahead controls, and dashboard quick-review drawers. Prompt 260 reflowed the
 dashboard body and added the first app-wide light/dark view toggle. Prompt 261
-added the Flights page drilldown foundation. Prompt 262 restored Render demo
-flight visibility and added shared compact drawer passes. Prompt 263 separated
-dashboard lifecycle and release actions. Prompt 264 upgraded dashboard
-FlightLeg drawers into the first object-action workspace pattern.
+added the Flights page drilldown foundation. Prompts 265-269 were used for the
+fuel ledger and release fuel readiness chain. The latest dashboard drawer
+refinement removed duplicate release summary content, made fuel/manifest/crew
+cards more useful at a glance, and routed actionable cards to existing
+workflows.
 
 - Prompt 258: Dashboard Compact Ops Foundation.
 - Prompt 259: Dashboard Release Readiness Drawer Foundation.
 - Prompt 260: Dashboard Layout And Theme Foundation.
 - Prompt 261: Flights Page Drilldown Foundation.
-- Prompt 262: Render Flights Data Restore And Shared Drawer Foundation.
-- Prompt 263: Dashboard Flight Card Release Action Cleanup.
-- Prompt 264: Object Action Drawer Architecture.
-- Prompt 265: Operator Release Configuration Planning.
-- Prompt 266: Dashboard Command Surface Follow-Up Planning.
-- Prompt 267: Dashboard Command Surface Follow-Up Foundation.
-- Prompt 268: Dashboard Command Surface QA.
-- Prompt 269: Operations Control Workbench Polish Planning.
-- Prompt 270: Operations Control Workbench Polish Foundation.
-- Prompt 271: Operations Control Workbench QA.
+- Fuel ledger chain: Prompts 265-269.
+- Current drawer refinement: dashboard FlightLeg workspace summary cleanup.
+- Next recommended slice: continue FlightLeg drawer/workspace planning for
+  manifest depth, MX restrictions, dispatch depth, and future drawer-contained
+  forms.
 
 ## Backend Work To Avoid During UI Polish
 

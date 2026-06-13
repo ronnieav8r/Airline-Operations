@@ -1,6 +1,6 @@
 # AeroOps Docs Map
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 ## Start Here
 
@@ -8,6 +8,7 @@ Use these files first. They are the current source of truth for new builder or
 planner chats:
 
 - `docs/BUILDER_ONBOARDING.md`: quick orientation for new work.
+- `docs/CURRENT_HANDOFF.md`: current handoff summary for the next builder.
 - `docs/PROJECT_STATUS.md`: current status plus long running history.
 - `docs/BACKEND_MVP_STATE.md`: stable backend contracts after backend MVP.
 - `docs/FRONTEND_READINESS_PLAN.md`: current frontend/UI handoff plan.
@@ -102,6 +103,7 @@ Current highest-priority truth order:
 
 ## Current Next Work
 
-Frontend/UI polish should start after this documentation cleanup. Because
-Prompt 256 was used for ADS-B planning and Prompt 257 for docs cleanup, the
-first frontend IA planning slice should start at Prompt 258.
+Frontend/UI polish is active. Recent completed work includes compact dashboard
+passes, FlightLeg drawer/object-action refinement, fuel ledger/release fuel
+readiness, and dashboard drawer summary cleanup. Start with
+`docs/CURRENT_HANDOFF.md` before selecting the next UI slice.

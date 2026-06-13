@@ -1941,6 +1941,15 @@ readiness item and appears in dashboard drawer release context and W&B context.
 Release behavior remains warning-only; provider integrations, tickets, billing,
 range/endurance calculation, and hard release blocking remain deferred.
 
+Latest dashboard drawer refinement is complete. The FlightLeg workspace drawer
+summary now keeps lifecycle/release state in the header, removes duplicate
+release-summary cards and readiness strips, shows clearer fuel/manifest/crew
+context, routes summary cards to existing actionable workflows where available,
+and surfaces crew qualification warnings as warning state instead of green
+coverage. Static validation passed with `npm run typecheck`, `npm run lint`,
+and `npm run build`. Authenticated browser smoke was not rerun in that final
+pass because Docker Desktop/local PostgreSQL was unavailable.
+
 Next recommended workstream:
 
 ```text
@@ -1949,7 +1958,8 @@ Frontend/UI polish continuing with Prompt 262
 
 Scope:
 
-- Continue page-by-page frontend IA review and app-shell polish.
+- Continue page-by-page frontend IA review and app-shell polish. Start from
+  `docs/CURRENT_HANDOFF.md`.
 - Preserve backend contracts in `docs/BACKEND_MVP_STATE.md`.
 - Keep backend post-MVP gaps deferred unless separately planned.
 - Plan operator-specific release UI/configuration rules before making release
