@@ -427,6 +427,19 @@ function releaseComponent(
   return { key, label, message, status };
 }
 
+function formatDashboardFuel(lbs: Prisma.Decimal | null, gallons: Prisma.Decimal | null) {
+  if (!lbs) {
+    return null;
+  }
+
+  const poundsLabel = `${Math.round(Number(lbs)).toLocaleString("en-US")} lb`;
+  const gallonsLabel = gallons
+    ? ` / ${Math.round(Number(gallons)).toLocaleString("en-US")} gal approx`
+    : "";
+
+  return `${poundsLabel}${gallonsLabel}`;
+}
+
 function buildReleaseSummary(
   flight: Omit<DashboardFlight, "coverage" | "releaseSummary">,
   coverage: FlightCoverage | null,
@@ -443,16 +456,20 @@ function buildReleaseSummary(
   const mxBlockingStatus =
     aircraft?.status === AircraftStatus.IN_MAINTENANCE ||
     aircraft?.status === AircraftStatus.OUT_OF_SERVICE;
+  const fuelLabel = evidence
+    ? formatDashboardFuel(evidence.fuelOnboardLbs, evidence.fuelOnboardGallons)
+    : null;
+  const firstCrewWarning = coverage?.warnings[0]?.message;
 
   const components: DashboardReleaseComponent[] = [
     releaseComponent(
       "fuel",
       "Fuel",
       evidence?.fueledReady === true ? "ready" : evidence?.fuelOnboardLbs ? "review" : "missing",
-      evidence?.fueledReady === true && evidence.fuelOnboardLbs
-        ? `Fuel onboard ${evidence.fuelOnboardLbs.toString()} lb and ready.`
+      evidence?.fueledReady === true && fuelLabel
+        ? `${fuelLabel} | Fuel ready. Endurance/range not configured yet.`
         : evidence?.fuelOnboardLbs
-          ? "Fuel onboard is recorded, but fueled-ready is not confirmed."
+          ? `${fuelLabel ?? "Fuel onboard recorded"} | Fuel-ready not confirmed.`
           : "Release fuel is missing.",
     ),
     releaseComponent(
@@ -465,7 +482,7 @@ function buildReleaseSummary(
           ? "review"
           : "missing",
       evidence?.manifestStatus
-        ? `Manifest is ${evidence.manifestStatus}.`
+        ? `Crew ${coverage?.assignedCrew.length ?? 0} | Pax ${evidence.manifestItemCount} | ${evidence.manifestStatus}.`
         : "Manifest is missing.",
     ),
     releaseComponent(
@@ -526,12 +543,21 @@ function buildReleaseSummary(
     releaseComponent(
       "crew",
       "Crew",
-      !coverage ? "missing" : coverage.isCovered ? "ready" : "missing",
+      !coverage
+        ? "missing"
+        : coverage.isCovered && coverage.warnings.length === 0
+          ? "ready"
+          : coverage.isCovered
+            ? "warning"
+            : "missing",
       !coverage
         ? "Crew coverage has not been resolved."
-        : coverage.isCovered
+        : coverage.isCovered && coverage.warnings.length === 0
           ? "Required crew roles are covered."
-          : `Missing ${coverage.missingRoles.join(", ")} crew coverage.`,
+          : coverage.isCovered
+            ? firstCrewWarning ??
+              `${coverage.warnings.length} crew qualification warning${coverage.warnings.length === 1 ? "" : "s"}.`
+            : `Missing ${coverage.missingRoles.join(", ")} crew coverage.`,
     ),
   ];
   const reviewReasons = components

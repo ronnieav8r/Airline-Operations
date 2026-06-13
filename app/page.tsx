@@ -393,6 +393,34 @@ function workflowHref(flight: DashboardFlight, component: DashboardReleaseCompon
   return suffix ? `/operations-control/${flight.flightLegId}/${suffix}` : null;
 }
 
+function summaryComponentHref(
+  flight: DashboardFlight,
+  component: DashboardReleaseComponent,
+  selectedWindow: DashboardWindowValue,
+  size: DrawerSize,
+): string {
+  const workflow = workflowHref(flight, component);
+
+  if (workflow) {
+    return workflow;
+  }
+
+  if (component.key === "mx" && flight.assignedAircraft) {
+    return `/aircraft/${flight.assignedAircraft.id}/airworthiness`;
+  }
+
+  if (component.key === "crew" && flight.assignedAircraft) {
+    return `/aircraft/${flight.assignedAircraft.id}/crew`;
+  }
+
+  return dashboardHref(selectedWindow, {
+    id: flight.flightLegId,
+    object: "flightLeg",
+    size,
+    view: componentView(component),
+  });
+}
+
 function ReleaseStrip({
   flight,
 }: {
@@ -682,12 +710,14 @@ function FlightLegDrawerHeader({ flight }: { flight: DashboardFlight }) {
           {releaseActionLabel(flight)}
         </span>
       </div>
-      {flight.releaseEvidence ? (
+      {flight.releaseEvidence?.fuelOnboardLbs ? (
         <p className="mt-2 text-xs font-medium text-zinc-600">
           Fuel {formatFuelAmount(flight.releaseEvidence.fuelOnboardLbs, flight.releaseEvidence.fuelOnboardGallons)} |{" "}
           {fuelReadyLabel(flight.releaseEvidence.fueledReady)}
         </p>
-      ) : null}
+      ) : (
+        <p className="mt-2 text-xs font-medium text-zinc-600">Fuel not recorded</p>
+      )}
     </div>
   );
 }
@@ -704,28 +734,10 @@ function FlightLegSummaryView({
   return (
     <div className="space-y-4">
       <FlightLegDrawerHeader flight={flight} />
-      <ReleaseStrip flight={flight} />
       <div className={size === "expanded" ? "grid gap-3 lg:grid-cols-2" : "grid gap-3"}>
-        <DrawerSectionLink
-          href={dashboardHref(selectedWindow, {
-            id: flight.flightLegId,
-            object: "flightLeg",
-            size,
-            view: "release",
-          })}
-          tone={flight.releaseStatus === ReleaseStatus.RELEASED ? "emerald" : flight.releaseSummary.allReady ? "sky" : "amber"}
-        >
-          <p className="font-semibold">Release</p>
-          <p className="mt-1 text-xs opacity-80">{releaseActionLabel(flight)}</p>
-        </DrawerSectionLink>
         {flight.releaseSummary.components.map((component) => (
           <DrawerSectionLink
-            href={dashboardHref(selectedWindow, {
-              id: flight.flightLegId,
-              object: "flightLeg",
-              size,
-              view: componentView(component),
-            })}
+            href={summaryComponentHref(flight, component, selectedWindow, size)}
             key={component.key}
             tone={componentTone(component)}
           >
