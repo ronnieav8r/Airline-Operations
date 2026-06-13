@@ -3,6 +3,8 @@ import {
   FaaFlightPlanStatus,
   FlightLegStatus,
   FlightStatus,
+  IdDocumentType,
+  ManifestStatus,
   OperatorManifestMode,
   ReleaseStatus,
   SeatRole,
@@ -17,6 +19,7 @@ import {
   dashboardUpdateFlightPlanStatusAction,
   dashboardVoidReleaseAction,
 } from "@/app/dashboard-actions";
+import { addExistingPassengerToManifestAction } from "@/app/operations-control/[flightLegId]/manifest/actions";
 import { ContextDrawer } from "@/components/context-drawer";
 import {
   DashboardFlight,
@@ -32,6 +35,11 @@ import {
   FlightCrewCandidateGroup,
   resolveFlightCrewCandidates,
 } from "@/lib/crew-resolution";
+import {
+  getManifestPassengerOptions,
+  getManifestWorkflowData,
+  ManifestWorkflowData,
+} from "@/lib/manifest-workflow-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -440,6 +448,15 @@ function summaryComponentHref(
   selectedWindow: DashboardWindowValue,
   size: DrawerSize,
 ): string {
+  if (component.key === "manifest") {
+    return dashboardHref(selectedWindow, {
+      id: flight.flightLegId,
+      object: "flightLeg",
+      size,
+      view: "manifest",
+    });
+  }
+
   const workflow = workflowHref(flight, component);
 
   if (workflow) {
@@ -496,6 +513,10 @@ function releaseComponentByView(
 
 function statusText(value: string | null | undefined): string {
   return value ? value.replaceAll("_", " ") : "Missing";
+}
+
+function decimalString(value: { toString(): string } | null): string {
+  return value?.toString() ?? "";
 }
 
 function flightPlanStatusText(value: FaaFlightPlanStatus): string {
@@ -953,6 +974,50 @@ function postflightSummary(flight: DashboardFlight): { message: string; ready: b
   };
 }
 
+function manifestSummary(flight: DashboardFlight): { message: string; ready: boolean } {
+  const evidence = flight.releaseEvidence;
+
+  if (!evidence) {
+    return { message: "Manifest evidence is not available.", ready: false };
+  }
+
+  const itemLabel = `${evidence.manifestItemCount} passenger/item${
+    evidence.manifestItemCount === 1 ? "" : "s"
+  }`;
+
+  if (evidence.manifestStatus === ManifestStatus.READY || evidence.manifestStatus === ManifestStatus.LOCKED) {
+    return {
+      message: `Manifest ${statusText(evidence.manifestStatus).toLowerCase()} with ${itemLabel}.`,
+      ready: true,
+    };
+  }
+
+  if (flight.releaseSetting.manifestMode === OperatorManifestMode.NOT_REQUIRED) {
+    return {
+      message: evidence.manifestItemCount > 0
+        ? `Optional manifest started with ${itemLabel}.`
+        : "Manifest is optional for this flight, but passengers can be added if needed.",
+      ready: false,
+    };
+  }
+
+  if (flight.releaseSetting.manifestMode === OperatorManifestMode.OPS_REQUIRED) {
+    return {
+      message: evidence.manifestItemCount > 0
+        ? `Ops manifest has ${itemLabel}; mark ready when reviewed.`
+        : "Ops manifest is required and has no passengers yet.",
+      ready: false,
+    };
+  }
+
+  return {
+    message: evidence.manifestItemCount > 0
+      ? `Manifest has ${itemLabel}; Preflight will verify it.`
+      : "Add passengers when applicable; Preflight will verify the manifest.",
+    ready: false,
+  };
+}
+
 function FlightLegDrawerHeader({ flight }: { flight: DashboardFlight }) {
   return (
     <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
@@ -999,7 +1064,7 @@ function FlightLegSummaryView({
     <div className="space-y-4">
       <FlightLegDrawerHeader flight={flight} />
       <div className={size === "expanded" ? "grid gap-3 lg:grid-cols-2" : "grid gap-3"}>
-        {flight.releaseSummary.components.map((component) => (
+        {flight.releaseSummary.components.filter((component) => component.key !== "manifest").map((component) => (
           <DrawerSectionLink
             href={summaryComponentHref(flight, component, selectedWindow, size)}
             key={component.key}
@@ -1012,6 +1077,18 @@ function FlightLegSummaryView({
             <p className="mt-1 text-xs opacity-80">{component.message}</p>
           </DrawerSectionLink>
         ))}
+        <DrawerSectionLink
+          href={dashboardHref(selectedWindow, {
+            id: flight.flightLegId,
+            object: "flightLeg",
+            size,
+            view: "manifest",
+          })}
+          tone={manifestSummary(flight).ready ? "emerald" : "amber"}
+        >
+          <p className="font-semibold">Manifest</p>
+          <p className="mt-1 text-xs opacity-80">{manifestSummary(flight).message}</p>
+        </DrawerSectionLink>
         <DrawerSectionLink
           href={dashboardHref(selectedWindow, {
             id: flight.flightLegId,
@@ -1171,6 +1248,221 @@ function PhaseDetailView({
         </section>
       ) : null}
       {href ? <DashboardActionLink href={href} label="Open full workflow" primary /> : null}
+    </div>
+  );
+}
+
+function passengerOptionName(passenger: {
+  email: string | null;
+  firstName: string;
+  idDocumentType: IdDocumentType | null;
+  lastName: string;
+  middleName: string | null;
+}) {
+  const name = [passenger.firstName, passenger.middleName, passenger.lastName]
+    .filter(Boolean)
+    .join(" ");
+  const details = [passenger.email, passenger.idDocumentType?.replaceAll("_", " ")]
+    .filter(Boolean)
+    .join(" | ");
+
+  return details ? `${name} (${details})` : name;
+}
+
+function manifestPassengerName(item: NonNullable<ManifestWorkflowData["manifest"]>["items"][number]): string {
+  if (item.personName) {
+    return item.personName;
+  }
+
+  if (!item.passenger) {
+    return "Unnamed item";
+  }
+
+  return [item.passenger.firstName, item.passenger.middleName, item.passenger.lastName]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function AddManifestPassengerDrawerForm({
+  action,
+  customerName,
+  globalPassengers,
+  linkedPassengers,
+  returnTo,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  customerName: string | null;
+  globalPassengers: Awaited<ReturnType<typeof getManifestPassengerOptions>>;
+  linkedPassengers: Awaited<ReturnType<typeof getManifestPassengerOptions>>;
+  returnTo: string;
+}) {
+  const linkedIds = new Set(linkedPassengers.map((passenger) => passenger.id));
+  const otherPassengers = globalPassengers.filter((passenger) => !linkedIds.has(passenger.id));
+
+  return (
+    <form action={action} className="rounded-xl border border-zinc-200 bg-white p-3 text-sm">
+      <input name="returnTo" type="hidden" value={returnTo} />
+      <label className="block">
+        <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          Passenger
+        </span>
+        <select
+          className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+          name="passengerId"
+          required
+        >
+          <option value="">Select passenger</option>
+          {linkedPassengers.length > 0 ? (
+            <optgroup label={`${customerName ?? "Customer"} passengers`}>
+              {linkedPassengers.map((passenger) => (
+                <option key={passenger.id} value={passenger.id}>
+                  {passengerOptionName(passenger)}
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
+          <optgroup label="All passengers">
+            {otherPassengers.map((passenger) => (
+              <option key={passenger.id} value={passenger.id}>
+                {passengerOptionName(passenger)}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+      </label>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Seat</span>
+          <input
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+            name="seatNumber"
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Weight</span>
+          <input
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+            name="weight"
+            step="0.01"
+            type="number"
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Baggage</span>
+          <input
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+            name="baggageWeight"
+            step="0.01"
+            type="number"
+          />
+        </label>
+      </div>
+      <label className="mt-3 block">
+        <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Notes</span>
+        <input
+          className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+          name="notes"
+        />
+      </label>
+      <button
+        className="mt-3 rounded-md bg-zinc-950 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+        type="submit"
+      >
+        Add passenger
+      </button>
+    </form>
+  );
+}
+
+function ManifestDrawerPanel({
+  detail,
+  flight,
+  passengerOptions,
+  returnTo,
+}: {
+  detail: ManifestWorkflowData | null;
+  flight: DashboardFlight;
+  passengerOptions: Awaited<ReturnType<typeof getManifestPassengerOptions>>;
+  returnTo: string;
+}) {
+  const summary = manifestSummary(flight);
+  const addAction = flight.flightLegId
+    ? addExistingPassengerToManifestAction.bind(null, flight.flightLegId)
+    : null;
+  const linkedPassengers =
+    detail?.operationalControlRecord?.customer?.passengers.map((link) => link.passenger) ?? [];
+  const customerName = detail?.operationalControlRecord?.customer?.name ?? null;
+  const items = detail?.manifest?.items ?? [];
+  const isLocked = detail?.manifest?.status === ManifestStatus.LOCKED;
+
+  return (
+    <div className="space-y-4">
+      <FlightLegDrawerHeader flight={flight} />
+      <section
+        className={`rounded-xl border p-3 text-sm ${
+          summary.ready
+            ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+            : "border-amber-200 bg-amber-50 text-amber-900"
+        }`}
+      >
+        <p className="font-semibold">Manifest</p>
+        <p className="mt-1">{summary.message}</p>
+      </section>
+      {addAction && detail && !isLocked ? (
+        <section className="space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-zinc-950">Add passenger</p>
+            <p className="mt-1 text-xs text-zinc-600">
+              {customerName
+                ? `Passengers linked to ${customerName} are listed first.`
+                : "Select from the passenger database."}
+            </p>
+          </div>
+          <AddManifestPassengerDrawerForm
+            action={addAction}
+            customerName={customerName}
+            globalPassengers={passengerOptions}
+            linkedPassengers={linkedPassengers}
+            returnTo={returnTo}
+          />
+        </section>
+      ) : (
+        <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
+          {isLocked
+            ? "This manifest is locked and cannot be edited from the drawer."
+            : "This row is not backed by a FlightLeg manifest workflow."}
+        </p>
+      )}
+      <section className="rounded-xl border border-zinc-200 bg-white p-3 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-semibold text-zinc-950">Manifest passengers</p>
+          <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-semibold text-zinc-600">
+            {items.length}
+          </span>
+        </div>
+        {items.length > 0 ? (
+          <ul className="mt-3 space-y-2">
+            {items.map((item) => (
+              <li className="rounded-lg border border-zinc-200 bg-zinc-50 p-2" key={item.id}>
+                <p className="font-medium text-zinc-900">{manifestPassengerName(item)}</p>
+                <p className="mt-1 text-xs text-zinc-600">
+                  Seat {item.seatNumber ?? "unassigned"} | Weight{" "}
+                  {decimalString(item.weight)} | Baggage {decimalString(item.baggageWeight)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-zinc-600">No passengers have been added yet.</p>
+        )}
+      </section>
+      {flight.flightLegId ? (
+        <DashboardActionLink
+          href={`/operations-control/${flight.flightLegId}/manifest`}
+          label="Open full manifest workflow"
+          primary
+        />
+      ) : null}
     </div>
   );
 }
@@ -1339,6 +1631,8 @@ function DashboardDrawer({
   drawerObject,
   drawerSize,
   drawerView,
+  manifestDetail,
+  manifestPassengerOptions,
   panel,
   releaseError,
   selectedFlight,
@@ -1350,6 +1644,8 @@ function DashboardDrawer({
   drawerObject: DrawerObject | null;
   drawerSize: DrawerSize;
   drawerView: FlightLegDrawerView;
+  manifestDetail: ManifestWorkflowData | null;
+  manifestPassengerOptions: Awaited<ReturnType<typeof getManifestPassengerOptions>>;
   panel: DashboardPanel | null;
   releaseError: string | null;
   selectedFlight: DashboardFlight | null;
@@ -1514,6 +1810,20 @@ function DashboardDrawer({
         selectedWindow={selectedWindow}
       />
     );
+  } else if (drawerView === "manifest") {
+    content = (
+      <ManifestDrawerPanel
+        detail={manifestDetail}
+        flight={selectedFlight}
+        passengerOptions={manifestPassengerOptions}
+        returnTo={dashboardHref(selectedWindow, {
+          id: selectedFlight.flightLegId,
+          object: "flightLeg",
+          size: drawerSize,
+          view: "manifest",
+        })}
+      />
+    );
   } else if (drawerView === "preflight" || drawerView === "postflight") {
     content = <PhaseDetailView flight={selectedFlight} phase={drawerView} />;
   } else if (drawerView === "audit") {
@@ -1576,6 +1886,13 @@ export default async function Home({ searchParams }: PageProps) {
     selectedFlight?.flightLegId && drawerView === "crew"
       ? await resolveFlightCrewCandidates(selectedFlight.flightLegId)
       : null;
+  const [manifestDetail, manifestPassengerOptions] =
+    selectedFlight?.flightLegId && drawerView === "manifest"
+      ? await Promise.all([
+          getManifestWorkflowData(selectedFlight.flightLegId),
+          getManifestPassengerOptions(),
+        ])
+      : [null, []];
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-3 text-zinc-950 sm:px-6 lg:px-8">
@@ -1801,6 +2118,8 @@ export default async function Home({ searchParams }: PageProps) {
         drawerObject={drawerObject}
         drawerSize={drawerSize}
         drawerView={drawerView}
+        manifestDetail={manifestDetail}
+        manifestPassengerOptions={manifestPassengerOptions}
         panel={panel}
         releaseError={releaseError}
         crewCandidates={crewCandidates}

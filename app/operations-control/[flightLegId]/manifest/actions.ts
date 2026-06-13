@@ -244,10 +244,34 @@ async function ensureManifestItemBelongsToFlightLeg(flightLegId: string, itemId:
 }
 
 function revalidateManifestPaths(flightLegId: string) {
+  revalidatePath("/");
   revalidatePath("/operations-control");
   revalidatePath(`/operations-control/${flightLegId}`);
   revalidatePath(`/operations-control/${flightLegId}/manifest`);
   revalidatePath("/api/health");
+}
+
+function getReturnTo(formData: FormData): string | null {
+  const returnTo = getOptionalText(formData, "returnTo");
+
+  return returnTo?.startsWith("/") ? returnTo : null;
+}
+
+function redirectTarget(flightLegId: string, formData: FormData, error?: unknown): string {
+  const returnTo = getReturnTo(formData);
+
+  if (!returnTo) {
+    return error
+      ? `/operations-control/${flightLegId}/manifest?error=${encodeError(error)}`
+      : `/operations-control/${flightLegId}/manifest`;
+  }
+
+  if (!error) {
+    return returnTo;
+  }
+
+  const separator = returnTo.includes("?") ? "&" : "?";
+  return `${returnTo}${separator}releaseError=${encodeError(error)}`;
 }
 
 export async function addManifestItemAction(flightLegId: string, formData: FormData) {
@@ -275,11 +299,11 @@ export async function addManifestItemAction(flightLegId: string, formData: FormD
       });
     }
   } catch (error) {
-    redirect(`/operations-control/${flightLegId}/manifest?error=${encodeError(error)}`);
+    redirect(redirectTarget(flightLegId, formData, error));
   }
 
   revalidateManifestPaths(flightLegId);
-  redirect(`/operations-control/${flightLegId}/manifest`);
+  redirect(redirectTarget(flightLegId, formData));
 }
 
 export async function addExistingPassengerToManifestAction(flightLegId: string, formData: FormData) {
@@ -314,11 +338,11 @@ export async function addExistingPassengerToManifestAction(flightLegId: string, 
 
     await markManifestDraftIfNeeded(manifest.id);
   } catch (error) {
-    redirect(`/operations-control/${flightLegId}/manifest?error=${encodeError(error)}`);
+    redirect(redirectTarget(flightLegId, formData, error));
   }
 
   revalidateManifestPaths(flightLegId);
-  redirect(`/operations-control/${flightLegId}/manifest`);
+  redirect(redirectTarget(flightLegId, formData));
 }
 
 export async function createPassengerAndAddToManifestAction(flightLegId: string, formData: FormData) {

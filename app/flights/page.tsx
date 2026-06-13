@@ -663,6 +663,14 @@ function FlightsDrawer({
             <p className="mt-1">
               Continue with the items below as they become applicable for this flight.
             </p>
+            {selectedFlight.flightLegId ? (
+              <Link
+                className="mt-3 inline-flex rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800"
+                href={`/operations-control/${selectedFlight.flightLegId}/manifest`}
+              >
+                Add passengers to manifest
+              </Link>
+            ) : null}
           </section>
         ) : null}
         <div className="flex flex-wrap gap-2">
