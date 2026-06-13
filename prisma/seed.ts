@@ -1761,6 +1761,8 @@ async function main() {
         email: "olivia.diaz@example.com",
         idDocumentType: IdDocumentType.PASSPORT,
         idDocumentNumber: "P1234501",
+        idIssuingCountry: "USA",
+        idDocumentExpiresAt: addMonths(anchor, 36),
       },
       {
         firstName: "Noah",
@@ -1768,14 +1770,39 @@ async function main() {
         email: "noah.brooks@example.com",
         idDocumentType: IdDocumentType.DRIVERS_LICENSE,
         idDocumentNumber: "D9988771",
+        idIssuingState: "NY",
+        idDocumentExpiresAt: addMonths(anchor, 24),
       },
       {
         firstName: "Ava",
         lastName: "Flores",
         idDocumentType: IdDocumentType.STATE_ID,
         idDocumentNumber: "S4422109",
+        idIssuingState: "MA",
+        idDocumentExpiresAt: addMonths(anchor, 18),
       },
     ],
+  });
+
+  await prisma.customerPassenger.createMany({
+    data: [
+      {
+        customerId: summitEnergy.id,
+        passengerId: passengers[0].id,
+        relationship: "Traveler",
+      },
+      {
+        customerId: summitEnergy.id,
+        passengerId: passengers[1].id,
+        relationship: "Traveler",
+      },
+      {
+        customerId: harborCapital.id,
+        passengerId: passengers[2].id,
+        relationship: "Executive traveler",
+      },
+    ],
+    skipDuplicates: true,
   });
 
   await prisma.flightPassenger.createMany({

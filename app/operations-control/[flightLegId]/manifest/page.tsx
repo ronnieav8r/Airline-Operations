@@ -1,15 +1,18 @@
-import { ManifestStatus } from "@prisma/client";
+import { IdDocumentType, ManifestStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
   addManifestItemAction,
+  addExistingPassengerToManifestAction,
+  createPassengerAndAddToManifestAction,
   deleteManifestItemAction,
   markManifestReadyAction,
   updateManifestItemAction,
 } from "@/app/operations-control/[flightLegId]/manifest/actions";
 import {
   getManifestWorkflowData,
+  getManifestPassengerOptions,
   ManifestWorkflowData,
 } from "@/lib/manifest-workflow-queries";
 
@@ -54,10 +57,29 @@ function passengerName(item: ManifestItem): string {
   }
 
   if (item.passenger) {
-    return `${item.passenger.firstName} ${item.passenger.lastName}`;
+    return [item.passenger.firstName, item.passenger.middleName, item.passenger.lastName]
+      .filter(Boolean)
+      .join(" ");
   }
 
   return "";
+}
+
+function optionName(passenger: {
+  email: string | null;
+  firstName: string;
+  idDocumentType: IdDocumentType | null;
+  lastName: string;
+  middleName: string | null;
+}) {
+  const name = [passenger.firstName, passenger.middleName, passenger.lastName]
+    .filter(Boolean)
+    .join(" ");
+  const details = [passenger.email, passenger.idDocumentType?.replaceAll("_", " ")]
+    .filter(Boolean)
+    .join(" | ");
+
+  return details ? `${name} (${details})` : name;
 }
 
 function itemWarnings(item: ManifestItem): string[] {
@@ -168,6 +190,112 @@ function ManifestItemForm({
   );
 }
 
+function AddPassengerForm({
+  action,
+  customerName,
+  globalPassengers,
+  linkedPassengers,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  customerName: string | null;
+  globalPassengers: Awaited<ReturnType<typeof getManifestPassengerOptions>>;
+  linkedPassengers: Awaited<ReturnType<typeof getManifestPassengerOptions>>;
+}) {
+  const linkedIds = new Set(linkedPassengers.map((passenger) => passenger.id));
+  const otherPassengers = globalPassengers.filter((passenger) => !linkedIds.has(passenger.id));
+
+  return (
+    <form action={action} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <label className="block xl:col-span-2">
+          <span className="text-xs font-medium text-zinc-600">Passenger</span>
+          <select
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+            name="passengerId"
+            required
+          >
+            <option value="">Select passenger</option>
+            {linkedPassengers.length > 0 ? (
+              <optgroup label={`${customerName ?? "Customer"} passengers`}>
+                {linkedPassengers.map((passenger) => (
+                  <option key={passenger.id} value={passenger.id}>
+                    {optionName(passenger)}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+            <optgroup label="All passengers">
+              {otherPassengers.map((passenger) => (
+                <option key={passenger.id} value={passenger.id}>
+                  {optionName(passenger)}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </label>
+        <Field label="Seat" name="seatNumber" />
+        <Field label="Weight" name="weight" type="number" />
+        <Field label="Baggage" name="baggageWeight" type="number" />
+      </div>
+      <div className="mt-3">
+        <Field label="Manifest notes" name="notes" />
+      </div>
+      <button
+        className="mt-3 rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+        type="submit"
+      >
+        Add passenger
+      </button>
+    </form>
+  );
+}
+
+function CreatePassengerManifestForm({ action }: { action: (formData: FormData) => Promise<void> }) {
+  return (
+    <form action={action} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+      <div className="grid gap-3 md:grid-cols-3">
+        <Field label="First name" name="firstName" />
+        <Field label="Middle" name="middleName" />
+        <Field label="Last name" name="lastName" />
+        <Field label="Date of birth" name="dateOfBirth" type="date" />
+        <Field label="Email" name="email" type="email" />
+        <Field label="Phone" name="phone" />
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">ID type</span>
+          <select
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+            name="idDocumentType"
+          >
+            <option value="">Not set</option>
+            {Object.values(IdDocumentType).map((type) => (
+              <option key={type} value={type}>
+                {type.replaceAll("_", " ")}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Field label="ID number" name="idDocumentNumber" />
+        <Field label="Issuing country" name="idIssuingCountry" />
+        <Field label="Issuing state" name="idIssuingState" />
+        <Field label="ID expiration" name="idDocumentExpiresAt" type="date" />
+        <Field label="Seat" name="seatNumber" />
+        <Field label="Weight" name="weight" type="number" />
+        <Field label="Baggage" name="baggageWeight" type="number" />
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <Field label="Passenger notes" name="passengerNotes" />
+        <Field label="Manifest notes" name="notes" />
+      </div>
+      <button
+        className="mt-3 rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
+        type="submit"
+      >
+        Create passenger and add
+      </button>
+    </form>
+  );
+}
+
 function ManifestItems({
   flightLegId,
   manifest,
@@ -223,16 +351,24 @@ function ManifestItems({
 
 export default async function ManifestWorkflowPage({ params, searchParams }: PageProps) {
   const [{ flightLegId }, queryParams] = await Promise.all([params, searchParams]);
-  const detail = await getManifestWorkflowData(flightLegId);
+  const [detail, passengerOptions] = await Promise.all([
+    getManifestWorkflowData(flightLegId),
+    getManifestPassengerOptions(),
+  ]);
 
   if (!detail) {
     notFound();
   }
 
   const addAction = addManifestItemAction.bind(null, flightLegId);
+  const addPassengerAction = addExistingPassengerToManifestAction.bind(null, flightLegId);
+  const createPassengerAction = createPassengerAndAddToManifestAction.bind(null, flightLegId);
   const readyAction = markManifestReadyAction.bind(null, flightLegId);
   const warnings = manifestWarnings(detail.manifest);
   const isLocked = detail.manifest?.status === ManifestStatus.LOCKED;
+  const linkedPassengers =
+    detail.operationalControlRecord?.customer?.passengers.map((link) => link.passenger) ?? [];
+  const customerName = detail.operationalControlRecord?.customer?.name ?? null;
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -316,12 +452,40 @@ export default async function ManifestWorkflowPage({ params, searchParams }: Pag
         </section>
 
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold">Add manual item</h2>
+          <h2 className="text-lg font-semibold">Add passenger</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Manual person-name entries are the v1 path; passenger identity redesign remains deferred.
+            {customerName
+              ? `Passengers linked to ${customerName} are listed first.`
+              : "Select from the passenger database or create a new passenger below."}
           </p>
           <div className="mt-4">
-            <ManifestItemForm action={addAction} submitLabel="Add item" />
+            <AddPassengerForm
+              action={addPassengerAction}
+              customerName={customerName}
+              globalPassengers={passengerOptions}
+              linkedPassengers={linkedPassengers}
+            />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Create passenger and add to manifest</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            New passengers created here are linked to the flight customer automatically when a
+            customer is selected for the FlightLeg.
+          </p>
+          <div className="mt-4">
+            <CreatePassengerManifestForm action={createPassengerAction} />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Manual manifest item</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Use only when a reusable passenger record is not available yet.
+          </p>
+          <div className="mt-4">
+            <ManifestItemForm action={addAction} submitLabel="Add manual item" />
           </div>
         </section>
 

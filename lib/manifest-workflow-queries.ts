@@ -16,6 +16,30 @@ const manifestWorkflowSelect = {
       code: true,
     },
   },
+  operationalControlRecord: {
+    select: {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          passengers: {
+            select: {
+              passenger: {
+                select: {
+                  email: true,
+                  firstName: true,
+                  id: true,
+                  idDocumentType: true,
+                  lastName: true,
+                  middleName: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
   manifest: {
     select: {
       id: true,
@@ -35,6 +59,7 @@ const manifestWorkflowSelect = {
           passenger: {
             select: {
               firstName: true,
+              middleName: true,
               lastName: true,
             },
           },
@@ -55,5 +80,20 @@ export async function getManifestWorkflowData(
   return prisma.flightLeg.findUnique({
     where: { id: flightLegId },
     select: manifestWorkflowSelect,
+  });
+}
+
+export async function getManifestPassengerOptions() {
+  return prisma.passenger.findMany({
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    select: {
+      email: true,
+      firstName: true,
+      id: true,
+      idDocumentType: true,
+      lastName: true,
+      middleName: true,
+    },
+    take: 250,
   });
 }

@@ -35,12 +35,8 @@ function selectedControlNotes(initial: FlightLegEditData | null | undefined): st
   return initial?.operationalControlRecord?.controlNotes ?? "";
 }
 
-function selectedCustomerName(initial: FlightLegEditData | null | undefined): string {
-  return (
-    initial?.operationalControlRecord?.customer?.name ??
-    initial?.operationalControlRecord?.controllingEntity ??
-    ""
-  );
+function selectedCustomerId(initial: FlightLegEditData | null | undefined): string {
+  return initial?.operationalControlRecord?.customer?.id ?? "";
 }
 
 function formatOperatingPart(part: OperatingPart): string {
@@ -147,22 +143,25 @@ export function FlightLegForm({
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium text-zinc-700">Customer</span>
-          <input
-            autoComplete="off"
+          <span className="flex items-center justify-between gap-3 text-sm font-medium text-zinc-700">
+            Customer
+            <Link className="text-xs font-semibold text-sky-700 hover:text-sky-900" href="/customers">
+              Create customer
+            </Link>
+          </span>
+          <select
             className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-            defaultValue={selectedCustomerName(initial)}
-            list="customer-options"
-            name="customerName"
+            defaultValue={selectedCustomerId(initial)}
+            name="customerId"
             required
-          />
-          <datalist id="customer-options">
+          >
+            <option value="">Select customer</option>
             {options.customers.map((customer) => (
-              <option key={customer.id} value={customer.name}>
+              <option key={customer.id} value={customer.id}>
                 {customerOptionLabel(customer)}
               </option>
             ))}
-          </datalist>
+          </select>
         </label>
 
         <label className="block">

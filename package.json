@@ -30,6 +30,7 @@
     "smoke:crew-logistics-workbench": "tsx scripts/smoke-crew-logistics-workbench.ts",
     "smoke:crew-coverage-eligibility": "tsx scripts/smoke-crew-coverage-eligibility.ts",
     "smoke:release-workflow-phases": "tsx scripts/smoke-release-workflow-phases.ts",
+    "smoke:customer-passenger-manifest": "tsx scripts/smoke-customer-passenger-manifest.ts",
     "smoke:fuel-workflow": "tsx scripts/smoke-fuel-workflow.ts",
     "smoke:browser": "playwright test",
     "playwright:install": "playwright install chromium",

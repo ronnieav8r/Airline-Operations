@@ -627,6 +627,7 @@ model Customer {
   updatedAt                 DateTime                   @updatedAt
   operator                  Operator                   @relation(fields: [operatorId], references: [id], onDelete: Cascade)
   operationalControlRecords OperationalControlRecord[]
+  passengers                CustomerPassenger[]
 
   @@unique([operatorId, name])
   @@index([operatorId, isActive])
@@ -1960,6 +1961,21 @@ model ManifestItem {
   @@index([passengerId])
 }
 
+model CustomerPassenger {
+  id          String    @id @default(cuid())
+  customerId  String
+  passengerId String
+  relationship String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  customer    Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  passenger   Passenger  @relation(fields: [passengerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, passengerId])
+  @@index([passengerId])
+}
+
 model WeightBalanceRun {
   id                  String              @id @default(cuid())
   flightLegId         String
@@ -2302,14 +2318,20 @@ model CrewFlightLog {
 model Passenger {
   id               String            @id @default(cuid())
   firstName        String
+  middleName       String?
   lastName         String
   dateOfBirth      DateTime?
   email            String?
   phone            String?
   idDocumentType   IdDocumentType?
   idDocumentNumber String?
+  idIssuingCountry String?
+  idIssuingState   String?
+  idDocumentExpiresAt DateTime?
+  notes            String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+  customers        CustomerPassenger[]
   flights          FlightPassenger[]
   manifestItems    ManifestItem[]
 

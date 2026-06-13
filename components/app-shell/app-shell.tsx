@@ -12,6 +12,7 @@ const navigationItems = [
   { label: "Dashboard", href: "/" },
   { label: "Operations Control", href: "/operations-control" },
   { label: "Flights", href: "/flights" },
+  { label: "Customers", href: "/customers" },
   { label: "Aircraft", href: "/aircraft" },
   { label: "Crew", href: "/crew" },
   { label: "Scheduling", href: "/scheduling" },

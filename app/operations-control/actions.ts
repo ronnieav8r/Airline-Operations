@@ -74,7 +74,7 @@ type FlightLegFormInput = {
   scheduledDeparture: Date;
   scheduledArrival: Date;
   operatingAuthorityId: string;
-  customerName: string;
+  customerId: string;
   notes: string | null;
   controlNotes: string | null;
 };
@@ -137,7 +137,7 @@ function parseFlightLegForm(formData: FormData): FlightLegFormInput {
     scheduledDeparture,
     scheduledArrival,
     operatingAuthorityId: getRequiredText(formData, "operatingAuthorityId", "Operating authority"),
-    customerName: getRequiredText(formData, "customerName", "Customer"),
+    customerId: getRequiredText(formData, "customerId", "Customer"),
     notes: getOptionalText(formData, "notes"),
     controlNotes: getOptionalText(formData, "controlNotes"),
   };
@@ -249,45 +249,39 @@ async function validateReferences(
   };
 }
 
-async function ensureCustomer(
+async function getSelectedCustomer(
   tx: Prisma.TransactionClient,
   operatorId: string,
-  customerName: string,
+  customerId: string,
 ) {
-  const existingCustomer = await tx.customer.findUnique({
+  const customer = await tx.customer.findFirst({
     where: {
-      operatorId_name: {
-        operatorId,
-        name: customerName,
-      },
+      id: customerId,
+      isActive: true,
+      operatorId,
     },
     select: { id: true, name: true },
   });
 
-  if (existingCustomer) {
-    return existingCustomer;
+  if (!customer) {
+    throw new FlightLegFormError("Selected customer was not found.");
   }
 
-  return tx.customer.create({
-    data: {
-      operatorId,
-      name: customerName,
-    },
-    select: { id: true, name: true },
-  });
+  return customer;
 }
 
 async function ensureTripOrMission(
   tx: Prisma.TransactionClient,
   input: FlightLegFormInput,
   operatorId: string,
+  customerName: string,
   existingTripOrMissionId?: string | null,
 ) {
   if (existingTripOrMissionId) {
     return tx.tripOrMission.update({
       where: { id: existingTripOrMissionId },
       data: {
-        customerName: input.customerName,
+        customerName,
         operatorId,
         tripNumber: buildTripNumber(input),
         requestedStart: input.scheduledDeparture,
@@ -306,13 +300,13 @@ async function ensureTripOrMission(
       },
     },
     update: {
-      customerName: input.customerName,
+      customerName,
       requestedStart: input.scheduledDeparture,
       requestedEnd: input.scheduledArrival,
       notes: input.notes,
     },
     create: {
-      customerName: input.customerName,
+      customerName,
       operatorId,
       tripNumber: buildTripNumber(input),
       requestedStart: input.scheduledDeparture,
@@ -493,10 +487,10 @@ async function syncCrewLegAssignments(
 async function createFlightLeg(input: FlightLegFormInput, currentUserId: string): Promise<string> {
   return prisma.$transaction(async (tx) => {
     const authorityContext = await validateReferences(tx, input);
-    const customer = await ensureCustomer(tx, authorityContext.operatorId, input.customerName);
+    const customer = await getSelectedCustomer(tx, authorityContext.operatorId, input.customerId);
     await assertNoDuplicateLegacyFlight(tx, input);
 
-    const trip = await ensureTripOrMission(tx, input, authorityContext.operatorId);
+    const trip = await ensureTripOrMission(tx, input, authorityContext.operatorId, customer.name);
     const legacyFlight = await tx.flight.create({
       data: {
         flightNumber: input.flightNumber,
@@ -580,7 +574,7 @@ async function updateFlightLeg(
 ): Promise<string> {
   return prisma.$transaction(async (tx) => {
     const authorityContext = await validateReferences(tx, input);
-    const customer = await ensureCustomer(tx, authorityContext.operatorId, input.customerName);
+    const customer = await getSelectedCustomer(tx, authorityContext.operatorId, input.customerId);
 
     const existing = await tx.flightLeg.findUnique({
       where: { id: flightLegId },
@@ -605,6 +599,7 @@ async function updateFlightLeg(
       tx,
       input,
       authorityContext.operatorId,
+      customer.name,
       existing.tripOrMissionId,
     );
     const legacyFlight = existing.legacyFlightId
