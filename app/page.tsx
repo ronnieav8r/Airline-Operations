@@ -322,6 +322,18 @@ function StatusTile({
   );
 }
 
+function activeAlertsTone(activeAlerts: number, activeAlertsInView: number): "amber" | "emerald" | "rose" {
+  if (activeAlertsInView > 0) {
+    return "rose";
+  }
+
+  if (activeAlerts > 0) {
+    return "amber";
+  }
+
+  return "emerald";
+}
+
 function MiniSection({
   action,
   children,
@@ -1322,18 +1334,18 @@ export default async function Home({ searchParams }: PageProps) {
       : null;
 
   return (
-    <main className="min-h-screen bg-zinc-100 px-4 py-4 text-zinc-950 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-4">
-        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+    <main className="min-h-screen bg-zinc-100 px-4 py-3 text-zinc-950 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-3">
+        <section className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+          <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
                 Today&apos;s Operations
               </p>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-950">
+              <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-zinc-950">
                 Dashboard | {dashboard.dateLabel}
               </h1>
-              <p className="mt-1 text-sm text-zinc-600">
+              <p className="mt-0.5 text-sm text-zinc-600">
             Ops release window: {dashboard.releaseWindowLabel}
               </p>
             </div>
@@ -1344,7 +1356,7 @@ export default async function Home({ searchParams }: PageProps) {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-11">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-10">
             <StatusTile
               href="/operations-control"
               label="Flights in view"
@@ -1352,16 +1364,13 @@ export default async function Home({ searchParams }: PageProps) {
               value={dashboard.statusSummary.totalFlights}
             />
             <StatusTile
-              href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
-              label="Released"
-              tone="emerald"
-              value={dashboard.statusSummary.released}
-            />
-            <StatusTile
-              href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
-              label="Needs release"
-              tone={dashboard.statusSummary.plannedOrUnreleased > 0 ? "sky" : "emerald"}
-              value={dashboard.statusSummary.plannedOrUnreleased}
+              href={dashboardHref(dashboard.selectedWindow, { panel: "alerts" })}
+              label="Active alerts"
+              tone={activeAlertsTone(
+                dashboard.statusSummary.activeAlerts,
+                dashboard.statusSummary.activeAlertsInView,
+              )}
+              value={dashboard.statusSummary.activeAlerts}
             />
             <StatusTile
               href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
@@ -1372,8 +1381,14 @@ export default async function Home({ searchParams }: PageProps) {
             <StatusTile
               href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
               label="Ops ready"
-              tone="emerald"
+              tone={dashboard.statusSummary.releaseReady > 0 ? "sky" : "zinc"}
               value={dashboard.statusSummary.releaseReady}
+            />
+            <StatusTile
+              href={dashboardHref(dashboard.selectedWindow, { panel: "release" })}
+              label="Released"
+              tone="emerald"
+              value={dashboard.statusSummary.released}
             />
             <StatusTile
               href="/flights?status=enroute"
@@ -1400,21 +1415,15 @@ export default async function Home({ searchParams }: PageProps) {
               value={dashboard.statusSummary.cancelled}
             />
             <StatusTile
-              href={dashboardHref(dashboard.selectedWindow, { panel: "alerts" })}
-              label="Active alerts"
-              tone={dashboard.statusSummary.activeAlerts > 0 ? "rose" : "emerald"}
-              value={dashboard.statusSummary.activeAlerts}
-            />
-            <StatusTile
               href="/aircraft"
-              label="Aircraft"
-              tone="zinc"
-              value={dashboard.statusSummary.aircraftCount}
+              label="Available aircraft"
+              tone={dashboard.statusSummary.availableAircraft > 0 ? "emerald" : "amber"}
+              value={dashboard.statusSummary.availableAircraft}
             />
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
+        <section className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
           <MiniSection
             action={<DashboardActionLink href="/operations-control" label="Full workbench" />}
             title={`Flight board | ${dashboard.releaseWindowLabel}`}
@@ -1424,7 +1433,7 @@ export default async function Home({ searchParams }: PageProps) {
                 No flights found inside this selected view.
               </p>
             ) : (
-              <div className="max-h-[34rem] space-y-2 overflow-y-auto pr-1">
+              <div className="max-h-[28rem] space-y-2 overflow-y-auto pr-1">
                 {visibleFlights.map((flight) => (
                   <article
                     className="relative grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm transition hover:border-sky-300 hover:bg-sky-50/40 md:grid-cols-[auto_1fr]"
@@ -1499,7 +1508,7 @@ export default async function Home({ searchParams }: PageProps) {
           </MiniSection>
 
           <MiniSection title="AI Review Notes">
-            <div className="flex min-h-[34rem] flex-col justify-between rounded-xl border border-dashed border-sky-300 bg-sky-50/70 p-4">
+            <div className="flex max-h-[28rem] min-h-[28rem] flex-col justify-between overflow-y-auto rounded-xl border border-dashed border-sky-300 bg-sky-50/70 p-4">
               <div>
                 <p className="text-sm font-semibold text-sky-950">Future placeholder</p>
                 <p className="mt-2 text-sm text-sky-900">
@@ -1514,25 +1523,28 @@ export default async function Home({ searchParams }: PageProps) {
           </MiniSection>
         </section>
 
-        <footer className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <footer className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
                 Fleet snapshot
               </h2>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-0.5 text-xs text-zinc-500">
                 Aircraft state overview. Detailed maintenance context stays in Aircraft.
               </p>
             </div>
             <DashboardActionLink href="/aircraft" label="Open aircraft" />
           </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             {dashboard.fleetSnapshot.map((bucket) => (
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3" key={bucket.status}>
+              <div
+                className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2"
+                key={bucket.status}
+              >
                 <p className="text-[0.68rem] font-semibold uppercase tracking-wide text-zinc-500">
                   {bucket.status}
                 </p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">{bucket.count}</p>
+                <p className="text-lg font-semibold tabular-nums text-zinc-950">{bucket.count}</p>
               </div>
             ))}
           </div>

@@ -323,13 +323,12 @@ export type DashboardData = {
     complete: number;
     cancelled: number;
     activeAlerts: number;
-    aircraftCount: number;
-    crewCount: number;
+    activeAlertsInView: number;
+    availableAircraft: number;
     flightLegReads: number;
     fallbackFlightReads: number;
     releaseEvidenceComplete: number;
     releaseEvidenceMissing: number;
-    plannedOrUnreleased: number;
     released: number;
     releaseReady: number;
     releaseReviewNeeded: number;
@@ -728,13 +727,11 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
   const { start, end: todayEnd } = getTodayRange(now);
   const queryEnd =
     releaseWindow.end.getTime() > todayEnd.getTime() ? releaseWindow.end : todayEnd;
-  const [aircraftCount, crewCount, todayFlights, alerts, fleetStatusGroups] =
+  const [todayFlights, alerts, fleetStatusGroups] =
     await timeOperation(
       "dashboard.database",
       () =>
         Promise.all([
-          prisma.aircraft.count(),
-          prisma.crewMember.count(),
           Promise.all([
             prisma.flightLeg.findMany({
               where: {
@@ -784,6 +781,7 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
               flight: {
                 select: {
                   flightNumber: true,
+                  scheduledDeparture: true,
                 },
               },
               aircraft: {
@@ -860,9 +858,20 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
       count: group._count._all,
     })),
   );
-  const plannedOrUnreleased = flightsInReleaseWindow.filter(
+  const availableAircraft =
+    fleetSnapshot.find((bucket) => bucket.status === AircraftStatus.AVAILABLE)?.count ?? 0;
+  const unreleasedFlightsInWindow = flightsInReleaseWindow.filter(
     (flight) => flight.releaseStatus !== ReleaseStatus.RELEASED,
-  ).length;
+  );
+  const activeAlertsInView = alerts.filter((alert) => {
+    const scheduledDeparture = alert.flight?.scheduledDeparture;
+
+    return (
+      scheduledDeparture &&
+      scheduledDeparture.getTime() >= releaseWindow.start.getTime() &&
+      scheduledDeparture.getTime() <= releaseWindow.end.getTime()
+    );
+  }).length;
   const statusCount = (status: string) =>
     flightsWithCoverage.filter((flight) => String(flight.status) === status).length;
 
@@ -877,8 +886,8 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
       complete: statusCount("COMPLETE"),
       cancelled: statusCount("CANCELLED"),
       activeAlerts: alerts.length,
-      aircraftCount,
-      crewCount,
+      activeAlertsInView,
+      availableAircraft,
       flightLegReads: flightsWithCoverage.filter((flight) => flight.readSource === "FLIGHT_LEG")
         .length,
       fallbackFlightReads: flightsWithCoverage.filter(
@@ -890,14 +899,13 @@ export async function getDashboardData(options: DashboardOptions = {}): Promise<
       releaseEvidenceMissing: flightsWithCoverage.filter(
         (flight) => !flight.releaseEvidence?.complete,
       ).length,
-      plannedOrUnreleased,
       released: flightsInReleaseWindow.filter(
         (flight) => flight.releaseStatus === ReleaseStatus.RELEASED,
       ).length,
-      releaseReady: flightsInReleaseWindow.filter((flight) => flight.releaseSummary.allReady)
+      releaseReady: unreleasedFlightsInWindow.filter((flight) => flight.releaseSummary.allReady)
         .length,
-      releaseReviewNeeded: flightsInReleaseWindow.filter(
-        (flight) => flight.releaseSummary.needsReview,
+      releaseReviewNeeded: unreleasedFlightsInWindow.filter(
+        (flight) => !flight.releaseSummary.allReady,
       ).length,
     },
     operationsAttention: {
