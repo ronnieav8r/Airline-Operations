@@ -7,6 +7,8 @@ import {
   CrewComplianceRecordStatus,
   CrewComplianceResult,
   CrewDutyPeriodStatus,
+  CrewPlannedComplianceEventStatus,
+  CrewPlannedComplianceEventType,
   CrewRecencyEventType,
   CrewRestPeriodStatus,
   CrewTrainingEventType,
@@ -163,10 +165,13 @@ function redirectWithError(crewMemberId: string, error: unknown): never {
 }
 
 function revalidateCrewCompliance(crewMemberId: string) {
+  revalidatePath("/");
   revalidatePath(`/crew/${crewMemberId}/compliance`);
   revalidatePath(`/crew/${crewMemberId}`);
   revalidatePath("/crew");
   revalidatePath("/crew/scheduling");
+  revalidatePath("/flights");
+  revalidatePath("/scheduling");
 }
 
 async function assertCrewMemberExists(crewMemberId: string) {
@@ -211,6 +216,23 @@ function parseMedicalInput(formData: FormData) {
     medicalClass: enumValue(MedicalCertificateClass, formData, "medicalClass", "Medical class"),
     notes: optionalText(formData, "notes"),
     status: enumValue(CrewComplianceRecordStatus, formData, "status", "Status"),
+  };
+}
+
+function parsePlannedComplianceInput(formData: FormData) {
+  const scheduledFor = requiredDateTime(formData, "scheduledFor", "Scheduled time");
+  const dueBy = optionalDateTime(formData, "dueBy", "Due by");
+  validateDateOrder(scheduledFor, dueBy, "scheduled time", "due by");
+
+  return {
+    aircraftType: optionalEnumValue(AircraftType, formData, "aircraftType", "Aircraft type"),
+    dueBy,
+    eventType: enumValue(CrewPlannedComplianceEventType, formData, "eventType", "Event type"),
+    notes: optionalText(formData, "notes"),
+    providerName: optionalText(formData, "providerName"),
+    scheduledFor,
+    seatRole: optionalEnumValue(SeatRole, formData, "seatRole", "Seat role"),
+    status: enumValue(CrewPlannedComplianceEventStatus, formData, "status", "Status"),
   };
 }
 
@@ -471,6 +493,76 @@ export async function voidCrewMedicalAction(crewMemberId: string, medicalId: str
   }
 
   redirect(`/crew/${crewMemberId}/compliance?message=Medical%20record%20voided.`);
+}
+
+export async function createCrewPlannedComplianceEventAction(
+  crewMemberId: string,
+  formData: FormData,
+) {
+  const currentUser = await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await assertCrewMemberExists(crewMemberId);
+    await prisma.crewPlannedComplianceEvent.create({
+      data: {
+        ...parsePlannedComplianceInput(formData),
+        createdById: currentUser.id,
+        crewMemberId,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Planned%20compliance%20event%20created.`);
+}
+
+export async function updateCrewPlannedComplianceEventAction(
+  crewMemberId: string,
+  eventId: string,
+  formData: FormData,
+) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewPlannedComplianceEvent.update({
+      where: {
+        id: eventId,
+        crewMemberId,
+      },
+      data: parsePlannedComplianceInput(formData),
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Planned%20compliance%20event%20updated.`);
+}
+
+export async function cancelCrewPlannedComplianceEventAction(
+  crewMemberId: string,
+  eventId: string,
+) {
+  await requireRole(COMPLIANCE_ADMIN_ROLES);
+
+  try {
+    await prisma.crewPlannedComplianceEvent.update({
+      where: {
+        id: eventId,
+        crewMemberId,
+      },
+      data: {
+        status: CrewPlannedComplianceEventStatus.CANCELLED,
+      },
+    });
+    revalidateCrewCompliance(crewMemberId);
+  } catch (error) {
+    redirectWithError(crewMemberId, error);
+  }
+
+  redirect(`/crew/${crewMemberId}/compliance?message=Planned%20compliance%20event%20cancelled.`);
 }
 
 export async function createCrewTrainingEventAction(crewMemberId: string, formData: FormData) {

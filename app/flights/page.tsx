@@ -22,8 +22,8 @@ type PageProps = {
 
 type DateRangeFilter = "7d" | "30d" | "custom" | "today" | "tomorrow";
 type FlightStatusFilter = "all" | "cancelled" | "complete" | "delayed" | "enroute" | "released" | "scheduled";
-type ReleaseFilter = "all" | "planned" | "released" | "unreleased";
-type IssueFilter = "all" | "coverage-gap" | "delayed" | "qualification-warning" | "release-review";
+type ReleaseFilter = "all" | "released" | "unreleased";
+type IssueFilter = "all" | "crew-open" | "crew-pending" | "crew-warning" | "delayed" | "release-review";
 type FlightPanel = "crew" | "flight" | "release";
 
 const RANGE_OPTIONS: Array<{ label: string; value: DateRangeFilter }> = [
@@ -46,15 +46,15 @@ const STATUS_OPTIONS: Array<{ label: string; value: FlightStatusFilter }> = [
 const RELEASE_OPTIONS: Array<{ label: string; value: ReleaseFilter }> = [
   { label: "All release", value: "all" },
   { label: "Released", value: "released" },
-  { label: "Unreleased", value: "unreleased" },
-  { label: "Planned", value: "planned" },
+  { label: "Not released", value: "unreleased" },
 ];
 
 const ISSUE_OPTIONS: Array<{ label: string; value: IssueFilter }> = [
-  { label: "All issues", value: "all" },
-  { label: "Release review", value: "release-review" },
-  { label: "Coverage gap", value: "coverage-gap" },
-  { label: "Qualification warning", value: "qualification-warning" },
+  { label: "All", value: "all" },
+  { label: "Crew open", value: "crew-open" },
+  { label: "Crew pending", value: "crew-pending" },
+  { label: "Crew warnings", value: "crew-warning" },
+  { label: "Release needs review", value: "release-review" },
   { label: "Delayed", value: "delayed" },
 ];
 
@@ -140,12 +140,12 @@ function parseFilters(searchParams: Awaited<PageProps["searchParams"]>) {
   );
   const release = oneOf<ReleaseFilter>(
     firstParam(searchParams.release),
-    ["all", "planned", "released", "unreleased"],
+    ["all", "released", "unreleased"],
     "all",
   );
   const issue = oneOf<IssueFilter>(
     firstParam(searchParams.issue),
-    ["all", "coverage-gap", "delayed", "qualification-warning", "release-review"],
+    ["all", "crew-open", "crew-pending", "crew-warning", "delayed", "release-review"],
     "all",
   );
   const panel = oneOf<FlightPanel | "none">(
@@ -249,10 +249,19 @@ function releaseMatches(flight: FlightListItem, release: ReleaseFilter) {
   if (release === "released") {
     return releaseValue === ReleaseStatus.RELEASED;
   }
-  if (release === "planned") {
-    return releaseValue === ReleaseStatus.PLANNED;
-  }
   return releaseValue !== ReleaseStatus.RELEASED;
+}
+
+function hasCrewOpen(flight: FlightListItem) {
+  return Boolean(flight.coverage && flight.coverage.missingRoles.length > 0);
+}
+
+function hasCrewPending(flight: FlightListItem) {
+  return Boolean(flight.coverage && flight.coverage.pendingAssignments.length > 0);
+}
+
+function hasCrewWarning(flight: FlightListItem) {
+  return Boolean(flight.coverage && flight.coverage.warnings.length > 0);
 }
 
 function hasReleaseReview(flight: FlightListItem) {
@@ -269,11 +278,14 @@ function issueMatches(flight: FlightListItem, issue: IssueFilter) {
   if (issue === "all") {
     return true;
   }
-  if (issue === "coverage-gap") {
-    return Boolean(flight.coverage && !flight.coverage.isCovered);
+  if (issue === "crew-open") {
+    return hasCrewOpen(flight);
   }
-  if (issue === "qualification-warning") {
-    return Boolean(flight.coverage && flight.coverage.warnings.length > 0);
+  if (issue === "crew-pending") {
+    return hasCrewPending(flight);
+  }
+  if (issue === "crew-warning") {
+    return hasCrewWarning(flight);
   }
   if (issue === "delayed") {
     return flight.status === FlightStatus.DELAYED;
@@ -313,6 +325,9 @@ function coverageBadgeClasses(coverage: FlightCoverage | null): string {
   if (!coverage) {
     return "border-zinc-200 bg-zinc-50 text-zinc-500";
   }
+  if (coverage.pendingAssignments.length > 0) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
   if (coverage.isCovered && coverage.warnings.length === 0) {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
@@ -340,15 +355,21 @@ function coverageLabel(coverage: FlightCoverage | null): string {
     return "No coverage data";
   }
 
+  if (coverage.pendingAssignments.length > 0) {
+    return `Crew pending: ${coverage.pendingAssignments
+      .map((assignment) => `${formatRoleLabel(assignment.seatRole)} ${assignment.crewMemberName}`)
+      .join(", ")}`;
+  }
+
   if (!coverage.isCovered) {
-    return `Missing ${coverage.missingRoles.map(formatRoleLabel).join(", ")}`;
+    return `Crew open: ${coverage.missingRoles.map(formatRoleLabel).join(", ")}`;
   }
 
   if (coverage.warnings.length > 0) {
-    return `${coverage.warnings.length} qual warning${coverage.warnings.length === 1 ? "" : "s"}`;
+    return `Crew warning: ${coverage.warnings.length}`;
   }
 
-  return "Covered";
+  return "Crew covered";
 }
 
 function releaseLabel(flight: FlightListItem): string {
@@ -381,12 +402,11 @@ function controlLabel(flight: FlightListItem): string {
 
 function getSummary(flights: FlightListItem[]) {
   return {
-    coverageGaps: flights.filter((flight) => flight.coverage && !flight.coverage.isCovered).length,
+    crewOpen: flights.filter(hasCrewOpen).length,
+    crewPending: flights.filter(hasCrewPending).length,
+    crewWarnings: flights.filter(hasCrewWarning).length,
     delayed: flights.filter((flight) => flight.status === FlightStatus.DELAYED).length,
-    qualificationWarnings: flights.filter((flight) => flight.coverage && flight.coverage.warnings.length > 0).length,
     released: flights.filter((flight) => releaseStatus(flight) === ReleaseStatus.RELEASED).length,
-    releaseReview: flights.filter(hasReleaseReview).length,
-    scheduled: flights.filter((flight) => flight.status === "SCHEDULED").length,
     total: flights.length,
     unreleased: flights.filter((flight) => releaseStatus(flight) !== ReleaseStatus.RELEASED).length,
   };
@@ -632,12 +652,12 @@ export default async function FlightsPage({ searchParams }: PageProps) {
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
               <SummaryChip label="Flights" value={summary.total} />
-              <SummaryChip label="Sched" value={summary.scheduled} />
               <SummaryChip label="Released" value={summary.released} />
-              <SummaryChip label="Unrel" value={summary.unreleased} />
-              <SummaryChip label="Review" value={summary.releaseReview} />
-              <SummaryChip label="Crew gaps" value={summary.coverageGaps} />
-              <SummaryChip label="Qual" value={summary.qualificationWarnings} />
+              <SummaryChip label="Needs release" value={summary.unreleased} />
+              <SummaryChip label="Crew open" value={summary.crewOpen} />
+              <SummaryChip label="Crew pending" value={summary.crewPending} />
+              <SummaryChip label="Crew warnings" value={summary.crewWarnings} />
+              <SummaryChip label="Delayed" value={summary.delayed} />
             </div>
             <div className="flex flex-wrap gap-2 xl:justify-end">
               <Link
@@ -728,7 +748,7 @@ export default async function FlightsPage({ searchParams }: PageProps) {
                 </div>
               </div>
               <div className="min-w-fit">
-                <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Issues</p>
+                <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Attention</p>
                 <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
                   {ISSUE_OPTIONS.map((option) => (
                     <FilterLink

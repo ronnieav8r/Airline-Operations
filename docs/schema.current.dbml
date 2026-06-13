@@ -254,6 +254,23 @@ Enum CrewComplianceResult {
   NOT_APPLICABLE
 }
 
+Enum CrewPlannedComplianceEventType {
+  MEDICAL_RENEWAL
+  RECURRENT_TRAINING
+  PROFICIENCY_CHECK
+  COMPETENCY_CHECK
+  LINE_CHECK
+  RECENCY
+  OTHER
+}
+
+Enum CrewPlannedComplianceEventStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  MISSED
+}
+
 Enum CrewRecencyEventType {
   TAKEOFF_LANDING
   INSTRUMENT_APPROACH
@@ -1463,6 +1480,30 @@ Table CrewMedical {
   }
 }
 
+Table CrewPlannedComplianceEvent {
+  id varchar [pk]
+  crewMemberId varchar [not null]
+  eventType CrewPlannedComplianceEventType [not null]
+  status CrewPlannedComplianceEventStatus [not null, default: "SCHEDULED"]
+  scheduledFor timestamp [not null]
+  dueBy timestamp
+  aircraftType AircraftType
+  seatRole SeatRole
+  providerName varchar
+  notes text
+  createdById varchar
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (crewMemberId, status)
+    (crewMemberId, scheduledFor)
+    (eventType, status)
+    (aircraftType, seatRole)
+    createdById
+  }
+}
+
 Table CrewTrainingEvent {
   id varchar [pk]
   crewMemberId varchar [not null]
@@ -1922,6 +1963,8 @@ Ref: CrewCertificate.verifiedById > User.id
 Ref: CrewMedical.crewMemberId > CrewMember.id
 Ref: CrewMedical.createdById > User.id
 Ref: CrewMedical.verifiedById > User.id
+Ref: CrewPlannedComplianceEvent.crewMemberId > CrewMember.id
+Ref: CrewPlannedComplianceEvent.createdById > User.id
 Ref: CrewTrainingEvent.crewMemberId > CrewMember.id
 Ref: CrewTrainingEvent.createdById > User.id
 Ref: CrewTrainingEvent.verifiedById > User.id

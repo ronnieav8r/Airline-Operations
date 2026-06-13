@@ -5,6 +5,8 @@ import {
   CrewComplianceRecordStatus,
   CrewComplianceResult,
   CrewDutyPeriodStatus,
+  CrewPlannedComplianceEventStatus,
+  CrewPlannedComplianceEventType,
   CrewRecencyEventType,
   CrewRestPeriodStatus,
   CrewTrainingEventType,
@@ -21,11 +23,13 @@ import { prisma } from "@/lib/prisma";
 
 import {
   cancelCrewDutyPeriodAction,
+  cancelCrewPlannedComplianceEventAction,
   cancelCrewRestPeriodAction,
   createCrewCertificateAction,
   createCrewCheckEventAction,
   createCrewDutyPeriodAction,
   createCrewMedicalAction,
+  createCrewPlannedComplianceEventAction,
   createCrewRecencyEventAction,
   createCrewRestPeriodAction,
   createCrewTrainingEventAction,
@@ -40,6 +44,7 @@ import {
   updateCrewCheckEventAction,
   updateCrewDutyPeriodAction,
   updateCrewMedicalAction,
+  updateCrewPlannedComplianceEventAction,
   updateCrewRecencyEventAction,
   updateCrewRestPeriodAction,
   updateCrewTrainingEventAction,
@@ -94,12 +99,26 @@ function dateLabel(value: Date | null): string {
   }).format(value);
 }
 
+function dateTimeLabel(value: Date | null): string {
+  if (!value) {
+    return "Not set";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(value);
+}
+
 function statusBadgeClasses(status: string): string {
-  if (status === CrewComplianceRecordStatus.ACTIVE) {
+  if (status === CrewComplianceRecordStatus.ACTIVE || status === CrewPlannedComplianceEventStatus.SCHEDULED) {
     return "bg-emerald-100 text-emerald-800";
   }
 
-  if (status === CrewComplianceRecordStatus.EXPIRED) {
+  if (status === CrewComplianceRecordStatus.EXPIRED || status === CrewPlannedComplianceEventStatus.MISSED) {
     return "bg-amber-100 text-amber-800";
   }
 
@@ -300,6 +319,61 @@ function MedicalForm({
       <TextAreaField defaultValue={medical?.notes} label="Notes" name="notes" />
       <div className="md:col-span-2">
         <FormButton>{medical ? "Update medical" : "Create medical"}</FormButton>
+      </div>
+    </form>
+  );
+}
+
+function PlannedComplianceEventForm({
+  action,
+  event,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  event?: {
+    aircraftType: AircraftType | null;
+    dueBy: Date | null;
+    eventType: CrewPlannedComplianceEventType;
+    notes: string | null;
+    providerName: string | null;
+    scheduledFor: Date;
+    seatRole: SeatRole | null;
+    status: CrewPlannedComplianceEventStatus;
+  };
+}) {
+  return (
+    <form action={action} className="grid gap-3 md:grid-cols-2">
+      <SelectField
+        defaultValue={event?.eventType ?? CrewPlannedComplianceEventType.RECURRENT_TRAINING}
+        enumObject={CrewPlannedComplianceEventType}
+        label="Event type"
+        name="eventType"
+      />
+      <SelectField
+        defaultValue={event?.status ?? CrewPlannedComplianceEventStatus.SCHEDULED}
+        enumObject={CrewPlannedComplianceEventStatus}
+        label="Status"
+        name="status"
+      />
+      <TextField defaultValue={dateTimeInputValue(event?.scheduledFor ?? null)} label="Scheduled for" name="scheduledFor" type="datetime-local" />
+      <TextField defaultValue={dateTimeInputValue(event?.dueBy ?? null)} label="Due by" name="dueBy" type="datetime-local" />
+      <SelectField
+        defaultValue={event?.aircraftType}
+        enumObject={AircraftType}
+        includeBlank
+        label="Aircraft type"
+        name="aircraftType"
+      />
+      <SelectField
+        defaultValue={event?.seatRole}
+        enumObject={SeatRole}
+        includeBlank
+        label="Seat role"
+        name="seatRole"
+      />
+      <TextField defaultValue={event?.providerName} label="Provider" name="providerName" />
+      <TextAreaField defaultValue={event?.notes} label="Notes" name="notes" />
+      <div className="md:col-span-2">
+        <FormButton>{event ? "Update planned event" : "Create planned event"}</FormButton>
       </div>
     </form>
   );
@@ -608,6 +682,20 @@ async function getCrewCompliancePageData(crewMemberId: string) {
           verifiedAt: true,
         },
       },
+      plannedComplianceEvents: {
+        orderBy: [{ status: "asc" }, { scheduledFor: "asc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          aircraftType: true,
+          dueBy: true,
+          eventType: true,
+          notes: true,
+          providerName: true,
+          scheduledFor: true,
+          seatRole: true,
+          status: true,
+        },
+      },
       trainingEvents: {
         orderBy: [{ status: "asc" }, { completedAt: "desc" }, { createdAt: "desc" }],
         select: {
@@ -757,6 +845,16 @@ export default async function CrewCompliancePage({ params, searchParams }: PageP
         </section>
 
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Create Planned Compliance Event</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Add future training, medical, check, or recency items used for tentative planning.
+          </p>
+          <div className="mt-4">
+            <PlannedComplianceEventForm action={createCrewPlannedComplianceEventAction.bind(null, crewMember.id)} />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
           <h2 className="text-lg font-semibold">Create Training Record</h2>
           <p className="mt-1 text-sm text-zinc-600">
             Add training program, module, completion, result, and expiration evidence.
@@ -889,6 +987,50 @@ export default async function CrewCompliancePage({ params, searchParams }: PageP
                 </div>
                 <div className="mt-4 border-t border-zinc-100 pt-4">
                   <MedicalForm action={updateCrewMedicalAction.bind(null, crewMember.id, medical.id)} medical={medical} />
+                </div>
+              </article>
+            ))
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Planned Compliance Events</h2>
+          {crewMember.plannedComplianceEvents.length === 0 ? (
+            <p className="rounded-md border border-zinc-200 bg-white p-4 text-sm text-zinc-600">
+              No planned compliance events yet.
+            </p>
+          ) : (
+            crewMember.plannedComplianceEvents.map((event) => (
+              <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" key={event.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusBadgeClasses(event.status)}`}>
+                      {formatEnum(event.status)}
+                    </span>
+                    <h3 className="mt-2 font-semibold">{formatEnum(event.eventType)}</h3>
+                    <p className="text-sm text-zinc-600">
+                      Scheduled {dateTimeLabel(event.scheduledFor)} | due {dateTimeLabel(event.dueBy)}
+                    </p>
+                    <p className="text-sm text-zinc-600">
+                      {event.aircraftType ? formatEnum(event.aircraftType) : "Any aircraft"} |{" "}
+                      {event.seatRole ? formatEnum(event.seatRole) : "Any seat"} |{" "}
+                      {event.providerName ?? "No provider"}
+                    </p>
+                    {event.notes ? <p className="mt-1 text-sm text-zinc-600">{event.notes}</p> : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <form action={cancelCrewPlannedComplianceEventAction.bind(null, crewMember.id, event.id)}>
+                      <button className="rounded-md border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700" type="submit">
+                        Cancel
+                      </button>
+                    </form>
+                  </div>
+                </div>
+                <div className="mt-4 border-t border-zinc-100 pt-4">
+                  <PlannedComplianceEventForm
+                    action={updateCrewPlannedComplianceEventAction.bind(null, crewMember.id, event.id)}
+                    event={event}
+                  />
                 </div>
               </article>
             ))

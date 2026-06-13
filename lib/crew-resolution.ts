@@ -1,22 +1,38 @@
-import { AircraftType, AssignmentStatus, Prisma, SeatRole } from "@prisma/client";
+import {
+  AircraftType,
+  AssignmentStatus,
+  CrewPlannedComplianceEventStatus,
+  Prisma,
+  SeatRole,
+} from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
 const REQUIRED_COCKPIT_ROLES: SeatRole[] = [SeatRole.CPT, SeatRole.FO];
+const QUALIFICATION_WARNING_WINDOW_DAYS = 30;
 
-type AssignmentWarningCode = "MISSING_QUALIFICATION" | "EXPIRED_QUALIFICATION";
+type AssignmentWarningCode =
+  | "EXPIRED_QUALIFICATION"
+  | "MISSING_QUALIFICATION"
+  | "PENDING_COMPLIANCE_EVENT"
+  | "QUALIFICATION_EXPIRING_SOON";
 type FlightCoverageIdentitySource = "FLIGHT_LEG_ID" | "LEGACY_FLIGHT_ID" | "LEGACY_FLIGHT_ONLY";
+type AssignmentEligibilityStatus = "ELIGIBLE" | "INELIGIBLE" | "PENDING" | "WARNING";
+type AssignmentIssueSeverity = "block" | "pending" | "warning";
 
 export type QualificationWarning = {
   code: AssignmentWarningCode;
   message: string;
+  severity: AssignmentIssueSeverity;
 };
 
 export type ResolvedCrewAssignment = {
   assignmentId: string;
   aircraftId: string;
+  coverageEligible: boolean;
   crewMemberId: string;
   crewMemberName: string;
+  eligibilityStatus: AssignmentEligibilityStatus;
   seatRole: SeatRole;
   startsAt: Date;
   endsAt: Date | null;
@@ -43,6 +59,8 @@ export type FlightCoverage = {
   requiredRoles: SeatRole[];
   missingRoles: SeatRole[];
   assignedCrew: ResolvedCrewAssignment[];
+  ineligibleAssignments: ResolvedCrewAssignment[];
+  pendingAssignments: ResolvedCrewAssignment[];
   warnings: CoverageWarning[];
   isCovered: boolean;
 };
@@ -207,16 +225,28 @@ export async function resolveFlightCoverage(flightId: string): Promise<FlightCov
     return null;
   }
 
-  const assignedSeatRoles = new Set(crew.assignedCrew.map((assignment) => assignment.seatRole));
+  const assignedSeatRoles = new Set(
+    crew.assignedCrew
+      .filter((assignment) => assignment.coverageEligible)
+      .map((assignment) => assignment.seatRole),
+  );
   const missingRoles = REQUIRED_COCKPIT_ROLES.filter((role) => !assignedSeatRoles.has(role));
   const warnings = crew.assignedCrew.flatMap((assignment) =>
-    assignment.qualificationWarnings.map((warning) => ({
-      ...warning,
-      assignmentId: assignment.assignmentId,
-      crewMemberId: assignment.crewMemberId,
-      crewMemberName: assignment.crewMemberName,
-      seatRole: assignment.seatRole,
-    })),
+    assignment.qualificationWarnings
+      .filter((warning) => warning.severity === "warning")
+      .map((warning) => ({
+        ...warning,
+        assignmentId: assignment.assignmentId,
+        crewMemberId: assignment.crewMemberId,
+        crewMemberName: assignment.crewMemberName,
+        seatRole: assignment.seatRole,
+      })),
+  );
+  const pendingAssignments = crew.assignedCrew.filter(
+    (assignment) => assignment.eligibilityStatus === "PENDING",
+  );
+  const ineligibleAssignments = crew.assignedCrew.filter(
+    (assignment) => assignment.eligibilityStatus === "INELIGIBLE",
   );
 
   return {
@@ -231,6 +261,8 @@ export async function resolveFlightCoverage(flightId: string): Promise<FlightCov
     requiredRoles: REQUIRED_COCKPIT_ROLES,
     missingRoles,
     assignedCrew: crew.assignedCrew,
+    ineligibleAssignments,
+    pendingAssignments,
     warnings,
     isCovered: missingRoles.length === 0,
   };
@@ -288,8 +320,22 @@ async function resolveAssignmentsForAircraftAt(
               aircraftType,
             },
             select: {
+              aircraftType: true,
               seatRole: true,
               expiresAt: true,
+            },
+          },
+          plannedComplianceEvents: {
+            where: {
+              scheduledFor: { lte: at },
+              status: CrewPlannedComplianceEventStatus.SCHEDULED,
+            },
+            orderBy: { scheduledFor: "asc" },
+            select: {
+              aircraftType: true,
+              eventType: true,
+              scheduledFor: true,
+              seatRole: true,
             },
           },
         },
@@ -301,58 +347,156 @@ async function resolveAssignmentsForAircraftAt(
     const matchingQualification = assignment.crewMember.qualifications.find(
       (qualification) => qualification.seatRole === assignment.seatRole,
     );
-    const qualificationWarnings = getQualificationWarnings(
-      Boolean(matchingQualification),
-      matchingQualification?.expiresAt ?? null,
-      assignment.seatRole,
-      assignment.crewMember.firstName,
-      assignment.crewMember.lastName,
+    const eligibility = getAssignmentEligibility(
+      {
+        expiresAt: matchingQualification?.expiresAt ?? null,
+        hasMatchingQualification: Boolean(matchingQualification),
+        plannedEvents: assignment.crewMember.plannedComplianceEvents,
+      },
+      {
+        aircraftType,
+        firstName: assignment.crewMember.firstName,
+        lastName: assignment.crewMember.lastName,
+        seatRole: assignment.seatRole,
+      },
       at,
     );
 
     return {
       assignmentId: assignment.id,
       aircraftId: assignment.aircraftId,
+      coverageEligible: eligibility.coverageEligible,
       crewMemberId: assignment.crewMember.id,
       crewMemberName: `${assignment.crewMember.firstName} ${assignment.crewMember.lastName}`,
+      eligibilityStatus: eligibility.status,
       seatRole: assignment.seatRole,
       startsAt: assignment.startsAt,
       endsAt: assignment.endsAt,
-      hasQualificationWarning: qualificationWarnings.length > 0,
-      qualificationWarnings,
+      hasQualificationWarning: eligibility.issues.length > 0,
+      qualificationWarnings: eligibility.issues,
     };
   });
 }
 
-function getQualificationWarnings(
-  hasMatchingQualification: boolean,
-  expiresAt: Date | null,
+function plannedEventApplies(
+  event: {
+    aircraftType: AircraftType | null;
+    seatRole: SeatRole | null;
+  },
+  aircraftType: AircraftType,
   seatRole: SeatRole,
-  firstName: string,
-  lastName: string,
+): boolean {
+  return (
+    (!event.aircraftType || event.aircraftType === aircraftType) &&
+    (!event.seatRole || event.seatRole === seatRole)
+  );
+}
+
+function formatPlannedEvent(event: { eventType: string; scheduledFor: Date }): string {
+  const label = event.eventType.replaceAll("_", " ").toLowerCase();
+  const scheduledFor = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(event.scheduledFor);
+
+  return `${label} scheduled ${scheduledFor}`;
+}
+
+function getAssignmentEligibility(
+  evidence: {
+    expiresAt: Date | null;
+    hasMatchingQualification: boolean;
+    plannedEvents: Array<{
+      aircraftType: AircraftType | null;
+      eventType: string;
+      scheduledFor: Date;
+      seatRole: SeatRole | null;
+    }>;
+  },
+  assignment: {
+    aircraftType: AircraftType;
+    firstName: string;
+    lastName: string;
+    seatRole: SeatRole;
+  },
   at: Date,
-): QualificationWarning[] {
+): {
+  coverageEligible: boolean;
+  issues: QualificationWarning[];
+  status: AssignmentEligibilityStatus;
+} {
+  const { aircraftType, firstName, lastName, seatRole } = assignment;
   const crewMemberName = `${firstName} ${lastName}`;
+  const plannedEvent = evidence.plannedEvents.find((event) =>
+    plannedEventApplies(event, aircraftType, seatRole),
+  );
 
-  if (!hasMatchingQualification) {
-    return [
-      {
-        code: "MISSING_QUALIFICATION",
-        message: `${crewMemberName} has no matching ${seatRole} qualification for this aircraft type.`,
-      },
-    ];
+  if (!evidence.hasMatchingQualification) {
+    const issue: QualificationWarning = plannedEvent
+      ? {
+          code: "PENDING_COMPLIANCE_EVENT",
+          message: `${crewMemberName} has no matching ${seatRole} qualification for this aircraft type; ${formatPlannedEvent(plannedEvent)}.`,
+          severity: "pending",
+        }
+      : {
+          code: "MISSING_QUALIFICATION",
+          message: `${crewMemberName} has no matching ${seatRole} qualification for this aircraft type.`,
+          severity: "block",
+        };
+
+    return {
+      coverageEligible: false,
+      issues: [issue],
+      status: plannedEvent ? "PENDING" : "INELIGIBLE",
+    };
   }
 
-  if (expiresAt && expiresAt.getTime() < at.getTime()) {
-    return [
-      {
-        code: "EXPIRED_QUALIFICATION",
-        message: `${crewMemberName} has an expired ${seatRole} qualification.`,
-      },
-    ];
+  if (evidence.expiresAt && evidence.expiresAt.getTime() < at.getTime()) {
+    const issue: QualificationWarning = plannedEvent
+      ? {
+          code: "PENDING_COMPLIANCE_EVENT",
+          message: `${crewMemberName}'s ${seatRole} qualification is expired; ${formatPlannedEvent(plannedEvent)}.`,
+          severity: "pending",
+        }
+      : {
+          code: "EXPIRED_QUALIFICATION",
+          message: `${crewMemberName} has an expired ${seatRole} qualification.`,
+          severity: "block",
+        };
+
+    return {
+      coverageEligible: false,
+      issues: [issue],
+      status: plannedEvent ? "PENDING" : "INELIGIBLE",
+    };
   }
 
-  return [];
+  const warningWindowEnd = new Date(at);
+  warningWindowEnd.setUTCDate(warningWindowEnd.getUTCDate() + QUALIFICATION_WARNING_WINDOW_DAYS);
+
+  if (
+    evidence.expiresAt &&
+    evidence.expiresAt.getTime() >= at.getTime() &&
+    evidence.expiresAt.getTime() <= warningWindowEnd.getTime()
+  ) {
+    return {
+      coverageEligible: true,
+      issues: [
+        {
+          code: "QUALIFICATION_EXPIRING_SOON",
+          message: `${crewMemberName}'s ${seatRole} qualification expires soon.`,
+          severity: "warning",
+        },
+      ],
+      status: "WARNING",
+    };
+  }
+
+  return {
+    coverageEligible: true,
+    issues: [],
+    status: "ELIGIBLE",
+  };
 }
 
 function groupBySeatRole(

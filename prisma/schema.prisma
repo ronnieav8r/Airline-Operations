@@ -417,6 +417,23 @@ enum CrewComplianceResult {
   NOT_APPLICABLE
 }
 
+enum CrewPlannedComplianceEventType {
+  MEDICAL_RENEWAL
+  RECURRENT_TRAINING
+  PROFICIENCY_CHECK
+  COMPETENCY_CHECK
+  LINE_CHECK
+  RECENCY
+  OTHER
+}
+
+enum CrewPlannedComplianceEventStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  MISSED
+}
+
 enum CrewRecencyEventType {
   TAKEOFF_LANDING
   INSTRUMENT_APPROACH
@@ -704,6 +721,7 @@ model User {
   crewTrainingEventsVerified    CrewTrainingEvent[]        @relation("CrewTrainingEventVerifiedBy")
   crewCheckEventsCreated        CrewCheckEvent[]           @relation("CrewCheckEventCreatedBy")
   crewCheckEventsVerified       CrewCheckEvent[]           @relation("CrewCheckEventVerifiedBy")
+  crewPlannedComplianceEventsCreated CrewPlannedComplianceEvent[] @relation("CrewPlannedComplianceEventCreatedBy")
   crewRecencyEventsCreated      CrewRecencyEvent[]         @relation("CrewRecencyEventCreatedBy")
   crewRecencyEventsVerified     CrewRecencyEvent[]         @relation("CrewRecencyEventVerifiedBy")
   crewDutyPeriodsCreated        CrewDutyPeriod[]           @relation("CrewDutyPeriodCreatedBy")
@@ -923,6 +941,7 @@ model CrewMember {
   medicals                      CrewMedical[]
   trainingEvents                CrewTrainingEvent[]
   checkEvents                   CrewCheckEvent[]
+  plannedComplianceEvents       CrewPlannedComplianceEvent[]
   recencyEvents                 CrewRecencyEvent[]
   dutyPeriods                   CrewDutyPeriod[]
   restPeriods                   CrewRestPeriod[]
@@ -1008,6 +1027,30 @@ model CrewMedical {
   @@index([medicalClass])
   @@index([createdById])
   @@index([verifiedById])
+}
+
+model CrewPlannedComplianceEvent {
+  id           String                            @id @default(cuid())
+  crewMemberId String
+  eventType    CrewPlannedComplianceEventType
+  status       CrewPlannedComplianceEventStatus @default(SCHEDULED)
+  scheduledFor DateTime
+  dueBy        DateTime?
+  aircraftType AircraftType?
+  seatRole     SeatRole?
+  providerName String?
+  notes        String?
+  createdById  String?
+  createdAt    DateTime                         @default(now())
+  updatedAt    DateTime                         @updatedAt
+  crewMember   CrewMember                       @relation(fields: [crewMemberId], references: [id], onDelete: Cascade)
+  createdBy    User?                            @relation("CrewPlannedComplianceEventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([crewMemberId, status])
+  @@index([crewMemberId, scheduledFor])
+  @@index([eventType, status])
+  @@index([aircraftType, seatRole])
+  @@index([createdById])
 }
 
 model CrewTrainingEvent {
