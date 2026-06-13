@@ -1,5 +1,6 @@
 import {
   AlertSeverity,
+  FaaFlightPlanStatus,
   FlightLegStatus,
   FlightStatus,
   OperatorManifestMode,
@@ -11,7 +12,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import {
+  dashboardAssignCrewLegAction,
   dashboardReleaseFlightAction,
+  dashboardUpdateFlightPlanStatusAction,
   dashboardVoidReleaseAction,
 } from "@/app/dashboard-actions";
 import { ContextDrawer } from "@/components/context-drawer";
@@ -24,6 +27,11 @@ import {
 } from "@/lib/dashboard-queries";
 import { formatFuelAmount, fuelReadyLabel } from "@/lib/fuel";
 import { getCurrentUser, type CurrentUser } from "@/lib/auth/session";
+import {
+  FlightCrewCandidate,
+  FlightCrewCandidateGroup,
+  resolveFlightCrewCandidates,
+} from "@/lib/crew-resolution";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +73,13 @@ const WINDOW_OPTIONS: Array<{ label: string; value: DashboardWindowValue }> = [
   { label: "+12 hr", value: "12" },
   { label: "+24 hr", value: "24" },
   { label: "Today", value: "today" },
+];
+
+const FLIGHT_PLAN_STATUS_OPTIONS: Array<{ label: string; value: FaaFlightPlanStatus }> = [
+  { label: "Unknown", value: FaaFlightPlanStatus.UNKNOWN },
+  { label: "Filed", value: FaaFlightPlanStatus.FILED },
+  { label: "Not filed", value: FaaFlightPlanStatus.NOT_FILED },
+  { label: "Not applicable", value: FaaFlightPlanStatus.NOT_APPLICABLE },
 ];
 
 function firstParam(value: string | string[] | undefined): string | null {
@@ -480,6 +495,10 @@ function statusText(value: string | null | undefined): string {
   return value ? value.replaceAll("_", " ") : "Missing";
 }
 
+function flightPlanStatusText(value: FaaFlightPlanStatus): string {
+  return FLIGHT_PLAN_STATUS_OPTIONS.find((option) => option.value === value)?.label ?? statusText(value);
+}
+
 function crewCoverageLabel(flight: DashboardFlight): string {
   if (!flight.coverage) {
     return "No coverage data";
@@ -488,6 +507,192 @@ function crewCoverageLabel(flight: DashboardFlight): string {
     return "Covered";
   }
   return `Missing ${flight.coverage.missingRoles.map(formatRoleLabel).join(", ")}`;
+}
+
+function crewCandidateLabel(candidate: FlightCrewCandidate): string {
+  const notes = [
+    candidate.employeeNumber,
+    candidate.eligibilityStatus,
+    candidate.conflictLabel ? `assigned ${candidate.conflictLabel}` : null,
+  ].filter(Boolean);
+
+  return `${candidate.crewMemberName} | ${notes.join(" | ")}`;
+}
+
+function CrewRoleAssignmentPanel({
+  candidates,
+  currentAssignments,
+  flight,
+  role,
+  returnTo,
+}: {
+  candidates: FlightCrewCandidate[];
+  currentAssignments: NonNullable<DashboardFlight["coverage"]>["assignedCrew"];
+  flight: DashboardFlight;
+  role: SeatRole;
+  returnTo: string;
+}) {
+  const assignAction = flight.flightLegId
+    ? dashboardAssignCrewLegAction.bind(null, flight.flightLegId)
+    : null;
+  const currentForRole = currentAssignments.filter((assignment) => assignment.seatRole === role);
+  const eligibleCandidates = candidates.filter((candidate) => candidate.seatRole === role);
+
+  return (
+    <section className="rounded-xl border border-zinc-200 bg-white p-3 text-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="font-semibold text-zinc-950">{formatRoleLabel(role)}</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            {currentForRole.length > 0
+              ? currentForRole.map((assignment) => assignment.crewMemberName).join(", ")
+              : "No crew member assigned."}
+          </p>
+        </div>
+        <span
+          className={`rounded-full border px-2 py-1 text-xs font-semibold ${
+            currentForRole.some((assignment) => assignment.coverageEligible)
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-rose-200 bg-rose-50 text-rose-700"
+          }`}
+        >
+          {currentForRole.some((assignment) => assignment.coverageEligible) ? "Covered" : "Open"}
+        </span>
+      </div>
+      {assignAction ? (
+        <form action={assignAction} className="mt-3 grid gap-2">
+          <input name="returnTo" type="hidden" value={returnTo} />
+          <input name="seatRole" type="hidden" value={role} />
+          <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Assign {formatRoleLabel(role)}
+            <select
+              className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+              name="crewMemberId"
+              required
+            >
+              <option value="">Select crew member</option>
+              {eligibleCandidates.map((candidate) => (
+                <option
+                  disabled={!candidate.coverageEligible}
+                  key={`${candidate.seatRole}-${candidate.crewMemberId}`}
+                  value={candidate.crewMemberId}
+                >
+                  {crewCandidateLabel(candidate)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {eligibleCandidates.length === 0 ? (
+            <p className="text-xs text-amber-700">No active qualified {formatRoleLabel(role)} candidates found.</p>
+          ) : null}
+          <button
+            className="justify-self-start rounded-md bg-zinc-950 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+            type="submit"
+          >
+            Assign {formatRoleLabel(role)}
+          </button>
+        </form>
+      ) : (
+        <p className="mt-3 text-xs text-zinc-500">This row is not backed by a FlightLeg assignment workflow.</p>
+      )}
+    </section>
+  );
+}
+
+function CrewAssignmentDrawerPanel({
+  candidates,
+  flight,
+  returnTo,
+}: {
+  candidates: FlightCrewCandidateGroup | null;
+  flight: DashboardFlight;
+  returnTo: string;
+}) {
+  const currentAssignments = flight.coverage?.assignedCrew ?? [];
+
+  return (
+    <div className="space-y-3">
+      <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm">
+        <p className="font-semibold text-zinc-950">Assign cockpit crew to this flight</p>
+        <p className="mt-1 text-zinc-600">
+          These assignments are flight-specific and update release coverage for {flight.flightNumber}.
+        </p>
+      </section>
+      <CrewRoleAssignmentPanel
+        candidates={candidates?.candidates ?? []}
+        currentAssignments={currentAssignments}
+        flight={flight}
+        returnTo={returnTo}
+        role={SeatRole.CPT}
+      />
+      <CrewRoleAssignmentPanel
+        candidates={candidates?.candidates ?? []}
+        currentAssignments={currentAssignments}
+        flight={flight}
+        returnTo={returnTo}
+        role={SeatRole.FO}
+      />
+    </div>
+  );
+}
+
+function FlightPlanStatusPanel({
+  component,
+  flight,
+  returnTo,
+}: {
+  component: DashboardReleaseComponent;
+  flight: DashboardFlight;
+  returnTo: string;
+}) {
+  const updateAction = flight.flightLegId
+    ? dashboardUpdateFlightPlanStatusAction.bind(null, flight.flightLegId)
+    : null;
+
+  return (
+    <div className="space-y-3">
+      <section className={`rounded-xl border p-3 ${componentToneClasses(component.status)}`}>
+        <p className="font-semibold">{component.label}</p>
+        <p className="mt-1 text-sm opacity-85">{component.message}</p>
+      </section>
+      <section className="rounded-xl border border-zinc-200 bg-white p-3 text-sm">
+        <p className="font-semibold text-zinc-950">Flight-plan status</p>
+        <p className="mt-1 text-zinc-600">
+          This records the planning basis only. AeroOps is not building or filing the flight plan here.
+        </p>
+        {updateAction ? (
+          <form action={updateAction} className="mt-3 grid gap-2">
+            <input name="returnTo" type="hidden" value={returnTo} />
+            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              FAA flight plan
+              <select
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950"
+                defaultValue={flight.faaFlightPlanStatus}
+                name="faaFlightPlanStatus"
+              >
+                {FLIGHT_PLAN_STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="justify-self-start rounded-md bg-zinc-950 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+              type="submit"
+            >
+              Save flight-plan status
+            </button>
+          </form>
+        ) : (
+          <p className="mt-3 text-xs text-zinc-500">This row is not backed by a FlightLeg workflow.</p>
+        )}
+      </section>
+      <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
+        Current status: {flightPlanStatusText(flight.faaFlightPlanStatus)}
+      </section>
+    </div>
+  );
 }
 
 function isCurrentUserReleaseAuthorized(currentUser: CurrentUser | null): boolean {
@@ -968,13 +1173,52 @@ function PhaseDetailView({
 }
 
 function ComponentDetailView({
+  crewCandidates,
   component,
   flight,
+  releaseError,
+  selectedWindow,
 }: {
+  crewCandidates: FlightCrewCandidateGroup | null;
   component: DashboardReleaseComponent;
   flight: DashboardFlight;
+  releaseError: string | null;
+  selectedWindow: DashboardWindowValue;
 }) {
   const fullWorkflowHref = workflowHref(flight, component);
+  const returnTo = dashboardHref(selectedWindow, {
+    id: flight.flightLegId,
+    object: "flightLeg",
+    view: componentView(component),
+  });
+
+  if (component.key === "crew") {
+    return (
+      <div className="space-y-4">
+        <FlightLegDrawerHeader flight={flight} />
+        {releaseError ? (
+          <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+            {releaseError}
+          </p>
+        ) : null}
+        <CrewAssignmentDrawerPanel candidates={crewCandidates} flight={flight} returnTo={returnTo} />
+      </div>
+    );
+  }
+
+  if (component.key === "flight-following") {
+    return (
+      <div className="space-y-4">
+        <FlightLegDrawerHeader flight={flight} />
+        {releaseError ? (
+          <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+            {releaseError}
+          </p>
+        ) : null}
+        <FlightPlanStatusPanel component={component} flight={flight} returnTo={returnTo} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -996,19 +1240,6 @@ function ComponentDetailView({
             {flight.assignedAircraft.discrepancyCount} open discrepancies |{" "}
             {flight.assignedAircraft.deferralCount} active deferrals
           </p>
-        </section>
-      ) : null}
-      {component.key === "crew" ? (
-        <section className="rounded-xl border border-zinc-200 bg-white p-3 text-sm">
-          <p className="font-semibold text-zinc-950">Crew coverage</p>
-          <p className="mt-1 text-zinc-600">{crewCoverageLabel(flight)}</p>
-          {flight.coverage?.warnings.length ? (
-            <ul className="mt-2 space-y-1 text-amber-800">
-              {flight.coverage.warnings.map((warning) => (
-                <li key={`${warning.seatRole}-${warning.message}`}>{warning.message}</li>
-              ))}
-            </ul>
-          ) : null}
         </section>
       ) : null}
       {component.key === "manifest" && flight.releaseEvidence ? (
@@ -1099,6 +1330,7 @@ function AuditDetailView({ flight }: { flight: DashboardFlight }) {
 }
 
 function DashboardDrawer({
+  crewCandidates,
   dashboard,
   currentUser,
   drawerObject,
@@ -1109,6 +1341,7 @@ function DashboardDrawer({
   selectedFlight,
   selectedWindow,
 }: {
+  crewCandidates: FlightCrewCandidateGroup | null;
   dashboard: Awaited<ReturnType<typeof getDashboardData>>;
   currentUser: CurrentUser | null;
   drawerObject: DrawerObject | null;
@@ -1283,7 +1516,15 @@ function DashboardDrawer({
   } else if (drawerView === "audit") {
     content = <AuditDetailView flight={selectedFlight} />;
   } else if (component) {
-    content = <ComponentDetailView component={component} flight={selectedFlight} />;
+    content = (
+      <ComponentDetailView
+        component={component}
+        crewCandidates={crewCandidates}
+        flight={selectedFlight}
+        releaseError={releaseError}
+        selectedWindow={selectedWindow}
+      />
+    );
   } else {
     content = (
       <FlightLegSummaryView
@@ -1327,6 +1568,10 @@ export default async function Home({ searchParams }: PageProps) {
     drawerObject === "flightLeg"
       ? dashboard.flights.find((flight) => flight.flightLegId === drawerId || flight.id === drawerId) ??
         null
+      : null;
+  const crewCandidates =
+    selectedFlight?.flightLegId && drawerView === "crew"
+      ? await resolveFlightCrewCandidates(selectedFlight.flightLegId)
       : null;
 
   return (
@@ -1555,6 +1800,7 @@ export default async function Home({ searchParams }: PageProps) {
         drawerView={drawerView}
         panel={panel}
         releaseError={releaseError}
+        crewCandidates={crewCandidates}
         selectedFlight={selectedFlight}
         selectedWindow={dashboard.selectedWindow}
       />

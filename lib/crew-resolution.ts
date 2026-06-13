@@ -2,6 +2,7 @@ import {
   AircraftType,
   AssignmentStatus,
   CrewPlannedComplianceEventStatus,
+  EmploymentStatus,
   Prisma,
   SeatRole,
 } from "@prisma/client";
@@ -84,6 +85,27 @@ export type AircraftCrewAssignmentsAt = {
   at: Date;
   assignedCrew: ResolvedCrewAssignment[];
   crewBySeatRole: Partial<Record<SeatRole, ResolvedCrewAssignment[]>>;
+};
+
+export type FlightCrewCandidate = {
+  conflictLabel: string | null;
+  coverageEligible: boolean;
+  crewMemberId: string;
+  crewMemberName: string;
+  dutyStatus: string;
+  eligibilityStatus: AssignmentEligibilityStatus;
+  employeeNumber: string;
+  isCurrentForRole: boolean;
+  qualificationWarnings: QualificationWarning[];
+  seatRole: SeatRole;
+};
+
+export type FlightCrewCandidateGroup = {
+  aircraftId: string;
+  aircraftType: AircraftType;
+  candidates: FlightCrewCandidate[];
+  flightLegId: string;
+  scheduledDeparture: Date;
 };
 
 const flightResolutionSelect = {
@@ -197,11 +219,22 @@ export async function resolveFlightCrew(flightId: string): Promise<FlightCrew | 
     return null;
   }
 
-  const assignedCrew = await resolveAssignmentsForAircraftAt(
-    flight.aircraftId,
-    flight.aircraftType,
-    flight.scheduledDeparture,
-  );
+  const flightLegAssignedCrew = flight.flightLegId
+    ? await resolveCrewLegAssignmentsAt(
+        flight.flightLegId,
+        flight.aircraftId,
+        flight.aircraftType,
+        flight.scheduledDeparture,
+      )
+    : [];
+  const assignedCrew =
+    flightLegAssignedCrew.length > 0
+      ? flightLegAssignedCrew
+      : await resolveAssignmentsForAircraftAt(
+          flight.aircraftId,
+          flight.aircraftType,
+          flight.scheduledDeparture,
+        );
 
   return {
     flightId: flight.flightId,
@@ -289,6 +322,225 @@ export async function resolveAircraftCrewAssignmentsAt(
     assignedCrew,
     crewBySeatRole: groupBySeatRole(assignedCrew),
   };
+}
+
+export async function resolveFlightCrewCandidates(
+  flightLegId: string,
+): Promise<FlightCrewCandidateGroup | null> {
+  const flight = await resolveFlightContextForCoverage(flightLegId);
+
+  if (!flight?.flightLegId) {
+    return null;
+  }
+
+  const currentAssignments = await resolveCrewLegAssignmentsAt(
+    flight.flightLegId,
+    flight.aircraftId,
+    flight.aircraftType,
+    flight.scheduledDeparture,
+  );
+  const currentCrewByRole = new Map(
+    currentAssignments.map((assignment) => [
+      `${assignment.seatRole}:${assignment.crewMemberId}`,
+      true,
+    ]),
+  );
+  const sameDayStart = new Date(flight.scheduledDeparture);
+  sameDayStart.setHours(0, 0, 0, 0);
+  const sameDayEnd = new Date(sameDayStart);
+  sameDayEnd.setDate(sameDayEnd.getDate() + 1);
+  const crewMembers = await prisma.crewMember.findMany({
+    where: {
+      employmentStatus: EmploymentStatus.ACTIVE,
+      qualifications: {
+        some: {
+          aircraftType: flight.aircraftType,
+          seatRole: { in: REQUIRED_COCKPIT_ROLES },
+        },
+      },
+    },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    select: {
+      id: true,
+      dutyStatus: true,
+      employeeNumber: true,
+      firstName: true,
+      lastName: true,
+      qualifications: {
+        where: {
+          aircraftType: flight.aircraftType,
+          seatRole: { in: REQUIRED_COCKPIT_ROLES },
+        },
+        select: {
+          aircraftType: true,
+          expiresAt: true,
+          seatRole: true,
+        },
+      },
+      plannedComplianceEvents: {
+        where: {
+          scheduledFor: { lte: flight.scheduledDeparture },
+          status: CrewPlannedComplianceEventStatus.SCHEDULED,
+        },
+        orderBy: { scheduledFor: "asc" },
+        select: {
+          aircraftType: true,
+          eventType: true,
+          scheduledFor: true,
+          seatRole: true,
+        },
+      },
+      legAssignments: {
+        where: {
+          flightLegId: { not: flight.flightLegId },
+          status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+          flightLeg: {
+            scheduledDeparture: {
+              gte: sameDayStart,
+              lt: sameDayEnd,
+            },
+          },
+        },
+        select: {
+          seatRole: true,
+          flightLeg: {
+            select: {
+              flightNumber: true,
+              scheduledDeparture: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const candidates = crewMembers.flatMap((crewMember) =>
+    crewMember.qualifications.map((qualification) => {
+      const eligibility = getAssignmentEligibility(
+        {
+          expiresAt: qualification.expiresAt,
+          hasMatchingQualification: true,
+          plannedEvents: crewMember.plannedComplianceEvents,
+        },
+        {
+          aircraftType: flight.aircraftType,
+          firstName: crewMember.firstName,
+          lastName: crewMember.lastName,
+          seatRole: qualification.seatRole,
+        },
+        flight.scheduledDeparture,
+      );
+      const conflict = crewMember.legAssignments[0] ?? null;
+
+      return {
+        conflictLabel: conflict
+          ? `${conflict.flightLeg.flightNumber} ${formatCandidateTime(conflict.flightLeg.scheduledDeparture)}`
+          : null,
+        coverageEligible: eligibility.coverageEligible,
+        crewMemberId: crewMember.id,
+        crewMemberName: `${crewMember.firstName} ${crewMember.lastName}`,
+        dutyStatus: crewMember.dutyStatus,
+        eligibilityStatus: eligibility.status,
+        employeeNumber: crewMember.employeeNumber,
+        isCurrentForRole: currentCrewByRole.has(`${qualification.seatRole}:${crewMember.id}`),
+        qualificationWarnings: eligibility.issues,
+        seatRole: qualification.seatRole,
+      };
+    }),
+  );
+
+  return {
+    aircraftId: flight.aircraftId,
+    aircraftType: flight.aircraftType,
+    candidates: candidates.sort(compareCrewCandidates),
+    flightLegId: flight.flightLegId,
+    scheduledDeparture: flight.scheduledDeparture,
+  };
+}
+
+async function resolveCrewLegAssignmentsAt(
+  flightLegId: string,
+  aircraftId: string,
+  aircraftType: AircraftType,
+  at: Date,
+): Promise<ResolvedCrewAssignment[]> {
+  const assignments = await prisma.crewLegAssignment.findMany({
+    where: {
+      flightLegId,
+      status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+    },
+    orderBy: [{ seatRole: "asc" }, { reportTime: "asc" }],
+    select: {
+      id: true,
+      seatRole: true,
+      reportTime: true,
+      releaseTime: true,
+      crewMember: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          qualifications: {
+            where: {
+              aircraftType,
+            },
+            select: {
+              aircraftType: true,
+              seatRole: true,
+              expiresAt: true,
+            },
+          },
+          plannedComplianceEvents: {
+            where: {
+              scheduledFor: { lte: at },
+              status: CrewPlannedComplianceEventStatus.SCHEDULED,
+            },
+            orderBy: { scheduledFor: "asc" },
+            select: {
+              aircraftType: true,
+              eventType: true,
+              scheduledFor: true,
+              seatRole: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return assignments.map((assignment) => {
+    const matchingQualification = assignment.crewMember.qualifications.find(
+      (qualification) => qualification.seatRole === assignment.seatRole,
+    );
+    const eligibility = getAssignmentEligibility(
+      {
+        expiresAt: matchingQualification?.expiresAt ?? null,
+        hasMatchingQualification: Boolean(matchingQualification),
+        plannedEvents: assignment.crewMember.plannedComplianceEvents,
+      },
+      {
+        aircraftType,
+        firstName: assignment.crewMember.firstName,
+        lastName: assignment.crewMember.lastName,
+        seatRole: assignment.seatRole,
+      },
+      at,
+    );
+
+    return {
+      assignmentId: assignment.id,
+      aircraftId,
+      coverageEligible: eligibility.coverageEligible,
+      crewMemberId: assignment.crewMember.id,
+      crewMemberName: `${assignment.crewMember.firstName} ${assignment.crewMember.lastName}`,
+      eligibilityStatus: eligibility.status,
+      seatRole: assignment.seatRole,
+      startsAt: assignment.reportTime ?? at,
+      endsAt: assignment.releaseTime,
+      hasQualificationWarning: eligibility.issues.length > 0,
+      qualificationWarnings: eligibility.issues,
+    };
+  });
 }
 
 async function resolveAssignmentsForAircraftAt(
@@ -400,6 +652,29 @@ function formatPlannedEvent(event: { eventType: string; scheduledFor: Date }): s
   }).format(event.scheduledFor);
 
   return `${label} scheduled ${scheduledFor}`;
+}
+
+function formatCandidateTime(value: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(value);
+}
+
+function compareCrewCandidates(first: FlightCrewCandidate, second: FlightCrewCandidate): number {
+  if (first.isCurrentForRole !== second.isCurrentForRole) {
+    return first.isCurrentForRole ? -1 : 1;
+  }
+
+  if (first.coverageEligible !== second.coverageEligible) {
+    return first.coverageEligible ? -1 : 1;
+  }
+
+  if (Boolean(first.conflictLabel) !== Boolean(second.conflictLabel)) {
+    return first.conflictLabel ? 1 : -1;
+  }
+
+  return first.crewMemberName.localeCompare(second.crewMemberName);
 }
 
 function getAssignmentEligibility(
