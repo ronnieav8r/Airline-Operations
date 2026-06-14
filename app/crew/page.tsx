@@ -2,25 +2,36 @@ import {
   AircraftType,
   DutyStatus,
   EmploymentStatus,
-  FlightLegStatus,
-  FlightStatus,
   SeatRole,
+  TimeOffRequestStatus,
 } from "@prisma/client";
 import Link from "next/link";
 import { ReactNode } from "react";
 
 import { createCrewMemberAction } from "@/app/crew/actions";
+import { reviewTimeOffRequestAction } from "@/app/crew/scheduling/time-off/actions";
 import { ContextDrawer } from "@/components/context-drawer";
 import { prisma } from "@/lib/prisma";
 import {
   getUpcomingCoverageFlightsForAircrafts,
   UpcomingCoverageFlight,
 } from "@/lib/flightleg-upcoming-coverage";
+import {
+  getTimeOffWorkflowData,
+  TimeOffWorkflowData,
+  TimeOffWorkflowRequest,
+} from "@/lib/time-off-workflow-queries";
 
 export const dynamic = "force-dynamic";
 
 const UPCOMING_WINDOW_DAYS = 7;
 const EXPIRING_SOON_DAYS = 30;
+const TIME_OFF_STATUS_FILTERS = [
+  TimeOffRequestStatus.PENDING,
+  TimeOffRequestStatus.APPROVED,
+  TimeOffRequestStatus.DENIED,
+  TimeOffRequestStatus.CANCELLED,
+] as const;
 
 type PageProps = {
   searchParams: Promise<{
@@ -31,6 +42,7 @@ type PageProps = {
     panel?: string | string[];
     selected?: string | string[];
     status?: string | string[];
+    timeOffStatus?: string | string[];
     error?: string | string[];
   }>;
 };
@@ -61,9 +73,10 @@ type CrewFilters = {
   base: string;
   duty: "all" | DutyStatus;
   issue: "all" | "warnings";
-  panel: "create" | "crew" | null;
+  panel: "create" | "crew" | "time-off" | null;
   selected: string | null;
   status: "all" | EmploymentStatus;
+  timeOffStatus: TimeOffRequestStatus | "all";
 };
 
 function firstParam(value: string | string[] | undefined): string | null {
@@ -86,9 +99,17 @@ function parseCrewFilters(searchParams: Awaited<PageProps["searchParams"]>): Cre
     base: firstParam(searchParams.base) ?? "all",
     duty: oneOf(firstParam(searchParams.duty), ["all", ...Object.values(DutyStatus)], "all"),
     issue: oneOf(firstParam(searchParams.issue), ["all", "warnings"], "all"),
-    panel: panelParam === "create" || panelParam === "crew" ? panelParam : null,
+    panel:
+      panelParam === "create" || panelParam === "crew" || panelParam === "time-off"
+        ? panelParam
+        : null,
     selected: firstParam(searchParams.selected),
     status: oneOf(firstParam(searchParams.status), ["all", ...Object.values(EmploymentStatus)], "all"),
+    timeOffStatus: oneOf(
+      firstParam(searchParams.timeOffStatus),
+      ["all", ...Object.values(TimeOffRequestStatus)],
+      TimeOffRequestStatus.PENDING,
+    ),
   };
 }
 
@@ -116,6 +137,9 @@ function crewHref(filters: CrewFilters, next: Partial<CrewFilters> = {}) {
   }
   if (merged.selected) {
     params.set("selected", merged.selected);
+  }
+  if (merged.panel === "time-off" && merged.timeOffStatus !== TimeOffRequestStatus.PENDING) {
+    params.set("timeOffStatus", merged.timeOffStatus);
   }
 
   const query = params.toString();
@@ -191,36 +215,17 @@ function dutyBadgeClasses(status: DutyStatus): string {
   return "border-zinc-200 bg-zinc-50 text-zinc-600";
 }
 
-function flightBadgeClasses(status: FlightStatus | FlightLegStatus): string {
-  if (status === FlightStatus.ENROUTE) {
-    return "border-blue-200 bg-blue-50 text-blue-700";
-  }
-  if (status === FlightStatus.DELAYED) {
-    return "border-rose-200 bg-rose-50 text-rose-700";
-  }
-  if (status === FlightStatus.CANCELLED) {
-    return "border-zinc-200 bg-zinc-50 text-zinc-500";
-  }
-  if (status === FlightStatus.COMPLETE) {
-    return "border-slate-200 bg-slate-50 text-slate-600";
-  }
-  return "border-emerald-200 bg-emerald-50 text-emerald-700";
-}
-
-function sourceBadgeClasses(readSource: UpcomingFlightRow["readSource"]): string {
-  if (readSource === "FLIGHT_LEG") {
+function timeOffBadgeClasses(status: TimeOffRequestStatus): string {
+  if (status === TimeOffRequestStatus.APPROVED) {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
-
-  return "border-amber-200 bg-amber-50 text-amber-800";
-}
-
-function sourceLabel(readSource: UpcomingFlightRow["readSource"]): string {
-  if (readSource === "FLIGHT_LEG") {
-    return "FlightLeg read";
+  if (status === TimeOffRequestStatus.PENDING) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
   }
-
-  return "Fallback Flight read";
+  if (status === TimeOffRequestStatus.DENIED) {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  return "border-zinc-200 bg-zinc-50 text-zinc-600";
 }
 
 function qualificationBadgeClasses(qualification: QualificationRow, now: Date): string {
@@ -307,44 +312,6 @@ function getQualificationWarnings(qualifications: QualificationRow[], now: Date)
 
 function assignmentLabel(assignment: CrewAssignmentRow): string {
   return `${formatRoleLabel(assignment.seatRole)} on ${assignment.aircraft.tailNumber}`;
-}
-
-function coverageLabel(flight: UpcomingFlightRow): string {
-  if (!flight.coverage) {
-    return "No coverage data";
-  }
-
-  if (!flight.coverage.isCovered) {
-    return `Missing ${flight.coverage.missingRoles.map(formatRoleLabel).join(", ")}`;
-  }
-
-  if (flight.coverage.warnings.length > 0) {
-    return `${flight.coverage.warnings.length} warning${
-      flight.coverage.warnings.length === 1 ? "" : "s"
-    }`;
-  }
-
-  return "Covered";
-}
-
-function coverageBadgeClasses(flight: UpcomingFlightRow): string {
-  if (!flight.coverage) {
-    return "border-zinc-200 bg-zinc-50 text-zinc-500";
-  }
-
-  const crewWarnings = flight.coverage.warnings.filter((warning) =>
-    flight.seatRoles.includes(warning.seatRole),
-  );
-
-  if (flight.coverage.isCovered && crewWarnings.length === 0) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  }
-
-  if (flight.coverage.isCovered) {
-    return "border-amber-200 bg-amber-50 text-amber-700";
-  }
-
-  return "border-rose-200 bg-rose-50 text-rose-700";
 }
 
 async function getCrewRosterData() {
@@ -617,20 +584,251 @@ function CrewFilterGroup({
   );
 }
 
+function TimeOffReviewButton({
+  label,
+  requestId,
+  returnTo,
+  status,
+  variant = "primary",
+}: {
+  label: string;
+  requestId: string;
+  returnTo: string;
+  status: TimeOffRequestStatus;
+  variant?: "primary" | "secondary";
+}) {
+  return (
+    <form action={reviewTimeOffRequestAction.bind(null, requestId, status)}>
+      <input name="returnTo" type="hidden" value={returnTo} />
+      <button
+        className={
+          variant === "primary"
+            ? "rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800"
+            : "rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+        }
+        type="submit"
+      >
+        {label}
+      </button>
+    </form>
+  );
+}
+
+function TimeOffRequestRow({
+  request,
+  returnTo,
+}: {
+  request: TimeOffWorkflowRequest;
+  returnTo: string;
+}) {
+  const crewName = `${request.crewMember.firstName} ${request.crewMember.lastName}`;
+
+  return (
+    <article className="rounded-md border border-zinc-200 bg-white p-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              className="font-semibold text-sky-700 hover:text-sky-900"
+              href={`/crew/${request.crewMember.id}`}
+            >
+              {crewName}
+            </Link>
+            <span className="text-xs text-zinc-500">#{request.crewMember.employeeNumber}</span>
+            <span
+              className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${timeOffBadgeClasses(
+                request.status,
+              )}`}
+            >
+              {statusLabel(request.status)}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-zinc-700">
+            {statusLabel(request.requestType)} | {toDateTime(request.startDate)} -{" "}
+            {toDateTime(request.endDate)}
+          </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Base {request.crewMember.baseStation.code}
+            {request.reviewedAt ? ` | reviewed ${toDateTime(request.reviewedAt)}` : ""}
+          </p>
+          {request.reason ? (
+            <p className="mt-2 text-sm text-zinc-600">{request.reason}</p>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {request.status === TimeOffRequestStatus.PENDING ? (
+            <>
+              <TimeOffReviewButton
+                label="Approve"
+                requestId={request.id}
+                returnTo={returnTo}
+                status={TimeOffRequestStatus.APPROVED}
+              />
+              <TimeOffReviewButton
+                label="Deny"
+                requestId={request.id}
+                returnTo={returnTo}
+                status={TimeOffRequestStatus.DENIED}
+                variant="secondary"
+              />
+              <TimeOffReviewButton
+                label="Cancel"
+                requestId={request.id}
+                returnTo={returnTo}
+                status={TimeOffRequestStatus.CANCELLED}
+                variant="secondary"
+              />
+            </>
+          ) : null}
+          {request.status === TimeOffRequestStatus.APPROVED ? (
+            <TimeOffReviewButton
+              label="Cancel approved"
+              requestId={request.id}
+              returnTo={returnTo}
+              status={TimeOffRequestStatus.CANCELLED}
+              variant="secondary"
+            />
+          ) : null}
+        </div>
+      </div>
+      {request.conflictWarnings.length > 0 ? (
+        <ul className="mt-3 space-y-1.5 text-xs text-amber-900">
+          {request.conflictWarnings.map((warning) => (
+            <li className="rounded-md border border-amber-200 bg-amber-50 p-2" key={warning}>
+              {warning}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </article>
+  );
+}
+
+function TimeOffDrawer({
+  filters,
+  timeOffData,
+}: {
+  filters: CrewFilters;
+  timeOffData: TimeOffWorkflowData;
+}) {
+  const closeHref = crewHref(filters, { panel: null, selected: null });
+  const returnTo = crewHref(filters, { panel: "time-off", selected: null });
+  const visibleRequests =
+    filters.timeOffStatus === "all"
+      ? TIME_OFF_STATUS_FILTERS.flatMap((status) => timeOffData.requestsByStatus[status])
+      : timeOffData.requestsByStatus[filters.timeOffStatus];
+
+  return (
+    <ContextDrawer closeHref={closeHref} eyebrow="Ops review" size="wide" title="Time-Off Requests">
+      <div className="space-y-4">
+        <section className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-zinc-950">Action queue</p>
+              <p className="mt-1 text-sm text-zinc-600">
+                Pending requests are the operational work. Approved, denied, and
+                cancelled are available here for review.
+              </p>
+            </div>
+            <Link
+              className="text-xs font-semibold text-sky-700 hover:text-sky-900"
+              href="/crew/scheduling/time-off"
+            >
+              Full page
+            </Link>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              className={
+                filters.timeOffStatus === TimeOffRequestStatus.PENDING
+                  ? "rounded-full bg-zinc-950 px-3 py-1 text-xs font-semibold text-white"
+                  : "rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+              }
+              href={crewHref(filters, {
+                panel: "time-off",
+                selected: null,
+                timeOffStatus: TimeOffRequestStatus.PENDING,
+              })}
+            >
+              Pending
+            </Link>
+            {TIME_OFF_STATUS_FILTERS.filter(
+              (status) => status !== TimeOffRequestStatus.PENDING,
+            ).map((status) => (
+              <Link
+                className={
+                  filters.timeOffStatus === status
+                    ? "rounded-full bg-zinc-950 px-3 py-1 text-xs font-semibold text-white"
+                    : "rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                }
+                href={crewHref(filters, { panel: "time-off", selected: null, timeOffStatus: status })}
+                key={status}
+              >
+                {statusLabel(status)}
+              </Link>
+            ))}
+            <Link
+              className={
+                filters.timeOffStatus === "all"
+                  ? "rounded-full bg-zinc-950 px-3 py-1 text-xs font-semibold text-white"
+                  : "rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+              }
+              href={crewHref(filters, { panel: "time-off", selected: null, timeOffStatus: "all" })}
+            >
+              All
+            </Link>
+          </div>
+        </section>
+
+        <section className="grid gap-2 sm:grid-cols-4">
+          {TIME_OFF_STATUS_FILTERS.map((status) => (
+            <article className="rounded-md border border-zinc-200 bg-white p-3" key={status}>
+              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">
+                {statusLabel(status)}
+              </p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {timeOffData.summary[status]}
+              </p>
+            </article>
+          ))}
+        </section>
+
+        <section className="space-y-2">
+          {visibleRequests.length === 0 ? (
+            <p className="rounded-md border border-zinc-200 bg-white p-3 text-sm text-zinc-600">
+              No {statusLabel(filters.timeOffStatus).toLowerCase()} time-off requests.
+            </p>
+          ) : (
+            visibleRequests.map((request) => (
+              <TimeOffRequestRow key={request.id} request={request} returnTo={returnTo} />
+            ))
+          )}
+        </section>
+      </div>
+    </ContextDrawer>
+  );
+}
+
 function CrewDrawer({
   crewMembers,
   filters,
   roster,
+  timeOffData,
 }: {
   crewMembers: CrewMemberRow[];
   filters: CrewFilters;
   roster: Awaited<ReturnType<typeof getCrewRosterData>>;
+  timeOffData: TimeOffWorkflowData;
 }) {
   if (!filters.panel) {
     return null;
   }
 
   const closeHref = crewHref(filters, { panel: null, selected: null });
+  if (filters.panel === "time-off") {
+    return <TimeOffDrawer filters={filters} timeOffData={timeOffData} />;
+  }
+
   if (filters.panel === "create") {
     return (
       <ContextDrawer closeHref={closeHref} eyebrow="Crew workflow" size="wide" title="Add Crew Member">
@@ -666,7 +864,8 @@ function CrewDrawer({
   return (
     <ContextDrawer
       closeHref={closeHref}
-      eyebrow="Crew quick review"
+      eyebrow="Crew profile"
+      size="wide"
       title={`${crewMember.firstName} ${crewMember.lastName}`}
     >
       <div className="space-y-4">
@@ -683,8 +882,48 @@ function CrewDrawer({
             Base {crewMember.baseStation.code} - {crewMember.baseStation.city}
           </p>
           <p className="mt-1 text-sm text-zinc-600">
-            {crewMember.email ?? "No email"} {crewMember.phone ? `| ${crewMember.phone}` : ""}
+            {crewMember.email ?? "No email"} | {crewMember.phone ?? "No phone"}
           </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Employee #{crewMember.employeeNumber}
+          </p>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Qualifications
+          </h3>
+          {crewMember.qualifications.length ? (
+            <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+              {crewMember.qualifications.map((qualification) => (
+                <li
+                  className="rounded-lg border border-zinc-200 bg-zinc-50 p-2 text-sm"
+                  key={qualification.id}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-zinc-950">
+                      {formatAircraftType(qualification.aircraftType)}{" "}
+                      {formatRoleLabel(qualification.seatRole)}
+                    </span>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${qualificationBadgeClasses(
+                        qualification,
+                        roster.now,
+                      )}`}
+                    >
+                      {qualificationStatus(qualification, roster.now)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-600">
+                    Issued {toDate(qualification.issuedAt)} | Expires{" "}
+                    {toDate(qualification.expiresAt)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-zinc-600">No qualifications recorded.</p>
+          )}
         </section>
 
         <section className="rounded-xl border border-zinc-200 bg-white p-3">
@@ -753,6 +992,16 @@ function CrewDrawer({
           <Link className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white" href={`/crew/${crewMember.id}`}>
             Crew detail
           </Link>
+          <Link
+            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"
+            href={crewHref(filters, {
+              panel: "time-off",
+              selected: null,
+              timeOffStatus: TimeOffRequestStatus.PENDING,
+            })}
+          >
+            Time off
+          </Link>
           <Link className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700" href={`/crew/${crewMember.id}/logistics`}>
             Logistics
           </Link>
@@ -764,8 +1013,17 @@ function CrewDrawer({
 
 export default async function CrewPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const roster = await getCrewRosterData();
   const filters = parseCrewFilters(params);
+  const [roster, timeOffData] = await Promise.all([
+    getCrewRosterData(),
+    getTimeOffWorkflowData({
+      crewMemberId: "all",
+      fromDate: null,
+      requestType: "all",
+      status: "all",
+      toDate: null,
+    }),
+  ]);
   const error = firstParam(params.error);
   const filteredCrewMembers = filterCrewMembers(roster.crewMembers, filters, roster.now);
   const baseOptions = Array.from(new Set(roster.crewMembers.map((crewMember) => crewMember.baseStation.code))).sort();
@@ -816,7 +1074,11 @@ export default async function CrewPage({ searchParams }: PageProps) {
               </Link>
               <Link
                 className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-                href="/crew/scheduling/time-off"
+                href={crewHref(filters, {
+                  panel: "time-off",
+                  selected: null,
+                  timeOffStatus: TimeOffRequestStatus.PENDING,
+                })}
               >
                 Time off
               </Link>
@@ -946,182 +1208,103 @@ export default async function CrewPage({ searchParams }: PageProps) {
                 const warnings = crewWarnings(crewMember, roster.now);
 
                 return (
-                  <article
-                    className="rounded-md border border-zinc-200 bg-white p-4"
+                  <Link
+                    className="group block rounded-md border border-zinc-200 bg-white px-3 py-2.5 transition hover:border-sky-200 hover:bg-sky-50"
+                    href={crewHref(filters, { panel: "crew", selected: crewMember.id })}
                     key={crewMember.id}
                   >
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
+                    <article className="grid gap-3 lg:grid-cols-[minmax(15rem,1.2fr)_minmax(14rem,1fr)_minmax(13rem,0.9fr)_minmax(12rem,0.8fr)] lg:items-center">
+                      <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Link
-                            className="text-lg font-semibold text-sky-700 hover:text-sky-900"
-                            href={crewHref(filters, { panel: "crew", selected: crewMember.id })}
-                          >
+                          <span className="font-semibold text-zinc-950 group-hover:text-sky-900">
                             {crewMember.firstName} {crewMember.lastName}
-                          </Link>
+                          </span>
                           <span className="text-xs text-zinc-500">
                             #{crewMember.employeeNumber}
                           </span>
                         </div>
-                        <p className="mt-1 text-sm text-zinc-600">
-                          Base {crewMember.baseStation.code} - {crewMember.baseStation.city}
-                          {crewMember.email ? ` | ${crewMember.email}` : ""}
+                        <p className="mt-1 truncate text-xs text-zinc-600">
+                          {crewMember.baseStation.code} - {crewMember.baseStation.city}
+                          {crewMember.email ? ` | ${crewMember.email}` : " | no email"}
                         </p>
-                        <Link
-                          className="mt-2 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
-                          href={`/crew/${crewMember.id}`}
-                        >
-                          Crew detail
-                        </Link>
-                        <Link
-                          className="ml-3 mt-2 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
-                          href={`/crew/${crewMember.id}/logistics`}
-                        >
-                          Manage logistics
-                        </Link>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+
+                      <div className="flex flex-wrap gap-1.5">
                         <span
-                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${employmentBadgeClasses(
+                          className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${employmentBadgeClasses(
                             crewMember.employmentStatus,
                           )}`}
                         >
                           {statusLabel(crewMember.employmentStatus)}
                         </span>
                         <span
-                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${dutyBadgeClasses(
+                          className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${dutyBadgeClasses(
                             crewMember.dutyStatus,
                           )}`}
                         >
                           {statusLabel(crewMember.dutyStatus)}
                         </span>
+                        {warnings.length > 0 ? (
+                          <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            {warnings.length} warning{warnings.length === 1 ? "" : "s"}
+                          </span>
+                        ) : null}
                       </div>
-                    </div>
 
-                    <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                          Current Aircraft Assignment
-                        </h3>
+                      <div className="min-w-0 text-xs text-zinc-600">
                         {crewMember.assignments.length === 0 ? (
-                          <p className="mt-2 text-sm text-zinc-600">
-                            No active aircraft assignment at this time.
-                          </p>
+                          <p>No active aircraft assignment</p>
                         ) : (
-                          <ul className="mt-2 space-y-2 text-sm">
-                            {crewMember.assignments.map((assignment) => (
-                              <li key={assignment.id}>
-                                <div className="font-medium text-zinc-900">
-                                  {assignmentLabel(assignment)}
-                                </div>
-                                <div className="text-xs text-zinc-500">
-                                  {formatAircraftType(assignment.aircraft.type)} |{" "}
-                                  {assignment.aircraft.status} | since{" "}
-                                  {toDateTime(assignment.startsAt)}
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
+                          <p className="truncate">
+                            {crewMember.assignments.map(assignmentLabel).join(", ")}
+                          </p>
                         )}
                       </div>
 
-                      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                          Qualifications
-                        </h3>
+                      <div className="min-w-0">
                         {crewMember.qualifications.length === 0 ? (
-                          <p className="mt-2 text-sm text-zinc-600">No qualifications recorded.</p>
+                          <p className="text-xs text-zinc-500">No qualifications</p>
                         ) : (
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {crewMember.qualifications.map((qualification) => (
-                              <span
-                                className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${qualificationBadgeClasses(
-                                  qualification,
-                                  roster.now,
-                                )}`}
-                                key={qualification.id}
-                              >
-                                {formatAircraftType(qualification.aircraftType)}{" "}
-                                {formatRoleLabel(qualification.seatRole)} -{" "}
-                                {qualificationStatus(qualification, roster.now)}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {warnings.length > 0 && (
-                          <ul className="mt-3 space-y-1.5 text-xs text-amber-800">
-                            {warnings.map((warning) => (
-                              <li
-                                className="rounded-md border border-amber-200 bg-amber-50 p-2"
-                                key={warning}
-                              >
-                                {warning}
-                              </li>
-                            ))}
-                          </ul>
+                          <p className="truncate text-xs text-zinc-600">
+                            {crewMember.qualifications
+                              .slice(0, 3)
+                              .map(
+                                (qualification) =>
+                                  `${formatAircraftType(qualification.aircraftType)} ${formatRoleLabel(
+                                    qualification.seatRole,
+                                  )}`,
+                              )
+                              .join(", ")}
+                            {crewMember.qualifications.length > 3
+                              ? ` +${crewMember.qualifications.length - 3}`
+                              : ""}
+                          </p>
                         )}
                       </div>
 
-                      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                          Upcoming Flight Coverage
-                        </h3>
+                      <div className="flex items-center justify-between gap-3 text-xs text-zinc-500 lg:col-start-4">
                         {upcomingFlights.length === 0 ? (
-                          <p className="mt-2 text-sm text-zinc-600">
-                            No covered flights found in the upcoming window.
-                          </p>
+                          <span>No upcoming covered legs</span>
                         ) : (
-                          <ul className="mt-2 space-y-2 text-sm">
-                            {upcomingFlights.map((flight) => (
-                              <li
-                                className="rounded-md border border-zinc-200 bg-white p-2"
-                                key={flight.id}
-                              >
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="font-semibold text-zinc-950">
-                                    {flight.flightNumber}
-                                  </span>
-                                  <span
-                                    className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${flightBadgeClasses(
-                                      flight.status,
-                                    )}`}
-                                  >
-                                    {flight.status}
-                                  </span>
-                                </div>
-                                <div className="mt-1 text-xs text-zinc-600">
-                                  {toDateTime(flight.scheduledDeparture)} |{" "}
-                                  {flight.departureCode} -&gt; {flight.arrivalCode} |{" "}
-                                  {flight.tailNumber} |{" "}
-                                  {flight.seatRoles.map(formatRoleLabel).join(", ")}
-                                </div>
-                                <span
-                                  className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceBadgeClasses(
-                                    flight.readSource,
-                                  )}`}
-                                >
-                                  {sourceLabel(flight.readSource)}
-                                </span>
-                                <span
-                                  className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${coverageBadgeClasses(
-                                    flight,
-                                  )}`}
-                                >
-                                  {coverageLabel(flight)}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
+                          <span>{upcomingFlights.length} upcoming covered leg{upcomingFlights.length === 1 ? "" : "s"}</span>
                         )}
+                        <span className="font-semibold text-sky-700 group-hover:text-sky-900">
+                          Open
+                        </span>
                       </div>
-                    </div>
-                  </article>
+                    </article>
+                  </Link>
                 );
               })}
             </div>
           )}
         </section>
-        <CrewDrawer crewMembers={roster.crewMembers} filters={filters} roster={roster} />
+        <CrewDrawer
+          crewMembers={roster.crewMembers}
+          filters={filters}
+          roster={roster}
+          timeOffData={timeOffData}
+        />
       </div>
     </main>
   );

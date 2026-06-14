@@ -103,11 +103,28 @@ function encodeError(error: unknown): string {
 function getSafeReturnTo(formData: FormData): string {
   const returnTo = getOptionalText(formData, "returnTo");
 
-  if (!returnTo || !returnTo.startsWith("/crew/scheduling/time-off")) {
+  if (!returnTo) {
     return "/crew/scheduling/time-off";
   }
 
-  return returnTo;
+  const parsed = new URL(returnTo, "http://aeroops.local");
+
+  if (parsed.origin !== "http://aeroops.local") {
+    return "/crew/scheduling/time-off";
+  }
+
+  if (parsed.pathname !== "/crew/scheduling/time-off" && parsed.pathname !== "/crew") {
+    return "/crew/scheduling/time-off";
+  }
+
+  return `${parsed.pathname}${parsed.search}`;
+}
+
+function returnToWithError(returnTo: string, error: unknown): string {
+  const parsed = new URL(returnTo, "http://aeroops.local");
+
+  parsed.searchParams.set("error", encodeError(error));
+  return `${parsed.pathname}${parsed.search}`;
 }
 
 async function ensureActiveCrewMember(tx: Prisma.TransactionClient, crewMemberId: string) {
@@ -200,7 +217,7 @@ export async function createTimeOffRequestAction(formData: FormData) {
       });
     });
   } catch (error) {
-    redirect(`/crew/scheduling/time-off?error=${encodeError(error)}`);
+    redirect(returnToWithError(returnTo, error));
   }
 
   revalidateTimeOffWorkflowPaths(crewMemberId);
@@ -238,7 +255,7 @@ export async function reviewTimeOffRequestAction(
       });
     });
   } catch (error) {
-    redirect(`/crew/scheduling/time-off?error=${encodeError(error)}`);
+    redirect(returnToWithError(returnTo, error));
   }
 
   revalidateTimeOffWorkflowPaths(crewMemberId);
