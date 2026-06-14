@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-06-11
+Last updated: 2026-06-14
 
 This document is the quick onboarding note for planner and builder chats. Read it
 before starting a new AeroOps slice.
@@ -16,10 +16,10 @@ The current active tracks are:
   warning-first scope. See `docs/BACKEND_MVP_STATE.md`,
   `docs/BACKEND_MVP_FINAL_SMOKE_QA.md`, and
   `docs/BACKEND_MVP_GAP_REVIEW.md`.
-- **Frontend readiness**: Prompt 255 planned the handoff into UI/frontend work
-  using the stable backend contracts. Prompt 256 was inserted for ADS-B
-  provider-neutral planning, and Prompt 257 was inserted for docs cleanup;
-  frontend IA should start at Prompt 258.
+- **Frontend/UI polish**: active work is now page-by-page operational workflow
+  refinement. Recent slices split Ops Release/Preflight/Postflight, added
+  reusable customer/passenger/manifest workflows, and simplified the aircraft
+  board into fleet-status filters.
 - **FlightLeg cutover**: Prompt 216 is implemented. Crew-heavy internal
   coverage consumers now prefer FlightLeg IDs while keeping legacy fallback and
   public API compatibility. Legacy `Flight` remains compatibility/archive.
@@ -88,13 +88,16 @@ It has:
 - Release snapshot detail at
   `/operations-control/[flightLegId]/snapshots/[snapshotId]`
 - Flights at `/flights`
+- Customers and passenger records at `/customers`
 - Aircraft at `/aircraft`
 - Crew at `/crew`
 - Scheduling at `/scheduling`
 - Shared URL-driven quick-review drawers across Dashboard, Flights, Aircraft,
   Crew, and Scheduling
 - Dashboard FlightLeg object-action drawer with summary, release, MX, crew,
-  manifest, W&B, locating, dispatch, and audit subviews
+  manifest, flight-plan basis, Preflight, Postflight, and audit subviews
+- FlightLeg detail contains Preflight and Postflight phase forms; standalone
+  phase routes are not currently implemented.
 - Dashboard release pill workflow for ready/released flights, with authorized
   confirmation or credential-based release authorization
 - Health endpoint at `/api/health`
@@ -1950,16 +1953,41 @@ coverage. Static validation passed with `npm run typecheck`, `npm run lint`,
 and `npm run build`. Authenticated browser smoke was not rerun in that final
 pass because Docker Desktop/local PostgreSQL was unavailable.
 
+Latest workflow/UI refinements are complete. Crew eligibility now evaluates as
+of the flight scheduled departure; planned compliance events can show pending
+intent but do not count as clean coverage. Ops Release, Preflight, and
+Postflight are split, with dispatcher support and manifest mode handled through
+operator settings. Customers and passengers are reusable records linked through
+`CustomerPassenger`, and `ManifestItem` is now the FlightLeg-specific manifest
+source of truth. `/customers` supports customer/passenger management, FlightLeg
+creation uses customer selection, and manifest workflows add reusable passengers
+with customer-linked suggestions first. Static validation and the focused
+customer/passenger/manifest smoke passed during that slice.
+
+Latest aircraft board cleanup is complete. `/aircraft` now uses six clickable
+fleet-status filters: Aircraft, Available, In flight, AOG, Open MELs, and Open
+write-ups. AOG currently maps to aircraft `OUT_OF_SERVICE`; deeper maintenance
+workflow planning around AOG, write-ups, MELs, CDL, NEF/EFL terminology,
+airworthiness, and operational limitations remains next. Static validation
+passed with `npm run typecheck`, `npm run lint`, and `npm run build`; browser
+checks covered `/aircraft`, `/aircraft?filter=aog`,
+`/aircraft?filter=open-mels`, and `/aircraft?filter=open-writeups`.
+
 Next recommended workstream:
 
 ```text
-Frontend/UI polish continuing with Prompt 262
+Frontend/UI polish continuing with drawer-contained issue fixing and aircraft
+create/maintenance planning
 ```
 
 Scope:
 
 - Continue page-by-page frontend IA review and app-shell polish. Start from
   `docs/CURRENT_HANDOFF.md`.
+- Add the aircraft create drawer from `/aircraft`.
+- Plan the maintenance workbench/tab before expanding aircraft-board metrics.
+- Continue drawer-contained issue fixing, especially crew assignment from the
+  FlightLeg drawer.
 - Preserve backend contracts in `docs/BACKEND_MVP_STATE.md`.
 - Keep backend post-MVP gaps deferred unless separately planned.
 - Plan operator-specific release UI/configuration rules before making release

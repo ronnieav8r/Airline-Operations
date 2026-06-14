@@ -1,6 +1,6 @@
 # Frontend Readiness Plan
 
-Last updated: 2026-06-11
+Last updated: 2026-06-14
 
 ## Status
 
@@ -21,11 +21,18 @@ Frontend work should preserve the backend contracts in
 - `ReleasePackage` is the evidence package wrapper with preview/final capture.
 - `AircraftCrewAssignment` is the operational aircraft staffing source of
   truth.
+- Crew eligibility is evaluated as of the FlightLeg scheduled departure.
+  Pending planned compliance events may explain scheduling intent, but they do
+  not count as clean coverage.
 - `CrewScheduleEntry` and `CrewSchedule` are schedule/availability records, not
   aircraft assignment automation.
 - Crew compliance and duty/rest outputs are warnings/evidence, not legal
   enforcement.
 - Crew Logistics is manual coordination only; no provider booking is available.
+- Ops Release, Preflight, and Postflight are separate workflow phases. Fuel and
+  weight-and-balance are Preflight-owned when dispatcher support is off.
+- `Customer` and `Passenger` are reusable records. `CustomerPassenger` links
+  them, and `ManifestItem` is the FlightLeg-specific passenger manifest.
 - Role-gated workflows should remain protected by existing auth helpers.
 
 ## First UI Tracks
@@ -85,6 +92,13 @@ views.
 
 Suggested slices:
 
+- Keep the aircraft board focused on fleet status: Aircraft, Available, In
+  flight, AOG, Open MELs, and Open write-ups.
+- Add a drawer-based aircraft create workflow before adding more aircraft-board
+  metrics.
+- Move deeper maintenance concepts into a focused maintenance workflow/tab:
+  AOG, write-ups, MELs, CDL, NEF/EFL terminology, airworthiness, and
+  operational limitations.
 - Improve aircraft detail hierarchy for assignment, airworthiness, upcoming
   legs, crew coverage, and logistics.
 - Improve crew detail hierarchy for compliance, schedule, assignments, time
@@ -121,20 +135,27 @@ Prompt 259 followed with release-readiness labels, MX visibility, hour-based
 lookahead controls, and dashboard quick-review drawers. Prompt 260 reflowed the
 dashboard body and added the first app-wide light/dark view toggle. Prompt 261
 added the Flights page drilldown foundation. Prompts 265-269 were used for the
-fuel ledger and release fuel readiness chain. The latest dashboard drawer
-refinement removed duplicate release summary content, made fuel/manifest/crew
-cards more useful at a glance, and routed actionable cards to existing
-workflows.
+fuel ledger and release fuel readiness chain. Subsequent frontend/backend slices
+split Ops Release, Preflight, and Postflight; added crew eligibility with
+planned compliance events; added customer/passenger records and reusable
+manifest workflow; added manifest access from the FlightLeg drawer; and
+simplified the aircraft board into clickable fleet status filters.
 
 - Prompt 258: Dashboard Compact Ops Foundation.
 - Prompt 259: Dashboard Release Readiness Drawer Foundation.
 - Prompt 260: Dashboard Layout And Theme Foundation.
 - Prompt 261: Flights Page Drilldown Foundation.
 - Fuel ledger chain: Prompts 265-269.
-- Current drawer refinement: dashboard FlightLeg workspace summary cleanup.
-- Next recommended slice: continue FlightLeg drawer/workspace planning for
-  manifest depth, MX restrictions, dispatch depth, and future drawer-contained
-  forms.
+- Release workflow split: Ops Release, Preflight, Postflight, dispatcher
+  setting, manifest mode, and flight-plan/locating basis.
+- Customer/passenger/manifest chain: `/customers`, customer selector on
+  FlightLeg create, reusable passengers, and passenger-first manifest workflow.
+- Current drawer refinement: dashboard FlightLeg workspace summary cleanup plus
+  manifest add-passenger access.
+- Current aircraft refinement: `/aircraft` fleet-status tiles and URL filters
+  for AOG, Open MELs, and Open write-ups.
+- Next recommended slice: add the aircraft create drawer, then plan the
+  maintenance workbench/tab information architecture.
 
 ## Backend Work To Avoid During UI Polish
 
@@ -151,11 +172,10 @@ workflows.
 
 ## Release UI Configuration Follow-Up
 
-Dashboard release-readiness is still using the app's existing global rules. A
-future planning slice should define operator-controlled release display and
-readiness preferences, including whether manifest, W&B, flight following,
-dispatch/current information, MX, crew, or duty/rest are enabled, required,
-warning-only, hidden, or operation-type specific.
+Dashboard release-readiness now has the first operator-controlled split:
+dispatcher support, manifest mode, and flight-plan/locating basis. Future
+planning should continue refining operator-controlled display and readiness
+preferences without turning warning-first checks into legal signoff.
 
 ## Acceptance For Frontend Handoff
 

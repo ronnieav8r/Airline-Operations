@@ -1,6 +1,6 @@
 # AeroOps Current Handoff
 
-Last updated: 2026-06-13
+Last updated: 2026-06-14
 
 ## Current State
 
@@ -10,15 +10,26 @@ post-MVP unless separately planned.
 
 Latest completed work:
 
-- Fuel ledger and release fuel readiness are implemented.
-- `/admin/settings` edits the operator Jet A density setting.
-- `/aircraft/[aircraftId]/fuel` records aircraft fuel uplift, defuel, and
-  correction events.
-- `/operations-control/[flightLegId]/fuel` records release fuel onboard,
-  fueled-ready state, and postflight fuel onboard.
-- Dashboard FlightLeg drawer summary was refined to reduce duplicate release
-  content, show clearer fuel/manifest/crew context, and surface crew
-  qualification warnings as warning state.
+- Crew eligibility now resolves as of the flight scheduled departure. Pending
+  planned compliance events show planning intent, but only eligible/warning
+  crew count as clean coverage.
+- Flight workflow is split into Ops Release, Preflight, and Postflight.
+  Dispatcher and manifest modes are operator settings; flight locating is only
+  required when no FAA flight plan is filed.
+- Customer and passenger records are now reusable data. `Customer` and
+  `Passenger` stay separate, linked through `CustomerPassenger`; `ManifestItem`
+  is the flight-specific manifest source of truth.
+- `/customers` is available for customer/passenger search, create, edit, and
+  linking. FlightLeg creation uses customer selection instead of free-text
+  customer creation.
+- Manifest workflows now prioritize adding reusable passengers, suggest
+  customer-linked passengers first, and can create/link a passenger from the
+  manifest flow.
+- Dashboard FlightLeg drawer includes a manifest action panel so passengers can
+  be added from the object-action workspace.
+- `/aircraft` was simplified from a dense metric board into six clickable fleet
+  status filters: Aircraft, Available, In flight, AOG, Open MELs, and Open
+  write-ups. AOG currently maps to aircraft `OUT_OF_SERVICE`.
 
 ## Current UI Direction
 
@@ -31,29 +42,43 @@ The dashboard drawer should become an object-action workspace:
   available.
 - Full drawer edit workflows are a future goal, but current routes remain the
   fallback until each drawer workflow is deliberately migrated.
+- Avoid routing drawer cards to broad pages when the user is trying to fix one
+  specific issue. The drawer should show the focused fix surface when practical.
+- Aircraft should stay a fleet inventory/status board. Detailed maintenance
+  workflows need their own focused surface instead of adding more top-level
+  aircraft counters.
 
 ## Known Current Follow-Ups
 
 - Add aircraft fuel burn/range/endurance settings before showing calculated
   endurance or conservative range.
-- Plan manifest depth: crew/passenger status, onboard/no-show, ID verified,
-  no-fly/watchlist verification, and the external verification boundary.
+- Add an aircraft create drawer from `/aircraft`.
+- Plan maintenance depth around AOG, open write-ups, MELs, CDL, and NEF/EFL
+  terminology. MELs should be the primary deferred-discrepancy language for
+  Part 91/135 jet workflows unless a later policy slice defines otherwise.
+- Continue manifest depth: passenger status, onboard/no-show, ID verified,
+  passport/identity document depth, no-fly/watchlist verification, and the
+  external verification boundary.
 - Plan dispatch/current-information depth.
 - Plan MX depth: next service due, MEL restrictions, operational limitations,
   and how those warnings should appear in release review.
-- Continue page-by-page UI polish after dashboard/drawer review.
+- Continue drawer-contained issue fixing, especially crew assignment from the
+  FlightLeg drawer.
+- Continue page-by-page UI polish after dashboard, flights, customers, and
+  aircraft review.
 
 ## Validation Status
 
-Most recent static validation passed after the drawer refinement:
+Most recent aircraft-board slice passed:
 
 - `npm run typecheck`
 - `npm run lint`
 - `npm run build`
+- Browser checks for `/aircraft`, `/aircraft?filter=aog`,
+  `/aircraft?filter=open-mels`, and `/aircraft?filter=open-writeups`.
 
-Authenticated local browser smoke was not completed in the latest drawer pass
-because Docker Desktop/local PostgreSQL was not running. Previous backend MVP
-and fuel workflow smoke checks passed before that environment issue.
+Recent manifest/customer work also added `npm run smoke:customer-passenger-manifest`
+coverage. Keep DB-backed smoke checks narrow when continuing UI slices.
 
 ## Required Start Files For Next Builder
 
