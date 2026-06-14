@@ -32,10 +32,13 @@ type PageProps = {
     drawer?: string | string[];
     layer?: string | string[];
     role?: string | string[];
+    sort?: string | string[];
     tab?: string | string[];
     view?: string | string[];
   }>;
 };
+
+type PersonnelSort = "status" | "name";
 
 type WorkbenchState = {
   aircraftId: string;
@@ -46,6 +49,7 @@ type WorkbenchState = {
   drawer: CrewSchedulingWorkbenchDrawer | "none";
   filters: CrewSchedulingWorkbenchFilters;
   layer: CrewSchedulingWorkbenchLayer;
+  sort: PersonnelSort;
   tab: CrewSchedulingWorkbenchTab;
   view: CrewSchedulingWorkbenchView;
 };
@@ -86,6 +90,13 @@ function inputDate(value: Date): string {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(
     value.getDate(),
   ).padStart(2, "0")}`;
+}
+
+function startOfWeekDate(value: Date): Date {
+  const next = new Date(value);
+  next.setHours(0, 0, 0, 0);
+  next.setDate(next.getDate() - next.getDay());
+  return next;
 }
 
 function toDate(value: Date): string {
@@ -145,6 +156,7 @@ function parseState(searchParams: Awaited<PageProps["searchParams"]>): Workbench
       role: requestedRole,
     },
     layer: oneOf(firstParam(searchParams.layer), CREW_SCHEDULING_WORKBENCH_LAYERS, "schedule"),
+    sort: oneOf(firstParam(searchParams.sort), ["status", "name"] as const, "status"),
     tab: oneOf(firstParam(searchParams.tab), CREW_SCHEDULING_WORKBENCH_TABS, "coverage"),
     view: oneOf(firstParam(searchParams.view), CREW_SCHEDULING_WORKBENCH_VIEWS, "week"),
   };
@@ -160,6 +172,7 @@ function buildHref(state: WorkbenchState, overrides: Partial<{
   drawer: CrewSchedulingWorkbenchDrawer | "none";
   layer: CrewSchedulingWorkbenchLayer;
   role: SeatRole | "all";
+  sort: PersonnelSort;
   tab: CrewSchedulingWorkbenchTab;
   view: CrewSchedulingWorkbenchView;
 }> = {}): string {
@@ -174,6 +187,7 @@ function buildHref(state: WorkbenchState, overrides: Partial<{
     drawer: state.drawer,
     layer: state.layer,
     role: state.filters.role,
+    sort: state.sort,
     tab: state.tab,
     view: state.view,
     ...overrides,
@@ -186,6 +200,7 @@ function buildHref(state: WorkbenchState, overrides: Partial<{
   params.set("aircraftType", next.aircraftType);
   params.set("role", next.role);
   params.set("base", next.base);
+  params.set("sort", next.sort);
 
   if (next.drawer !== "none") {
     params.set("drawer", next.drawer);
@@ -229,7 +244,7 @@ function CountPill({
   };
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.68rem] font-semibold ${toneClasses[tone]}`}>
+    <span className={`inline-flex whitespace-nowrap items-center gap-1 rounded-full border px-2 py-0.5 text-[0.68rem] font-semibold ${toneClasses[tone]}`}>
       {label} <span className="tabular-nums">{value}</span>
     </span>
   );
@@ -277,6 +292,7 @@ function WorkbenchFilters({ data, state }: { data: CrewSchedulingWorkbenchData; 
       <form className="grid gap-3 lg:grid-cols-8" method="get">
         <input name="tab" type="hidden" value={state.tab} />
         <input name="layer" type="hidden" value={state.layer} />
+        <input name="sort" type="hidden" value={state.sort} />
         <label className="block">
           <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">View</span>
           <select
@@ -387,9 +403,12 @@ function BucketCard({
       className="block rounded-md border border-zinc-200 bg-white p-2 hover:border-sky-300 hover:bg-sky-50"
       href={buildHref(state, {
         aircraftType: bucket.aircraftType,
-        bucketDate: day.dayKey,
-        drawer: "coverage",
+        bucketDate: "",
+        date: day.dayKey,
+        drawer: "none",
         role: bucket.seatRole,
+        tab: "coverage",
+        view: "day",
       })}
     >
       <div className="flex items-center justify-between gap-2">
@@ -414,6 +433,242 @@ function BucketCard({
   );
 }
 
+type PersonnelStatusKey =
+  | "scheduled"
+  | "reserve"
+  | "assigned"
+  | "pendingOff"
+  | "approvedOff"
+  | "occupied"
+  | "off"
+  | "unavailable";
+
+type PersonnelStatusConfig = {
+  key: PersonnelStatusKey;
+  label: string;
+  tone: "neutral" | "good" | "warn" | "bad";
+};
+
+type PersonnelRow = {
+  crewMember: CrewCoverageCrewDetail;
+  primaryStatus: PersonnelStatusConfig;
+  statuses: PersonnelStatusConfig[];
+};
+
+const PERSONNEL_STATUSES: PersonnelStatusConfig[] = [
+  { key: "scheduled", label: "Scheduled", tone: "good" },
+  { key: "reserve", label: "Reserve", tone: "good" },
+  { key: "assigned", label: "Assigned", tone: "neutral" },
+  { key: "pendingOff", label: "Pending off", tone: "warn" },
+  { key: "approvedOff", label: "Approved off", tone: "bad" },
+  { key: "occupied", label: "Occupied", tone: "warn" },
+  { key: "off", label: "Off", tone: "neutral" },
+  { key: "unavailable", label: "Unavailable", tone: "bad" },
+];
+
+function buildPersonnelRows(bucket: CrewCoverageRoleBucket, sort: PersonnelSort): PersonnelRow[] {
+  const rows = new Map<string, PersonnelRow>();
+
+  for (const status of PERSONNEL_STATUSES) {
+    for (const crewMember of bucket.crew[status.key]) {
+      const current = rows.get(crewMember.crewMemberId);
+
+      if (current) {
+        current.statuses.push(status);
+        continue;
+      }
+
+      rows.set(crewMember.crewMemberId, {
+        crewMember,
+        primaryStatus: status,
+        statuses: [status],
+      });
+    }
+  }
+
+  return Array.from(rows.values()).sort((first, second) => {
+    if (sort === "name") {
+      return first.crewMember.name.localeCompare(second.crewMember.name);
+    }
+
+    const firstStatus = PERSONNEL_STATUSES.findIndex((status) => status.key === first.primaryStatus.key);
+    const secondStatus = PERSONNEL_STATUSES.findIndex((status) => status.key === second.primaryStatus.key);
+
+    if (firstStatus !== secondStatus) {
+      return firstStatus - secondStatus;
+    }
+
+    return first.crewMember.name.localeCompare(second.crewMember.name);
+  });
+}
+
+function WeekGroups({ days }: { days: CrewCoverageCalendarDay[] }) {
+  const groups = new Map<string, CrewCoverageCalendarDay[]>();
+
+  for (const day of days) {
+    const weekStart = inputDate(startOfWeekDate(day.date));
+    groups.set(weekStart, [...(groups.get(weekStart) ?? []), day]);
+  }
+
+  return Array.from(groups.entries()).map(([weekStart, weekDays]) => ({
+    days: weekDays,
+    label: `Week of ${toDate(parseInputDate(weekStart) ?? weekDays[0].date)}`,
+    weekStart,
+  }));
+}
+
+function DayHeader({ day, state }: { day: CrewCoverageCalendarDay; state: WorkbenchState }) {
+  return (
+    <div className="flex items-center justify-between gap-2 border-b border-zinc-200 pb-2">
+      <Link
+        className="min-w-0 rounded-sm hover:text-sky-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+        href={buildHref(state, {
+          bucketDate: "",
+          date: day.dayKey,
+          drawer: "none",
+          tab: "coverage",
+          view: "day",
+        })}
+      >
+        <p className="truncate text-sm font-semibold text-zinc-950">{day.label}</p>
+        <p className="truncate text-xs text-zinc-500">
+          Sched {day.totals.scheduled} | Res {day.totals.reserve} | Asg {day.totals.assigned}
+        </p>
+      </Link>
+      {day.totals.flightGaps > 0 ? (
+        <span className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold leading-none text-rose-800">
+          {day.totals.flightGaps} crew gap{day.totals.flightGaps === 1 ? "" : "s"}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function FocusedBucketPersonnel({
+  bucket,
+  day,
+  state,
+}: {
+  bucket: CrewCoverageRoleBucket;
+  day: CrewCoverageCalendarDay;
+  state: WorkbenchState;
+}) {
+  const rows = buildPersonnelRows(bucket, state.sort);
+
+  return (
+    <section className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+      <div className="flex flex-col gap-3 border-b border-zinc-200 pb-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{day.label}</p>
+          <h3 className="mt-1 text-lg font-semibold text-zinc-950">
+            {formatAircraftType(bucket.aircraftType)} {formatRole(bucket.seatRole)}
+          </h3>
+          <p className="mt-1 text-sm text-zinc-600">
+            Personnel grouped by current planning status for this day and role.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            className={
+              state.sort === "status"
+                ? "rounded-full bg-zinc-950 px-3 py-1 text-xs font-semibold text-white"
+                : "rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+            }
+            href={buildHref(state, { sort: "status" })}
+          >
+            Status
+          </Link>
+          <Link
+            className={
+              state.sort === "name"
+                ? "rounded-full bg-zinc-950 px-3 py-1 text-xs font-semibold text-white"
+                : "rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+            }
+            href={buildHref(state, { sort: "name" })}
+          >
+            Name
+          </Link>
+        </div>
+      </div>
+
+      <section className="mt-3 grid gap-2 sm:grid-cols-4">
+        <SummaryCard label="Scheduled" value={bucket.counts.scheduled} />
+        <SummaryCard label="Reserve" value={bucket.counts.reserve} />
+        <SummaryCard label="Assigned" value={bucket.counts.assigned} />
+        <SummaryCard label="Crew gaps" value={bucket.flightGaps.length} />
+      </section>
+
+      {rows.length === 0 ? (
+        <p className="mt-3 rounded-md border border-zinc-200 bg-white p-3 text-sm text-zinc-500">
+          No personnel rows for this day, airframe, and role.
+        </p>
+      ) : (
+        <div className="mt-3 grid gap-2">
+          {rows.map((row) => (
+            <Link
+              className="rounded-md border border-zinc-200 bg-white p-3 hover:border-sky-300 hover:bg-sky-50"
+              href={buildHref(state, {
+                crewMemberId: row.crewMember.crewMemberId,
+                drawer: "crew",
+              })}
+              key={row.crewMember.crewMemberId}
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-zinc-950">{row.crewMember.name}</p>
+                    <span className="text-xs text-zinc-500">#{row.crewMember.employeeNumber}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Base {row.crewMember.baseStationCode} | {row.crewMember.locationLabel}
+                  </p>
+                  {row.crewMember.notes.length > 0 ? (
+                    <p className="mt-1 text-xs text-zinc-500">{row.crewMember.notes.slice(0, 2).join(" | ")}</p>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-1 sm:justify-end">
+                  {row.statuses.map((status) => (
+                    <span
+                      className={
+                        status.tone === "good"
+                          ? "inline-flex whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[0.68rem] font-semibold text-emerald-800"
+                          : status.tone === "warn"
+                            ? "inline-flex whitespace-nowrap rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[0.68rem] font-semibold text-amber-800"
+                            : status.tone === "bad"
+                              ? "inline-flex whitespace-nowrap rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[0.68rem] font-semibold text-rose-800"
+                              : "inline-flex whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[0.68rem] font-semibold text-zinc-700"
+                      }
+                      key={status.key}
+                    >
+                      {status.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {bucket.flightGaps.length > 0 ? (
+        <section className="mt-3 rounded-md border border-rose-200 bg-rose-50 p-3">
+          <h4 className="text-sm font-semibold text-rose-950">Flight-derived gaps</h4>
+          <div className="mt-2 grid gap-2">
+            {bucket.flightGaps.map((gap) => (
+              <article className="rounded-md border border-rose-200 bg-white p-3" key={`${gap.flightNumber}-${gap.scheduledDeparture.toISOString()}`}>
+                <p className="text-sm font-semibold text-zinc-950">{gap.flightNumber} | {gap.route}</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {gap.tailNumber} | {toDateTime(gap.scheduledDeparture)} | Missing {gap.missingRoles.map(formatRole).join(", ")}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </section>
+  );
+}
+
 function CoverageBoard({ data, state }: { data: CrewSchedulingWorkbenchData; state: WorkbenchState }) {
   const gridClasses =
     state.view === "month"
@@ -421,6 +676,10 @@ function CoverageBoard({ data, state }: { data: CrewSchedulingWorkbenchData; sta
       : state.view === "week"
         ? "grid gap-3 lg:grid-cols-7"
         : "grid gap-3";
+  const isFocusedDay =
+    state.view === "day" &&
+    state.filters.aircraftType !== "all" &&
+    state.filters.role !== "all";
 
   return (
     <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
@@ -449,8 +708,61 @@ function CoverageBoard({ data, state }: { data: CrewSchedulingWorkbenchData; sta
           ))}
         </div>
       </div>
-      <div className={gridClasses + " mt-4"}>
-        {data.calendarDays.map((day) => (
+      {state.view === "month" ? (
+        <div className="mt-4 grid gap-4">
+          {WeekGroups({ days: data.calendarDays }).map((week) => (
+            <section className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={week.weekStart}>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-zinc-950">{week.label}</p>
+                <Link
+                  className="shrink-0 rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-semibold text-zinc-700 hover:bg-sky-50"
+                  href={buildHref(state, {
+                    bucketDate: "",
+                    date: week.weekStart,
+                    drawer: "none",
+                    tab: "coverage",
+                    view: "week",
+                  })}
+                >
+                  Week view
+                </Link>
+              </div>
+              <div className={gridClasses}>
+                {week.days.map((day) => (
+                  <article className="min-h-48 rounded-md border border-zinc-200 bg-white p-3" key={day.dayKey}>
+                    <DayHeader day={day} state={state} />
+                    {day.buckets.length === 0 ? (
+                      <p className="mt-3 text-sm text-zinc-500">No coverage rows for active filters.</p>
+                    ) : (
+                      <div className="mt-3 space-y-2">
+                        {day.buckets.map((bucket) => (
+                          <BucketCard
+                            bucket={bucket}
+                            day={day}
+                            key={`${day.dayKey}-${bucket.aircraftType}-${bucket.seatRole}`}
+                            state={state}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div className={gridClasses + " mt-4"}>
+          {data.calendarDays.map((day) => {
+            const focusedBucket = isFocusedDay
+              ? day.buckets.find(
+                  (bucket) =>
+                    bucket.aircraftType === state.filters.aircraftType &&
+                    bucket.seatRole === state.filters.role,
+                )
+              : null;
+
+            return (
           <article
             className={
               state.view === "day"
@@ -459,20 +771,12 @@ function CoverageBoard({ data, state }: { data: CrewSchedulingWorkbenchData; sta
             }
             key={day.dayKey}
           >
-            <div className="flex items-start justify-between gap-2 border-b border-zinc-200 pb-2">
-              <div>
-                <p className="text-sm font-semibold text-zinc-950">{day.label}</p>
-                <p className="text-xs text-zinc-500">
-                  Sched {day.totals.scheduled} | Res {day.totals.reserve} | Asg {day.totals.assigned}
-                </p>
+            <DayHeader day={day} state={state} />
+            {focusedBucket ? (
+              <div className="mt-3">
+                <FocusedBucketPersonnel bucket={focusedBucket} day={day} state={state} />
               </div>
-              {day.totals.flightGaps > 0 ? (
-                <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-800">
-                  {day.totals.flightGaps} gap{day.totals.flightGaps === 1 ? "" : "s"}
-                </span>
-              ) : null}
-            </div>
-            {day.buckets.length === 0 ? (
+            ) : day.buckets.length === 0 ? (
               <p className="mt-3 text-sm text-zinc-500">No coverage rows for active filters.</p>
             ) : (
               <div className={state.view === "day" ? "mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3" : "mt-3 space-y-2"}>
@@ -487,8 +791,10 @@ function CoverageBoard({ data, state }: { data: CrewSchedulingWorkbenchData; sta
               </div>
             )}
           </article>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }

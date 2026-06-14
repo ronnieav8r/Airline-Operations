@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type ThemeMode = "dark" | "light";
 
@@ -11,22 +11,35 @@ function applyTheme(theme: ThemeMode) {
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    if (typeof window === "undefined") {
-      return "light";
-    }
-
-    const storedTheme = localStorage.getItem("aeroops-theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    return storedTheme === "dark" || storedTheme === "light" ? storedTheme : prefersDark ? "dark" : "light";
-  });
+  const themeLoaded = useRef(false);
+  const [theme, setTheme] = useState<ThemeMode>("light");
 
   useEffect(() => {
+    const loadTheme = window.setTimeout(() => {
+      const storedTheme = localStorage.getItem("aeroops-theme");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const nextTheme =
+        storedTheme === "dark" || storedTheme === "light" ? storedTheme : prefersDark ? "dark" : "light";
+
+      themeLoaded.current = true;
+      setTheme(nextTheme);
+      applyTheme(nextTheme);
+    }, 0);
+
+    return () => window.clearTimeout(loadTheme);
+  }, []);
+
+  useEffect(() => {
+    if (!themeLoaded.current) {
+      return;
+    }
+
     applyTheme(theme);
   }, [theme]);
 
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
+    themeLoaded.current = true;
     setTheme(nextTheme);
     applyTheme(nextTheme);
   }
