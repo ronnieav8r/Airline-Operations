@@ -626,7 +626,7 @@ function TimeOffRequestRow({
 
   return (
     <article className="rounded-md border border-zinc-200 bg-white p-3">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <div className="grid gap-3 xl:grid-cols-[minmax(13rem,1fr)_minmax(20rem,1.35fr)_auto] xl:items-start">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Link
@@ -656,7 +656,8 @@ function TimeOffRequestRow({
             <p className="mt-2 text-sm text-zinc-600">{request.reason}</p>
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <TimeOffCoverageImpactPanel impacts={request.coverageImpact} variant="compact" />
+        <div className="flex flex-wrap gap-2 xl:justify-end">
           {request.status === TimeOffRequestStatus.PENDING ? (
             <>
               <TimeOffReviewButton
@@ -701,7 +702,6 @@ function TimeOffRequestRow({
           ))}
         </ul>
       ) : null}
-      <TimeOffCoverageImpactPanel impacts={request.coverageImpact} />
     </article>
   );
 }

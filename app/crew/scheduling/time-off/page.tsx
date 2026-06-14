@@ -302,8 +302,8 @@ function ConflictWarnings({ request }: { request: TimeOffWorkflowRequest }) {
 function RequestCard({ request, returnTo }: { request: TimeOffWorkflowRequest; returnTo: string }) {
   return (
     <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+      <div className="grid gap-3 xl:grid-cols-[minmax(14rem,1fr)_minmax(22rem,1.35fr)_auto] xl:items-start">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Link
               className="text-lg font-semibold text-sky-700 hover:text-sky-900"
@@ -331,7 +331,8 @@ function RequestCard({ request, returnTo }: { request: TimeOffWorkflowRequest; r
           ) : null}
           {request.reason ? <p className="mt-2 text-sm text-zinc-600">{request.reason}</p> : null}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <TimeOffCoverageImpactPanel impacts={request.coverageImpact} variant="compact" />
+        <div className="flex flex-wrap gap-2 xl:justify-end">
           {request.status === TimeOffRequestStatus.PENDING ? (
             <>
               <ReviewButton
@@ -368,7 +369,6 @@ function RequestCard({ request, returnTo }: { request: TimeOffWorkflowRequest; r
         </div>
       </div>
       <ConflictWarnings request={request} />
-      <TimeOffCoverageImpactPanel impacts={request.coverageImpact} />
     </article>
   );
 }
