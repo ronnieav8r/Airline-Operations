@@ -3,6 +3,7 @@ import {
   AircraftStatus,
   AlertSeverity,
   AlertType,
+  DiscrepancyStatus,
   FlightLegStatus,
   FlightStatus,
   SeatRole,
@@ -16,12 +17,14 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   searchParams: Promise<{
+    filter?: string | string[];
     panel?: string | string[];
     selected?: string | string[];
   }>;
 };
 
 type AircraftBoardRow = Awaited<ReturnType<typeof getAircraftBoard>>["aircraft"][number];
+type AircraftFilter = "all" | "aog" | "available" | "in-flight" | "open-mels" | "open-writeups";
 
 function firstParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
@@ -31,8 +34,34 @@ function firstParam(value: string | string[] | undefined): string | null {
   return value ?? null;
 }
 
-function aircraftHref(options: { panel?: "aircraft" | null; selected?: string | null } = {}) {
+function parseAircraftFilter(value: string | string[] | undefined): AircraftFilter {
+  const firstValue = firstParam(value);
+
+  if (
+    firstValue === "aog" ||
+    firstValue === "available" ||
+    firstValue === "in-flight" ||
+    firstValue === "open-mels" ||
+    firstValue === "open-writeups"
+  ) {
+    return firstValue;
+  }
+
+  return "all";
+}
+
+function aircraftHref(
+  options: {
+    filter?: AircraftFilter | null;
+    panel?: "aircraft" | null;
+    selected?: string | null;
+  } = {},
+) {
   const params = new URLSearchParams();
+
+  if (options.filter && options.filter !== "all") {
+    params.set("filter", options.filter);
+  }
 
   if (options.panel) {
     params.set("panel", options.panel);
@@ -125,6 +154,14 @@ function aircraftStatusBadgeClasses(status: AircraftStatus): string {
   return "border-emerald-200 bg-emerald-50 text-emerald-700";
 }
 
+function aircraftStatusLabel(status: AircraftStatus): string {
+  if (status === AircraftStatus.OUT_OF_SERVICE) {
+    return "AOG";
+  }
+
+  return status.replaceAll("_", " ");
+}
+
 function flightStatusBadgeClasses(status: FlightStatus | FlightLegStatus): string {
   if (status === FlightStatus.ENROUTE) {
     return "border-blue-200 bg-blue-50 text-blue-700";
@@ -176,11 +213,79 @@ function missingCockpitRoles(assignments: Array<{ seatRole: SeatRole }>): SeatRo
   return [SeatRole.CPT, SeatRole.FO].filter((role) => !assignedRoles.has(role));
 }
 
+function hasOpenMel(item: AircraftBoardRow): boolean {
+  return item.deferrals.length > 0;
+}
+
+function openWriteUps(item: AircraftBoardRow) {
+  return item.discrepancies.filter((discrepancy) => discrepancy.status === DiscrepancyStatus.OPEN);
+}
+
+function hasOpenWriteUp(item: AircraftBoardRow): boolean {
+  return openWriteUps(item).length > 0;
+}
+
+function aircraftMatchesFilter(item: AircraftBoardRow, filter: AircraftFilter): boolean {
+  if (filter === "available") {
+    return item.status === AircraftStatus.AVAILABLE;
+  }
+  if (filter === "in-flight") {
+    return item.status === AircraftStatus.IN_FLIGHT;
+  }
+  if (filter === "aog") {
+    return item.status === AircraftStatus.OUT_OF_SERVICE;
+  }
+  if (filter === "open-mels") {
+    return hasOpenMel(item);
+  }
+  if (filter === "open-writeups") {
+    return hasOpenWriteUp(item);
+  }
+
+  return true;
+}
+
+function SummaryTile({
+  active,
+  href,
+  label,
+  tone,
+  value,
+}: {
+  active: boolean;
+  href: string;
+  label: string;
+  tone: "amber" | "blue" | "emerald" | "rose" | "zinc";
+  value: number;
+}) {
+  const toneClasses = {
+    amber: "border-amber-200 bg-amber-50 text-amber-950 hover:border-amber-300",
+    blue: "border-blue-200 bg-blue-50 text-blue-950 hover:border-blue-300",
+    emerald: "border-emerald-200 bg-emerald-50 text-emerald-950 hover:border-emerald-300",
+    rose: "border-rose-200 bg-rose-50 text-rose-950 hover:border-rose-300",
+    zinc: "border-zinc-200 bg-white text-zinc-950 hover:border-zinc-300",
+  }[tone];
+
+  return (
+    <Link
+      className={`rounded-xl border px-3 py-2 transition ${toneClasses} ${
+        active ? "ring-2 ring-zinc-950/15" : ""
+      }`}
+      href={href}
+    >
+      <p className="text-[0.65rem] font-semibold uppercase tracking-wide opacity-70">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold tabular-nums">{value}</p>
+    </Link>
+  );
+}
+
 function AircraftDrawer({
   aircraft,
+  selectedFilter,
   selectedId,
 }: {
   aircraft: AircraftBoardRow[];
+  selectedFilter: AircraftFilter;
   selectedId: string | null;
 }) {
   if (!selectedId) {
@@ -188,7 +293,7 @@ function AircraftDrawer({
   }
 
   const item = aircraft.find((aircraftRow) => aircraftRow.id === selectedId);
-  const closeHref = aircraftHref();
+  const closeHref = aircraftHref({ filter: selectedFilter });
 
   if (!item) {
     return (
@@ -226,7 +331,7 @@ function AircraftDrawer({
         <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
           <div className="flex flex-wrap gap-2">
             <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${aircraftStatusBadgeClasses(item.status)}`}>
-              {item.status}
+              {aircraftStatusLabel(item.status)}
             </span>
             <span
               className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
@@ -286,10 +391,12 @@ function AircraftDrawer({
 
         <section className="rounded-xl border border-zinc-200 bg-white p-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            MX signals
+            Maintenance state
           </h3>
           <p className="mt-2 text-sm text-zinc-700">
-            {item.discrepancies.length} open discrepancies | {item.deferrals.length} active deferrals
+            {openWriteUps(item).length} open write-up
+            {openWriteUps(item).length === 1 ? "" : "s"} | {item.deferrals.length} open MEL
+            {item.deferrals.length === 1 ? "" : "s"}
           </p>
         </section>
 
@@ -316,7 +423,9 @@ export default async function AircraftPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { aircraft, summary } = await getAircraftBoard();
   const now = new Date();
+  const selectedFilter = parseAircraftFilter(params.filter);
   const selectedId = firstParam(params.panel) === "aircraft" ? firstParam(params.selected) : null;
+  const visibleAircraft = aircraft.filter((item) => aircraftMatchesFilter(item, selectedFilter));
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-4 text-zinc-950 sm:px-6 lg:px-8">
@@ -331,7 +440,7 @@ export default async function AircraftPage({ searchParams }: PageProps) {
                 Aircraft
               </h1>
               <p className="mt-1 text-xs text-zinc-600">
-                Read-only aircraft status, crew blocks, and upcoming flight context.
+                Fleet status, AOG aircraft, open MELs, and open write-ups.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -346,80 +455,61 @@ export default async function AircraftPage({ searchParams }: PageProps) {
           </div>
         </header>
 
-        <section className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Aircraft</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.total}</p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Available</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.available}</p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">In flight</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.inFlight}</p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">MX signals</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.maintenance}</p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Alerts</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.activeAlerts}</p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Crew gaps</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">{summary.crewGaps}</p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">FlightLeg</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">
-              {summary.flightLegReads}
-            </p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Fallback</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">
-              {summary.fallbackFlightReads}
-            </p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Configured</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">
-              {summary.configuredAircraft}
-            </p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">MX releases</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">
-              {summary.aircraftWithAirworthinessRelease}
-            </p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Discrepancies</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">
-              {summary.aircraftWithOpenDiscrepancies}
-            </p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Deferrals</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">
-              {summary.aircraftWithActiveDeferrals}
-            </p>
-          </article>
+        <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+          <SummaryTile
+            active={selectedFilter === "all"}
+            href={aircraftHref({ filter: "all" })}
+            label="Aircraft"
+            tone="zinc"
+            value={summary.total}
+          />
+          <SummaryTile
+            active={selectedFilter === "available"}
+            href={aircraftHref({ filter: "available" })}
+            label="Available"
+            tone={summary.available > 0 ? "emerald" : "zinc"}
+            value={summary.available}
+          />
+          <SummaryTile
+            active={selectedFilter === "in-flight"}
+            href={aircraftHref({ filter: "in-flight" })}
+            label="In flight"
+            tone={summary.inFlight > 0 ? "blue" : "zinc"}
+            value={summary.inFlight}
+          />
+          <SummaryTile
+            active={selectedFilter === "aog"}
+            href={aircraftHref({ filter: "aog" })}
+            label="AOG"
+            tone={summary.aog > 0 ? "rose" : "zinc"}
+            value={summary.aog}
+          />
+          <SummaryTile
+            active={selectedFilter === "open-mels"}
+            href={aircraftHref({ filter: "open-mels" })}
+            label="Open MELs"
+            tone={summary.aircraftWithOpenMels > 0 ? "amber" : "zinc"}
+            value={summary.aircraftWithOpenMels}
+          />
+          <SummaryTile
+            active={selectedFilter === "open-writeups"}
+            href={aircraftHref({ filter: "open-writeups" })}
+            label="Open write-ups"
+            tone={summary.aircraftWithOpenWriteUps > 0 ? "amber" : "zinc"}
+            value={summary.aircraftWithOpenWriteUps}
+          />
         </section>
 
-        {aircraft.length === 0 ? (
+        {visibleAircraft.length === 0 ? (
           <section className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            <p className="font-medium">No aircraft found.</p>
+            <p className="font-medium">No aircraft found for this view.</p>
             <p className="mt-1">
-              The read-only aircraft page is ready, but the database has no aircraft rows to
-              display.
+              Select a different summary tile to broaden the aircraft board.
             </p>
           </section>
         ) : (
           <section className="grid gap-4 lg:grid-cols-2">
-            {aircraft.map((item) => {
+            {visibleAircraft.map((item) => {
               const currentFlight =
                 item.flights.find(
                   (flight) =>
@@ -430,9 +520,8 @@ export default async function AircraftPage({ searchParams }: PageProps) {
                 item.flights.find((flight) => flight.scheduledDeparture > now) ?? null;
               const displayedFlight = currentFlight ?? nextFlight;
               const missingRoles = missingCockpitRoles(item.crewAssignments);
-              const maintenanceAlerts = item.alerts.filter(
-                (alert) => alert.type === AlertType.MAINTENANCE,
-              );
+              const maintenanceAlerts = item.alerts.filter((alert) => alert.type === AlertType.MAINTENANCE);
+              const openWriteUpItems = openWriteUps(item);
               const currentConfiguration = item.configurations[0] ?? null;
               const latestMaintenanceEvent = item.maintenanceEvents[0] ?? null;
               const latestAirworthinessRelease = item.airworthinessReleases[0] ?? null;
@@ -457,7 +546,11 @@ export default async function AircraftPage({ searchParams }: PageProps) {
                       <div className="flex flex-wrap items-center gap-2">
                         <Link
                           className="font-mono text-xl font-semibold tracking-tight text-sky-700 hover:text-sky-900"
-                          href={aircraftHref({ panel: "aircraft", selected: item.id })}
+                          href={aircraftHref({
+                            filter: selectedFilter,
+                            panel: "aircraft",
+                            selected: item.id,
+                          })}
                         >
                           {item.tailNumber}
                         </Link>
@@ -466,7 +559,7 @@ export default async function AircraftPage({ searchParams }: PageProps) {
                             item.status,
                           )}`}
                         >
-                          {item.status}
+                          {aircraftStatusLabel(item.status)}
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-zinc-600">
@@ -567,12 +660,14 @@ export default async function AircraftPage({ searchParams }: PageProps) {
 
                     <section className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
                       <h3 className="text-sm font-semibold text-zinc-900">
-                        Maintenance / status signals
+                        Aircraft status
                       </h3>
                       <div className="mt-3 space-y-2 text-sm">
                         <p className="text-zinc-700">
                           Aircraft status is{" "}
-                          <span className="font-semibold text-zinc-950">{item.status}</span>.
+                          <span className="font-semibold text-zinc-950">
+                            {aircraftStatusLabel(item.status)}
+                          </span>.
                         </p>
                         {maintenanceAlerts.length === 0 ? (
                           <p className="text-zinc-600">
@@ -603,14 +698,14 @@ export default async function AircraftPage({ searchParams }: PageProps) {
                       <div className="flex flex-wrap items-center gap-2">
                         <span
                           className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
-                            item.discrepancies.length === 0 &&
+                            openWriteUpItems.length === 0 &&
                             item.deferrals.length === 0 &&
                             currentAirworthinessReleaseUsable
                               ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                               : "border-amber-200 bg-amber-50 text-amber-800"
                           }`}
                         >
-                          {item.discrepancies.length === 0 &&
+                          {openWriteUpItems.length === 0 &&
                           item.deferrals.length === 0 &&
                           currentAirworthinessReleaseUsable
                             ? "A/W current"
@@ -691,15 +786,15 @@ export default async function AircraftPage({ searchParams }: PageProps) {
                       </div>
                     </div>
 
-                    {item.discrepancies.length > 0 || item.deferrals.length > 0 ? (
+                    {openWriteUpItems.length > 0 || item.deferrals.length > 0 ? (
                       <div className="mt-3 grid gap-3 xl:grid-cols-2">
                         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                          <p className="font-semibold">Open discrepancies</p>
-                          {item.discrepancies.length === 0 ? (
+                          <p className="font-semibold">Open write-ups</p>
+                          {openWriteUpItems.length === 0 ? (
                             <p className="mt-1 text-amber-800">None.</p>
                           ) : (
                             <ul className="mt-2 space-y-1">
-                              {item.discrepancies.map((discrepancy) => (
+                              {openWriteUpItems.map((discrepancy) => (
                                 <li key={discrepancy.id}>
                                   {discrepancy.discrepancyNumber}: {discrepancy.title} (
                                   {discrepancy.status})
@@ -709,7 +804,7 @@ export default async function AircraftPage({ searchParams }: PageProps) {
                           )}
                         </div>
                         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                          <p className="font-semibold">Active deferrals</p>
+                          <p className="font-semibold">Open MELs</p>
                           {item.deferrals.length === 0 ? (
                             <p className="mt-1 text-amber-800">None.</p>
                           ) : (
@@ -846,7 +941,11 @@ export default async function AircraftPage({ searchParams }: PageProps) {
             })}
           </section>
         )}
-        <AircraftDrawer aircraft={aircraft} selectedId={selectedId} />
+        <AircraftDrawer
+          aircraft={aircraft}
+          selectedFilter={selectedFilter}
+          selectedId={selectedId}
+        />
       </div>
     </main>
   );

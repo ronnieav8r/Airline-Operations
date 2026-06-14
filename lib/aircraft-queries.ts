@@ -2,7 +2,6 @@ import {
   AircraftCapabilityStatus,
   AircraftConfigurationStatus,
   AircraftStatus,
-  AirworthinessReleaseStatus,
   AlertSeverity,
   AlertStatus,
   AlertType,
@@ -13,7 +12,6 @@ import {
   FlightStatus,
   MaintenanceEventStatus,
   Prisma,
-  SeatRole,
 } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -293,30 +291,19 @@ export type AircraftBoardItem = Omit<AircraftBoardPayload, "flights" | "crewAssi
 };
 
 export type AircraftBoardSummary = {
-  total: number;
+  activeAlerts: number;
+  aircraftWithOpenMels: number;
+  aircraftWithOpenWriteUps: number;
+  aog: number;
   available: number;
   inFlight: number;
-  maintenance: number;
-  activeAlerts: number;
-  crewGaps: number;
-  flightLegReads: number;
-  fallbackFlightReads: number;
-  configuredAircraft: number;
-  aircraftWithActiveDeferrals: number;
-  aircraftWithOpenDiscrepancies: number;
-  aircraftWithAirworthinessRelease: number;
+  total: number;
 };
 
 export type AircraftBoardData = {
   aircraft: AircraftBoardItem[];
   summary: AircraftBoardSummary;
 };
-
-function missingCockpitRoles(assignments: Array<{ seatRole: SeatRole }>): SeatRole[] {
-  const assignedRoles = new Set(assignments.map((assignment) => assignment.seatRole));
-
-  return [SeatRole.CPT, SeatRole.FO].filter((role) => !assignedRoles.has(role));
-}
 
 function normalizeFlight(flight: AircraftBoardPayload["flights"][number]): AircraftBoardFlight {
   if (flight.flightLeg) {
@@ -429,42 +416,15 @@ export async function getAircraftBoard(): Promise<AircraftBoardData> {
   return {
     aircraft,
     summary: {
-      total: aircraft.length,
+      activeAlerts: aircraft.reduce((count, item) => count + item.alerts.length, 0),
+      aircraftWithOpenMels: aircraft.filter((item) => item.deferrals.length > 0).length,
+      aircraftWithOpenWriteUps: aircraft.filter((item) =>
+        item.discrepancies.some((discrepancy) => discrepancy.status === DiscrepancyStatus.OPEN),
+      ).length,
+      aog: aircraft.filter((item) => item.status === AircraftStatus.OUT_OF_SERVICE).length,
       available: aircraft.filter((item) => item.status === AircraftStatus.AVAILABLE).length,
       inFlight: aircraft.filter((item) => item.status === AircraftStatus.IN_FLIGHT).length,
-      maintenance: aircraft.filter(
-        (item) =>
-          item.status === AircraftStatus.IN_MAINTENANCE ||
-          item.status === AircraftStatus.OUT_OF_SERVICE ||
-          item.alerts.some((alert) => alert.type === AlertType.MAINTENANCE),
-      ).length,
-      activeAlerts: aircraft.reduce((count, item) => count + item.alerts.length, 0),
-      crewGaps: aircraft.filter((item) => missingCockpitRoles(item.crewAssignments).length > 0)
-        .length,
-      flightLegReads: aircraft.reduce(
-        (count, item) =>
-          count + item.flights.filter((flight) => flight.readSource === "FLIGHT_LEG").length,
-        0,
-      ),
-      fallbackFlightReads: aircraft.reduce(
-        (count, item) =>
-          count +
-          item.flights.filter((flight) => flight.readSource === "LEG_MISSING_FALLBACK_FLIGHT")
-            .length,
-        0,
-      ),
-      configuredAircraft: aircraft.filter((item) => item.configurations.length > 0).length,
-      aircraftWithActiveDeferrals: aircraft.filter((item) => item.deferrals.length > 0).length,
-      aircraftWithOpenDiscrepancies: aircraft.filter(
-        (item) => item.discrepancies.length > 0,
-      ).length,
-      aircraftWithAirworthinessRelease: aircraft.filter((item) =>
-        item.airworthinessReleases.some(
-          (release) =>
-            release.status === AirworthinessReleaseStatus.RELEASED &&
-            (!release.expiresAt || release.expiresAt > now),
-        ),
-      ).length,
+      total: aircraft.length,
     },
   };
 }
