@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { ReactNode } from "react";
 
+import { createCrewMemberAction } from "@/app/crew/actions";
 import { ContextDrawer } from "@/components/context-drawer";
 import { prisma } from "@/lib/prisma";
 import {
@@ -30,6 +31,7 @@ type PageProps = {
     panel?: string | string[];
     selected?: string | string[];
     status?: string | string[];
+    error?: string | string[];
   }>;
 };
 
@@ -347,7 +349,8 @@ async function getCrewRosterData() {
   const now = new Date();
   const upcomingEnd = addDays(now, UPCOMING_WINDOW_DAYS);
 
-  const crewMembers = await prisma.crewMember.findMany({
+  const [crewMembers, stations] = await Promise.all([
+  prisma.crewMember.findMany({
     orderBy: [{ employmentStatus: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
     select: {
       id: true,
@@ -397,7 +400,17 @@ async function getCrewRosterData() {
         },
       },
     },
-  });
+  }),
+  prisma.station.findMany({
+    where: { isActive: true },
+    orderBy: [{ code: "asc" }],
+    select: {
+      id: true,
+      code: true,
+      city: true,
+    },
+  }),
+  ]);
 
   const aircraftIds = Array.from(
     new Set(
@@ -448,9 +461,87 @@ async function getCrewRosterData() {
 
   return {
     crewMembers,
+    stations,
     upcomingFlightsByCrewId,
     now,
   };
+}
+
+function CrewMemberCreateForm({
+  stations,
+}: {
+  stations: Awaited<ReturnType<typeof getCrewRosterData>>["stations"];
+}) {
+  const defaultStation = stations[0]?.id;
+
+  return (
+    <details className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+      <summary className="cursor-pointer text-sm font-semibold text-zinc-900">
+        Add crew member
+      </summary>
+      <form action={createCrewMemberAction} className="mt-3 grid gap-3 lg:grid-cols-4">
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Employee #</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="employeeNumber" required />
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">First name</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="firstName" required />
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Last name</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="lastName" required />
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Base</span>
+          <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={defaultStation} name="baseStationId" required>
+            {stations.map((station) => (
+              <option key={station.id} value={station.id}>
+                {station.code} - {station.city}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Employment</span>
+          <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={EmploymentStatus.ACTIVE} name="employmentStatus" required>
+            {Object.values(EmploymentStatus).map((status) => (
+              <option key={status} value={status}>
+                {statusLabel(status)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Duty</span>
+          <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={DutyStatus.OFF_DUTY} name="dutyStatus" required>
+            {Object.values(DutyStatus).map((status) => (
+              <option key={status} value={status}>
+                {statusLabel(status)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Hire date</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="hireDate" type="date" />
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Phone</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="phone" />
+        </label>
+        <label className="block lg:col-span-2">
+          <span className="text-xs font-medium text-zinc-600">Email</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="email" type="email" />
+        </label>
+        <div className="flex items-end">
+          <button className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800" type="submit">
+            Create crew member
+          </button>
+        </div>
+      </form>
+    </details>
+  );
 }
 
 function crewWarnings(crewMember: CrewMemberRow, now: Date): string[] {
@@ -659,6 +750,7 @@ export default async function CrewPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const roster = await getCrewRosterData();
   const filters = parseCrewFilters(params);
+  const error = firstParam(params.error);
   const filteredCrewMembers = filterCrewMembers(roster.crewMembers, filters, roster.now);
   const baseOptions = Array.from(new Set(roster.crewMembers.map((crewMember) => crewMember.baseStation.code))).sort();
   const activeCrew = roster.crewMembers.filter(
@@ -690,7 +782,7 @@ export default async function CrewPage({ searchParams }: PageProps) {
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Crew</h1>
               <p className="mt-1 text-xs text-zinc-600">
-                Read-only roster, qualification, assignment, and upcoming coverage context.
+                Roster, qualification, assignment, and upcoming coverage context.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -724,6 +816,14 @@ export default async function CrewPage({ searchParams }: PageProps) {
             </div>
           </div>
         </header>
+
+        {error ? (
+          <section className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+            {decodeURIComponent(error)}
+          </section>
+        ) : null}
+
+        <CrewMemberCreateForm stations={roster.stations} />
 
         <section className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
           <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">

@@ -22,7 +22,9 @@ type PageProps = {
     aircraftId: string;
   }>;
   searchParams: Promise<{
+    crewMemberId?: string | string[];
     error?: string | string[];
+    seatRole?: string | string[];
   }>;
 };
 
@@ -54,6 +56,14 @@ function toInputDateTime(value: Date | null | undefined): string {
 
 function formatRoleLabel(role: SeatRole): string {
   return role === SeatRole.CPT ? "CPT" : role;
+}
+
+function parseSeatRoleParam(value: string | null): SeatRole | undefined {
+  if (value && editableSeatRoles.includes(value as WorkflowSeatRole)) {
+    return value as SeatRole;
+  }
+
+  return undefined;
 }
 
 function assignmentTimingBadgeClasses(timing: AircraftCrewWorkflowAssignment["timing"]): string {
@@ -169,12 +179,19 @@ function SeatRoleSelect({ defaultValue }: { defaultValue?: SeatRole }) {
   );
 }
 
-function CrewMemberSelect({ crewOptions }: { crewOptions: AircraftCrewMemberOption[] }) {
+function CrewMemberSelect({
+  crewOptions,
+  defaultValue,
+}: {
+  crewOptions: AircraftCrewMemberOption[];
+  defaultValue?: string;
+}) {
   return (
     <label className="block">
       <span className="text-sm font-medium text-zinc-700">Crew member</span>
       <select
         className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+        defaultValue={defaultValue ?? ""}
         name="crewMemberId"
         required
       >
@@ -227,7 +244,13 @@ function WarningPanel({
   );
 }
 
-function AvailabilityHintPanel({ crewOptions }: { crewOptions: AircraftCrewMemberOption[] }) {
+function AvailabilityHintPanel({
+  aircraftId,
+  crewOptions,
+}: {
+  aircraftId: string;
+  crewOptions: AircraftCrewMemberOption[];
+}) {
   const warnings = crewOptions.filter((crewMember) => crewMember.availabilityWarnings.length > 0);
 
   return (
@@ -270,6 +293,12 @@ function AvailabilityHintPanel({ crewOptions }: { crewOptions: AircraftCrewMembe
               >
                 Logistics
               </Link>
+              <Link
+                className="text-xs font-semibold text-sky-700 hover:text-sky-900"
+                href={`/crew/${crewMember.id}/compliance`}
+              >
+                Compliance
+              </Link>
               <span
                 className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${availabilityBadgeClasses(
                   crewMember.availabilityStatus,
@@ -292,6 +321,17 @@ function AvailabilityHintPanel({ crewOptions }: { crewOptions: AircraftCrewMembe
                 {formatStatus(crewMember.dutyStatus)}
               </span>
             </div>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+              {editableSeatRoles.map((seatRole) => (
+                <Link
+                  className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-zinc-700 hover:bg-zinc-50"
+                  href={`/aircraft/${aircraftId}/crew?crewMemberId=${crewMember.id}&seatRole=${seatRole}`}
+                  key={seatRole}
+                >
+                  Use as {formatRoleLabel(seatRole)}
+                </Link>
+              ))}
+            </div>
             {crewMember.availabilityWarnings.length === 0 ? (
               <p className="mt-2 text-xs text-zinc-500">
                 No schedule, time-off, duty, or assignment availability warnings found.
@@ -308,6 +348,19 @@ function AvailabilityHintPanel({ crewOptions }: { crewOptions: AircraftCrewMembe
                 ))}
               </ul>
             )}
+            <div className="mt-2 rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs text-zinc-600">
+              <p className="font-semibold text-zinc-800">Schedule fit</p>
+              <p className="mt-1">
+                Schedule blocks: {crewMember.schedules.length} | period entries:{" "}
+                {crewMember.scheduleEntries.length}
+              </p>
+              {crewMember.scheduleEntries[0] ? (
+                <p>
+                  Next period entry: {formatStatus(crewMember.scheduleEntries[0].dutyStatus)} |{" "}
+                  {crewMember.scheduleEntries[0].period.name}
+                </p>
+              ) : null}
+            </div>
             <div className="mt-2 rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs text-zinc-600">
               <p className="font-semibold text-zinc-800">Logistics context</p>
               <p className="mt-1">
@@ -353,17 +406,22 @@ function AssignmentForm({
   assignment,
   crewOptions,
   mode,
+  prefill,
 }: {
   action: (formData: FormData) => void;
   assignment?: AircraftCrewWorkflowAssignment;
   crewOptions: AircraftCrewMemberOption[];
   mode: "CREATE" | "EDIT";
+  prefill?: {
+    crewMemberId?: string;
+    seatRole?: SeatRole;
+  };
 }) {
   return (
     <form action={action} className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
       <div className="grid gap-3 lg:grid-cols-2">
         {mode === "CREATE" ? (
-          <CrewMemberSelect crewOptions={crewOptions} />
+          <CrewMemberSelect crewOptions={crewOptions} defaultValue={prefill?.crewMemberId} />
         ) : (
           <div>
             <span className="text-sm font-medium text-zinc-700">Crew member</span>
@@ -372,7 +430,7 @@ function AssignmentForm({
             </p>
           </div>
         )}
-        <SeatRoleSelect defaultValue={assignment?.seatRole} />
+        <SeatRoleSelect defaultValue={assignment?.seatRole ?? prefill?.seatRole} />
         <Field
           defaultValue={toInputDateTime(assignment?.startsAt)}
           label="Start time"
@@ -524,6 +582,9 @@ export default async function AircraftCrewWorkflowPage({
   }
 
   const error = firstSearchParam(queryParams.error);
+  const prefillCrewMemberId = firstSearchParam(queryParams.crewMemberId) ?? undefined;
+  const prefillSeatRole = parseSeatRoleParam(firstSearchParam(queryParams.seatRole));
+  const prefilledCrewMember = data.crewOptions.find((crewMember) => crewMember.id === prefillCrewMemberId);
   const createAction = createAircraftCrewAssignmentAction.bind(null, aircraftId);
   const currentAssignments = data.assignments.filter(
     (assignment) => assignment.timing === "CURRENT",
@@ -581,6 +642,18 @@ export default async function AircraftCrewWorkflowPage({
         {error ? (
           <section className="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
             {decodeURIComponent(error)}
+          </section>
+        ) : null}
+
+        {prefilledCrewMember ? (
+          <section className="rounded-md border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+            <p className="font-semibold">Crew fit prefill ready</p>
+            <p className="mt-1">
+              The create-assignment form is prefilled for {prefilledCrewMember.firstName}{" "}
+              {prefilledCrewMember.lastName}
+              {prefillSeatRole ? ` as ${formatRoleLabel(prefillSeatRole)}` : ""}. Nothing is
+              assigned until the form is submitted.
+            </p>
           </section>
         ) : null}
 
@@ -673,10 +746,18 @@ export default async function AircraftCrewWorkflowPage({
             FlightLeg crew snapshots.
           </p>
           <div className="mt-4">
-            <AssignmentForm action={createAction} crewOptions={data.crewOptions} mode="CREATE" />
+            <AssignmentForm
+              action={createAction}
+              crewOptions={data.crewOptions}
+              mode="CREATE"
+              prefill={{
+                crewMemberId: prefilledCrewMember?.id,
+                seatRole: prefillSeatRole,
+              }}
+            />
           </div>
           <div className="mt-4">
-            <AvailabilityHintPanel crewOptions={data.crewOptions} />
+            <AvailabilityHintPanel aircraftId={aircraftId} crewOptions={data.crewOptions} />
           </div>
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             <WarningPanel crewOptions={data.crewOptions} seatRole={WorkflowSeatRole.CPT} />

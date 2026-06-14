@@ -26,10 +26,12 @@ const crewMemberContextSelect = {
   lastName: true,
   dutyStatus: true,
   employmentStatus: true,
+  hireDate: true,
   phone: true,
   email: true,
   baseStation: {
     select: {
+      id: true,
       code: true,
       city: true,
     },
@@ -42,6 +44,7 @@ const crewMemberContextSelect = {
       seatRole: true,
       issuedAt: true,
       expiresAt: true,
+      notes: true,
     },
   },
   assignments: {

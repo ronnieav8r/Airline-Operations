@@ -639,6 +639,20 @@ function RequestCard({ periodId, request }: { periodId: string; request: Request
         </p>
       ) : null}
       {request.requestNotes ? <p className="mt-2 text-sm text-zinc-700">{request.requestNotes}</p> : null}
+      <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold">
+        <Link className="text-sky-700 hover:text-sky-900" href={`/crew/${request.crewMember.id}`}>
+          Crew profile
+        </Link>
+        <Link className="text-sky-700 hover:text-sky-900" href={`/crew/${request.crewMember.id}/compliance`}>
+          Compliance
+        </Link>
+        <Link className="text-sky-700 hover:text-sky-900" href={`/crew/${request.crewMember.id}/logistics`}>
+          Logistics
+        </Link>
+        <Link className="text-sky-700 hover:text-sky-900" href="/crew/scheduling/time-off">
+          Time off queue
+        </Link>
+      </div>
       {request.reviewNotes ? (
         <p className="mt-2 rounded-md border border-zinc-200 bg-white p-2 text-xs text-zinc-600">
           Review notes: {request.reviewNotes}
@@ -1141,9 +1155,23 @@ export default async function CrewSchedulePeriodDetailPage({ params, searchParam
           <p className="mt-1">
             This page can edit the schedule-period container, manage draft
             schedule entries, and publish entries into CrewSchedule availability
-            rows. It does not review requests, apply patterns, enforce duty/rest,
-            or create aircraft assignments.
+            rows. Request review and pattern generation remain planning-only; this
+            page does not enforce duty/rest or create aircraft assignments.
           </p>
+        </section>
+
+        <section className="grid gap-3 md:grid-cols-4">
+          {[
+            ["Requests", "Review bids, swaps, pattern preferences, and crew notes."],
+            ["Draft entries", "Create planning rows and check warning-only conflicts."],
+            ["Pattern preview", "Generate draft entries from approved pattern requests."],
+            ["Publish", "Create CrewSchedule availability rows without staffing aircraft."],
+          ].map(([title, body]) => (
+            <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" key={title}>
+              <p className="text-sm font-semibold text-zinc-950">{title}</p>
+              <p className="mt-1 text-xs leading-5 text-zinc-600">{body}</p>
+            </article>
+          ))}
         </section>
 
         {error ? (

@@ -1,19 +1,36 @@
-import { DutyStatus, EmploymentStatus, SeatRole, TimeOffRequestStatus } from "@prisma/client";
+import {
+  AircraftType,
+  DutyStatus,
+  EmploymentStatus,
+  SeatRole,
+  TimeOffRequestStatus,
+} from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import {
+  createCrewQualificationAction,
+  deleteCrewQualificationAction,
+  expireCrewQualificationAction,
+  updateCrewMemberAction,
+  updateCrewQualificationAction,
+} from "@/app/crew/actions";
 import {
   CREW_MEMBER_CONTEXT_WINDOW_DAYS,
   CrewMemberContextData,
   CrewMemberContextFlight,
   getCrewMemberContextData,
 } from "@/lib/crew-member-context-queries";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{
     crewMemberId: string;
+  }>;
+  searchParams: Promise<{
+    error?: string | string[];
   }>;
 };
 
@@ -43,6 +60,22 @@ function toDateTime(value: Date | null): string {
     minute: "2-digit",
     hour12: false,
   }).format(value);
+}
+
+function toInputDate(value: Date | null | undefined): string {
+  if (!value) {
+    return "";
+  }
+
+  return value.toISOString().slice(0, 10);
+}
+
+function firstSearchParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
 }
 
 function formatStatus(value: string): string {
@@ -162,15 +195,246 @@ function Section({
   );
 }
 
-export default async function CrewMemberContextPage({ params }: PageProps) {
+type StationOption = {
+  city: string;
+  code: string;
+  id: string;
+};
+
+function CrewMemberEditForm({
+  crewMember,
+  stations,
+}: {
+  crewMember: CrewMemberContextData;
+  stations: StationOption[];
+}) {
+  const action = updateCrewMemberAction.bind(null, crewMember.id);
+
+  return (
+    <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Crew database
+          </p>
+          <h2 className="text-lg font-semibold text-zinc-950">Core Profile</h2>
+        </div>
+      </div>
+      <form action={action} className="mt-3 grid gap-3 lg:grid-cols-4">
+        <input name="returnTo" type="hidden" value={`/crew/${crewMember.id}`} />
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Employee #</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={crewMember.employeeNumber} name="employeeNumber" required />
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">First name</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={crewMember.firstName} name="firstName" required />
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Last name</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={crewMember.lastName} name="lastName" required />
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Base</span>
+          <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={crewMember.baseStation.id} name="baseStationId" required>
+            {stations.map((station) => (
+              <option key={station.id} value={station.id}>
+                {station.code} - {station.city}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Employment</span>
+          <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={crewMember.employmentStatus} name="employmentStatus" required>
+            {Object.values(EmploymentStatus).map((status) => (
+              <option key={status} value={status}>
+                {formatStatus(status)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Duty</span>
+          <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={crewMember.dutyStatus} name="dutyStatus" required>
+            {Object.values(DutyStatus).map((status) => (
+              <option key={status} value={status}>
+                {formatStatus(status)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Hire date</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={toInputDate(crewMember.hireDate)} name="hireDate" type="date" />
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Phone</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={crewMember.phone ?? ""} name="phone" />
+        </label>
+        <label className="block lg:col-span-2">
+          <span className="text-xs font-medium text-zinc-600">Email</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={crewMember.email ?? ""} name="email" type="email" />
+        </label>
+        <div className="flex items-end">
+          <button className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800" type="submit">
+            Save core profile
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function QualificationForm({
+  action,
+  buttonLabel,
+  qualification,
+}: {
+  action: (formData: FormData) => void;
+  buttonLabel: string;
+  qualification?: QualificationRow;
+}) {
+  return (
+    <form action={action} className="grid gap-2 rounded-md border border-zinc-200 bg-zinc-50 p-3 sm:grid-cols-2 lg:grid-cols-6">
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Aircraft</span>
+        <select className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs" defaultValue={qualification?.aircraftType ?? AircraftType.CL_65} name="aircraftType" required>
+          {Object.values(AircraftType).map((type) => (
+            <option key={type} value={type}>
+              {formatAircraftType(type)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Seat</span>
+        <select className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs" defaultValue={qualification?.seatRole ?? SeatRole.FO} name="seatRole" required>
+          {Object.values(SeatRole).map((role) => (
+            <option key={role} value={role}>
+              {formatRoleLabel(role)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Issued</span>
+        <input className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs" defaultValue={toInputDate(qualification?.issuedAt ?? new Date())} name="issuedAt" required type="date" />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Expires</span>
+        <input className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs" defaultValue={toInputDate(qualification?.expiresAt)} name="expiresAt" type="date" />
+      </label>
+      <label className="block lg:col-span-2">
+        <span className="text-xs font-medium text-zinc-600">Notes</span>
+        <input className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs" defaultValue={qualification?.notes ?? ""} name="notes" />
+      </label>
+      <div className="flex items-end">
+        <button className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800" type="submit">
+          {buttonLabel}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function QualificationManagement({
+  crewMember,
+}: {
+  crewMember: CrewMemberContextData;
+}) {
+  const createAction = createCrewQualificationAction.bind(null, crewMember.id);
+
+  return (
+    <Section title="Qualifications" eyebrow="Crew database" >
+      {crewMember.qualifications.length === 0 ? (
+        <p className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
+          No qualifications recorded.
+        </p>
+      ) : (
+        <div className="grid gap-3">
+          {crewMember.qualifications.map((qualification) => {
+            const updateAction = updateCrewQualificationAction.bind(
+              null,
+              crewMember.id,
+              qualification.id,
+            );
+            const expireAction = expireCrewQualificationAction.bind(
+              null,
+              crewMember.id,
+              qualification.id,
+            );
+            const deleteAction = deleteCrewQualificationAction.bind(
+              null,
+              crewMember.id,
+              qualification.id,
+            );
+
+            return (
+              <article className="rounded-md border border-zinc-200 bg-white p-3" key={qualification.id}>
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${qualificationBadgeClasses(
+                      qualification,
+                      new Date(),
+                    )}`}
+                  >
+                    {formatAircraftType(qualification.aircraftType)} {formatRoleLabel(qualification.seatRole)} -{" "}
+                    {qualificationStatus(qualification, new Date())}
+                  </span>
+                  <span className="text-xs text-zinc-500">
+                    Issued {toDate(qualification.issuedAt)} | expires {toDate(qualification.expiresAt)}
+                  </span>
+                </div>
+                <QualificationForm action={updateAction} buttonLabel="Save qualification" qualification={qualification} />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <form action={expireAction}>
+                    <button className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100" type="submit">
+                      Expire now
+                    </button>
+                  </form>
+                  <form action={deleteAction}>
+                    <button className="rounded-md border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100" type="submit">
+                      Delete
+                    </button>
+                  </form>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-zinc-950">Add qualification</h3>
+        <div className="mt-2">
+          <QualificationForm action={createAction} buttonLabel="Add qualification" />
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+export default async function CrewMemberContextPage({ params, searchParams }: PageProps) {
   const { crewMemberId } = await params;
-  const crewMember = await getCrewMemberContextData(crewMemberId);
+  const queryParams = await searchParams;
+  const [crewMember, stations] = await Promise.all([
+    getCrewMemberContextData(crewMemberId),
+    prisma.station.findMany({
+      where: { isActive: true },
+      orderBy: [{ code: "asc" }],
+      select: {
+        city: true,
+        code: true,
+        id: true,
+      },
+    }),
+  ]);
+  const error = firstSearchParam(queryParams.error);
 
   if (!crewMember) {
     notFound();
   }
 
-  const now = new Date();
   const availabilityLabel =
     crewMember.availabilityWarnings.length === 0 ? "Available context clear" : "Review warnings";
 
@@ -193,6 +457,17 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
                 <Link className="text-sky-700 hover:text-sky-900" href={`/crew/${crewMemberId}/logistics`}>
                   Manage logistics
                 </Link>
+                <Link className="text-sky-700 hover:text-sky-900" href={`/crew/${crewMemberId}/compliance`}>
+                  Manage compliance
+                </Link>
+                {crewMember.activeAssignments[0] ? (
+                  <Link
+                    className="text-sky-700 hover:text-sky-900"
+                    href={`/aircraft/${crewMember.activeAssignments[0].aircraft.id}/crew?crewMemberId=${crewMember.id}`}
+                  >
+                    Aircraft crew
+                  </Link>
+                ) : null}
               </div>
               <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Crew Member Context
@@ -223,6 +498,12 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
             </div>
           </div>
         </header>
+
+        {error ? (
+          <section className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+            {decodeURIComponent(error)}
+          </section>
+        ) : null}
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <article className="rounded-md border border-zinc-200 bg-white p-4">
@@ -273,13 +554,11 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
           </article>
         </section>
 
+        <CrewMemberEditForm crewMember={crewMember} stations={stations} />
+
         <Section eyebrow="Warning-only" title="Availability Snapshot">
-          <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
-            This page is planning context only. It does not assign crew, enforce
-            duty/rest, write schedules, approve time off, or block release actions.
-          </div>
           {crewMember.availabilityWarnings.length === 0 ? (
-            <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+            <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
               No availability warnings found in the {CREW_MEMBER_CONTEXT_WINDOW_DAYS}-day planning
               window.
             </p>
@@ -368,39 +647,12 @@ export default async function CrewMemberContextPage({ params }: PageProps) {
           </div>
         </Section>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Section title="Qualifications">
-            {crewMember.qualifications.length === 0 ? (
-              <p className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600">
-                No qualifications recorded.
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {crewMember.qualifications.map((qualification) => (
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${qualificationBadgeClasses(
-                      qualification,
-                      now,
-                    )}`}
-                    key={qualification.id}
-                  >
-                    {formatAircraftType(qualification.aircraftType)}{" "}
-                    {formatRoleLabel(qualification.seatRole)} -{" "}
-                    {qualificationStatus(qualification, now)} ({toDate(qualification.expiresAt)})
-                  </span>
-                ))}
-              </div>
-            )}
-          </Section>
+        <div className="grid gap-4 lg:grid-cols-2" id="qualifications">
+          <QualificationManagement crewMember={crewMember} />
 
           <Section eyebrow="Warning-only" title="Compliance Evidence">
-            <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
-              Compliance records are evidence context only. They do not assign
-              crew, enforce duty/rest, sign releases, or block operations in
-              this slice.
-            </div>
             <Link
-              className="mt-3 inline-flex rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+              className="inline-flex rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
               href={`/crew/${crewMember.id}/compliance`}
             >
               Manage compliance records

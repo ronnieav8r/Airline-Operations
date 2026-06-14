@@ -606,6 +606,20 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
           </p>
         </section>
 
+        <section className="grid gap-3 md:grid-cols-4">
+          {[
+            ["Bid open", "Crew requests and preferences enter the period review queue."],
+            ["Drafting", "Ops builds schedule entries and reviews warning-only conflicts."],
+            ["Published", "Published entries create CrewSchedule availability rows."],
+            ["Archived", "Historical periods stay visible without active scheduling work."],
+          ].map(([title, body]) => (
+            <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" key={title}>
+              <p className="text-sm font-semibold text-zinc-950">{title}</p>
+              <p className="mt-1 text-xs leading-5 text-zinc-600">{body}</p>
+            </article>
+          ))}
+        </section>
+
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -901,6 +915,12 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
                               >
                                 Manage logistics
                               </Link>
+                              <Link
+                                className="ml-3 mt-2 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
+                                href={`/crew/${crewMember.id}/compliance`}
+                              >
+                                Compliance
+                              </Link>
                             </div>
                             <div className="flex flex-wrap gap-2">
                               <span
@@ -1058,9 +1078,9 @@ export default async function CrewSchedulingPage({ searchParams }: PageProps) {
                                       </div>
                                       <Link
                                         className="mt-1 inline-flex text-xs font-semibold text-sky-700 hover:text-sky-900"
-                                        href={`/aircraft/${assignment.aircraft.id}/crew`}
+                                        href={`/aircraft/${assignment.aircraft.id}/crew?crewMemberId=${crewMember.id}&seatRole=${assignment.seatRole}`}
                                       >
-                                        Manage aircraft crew
+                                        Assignment fit
                                       </Link>
                                     </li>
                                   ))}

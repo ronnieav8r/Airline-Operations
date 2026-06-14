@@ -2,6 +2,7 @@ import {
   AircraftType,
   CrewComplianceRecordStatus,
   CrewLogisticsNeedStatus,
+  CrewScheduleEntryStatus,
   DutyStatus,
   EmploymentStatus,
   Prisma,
@@ -320,6 +321,33 @@ const crewMemberOptionSelect = {
     },
     orderBy: [{ date: "asc" }, { startsAt: "asc" }],
   },
+  scheduleEntries: {
+    where: {
+      status: {
+        in: [CrewScheduleEntryStatus.DRAFT, CrewScheduleEntryStatus.PUBLISHED],
+      },
+    },
+    select: {
+      id: true,
+      date: true,
+      dutyStatus: true,
+      startsAt: true,
+      endsAt: true,
+      status: true,
+      period: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      station: {
+        select: {
+          code: true,
+        },
+      },
+    },
+    orderBy: [{ date: "asc" }, { startsAt: "asc" }],
+  },
   timeOffRequests: {
     where: {
       status: { in: [TimeOffRequestStatus.PENDING, TimeOffRequestStatus.APPROVED] },
@@ -587,6 +615,9 @@ function normalizeCrewOption(
   const schedulesInWindow = crewMember.schedules.filter((schedule) =>
     overlapsWindow(schedule.startsAt ?? schedule.date, schedule.endsAt, now, windowEnd),
   );
+  const scheduleEntriesInWindow = crewMember.scheduleEntries.filter((entry) =>
+    overlapsWindow(entry.startsAt ?? entry.date, entry.endsAt, now, windowEnd),
+  );
   const timeOffInWindow = crewMember.timeOffRequests.filter((request) =>
     overlapsWindow(request.startDate, request.endDate, now, windowEnd),
   );
@@ -608,8 +639,8 @@ function normalizeCrewOption(
     availabilityWarnings.push(`Current duty status should be reviewed: ${crewMember.dutyStatus}.`);
   }
 
-  if (schedulesInWindow.length === 0) {
-    availabilityWarnings.push("No CrewSchedule block in the next 7 days.");
+  if (schedulesInWindow.length === 0 && scheduleEntriesInWindow.length === 0) {
+    availabilityWarnings.push("No CrewSchedule block or schedule-period entry in the next 7 days.");
   }
 
   if (timeOffInWindow.length > 0) {
@@ -704,6 +735,16 @@ export async function getAircraftCrewWorkflowData(
             status: { in: [TimeOffRequestStatus.PENDING, TimeOffRequestStatus.APPROVED] },
             startDate: { lt: windowEnd },
             endDate: { gte: now },
+          },
+        },
+        scheduleEntries: {
+          ...crewMemberOptionSelect.scheduleEntries,
+          where: {
+            status: { in: [CrewScheduleEntryStatus.DRAFT, CrewScheduleEntryStatus.PUBLISHED] },
+            date: {
+              gte: windowStart,
+              lt: windowEnd,
+            },
           },
         },
       },

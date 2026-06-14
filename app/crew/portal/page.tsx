@@ -295,10 +295,24 @@ export default async function CrewPortalPage({ searchParams }: PageProps) {
         <section className="rounded-md border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
           <p className="font-semibold">Portal boundary</p>
           <p className="mt-1">
-            This first crew portal is read-only. It does not submit requests,
-            approve requests, publish schedules, change aircraft assignments,
+            This portal submits requests for this linked crew profile only. Admin/ops
+            review is still required before requests affect planning, and the portal
+            cannot approve requests, publish schedules, change aircraft assignments,
             edit compliance records, or create logistics records.
           </p>
+        </section>
+
+        <section className="grid gap-3 md:grid-cols-3">
+          {[
+            ["Submit", "Crew submits time off, pattern, duty preference, swap, or note requests."],
+            ["Review", "Admin/ops reviews submitted items on time-off and schedule-period queues."],
+            ["Plan", "Approved requests can inform draft entries; assignments stay explicit."],
+          ].map(([title, body]) => (
+            <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm" key={title}>
+              <p className="text-sm font-semibold text-zinc-950">{title}</p>
+              <p className="mt-1 text-xs leading-5 text-zinc-600">{body}</p>
+            </article>
+          ))}
         </section>
 
         {error ? (
@@ -334,9 +348,8 @@ export default async function CrewPortalPage({ searchParams }: PageProps) {
 
           <Section eyebrow="Crew self-service" title="Request Submission">
             <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
-              These forms submit requests for your linked crew profile only.
-              Admin/ops review is still required before anything is approved or
-              used for scheduling.
+              Time-off requests go to the time-off queue. Schedule requests go to
+              the selected schedule period for admin/ops review.
             </div>
             <div className="mt-3 grid gap-3" id="request-submission">
               <TimeOffRequestForm />
