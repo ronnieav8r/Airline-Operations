@@ -18,8 +18,12 @@ The current active tracks are:
   `docs/BACKEND_MVP_GAP_REVIEW.md`.
 - **Frontend/UI polish**: active work is now page-by-page operational workflow
   refinement. Recent slices split Ops Release/Preflight/Postflight, added
-  reusable customer/passenger/manifest workflows, and simplified the aircraft
-  board into fleet-status filters.
+  reusable customer/passenger/manifest workflows, simplified the aircraft board
+  into fleet-status filters, and started drawer-first crew/scheduling polish.
+- **Crew scheduling**: `/crew/scheduling` is now a read-only scheduler
+  workbench with Coverage Board, Schedule Planning, Assignment Overlay, and
+  Requests. Next work should keep schedule planning separate from aircraft or
+  FlightLeg assignment truth.
 - **FlightLeg cutover**: Prompt 216 is implemented. Crew-heavy internal
   coverage consumers now prefer FlightLeg IDs while keeping legacy fallback and
   public API compatibility. Legacy `Flight` remains compatibility/archive.
@@ -91,7 +95,7 @@ It has:
 - Customers and passenger records at `/customers`
 - Aircraft at `/aircraft`
 - Crew at `/crew`
-- Scheduling at `/scheduling`
+- Crew scheduling at `/crew/scheduling`
 - Shared URL-driven quick-review drawers across Dashboard, Flights, Aircraft,
   Crew, and Scheduling
 - Dashboard FlightLeg object-action drawer with summary, release, MX, crew,

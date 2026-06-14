@@ -10,6 +10,18 @@ post-MVP unless separately planned.
 
 Latest completed work:
 
+- Crew workflows are now moving drawer-first. `/crew` has a compact roster,
+  drawer-based add/edit/detail surfaces, and a time-off review drawer with
+  same-position coverage context.
+- Time-off review now shows affected aircraft/seat position, available crew,
+  pending and approved overlapping time off, occupied crew, and whether the
+  count is schedule-backed or unscheduled planning context.
+- `/crew/scheduling` was reworked into a read-only scheduler workbench with
+  Coverage Board, Schedule Planning, Assignment Overlay, and Requests tabs.
+  Month/week/day views are URL-driven and count crew by aircraft type and role
+  using `CPT` for captain and `CA` for cabin attendant.
+- Scheduling remains read/drill-only in the latest slice. It does not create
+  schedule rows, aircraft crew assignments, or FlightLeg assignments.
 - Crew eligibility now resolves as of the flight scheduled departure. Pending
   planned compliance events show planning intent, but only eligible/warning
   crew count as clean coverage.
@@ -47,9 +59,25 @@ The dashboard drawer should become an object-action workspace:
 - Aircraft should stay a fleet inventory/status board. Detailed maintenance
   workflows need their own focused surface instead of adding more top-level
   aircraft counters.
+- Crew and scheduling should continue the same task-first pattern: compact
+  list or board first, then focused drawers for review, edit, coverage,
+  location, logistics, and assignment handoff tasks.
+- Scheduling has two layers: schedule coverage planning first, then assignment
+  coverage overlay. `AircraftCrewAssignment` remains the staffing truth.
 
 ## Known Current Follow-Ups
 
+- Start Docker/local Postgres before running DB-backed crew smoke or browser
+  checks. Useful sequence: `npm run db:local:up`, `npm run db:local:migrate`,
+  and `npm run db:local:seed` when the database needs refresh.
+- Rerun crew scheduling checks with the local DB available:
+  `npm run smoke:crew-scheduling-workbench`, then browser-check
+  `/crew/scheduling?view=month`, `/crew/scheduling?view=week`, and
+  `/crew/scheduling?view=day`.
+- Continue the crew scheduling workbench from read/drill into focused drawer
+  workflows for schedule planning actions, request review, and assignment
+  handoff. Do not add auto-assignment or duty/rest hard enforcement without a
+  separate plan.
 - Add aircraft fuel burn/range/endurance settings before showing calculated
   endurance or conservative range.
 - Add an aircraft create drawer from `/aircraft`.
@@ -68,6 +96,18 @@ The dashboard drawer should become an object-action workspace:
   aircraft review.
 
 ## Validation Status
+
+Most recent crew scheduling workbench slice passed:
+
+- `npm run prisma:validate`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+
+DB-backed crew scheduling smoke and browser checks are pending because local
+Postgres was not available during the latest run. The user confirmed Docker can
+be started for future checks; do that before marking the DB-backed checks
+blocked.
 
 Most recent aircraft-board slice passed:
 

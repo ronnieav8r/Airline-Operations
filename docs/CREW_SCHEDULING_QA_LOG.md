@@ -1,6 +1,38 @@
 # Crew Scheduling QA Log
 
-Last updated: 2026-06-10
+Last updated: 2026-06-14
+
+## Crew Scheduling Workbench UI Rework
+
+### Result
+
+Static validation passed for the read-only `/crew/scheduling` workbench rework.
+DB-backed smoke and browser checks are pending until local Docker Postgres is
+available.
+
+### Static Validation
+
+- `npm run prisma:validate`: pass.
+- `npm run typecheck`: pass.
+- `npm run lint`: pass.
+- `npm run build`: pass.
+
+### Runtime Follow-Up
+
+- Start local Docker Postgres with `npm run db:local:up`.
+- Apply local DB setup with `npm run db:local:migrate` and
+  `npm run db:local:seed` if the local database needs refresh.
+- Run `npm run smoke:crew-scheduling-workbench`.
+- Browser-check `/crew/scheduling?view=month`, `/crew/scheduling?view=week`,
+  `/crew/scheduling?view=day`, coverage drawer, crew/location drawer, and
+  assignment overlay links.
+
+### Verified Static Behavior
+
+- Month/week/day aggregation is derived from existing schedule, time-off,
+  assignment, FlightLeg, location, and logistics tables.
+- Role labels use `CPT`, `FO`, `FA`, and `CA`.
+- Loading the workbench adds no schedule, assignment, or FlightLeg writes.
 
 ## Prompt 242: Runtime QA Plan
 
