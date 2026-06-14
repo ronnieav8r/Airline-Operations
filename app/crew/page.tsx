@@ -11,6 +11,7 @@ import { ReactNode } from "react";
 import { createCrewMemberAction } from "@/app/crew/actions";
 import { reviewTimeOffRequestAction } from "@/app/crew/scheduling/time-off/actions";
 import { ContextDrawer } from "@/components/context-drawer";
+import { TimeOffCoverageImpactPanel } from "@/components/time-off-coverage-impact";
 import { prisma } from "@/lib/prisma";
 import {
   getUpcomingCoverageFlightsForAircrafts,
@@ -700,6 +701,7 @@ function TimeOffRequestRow({
           ))}
         </ul>
       ) : null}
+      <TimeOffCoverageImpactPanel impacts={request.coverageImpact} />
     </article>
   );
 }

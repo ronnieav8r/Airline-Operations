@@ -5,6 +5,7 @@ import {
   createTimeOffRequestAction,
   reviewTimeOffRequestAction,
 } from "@/app/crew/scheduling/time-off/actions";
+import { TimeOffCoverageImpactPanel } from "@/components/time-off-coverage-impact";
 import {
   TimeOffWorkflowData,
   TimeOffWorkflowFilters,
@@ -367,6 +368,7 @@ function RequestCard({ request, returnTo }: { request: TimeOffWorkflowRequest; r
         </div>
       </div>
       <ConflictWarnings request={request} />
+      <TimeOffCoverageImpactPanel impacts={request.coverageImpact} />
     </article>
   );
 }

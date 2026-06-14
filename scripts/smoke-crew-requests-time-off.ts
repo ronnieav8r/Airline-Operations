@@ -1,13 +1,16 @@
 import {
+  EmploymentStatus,
   CrewSchedulePeriodStatus,
   CrewScheduleRequestStatus,
   CrewScheduleRequestType,
   DutyStatus,
   PrismaClient,
+  SeatRole,
   TimeOffRequestStatus,
   TimeOffRequestType,
 } from "@prisma/client";
 
+import { getTimeOffWorkflowData } from "../lib/time-off-workflow-queries";
 import {
   assertSmokeTestAuthEnabled,
   ensureSmokeTestUsers,
@@ -24,11 +27,52 @@ function atUtcDay(daysFromNow: number, hour = 0, minute = 0): Date {
   return date;
 }
 
+async function createCoverageCrew({
+  aircraftType,
+  employeeSuffix,
+  firstName,
+  lastName,
+  seatRole,
+  stationId,
+}: {
+  aircraftType: Awaited<ReturnType<typeof prisma.aircraft.findFirstOrThrow>>["type"];
+  employeeSuffix: string;
+  firstName: string;
+  lastName: string;
+  seatRole: SeatRole;
+  stationId: string;
+}) {
+  return prisma.crewMember.create({
+    data: {
+      baseStationId: stationId,
+      dutyStatus: DutyStatus.OFF_DUTY,
+      employeeNumber: `${smokeLabel}-${employeeSuffix}`,
+      employmentStatus: EmploymentStatus.ACTIVE,
+      firstName,
+      lastName,
+      qualifications: {
+        create: {
+          aircraftType,
+          issuedAt: atUtcDay(-30),
+          seatRole,
+        },
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+}
+
+function hasCrew(crew: Array<{ crewMemberId: string }>, crewMemberId: string): boolean {
+  return crew.some((crewMember) => crewMember.crewMemberId === crewMemberId);
+}
+
 async function main() {
   assertSmokeTestAuthEnabled();
   await ensureSmokeTestUsers(prisma);
 
-  const [admin, crewUser, crewMember] = await Promise.all([
+  const [admin, crewUser, crewMember, station, aircraft] = await Promise.all([
     prisma.user.findUnique({
       where: { email: "admin@aeroops.local" },
       select: { id: true },
@@ -42,6 +86,15 @@ async function main() {
       orderBy: [{ createdAt: "asc" }],
       select: { id: true },
     }),
+    prisma.station.findFirst({
+      where: { isActive: true },
+      orderBy: [{ code: "asc" }],
+      select: { id: true },
+    }),
+    prisma.aircraft.findFirst({
+      orderBy: [{ tailNumber: "asc" }],
+      select: { id: true, tailNumber: true, type: true },
+    }),
   ]);
 
   if (!admin || !crewUser) {
@@ -51,6 +104,188 @@ async function main() {
   if (!crewMember) {
     throw new Error("No active crew member was found. Run local seed first.");
   }
+
+  if (!station || !aircraft) {
+    throw new Error("Station or aircraft seed data was not found. Run local seed first.");
+  }
+
+  const assignedRole = SeatRole.FA;
+  const fallbackRole = SeatRole.CA;
+  const assignedWindowStart = atUtcDay(120);
+  const assignedWindowEnd = atUtcDay(122, 23, 59);
+  const fallbackWindowStart = atUtcDay(130);
+  const fallbackWindowEnd = atUtcDay(132, 23, 59);
+  const [
+    assignedRequester,
+    scheduledAvailableCrew,
+    pendingOverlapCrew,
+    approvedOverlapCrew,
+    occupiedCrew,
+    scheduledUnavailableCrew,
+    fallbackRequester,
+    fallbackAvailableCrew,
+  ] = await Promise.all([
+    createCoverageCrew({
+      aircraftType: aircraft.type,
+      employeeSuffix: "ASSIGNED-REQUESTER",
+      firstName: "Assigned",
+      lastName: "Requester",
+      seatRole: assignedRole,
+      stationId: station.id,
+    }),
+    createCoverageCrew({
+      aircraftType: aircraft.type,
+      employeeSuffix: "SCHEDULED-AVAILABLE",
+      firstName: "Scheduled",
+      lastName: "Available",
+      seatRole: assignedRole,
+      stationId: station.id,
+    }),
+    createCoverageCrew({
+      aircraftType: aircraft.type,
+      employeeSuffix: "PENDING-OVERLAP",
+      firstName: "Pending",
+      lastName: "Overlap",
+      seatRole: assignedRole,
+      stationId: station.id,
+    }),
+    createCoverageCrew({
+      aircraftType: aircraft.type,
+      employeeSuffix: "APPROVED-OVERLAP",
+      firstName: "Approved",
+      lastName: "Overlap",
+      seatRole: assignedRole,
+      stationId: station.id,
+    }),
+    createCoverageCrew({
+      aircraftType: aircraft.type,
+      employeeSuffix: "OCCUPIED",
+      firstName: "Occupied",
+      lastName: "Crew",
+      seatRole: assignedRole,
+      stationId: station.id,
+    }),
+    createCoverageCrew({
+      aircraftType: aircraft.type,
+      employeeSuffix: "SCHEDULED-UNAVAILABLE",
+      firstName: "Scheduled",
+      lastName: "Unavailable",
+      seatRole: assignedRole,
+      stationId: station.id,
+    }),
+    createCoverageCrew({
+      aircraftType: aircraft.type,
+      employeeSuffix: "FALLBACK-REQUESTER",
+      firstName: "Fallback",
+      lastName: "Requester",
+      seatRole: fallbackRole,
+      stationId: station.id,
+    }),
+    createCoverageCrew({
+      aircraftType: aircraft.type,
+      employeeSuffix: "FALLBACK-AVAILABLE",
+      firstName: "Fallback",
+      lastName: "Available",
+      seatRole: fallbackRole,
+      stationId: station.id,
+    }),
+  ]);
+
+  const [assignedCoverageRequest, fallbackCoverageRequest] = await Promise.all([
+    prisma.timeOffRequest.create({
+      data: {
+        crewMemberId: assignedRequester.id,
+        endDate: assignedWindowEnd,
+        reason: `${smokeLabel} assigned coverage request`,
+        requestedById: crewUser.id,
+        requestType: TimeOffRequestType.VACATION,
+        startDate: assignedWindowStart,
+        status: TimeOffRequestStatus.PENDING,
+      },
+      select: { id: true },
+    }),
+    prisma.timeOffRequest.create({
+      data: {
+        crewMemberId: fallbackRequester.id,
+        endDate: fallbackWindowEnd,
+        reason: `${smokeLabel} fallback coverage request`,
+        requestedById: crewUser.id,
+        requestType: TimeOffRequestType.PERSONAL,
+        startDate: fallbackWindowStart,
+        status: TimeOffRequestStatus.PENDING,
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  await prisma.$transaction([
+    prisma.aircraftCrewAssignment.create({
+      data: {
+        aircraftId: aircraft.id,
+        crewMemberId: assignedRequester.id,
+        isActive: true,
+        seatRole: assignedRole,
+        startsAt: atUtcDay(119),
+        endsAt: atUtcDay(123, 23, 59),
+        notes: `${smokeLabel} requester assignment`,
+      },
+    }),
+    prisma.aircraftCrewAssignment.create({
+      data: {
+        aircraftId: aircraft.id,
+        crewMemberId: occupiedCrew.id,
+        isActive: true,
+        seatRole: assignedRole,
+        startsAt: assignedWindowStart,
+        endsAt: assignedWindowEnd,
+        notes: `${smokeLabel} occupied same-position crew`,
+      },
+    }),
+    prisma.crewSchedule.create({
+      data: {
+        crewMemberId: scheduledAvailableCrew.id,
+        date: assignedWindowStart,
+        dutyStatus: DutyStatus.ON_DUTY,
+        stationId: station.id,
+        startsAt: assignedWindowStart,
+        endsAt: atUtcDay(120, 12),
+        notes: `${smokeLabel} workable schedule`,
+      },
+    }),
+    prisma.crewSchedule.create({
+      data: {
+        crewMemberId: scheduledUnavailableCrew.id,
+        date: assignedWindowStart,
+        dutyStatus: DutyStatus.TRAINING,
+        stationId: station.id,
+        startsAt: assignedWindowStart,
+        endsAt: atUtcDay(120, 12),
+        notes: `${smokeLabel} unavailable schedule`,
+      },
+    }),
+    prisma.timeOffRequest.create({
+      data: {
+        crewMemberId: pendingOverlapCrew.id,
+        endDate: assignedWindowEnd,
+        reason: `${smokeLabel} pending overlap`,
+        requestedById: crewUser.id,
+        requestType: TimeOffRequestType.PERSONAL,
+        startDate: assignedWindowStart,
+        status: TimeOffRequestStatus.PENDING,
+      },
+    }),
+    prisma.timeOffRequest.create({
+      data: {
+        crewMemberId: approvedOverlapCrew.id,
+        endDate: assignedWindowEnd,
+        reason: `${smokeLabel} approved overlap`,
+        requestedById: crewUser.id,
+        requestType: TimeOffRequestType.VACATION,
+        startDate: assignedWindowStart,
+        status: TimeOffRequestStatus.APPROVED,
+      },
+    }),
+  ]);
 
   const [aircraftAssignmentCountBefore, crewScheduleCountBefore, scheduleEntryCountBefore] =
     await Promise.all([
@@ -236,6 +471,52 @@ async function main() {
     )
   ) {
     throw new Error("Time-off review did not persist expected statuses and review metadata.");
+  }
+
+  const workflowData = await getTimeOffWorkflowData({
+    crewMemberId: "all",
+    fromDate: atUtcDay(118),
+    requestType: "all",
+    status: TimeOffRequestStatus.PENDING,
+    toDate: atUtcDay(134),
+  });
+  const assignedWorkflowRequest = workflowData.requestsByStatus.PENDING.find(
+    (request) => request.id === assignedCoverageRequest.id,
+  );
+  const fallbackWorkflowRequest = workflowData.requestsByStatus.PENDING.find(
+    (request) => request.id === fallbackCoverageRequest.id,
+  );
+  const assignedImpact = assignedWorkflowRequest?.coverageImpact.find(
+    (impact) => impact.aircraftType === aircraft.type && impact.seatRole === assignedRole,
+  );
+  const fallbackImpact = fallbackWorkflowRequest?.coverageImpact.find(
+    (impact) => impact.aircraftType === aircraft.type && impact.seatRole === fallbackRole,
+  );
+
+  if (!assignedImpact || assignedImpact.source !== "ASSIGNMENT") {
+    throw new Error("Time-off coverage did not use the requester's active aircraft assignment first.");
+  }
+
+  if (
+    assignedImpact.scheduleMode !== "SCHEDULED" ||
+    !hasCrew(assignedImpact.available, scheduledAvailableCrew.id) ||
+    !hasCrew(assignedImpact.pendingOff, pendingOverlapCrew.id) ||
+    !hasCrew(assignedImpact.approvedOff, approvedOverlapCrew.id) ||
+    !hasCrew(assignedImpact.occupied, occupiedCrew.id) ||
+    !hasCrew(assignedImpact.scheduledUnavailable, scheduledUnavailableCrew.id)
+  ) {
+    throw new Error("Time-off coverage did not bucket scheduled same-position crew as expected.");
+  }
+
+  if (!fallbackImpact || fallbackImpact.source !== "QUALIFICATION") {
+    throw new Error("Time-off coverage did not fall back to qualifications when no assignment existed.");
+  }
+
+  if (
+    fallbackImpact.scheduleMode !== "QUALIFIED_POOL" ||
+    !hasCrew(fallbackImpact.available, fallbackAvailableCrew.id)
+  ) {
+    throw new Error("Time-off coverage did not show an unscheduled qualified-pool estimate.");
   }
 
   const [aircraftAssignmentCountAfter, crewScheduleCountAfter, scheduleEntryCountAfter] =
