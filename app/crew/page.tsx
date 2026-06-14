@@ -61,7 +61,7 @@ type CrewFilters = {
   base: string;
   duty: "all" | DutyStatus;
   issue: "all" | "warnings";
-  panel: "crew" | null;
+  panel: "create" | "crew" | null;
   selected: string | null;
   status: "all" | EmploymentStatus;
 };
@@ -79,12 +79,14 @@ function oneOf<T extends string>(value: string | null, options: readonly T[], fa
 }
 
 function parseCrewFilters(searchParams: Awaited<PageProps["searchParams"]>): CrewFilters {
+  const panelParam = firstParam(searchParams.panel);
+
   return {
     assignment: oneOf(firstParam(searchParams.assignment), ["all", "assigned", "unassigned"], "all"),
     base: firstParam(searchParams.base) ?? "all",
     duty: oneOf(firstParam(searchParams.duty), ["all", ...Object.values(DutyStatus)], "all"),
     issue: oneOf(firstParam(searchParams.issue), ["all", "warnings"], "all"),
-    panel: firstParam(searchParams.panel) === "crew" ? "crew" : null,
+    panel: panelParam === "create" || panelParam === "crew" ? panelParam : null,
     selected: firstParam(searchParams.selected),
     status: oneOf(firstParam(searchParams.status), ["all", ...Object.values(EmploymentStatus)], "all"),
   };
@@ -475,72 +477,67 @@ function CrewMemberCreateForm({
   const defaultStation = stations[0]?.id;
 
   return (
-    <details className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
-      <summary className="cursor-pointer text-sm font-semibold text-zinc-900">
-        Add crew member
-      </summary>
-      <form action={createCrewMemberAction} className="mt-3 grid gap-3 lg:grid-cols-4">
-        <label className="block">
-          <span className="text-xs font-medium text-zinc-600">Employee #</span>
-          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="employeeNumber" required />
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-zinc-600">First name</span>
-          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="firstName" required />
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-zinc-600">Last name</span>
-          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="lastName" required />
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-zinc-600">Base</span>
-          <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={defaultStation} name="baseStationId" required>
-            {stations.map((station) => (
-              <option key={station.id} value={station.id}>
-                {station.code} - {station.city}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-zinc-600">Employment</span>
-          <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={EmploymentStatus.ACTIVE} name="employmentStatus" required>
-            {Object.values(EmploymentStatus).map((status) => (
-              <option key={status} value={status}>
-                {statusLabel(status)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-zinc-600">Duty</span>
-          <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={DutyStatus.OFF_DUTY} name="dutyStatus" required>
-            {Object.values(DutyStatus).map((status) => (
-              <option key={status} value={status}>
-                {statusLabel(status)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-zinc-600">Hire date</span>
-          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="hireDate" type="date" />
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-zinc-600">Phone</span>
-          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="phone" />
-        </label>
-        <label className="block lg:col-span-2">
-          <span className="text-xs font-medium text-zinc-600">Email</span>
-          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="email" type="email" />
-        </label>
-        <div className="flex items-end">
-          <button className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800" type="submit">
-            Create crew member
-          </button>
-        </div>
-      </form>
-    </details>
+    <form action={createCrewMemberAction} className="grid gap-3">
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Employee #</span>
+        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="employeeNumber" required />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">First name</span>
+        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="firstName" required />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Last name</span>
+        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="lastName" required />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Base</span>
+        <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={defaultStation} name="baseStationId" required>
+          {stations.map((station) => (
+            <option key={station.id} value={station.id}>
+              {station.code} - {station.city}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Employment</span>
+        <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={EmploymentStatus.ACTIVE} name="employmentStatus" required>
+          {Object.values(EmploymentStatus).map((status) => (
+            <option key={status} value={status}>
+              {statusLabel(status)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Duty</span>
+        <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={DutyStatus.OFF_DUTY} name="dutyStatus" required>
+          {Object.values(DutyStatus).map((status) => (
+            <option key={status} value={status}>
+              {statusLabel(status)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Hire date</span>
+        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="hireDate" type="date" />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Phone</span>
+        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="phone" />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-zinc-600">Email</span>
+        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="email" type="email" />
+      </label>
+      <div className="flex items-end">
+        <button className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800" type="submit">
+          Create crew member
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -629,11 +626,30 @@ function CrewDrawer({
   filters: CrewFilters;
   roster: Awaited<ReturnType<typeof getCrewRosterData>>;
 }) {
-  if (!filters.panel || !filters.selected) {
+  if (!filters.panel) {
     return null;
   }
 
   const closeHref = crewHref(filters, { panel: null, selected: null });
+  if (filters.panel === "create") {
+    return (
+      <ContextDrawer closeHref={closeHref} eyebrow="Crew workflow" size="wide" title="Add Crew Member">
+        <div className="space-y-4">
+          <section className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+            Create the core crew record first. Qualifications, compliance evidence,
+            logistics, scheduling, and aircraft assignments stay in their focused
+            workflows after the person exists.
+          </section>
+          <CrewMemberCreateForm stations={roster.stations} />
+        </div>
+      </ContextDrawer>
+    );
+  }
+
+  if (!filters.selected) {
+    return null;
+  }
+
   const crewMember = crewMembers.find((item) => item.id === filters.selected);
 
   if (!crewMember) {
@@ -788,6 +804,12 @@ export default async function CrewPage({ searchParams }: PageProps) {
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+                href={crewHref(filters, { panel: "create", selected: null })}
+              >
+                Add crew member
+              </Link>
+              <Link
+                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                 href="/crew/scheduling"
               >
                 Crew planner
@@ -822,8 +844,6 @@ export default async function CrewPage({ searchParams }: PageProps) {
             {decodeURIComponent(error)}
           </section>
         ) : null}
-
-        <CrewMemberCreateForm stations={roster.stations} />
 
         <section className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
           <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">

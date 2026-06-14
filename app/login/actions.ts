@@ -41,6 +41,27 @@ export async function loginAction(formData: FormData) {
   redirect("/");
 }
 
+export async function localAdminLoginAction() {
+  if (process.env.AEROOPS_ENABLE_TEST_AUTH !== "1" || process.env.NODE_ENV === "production") {
+    redirect(loginUrl({ error: "Local admin shortcut is disabled." }));
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: "admin@aeroops.local" },
+    select: {
+      id: true,
+      isActive: true,
+    },
+  });
+
+  if (!user?.isActive) {
+    redirect(loginUrl({ error: "Local admin user was not found. Run local seed first." }));
+  }
+
+  await createSession(user.id);
+  redirect("/");
+}
+
 export async function logoutAction() {
   await logoutCurrentSession();
   redirect("/login?loggedOut=1");

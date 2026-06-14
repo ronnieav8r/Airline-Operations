@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { loginAction } from "./actions";
+import { localAdminLoginAction, loginAction } from "./actions";
 
 type PageProps = {
   searchParams: Promise<{
@@ -19,6 +19,8 @@ export default async function LoginPage({ searchParams }: PageProps) {
   const error = firstParam(params.error);
   const email = firstParam(params.email) ?? "";
   const loggedOut = firstParam(params.loggedOut) === "1";
+  const showLocalAdminShortcut =
+    process.env.AEROOPS_ENABLE_TEST_AUTH === "1" && process.env.NODE_ENV !== "production";
 
   return (
     <main className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-7xl items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
@@ -79,6 +81,17 @@ export default async function LoginPage({ searchParams }: PageProps) {
             Sign in
           </button>
         </form>
+
+        {showLocalAdminShortcut ? (
+          <form action={localAdminLoginAction} className="mt-3">
+            <button
+              className="w-full rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-semibold text-sky-900 shadow-sm transition hover:bg-sky-100"
+              type="submit"
+            >
+              Continue as local admin
+            </button>
+          </form>
+        ) : null}
 
         <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
           Seeded local credentials use <span className="font-semibold">admin@aeroops.local</span>{" "}
