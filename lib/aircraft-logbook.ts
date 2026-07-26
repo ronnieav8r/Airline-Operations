@@ -711,7 +711,8 @@ export async function signAircraftLogbookEntry({
     throw new AircraftLogbookError("Signature purpose is not valid.");
   }
 
-  return prisma.$transaction(async (transaction) => {
+  try {
+    return await prisma.$transaction(async (transaction) => {
     const entry = await transaction.aircraftLogbookEntry.findUnique({
       where: { id: entryId },
       include: {
@@ -874,8 +875,19 @@ export async function signAircraftLogbookEntry({
       },
     });
 
-    return signature;
-  });
+      return signature;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === "P2002" || error.code === "P2034")
+    ) {
+      throw new AircraftLogbookError(
+        "This approval was signed or changed concurrently. Refresh the logbook entry before trying again.",
+      );
+    }
+    throw error;
+  }
 }
 
 export async function uploadAircraftLogbookAttachment({

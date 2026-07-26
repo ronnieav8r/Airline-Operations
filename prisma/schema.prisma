@@ -2265,6 +2265,7 @@ model AircraftLogbookSignature {
   signer             User?                           @relation("AircraftLogbookSignatureSigner", fields: [signerUserId], references: [id], onDelete: SetNull)
   authorityProfile   MaintenanceAuthorityProfile?    @relation(fields: [authorityProfileId], references: [id], onDelete: SetNull)
 
+  @@unique([entryId, purpose])
   @@index([entryId, signedAt])
   @@index([signerUserId])
   @@index([authorityProfileId])
