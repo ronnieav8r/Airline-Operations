@@ -4,6 +4,13 @@ Last updated: 2026-07-26
 
 This document is the current source of truth for aircraft maintenance serviceability in AeroOps. It supersedes older planning language that treated a current `AirworthinessRelease` as the normal everyday maintenance gate.
 
+## UI presentation note
+
+MX-003 groups already-filtered Scheduled Maintenance and review-only top-level
+Logbook rows by aircraft for display only. It does not change any lifecycle
+state, serviceability computation, authorization rule, persistence behavior, or
+maintenance action.
+
 ## Current Rule
 
 Aircraft serviceability is computed, not manually released for each flight.

@@ -88,6 +88,20 @@ type NextScheduledMaintenance = {
   timeLabel: string;
 };
 
+type ScheduledItemGroup = {
+  aircraftId: string;
+  aircraftType: AircraftType;
+  items: MaintenanceScheduledItem[];
+  tailNumber: string;
+};
+
+type LogbookItemGroup = {
+  aircraftId: string;
+  aircraftType: AircraftType;
+  items: MaintenanceLogbookItem[];
+  tailNumber: string;
+};
+
 type MaintenanceFleetStats = {
   aogCount: number;
   deferredCount: number;
@@ -391,6 +405,88 @@ function buildNextScheduledMaintenanceMap(items: MaintenanceScheduledItem[]) {
 
     return map;
   }, new Map<string, NextScheduledMaintenance>());
+}
+
+function scheduledStatusRank(status: MaintenanceComplianceStatus): number {
+  return {
+    [MaintenanceComplianceStatus.OVERDUE]: 0,
+    [MaintenanceComplianceStatus.DUE]: 1,
+    [MaintenanceComplianceStatus.DUE_SOON]: 2,
+    [MaintenanceComplianceStatus.NEEDS_BASELINE]: 3,
+    [MaintenanceComplianceStatus.CURRENT]: 4,
+    [MaintenanceComplianceStatus.NOT_APPLICABLE]: 5,
+  }[status];
+}
+
+function compareScheduledItems(first: MaintenanceScheduledItem, second: MaintenanceScheduledItem): number {
+  const statusDelta = scheduledStatusRank(first.complianceStatus) - scheduledStatusRank(second.complianceStatus);
+  if (statusDelta !== 0) {
+    return statusDelta;
+  }
+
+  const timeDelta = scheduledReferenceTime(first) - scheduledReferenceTime(second);
+  return timeDelta !== 0 ? timeDelta : first.taskTitle.localeCompare(second.taskTitle);
+}
+
+function groupScheduledItems(items: MaintenanceScheduledItem[]): ScheduledItemGroup[] {
+  const groups = new Map<string, ScheduledItemGroup>();
+
+  for (const item of items) {
+    const group = groups.get(item.aircraftId);
+    if (group) {
+      group.items.push(item);
+    } else {
+      groups.set(item.aircraftId, {
+        aircraftId: item.aircraftId,
+        aircraftType: item.aircraftType,
+        items: [item],
+        tailNumber: item.tailNumber,
+      });
+    }
+  }
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    items: group.items.slice().sort(compareScheduledItems),
+  }));
+}
+
+function groupLogbookItems(items: MaintenanceLogbookItem[]): LogbookItemGroup[] {
+  const groups = new Map<string, LogbookItemGroup>();
+
+  for (const item of items) {
+    const group = groups.get(item.aircraftId);
+    if (group) {
+      group.items.push(item);
+    } else {
+      groups.set(item.aircraftId, {
+        aircraftId: item.aircraftId,
+        aircraftType: item.aircraftType,
+        items: [item],
+        tailNumber: item.tailNumber,
+      });
+    }
+  }
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    items: group.items.slice().sort(compareLogbookItems),
+  }));
+}
+
+function isUnresolvedLogbookItem(item: MaintenanceLogbookItem): boolean {
+  return item.status === AircraftLogbookEntryStatus.OPEN
+    || item.status === AircraftLogbookEntryStatus.DEFERRED
+    || item.status === AircraftLogbookEntryStatus.READY_FOR_SIGNATURE;
+}
+
+function isActionableLogbookItem(item: MaintenanceLogbookItem): boolean {
+  return item.status === AircraftLogbookEntryStatus.OPEN || item.status === AircraftLogbookEntryStatus.READY_FOR_SIGNATURE;
+}
+
+function compareLogbookItems(first: MaintenanceLogbookItem, second: MaintenanceLogbookItem): number {
+  const timeDelta = second.reportedAt.getTime() - first.reportedAt.getTime();
+  return timeDelta !== 0 ? timeDelta : second.id.localeCompare(first.id);
 }
 
 function aircraftStatusLabel(status: AircraftStatus): string {
@@ -1146,6 +1242,61 @@ function ScheduledMaintenanceRow({
   );
 }
 
+function ScheduledMaintenanceGroup({
+  buildItemHref,
+  group,
+  selected,
+}: {
+  buildItemHref: (item: MaintenanceScheduledItem) => string;
+  group: ScheduledItemGroup;
+  selected: string | null;
+}) {
+  const mostUrgent = group.items[0];
+  const statusCounts = scheduledStatusOptions
+    .map(({ label, value }) => ({ count: group.items.filter((item) => item.complianceStatus === value).length, label }))
+    .filter(({ count }) => count > 0);
+  const plannedCount = group.items.filter((item) => item.maintenanceEvent?.status === MaintenanceEventStatus.PLANNED).length;
+  const inProgressCount = group.items.filter((item) => item.maintenanceEvent?.status === MaintenanceEventStatus.IN_PROGRESS).length;
+  const context = [
+    plannedCount > 0 ? `${plannedCount} planned` : null,
+    inProgressCount > 0 ? `${inProgressCount} in progress` : null,
+  ].filter(Boolean).join(" | ");
+
+  return (
+    <details className="group border-b border-zinc-100 last:border-b-0" open={group.items.some((item) => item.id === selected)}>
+      <summary className="grid cursor-pointer list-none gap-2 px-3 py-3 transition hover:bg-zinc-50 md:grid-cols-[8rem_8rem_minmax(0,1fr)_minmax(12rem,16rem)_5rem] md:items-center [&::-webkit-details-marker]:hidden">
+        <div>
+          <p className="text-sm font-semibold text-zinc-950">{group.tailNumber}</p>
+          <p className="text-[0.7rem] font-medium uppercase text-zinc-500">{aircraftTypeLabel(group.aircraftType)}</p>
+        </div>
+        <span className={`w-fit rounded-full border px-2 py-0.5 text-[0.7rem] font-semibold ${statusClasses(scheduledStatusLabel(mostUrgent.complianceStatus).toUpperCase())}`}>
+          {scheduledStatusLabel(mostUrgent.complianceStatus)}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-zinc-900">
+            {group.items.length} matching item{group.items.length === 1 ? "" : "s"}
+          </p>
+          <p className="truncate text-xs text-zinc-500">{statusCounts.map(({ count, label }) => `${count} ${label.toLowerCase()}`).join(" | ")}</p>
+          {context ? <p className="truncate text-xs text-zinc-500">{context}</p> : null}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-zinc-900">{mostUrgent.taskTitle}</p>
+          <p className="truncate text-xs text-zinc-500">{scheduledTimeLabel(mostUrgent)}</p>
+        </div>
+        <span className="text-xs font-semibold text-zinc-500 md:text-right">
+          <span className="group-open:hidden">Expand</span>
+          <span className="hidden group-open:inline">Collapse</span>
+        </span>
+      </summary>
+      <div className="divide-y divide-zinc-100 border-t border-zinc-200 bg-white md:ml-9 md:border-l md:border-zinc-200">
+        {group.items.map((item) => (
+          <ScheduledMaintenanceRow href={buildItemHref(item)} item={item} key={item.id} selected={selected === item.id} />
+        ))}
+      </div>
+    </details>
+  );
+}
+
 function ProgramRow({
   href,
   item,
@@ -1284,6 +1435,62 @@ function LogbookRow({
         Review
       </span>
     </Link>
+  );
+}
+
+function LogbookGroup({
+  buildItemHref,
+  group,
+  selected,
+}: {
+  buildItemHref: (item: MaintenanceLogbookItem) => string;
+  group: LogbookItemGroup;
+  selected: string | null;
+}) {
+  const unresolved = group.items.filter(isUnresolvedLogbookItem);
+  const actionableCount = group.items.filter(isActionableLogbookItem).length;
+  const oldestUnresolved = unresolved
+    .filter((item) => item.discrepancy)
+    .slice()
+    .sort((first, second) => first.reportedAt.getTime() - second.reportedAt.getTime())[0];
+  const mostRecent = group.items[0];
+
+  return (
+    <details className="group border-b border-zinc-100 last:border-b-0" open={group.items.some((item) => item.id === selected)}>
+      <summary className="grid cursor-pointer list-none gap-2 px-3 py-3 transition hover:bg-zinc-50 md:grid-cols-[8rem_minmax(0,1fr)_minmax(12rem,16rem)_minmax(12rem,16rem)_5rem] md:items-center [&::-webkit-details-marker]:hidden">
+        <div>
+          <p className="text-sm font-semibold text-zinc-950">{group.tailNumber}</p>
+          <p className="text-[0.7rem] font-medium uppercase text-zinc-500">{aircraftTypeLabel(group.aircraftType)}</p>
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-zinc-900">{group.items.length} matching entr{group.items.length === 1 ? "y" : "ies"}</p>
+          <p className="truncate text-xs text-zinc-500">{actionableCount} actionable | {unresolved.length} unresolved</p>
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-zinc-900">Most recent: {mostRecent.title}</p>
+          <p className="truncate text-xs text-zinc-500">{formatDateTime(mostRecent.reportedAt)}</p>
+        </div>
+        <div className="min-w-0">
+          {oldestUnresolved ? (
+            <>
+              <p className="truncate text-sm font-semibold text-amber-900">Oldest unresolved: {oldestUnresolved.title}</p>
+              <p className="truncate text-xs text-zinc-500">{formatDateTime(oldestUnresolved.reportedAt)}</p>
+            </>
+          ) : (
+            <p className="text-sm font-semibold text-emerald-800">No unresolved write-ups</p>
+          )}
+        </div>
+        <span className="text-xs font-semibold text-zinc-500 md:text-right">
+          <span className="group-open:hidden">Expand</span>
+          <span className="hidden group-open:inline">Collapse</span>
+        </span>
+      </summary>
+      <div className="divide-y divide-zinc-100 border-t border-zinc-200 bg-white md:ml-9 md:border-l md:border-zinc-200">
+        {group.items.map((item) => (
+          <LogbookRow href={buildItemHref(item)} item={item} key={item.id} selected={selected === item.id} />
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -2253,6 +2460,8 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
 
     return true;
   });
+  const scheduledItemGroups = groupScheduledItems(filteredScheduledItems);
+  const logbookItemGroups = groupLogbookItems(filteredLogbookItems);
   const programItemGroups = groupProgramItems(filteredProgramItems);
   const isCreatingProgramTask = view === "program" && selected === "new-task";
   const selectedQueueItem = view === "queue" ? data.queueItems.find((item) => item.id === selected) ?? null : null;
@@ -2589,15 +2798,15 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
                 <Wrench className="h-4 w-4 text-zinc-500" />
                 <h2 className="text-sm font-semibold text-zinc-950">Scheduled maintenance</h2>
               </div>
-              <span className="text-xs font-semibold text-zinc-500">{filteredScheduledItems.length} item{filteredScheduledItems.length === 1 ? "" : "s"}</span>
+              <span className="text-xs font-semibold text-zinc-500">{scheduledItemGroups.length} aircraft | {filteredScheduledItems.length} item{filteredScheduledItems.length === 1 ? "" : "s"}</span>
             </div>
             {filteredScheduledItems.length === 0 ? (
               <p className="p-4 text-sm text-zinc-600">No planned or in-progress maintenance is currently scheduled.</p>
             ) : (
-              <div className="divide-y divide-zinc-100">
-                {filteredScheduledItems.map((item) => (
-                  <ScheduledMaintenanceRow
-                    href={buildHref({
+              <div>
+                {scheduledItemGroups.map((group) => (
+                  <ScheduledMaintenanceGroup
+                    buildItemHref={(item) => buildHref({
                       aircraftType: aircraftTypeHrefValue,
                       category: categoryFilter,
                       scheduledStatus: scheduledStatusFilter,
@@ -2605,9 +2814,9 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
                       tail: tailFilter,
                       view,
                     })}
-                    item={item}
-                    key={item.id}
-                    selected={selected === item.id}
+                    group={group}
+                    key={group.aircraftId}
+                    selected={selected}
                   />
                 ))}
               </div>
@@ -2623,15 +2832,15 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
                   <p className="text-xs text-zinc-500">Review aircraft-tail logbook entries. Create, upload, and sign from the aircraft logbook page.</p>
                 </div>
               </div>
-              <span className="text-xs font-semibold text-zinc-500">{filteredLogbookItems.length} entr{filteredLogbookItems.length === 1 ? "y" : "ies"}</span>
+              <span className="text-xs font-semibold text-zinc-500">{logbookItemGroups.length} aircraft | {filteredLogbookItems.length} entr{filteredLogbookItems.length === 1 ? "y" : "ies"}</span>
             </div>
             {filteredLogbookItems.length === 0 ? (
               <p className="p-4 text-sm text-zinc-600">No logbook entries match this filter.</p>
             ) : (
-              <div className="divide-y divide-zinc-100">
-                {filteredLogbookItems.map((item) => (
-                  <LogbookRow
-                    href={buildHref({
+              <div>
+                {logbookItemGroups.map((group) => (
+                  <LogbookGroup
+                    buildItemHref={(item) => buildHref({
                       aircraftType: aircraftTypeHrefValue,
                       entryType: logbookEntryTypeFilter,
                       logbookStatus: logbookStatusFilter,
@@ -2640,9 +2849,9 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
                       tail: tailFilter,
                       view,
                     })}
-                    item={item}
-                    key={item.id}
-                    selected={selected === item.id}
+                    group={group}
+                    key={group.aircraftId}
+                    selected={selected}
                   />
                 ))}
               </div>

@@ -2,6 +2,14 @@
 
 Last updated: 2026-07-26
 
+## MX-003 Aircraft-grouped maintenance views
+
+MX-003 is a UI-only local coder checkpoint awaiting integration review. The
+Scheduled Maintenance and review-only top-level Logbook result lists group
+already-filtered rows by aircraft while preserving their existing review links,
+drawers, filters, and child ordering. There is no maintenance lifecycle,
+authorization, schema, migration, server-action, or service change.
+
 ## MX-002R Current Maintenance State
 
 `MX-002R` is accepted on `codex/aeroops-integration`. The accepted integrated

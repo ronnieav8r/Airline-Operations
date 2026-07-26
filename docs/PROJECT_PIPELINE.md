@@ -17,6 +17,20 @@ slice is accepted.
 
 ## Slice Register
 
+### MX-003 — Aircraft-grouped maintenance views
+
+| Field | Value |
+| --- | --- |
+| Status | Coder checkpoint complete; awaiting integration review. |
+| Baseline parent commit | `e81e9763cb0f07adec4236233eeaca9465ceaafd` |
+| Working branch | `codex/slice-003-aircraft-grouped-maintenance-views` |
+| Scope | UI-only grouping of already-filtered Scheduled Maintenance and review-only top-level Logbook results by aircraft. Existing child rows, review links, drawers, filters, ordering, and lifecycle actions are preserved. No lifecycle, authorization, schema, migration, server-action, or service change. |
+| Acceptance commands | `npm run typecheck`; `npm run lint`; `npm run build`; `npm run smoke:maintenance-lifecycle`; `npm run smoke:aircraft-logbook`; `git diff --check`; desktop and 390px rendered browser review. |
+| Runtime acceptance | `typecheck`, `lint`, webpack production build, both focused maintenance/logbook smokes, `git diff --check`, and desktop/390px rendered review passed. The standard Turbopack build is deferred to integration because this isolated worktree temporarily reuses canonical dependencies through an out-of-root junction that Turbopack rejects. |
+| Blockers | None recorded. |
+| Coder checkpoint | Local slice commit on the working branch; hash is recorded in Git history to avoid self-reference. |
+| Integrated product checkpoint | Pending lead review; do not treat this UI-only checkpoint as integrated. |
+
 ### MX-002R — Simplified maintenance availability lifecycle
 
 | Field | Value |
