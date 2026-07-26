@@ -1,6 +1,7 @@
 import {
   AircraftStatus,
   AircraftType,
+  DiscrepancyStatus,
   UserRole,
   PrismaClient,
 } from "@prisma/client";
@@ -63,12 +64,30 @@ async function main() {
       type: AircraftType.CL_65,
     },
   });
+  await prisma.maintenanceAuthorityProfile.create({
+    data: {
+      certificateNumber: "A&P-SMOKE",
+      certificateType: "A&P",
+      isActive: true,
+      legalName: "Smoke Mechanic",
+      userId: user.id,
+    },
+  });
+  const discrepancy = await prisma.discrepancy.create({
+    data: {
+      aircraftId: aircraft.id,
+      discrepancyNumber: "DISC-AIRCRAFT-LOGBOOK-SMOKE",
+      reportedById: user.id,
+      status: DiscrepancyStatus.OPEN,
+      title: "Smoke discrepancy",
+    },
+  });
 
   const entry = await createCorrectiveActionDraft({
     actorId: user.id,
     aircraftId: aircraft.id,
     formData: formData({
-      completed: true,
+      discrepancyId: discrepancy.id,
       manualReference: "SMOKE-AMM-001",
       narrative: "Smoke corrective action completed.",
       performedByName: "Smoke Mechanic",
@@ -77,8 +96,8 @@ async function main() {
     }),
   });
 
-  if (entry.status !== "READY_FOR_SIGNATURE") {
-    throw new Error(`Expected READY_FOR_SIGNATURE, received ${entry.status}.`);
+  if (entry.status !== "DRAFT") {
+    throw new Error(`Expected DRAFT, received ${entry.status}.`);
   }
 
   await signAircraftLogbookEntry({

@@ -1,18 +1,11 @@
 "use server";
 
 import {
-  AircraftLogbookAuditEventType,
-  AircraftLogbookEntrySource,
-  AircraftLogbookEntryStatus,
-  AircraftLogbookEntryType,
   AircraftType,
   MaintenanceProgramApplicabilityScope,
   MaintenanceProgramTaskCategory,
   MaintenanceComplianceStatus,
-  MaintenanceEventStatus,
-  MaintenanceEventType,
   MaintenanceProgramOverrideAction,
-  Prisma,
   AogResolutionPhase,
   UserRole,
 } from "@prisma/client";
@@ -20,6 +13,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireRole } from "@/lib/auth/guards";
+import {
+  convertMaintenanceControlHoldToDiscrepancy,
+  convertMaintenanceControlHoldToMaintenanceEvent,
+  placeMaintenanceControlHold,
+  planScheduledMaintenance,
+  releaseMaintenanceControlHold,
+  releaseMaintenanceOccurrence,
+  startScheduledMaintenance,
+} from "@/lib/maintenance-lifecycle";
 import { prisma } from "@/lib/prisma";
 
 class MaintenanceActionError extends Error {}
@@ -232,46 +234,6 @@ function safeKey(value: string): string {
     .slice(0, 64);
 }
 
-function safeTail(tailNumber: string): string {
-  return tailNumber.replace(/[^A-Z0-9]/gi, "").toUpperCase() || "AIRCRAFT";
-}
-
-function yyyymmdd(value = new Date()): string {
-  return [
-    value.getFullYear(),
-    String(value.getMonth() + 1).padStart(2, "0"),
-    String(value.getDate()).padStart(2, "0"),
-  ].join("");
-}
-
-async function nextMaintenanceNumber(tx: Prisma.TransactionClient, aircraftId: string, tailNumber: string) {
-  const prefix = `MX-${safeTail(tailNumber)}-${yyyymmdd()}`;
-  const count = await tx.maintenanceEvent.count({
-    where: {
-      aircraftId,
-      maintenanceNumber: {
-        startsWith: prefix,
-      },
-    },
-  });
-
-  return `${prefix}-${String(count + 1).padStart(3, "0")}`;
-}
-
-async function nextLogbookEntryNumber(tx: Prisma.TransactionClient, aircraftId: string, tailNumber: string) {
-  const prefix = `LB-${safeTail(tailNumber)}-${yyyymmdd()}`;
-  const count = await tx.aircraftLogbookEntry.count({
-    where: {
-      aircraftId,
-      entryNumber: {
-        startsWith: prefix,
-      },
-    },
-  });
-
-  return `${prefix}-${String(count + 1).padStart(3, "0")}`;
-}
-
 function revalidateMaintenanceProgramPaths(aircraftId?: string) {
   revalidatePath("/maintenance");
   revalidatePath("/aircraft");
@@ -329,6 +291,7 @@ function programTaskData(formData: FormData) {
     intervalDays,
     intervalMonths,
     requiredForServiceability: parseOptionalCheckbox(formData, "requiredForServiceability"),
+    requiresIndependentInspection: parseOptionalCheckbox(formData, "requiresIndependentInspection"),
     sourceReference: optionalText(formData, "sourceReference"),
     title,
     warningAirframeHours,
@@ -591,7 +554,7 @@ export async function createAircraftMeterSnapshotAction(aircraftId: string, form
   redirect(withMessage(returnTo, "message", "Aircraft meter snapshot added."));
 }
 
-export async function createScheduledMaintenanceWorkPackageAction(
+export async function planScheduledMaintenanceAction(
   aircraftId: string,
   taskId: string,
   formData: FormData,
@@ -600,116 +563,131 @@ export async function createScheduledMaintenanceWorkPackageAction(
   const returnTo = maintenanceReturnTo(formData);
 
   try {
-    await prisma.$transaction(async (tx) => {
-      const [aircraft, task] = await Promise.all([
-        tx.aircraft.findUniqueOrThrow({
-          select: { tailNumber: true },
-          where: { id: aircraftId },
-        }),
-        tx.maintenanceProgramTask.findUniqueOrThrow({
-          select: { category: true, description: true, id: true, sourceReference: true, title: true },
-          where: { id: taskId },
-        }),
-      ]);
-      const complianceState = await tx.maintenanceComplianceState.upsert({
-        create: {
-          aircraftId,
-          status: MaintenanceComplianceStatus.NEEDS_BASELINE,
-          taskId,
-          updatedById: currentUser.id,
-        },
-        update: {
-          updatedById: currentUser.id,
-        },
-        where: {
-          aircraftId_taskId: {
-            aircraftId,
-            taskId,
-          },
-        },
-      });
-      const existingOpenEvent = await tx.maintenanceEvent.findFirst({
-        where: {
-          aircraftId,
-          maintenanceComplianceStateId: complianceState.id,
-          maintenanceProgramTaskId: task.id,
-          status: { in: [MaintenanceEventStatus.PLANNED, MaintenanceEventStatus.IN_PROGRESS] },
-        },
-        select: { maintenanceNumber: true },
-      });
-
-      if (existingOpenEvent) {
-        throw new MaintenanceActionError(`A work package already exists: ${existingOpenEvent.maintenanceNumber}.`);
-      }
-
-      const description = optionalText(formData, "description") ?? task.description ?? task.title;
-      const scheduledAt = parseOptionalDateTime(formData, "scheduledAt", "Scheduled at");
-      const maintenanceNumber = await nextMaintenanceNumber(tx, aircraftId, aircraft.tailNumber);
-      const maintenanceEvent = await tx.maintenanceEvent.create({
-        data: {
-          aircraftId,
-          approvedById: currentUser.id,
-          description,
-          eventType: MaintenanceEventType.SCHEDULED_MAINTENANCE,
-          maintenanceComplianceStateId: complianceState.id,
-          maintenanceNumber,
-          maintenanceProgramTaskId: task.id,
-          providerName: optionalText(formData, "providerName"),
-          scheduledAt,
-          status: MaintenanceEventStatus.PLANNED,
-          taskReference: task.sourceReference,
-        },
-      });
-      const entryType =
-        task.category === MaintenanceProgramTaskCategory.INSPECTION ||
-        task.category === MaintenanceProgramTaskCategory.AD ||
-        task.category === MaintenanceProgramTaskCategory.STC_MODIFICATION
-          ? AircraftLogbookEntryType.INSPECTION_ENTRY
-          : AircraftLogbookEntryType.MAINTENANCE_ENTRY;
-      const logbookEntry = await tx.aircraftLogbookEntry.create({
-        data: {
-          aircraftId,
-          category: task.category,
-          createdById: currentUser.id,
-          dueAt: scheduledAt,
-          entryNumber: await nextLogbookEntryNumber(tx, aircraftId, aircraft.tailNumber),
-          entryType,
-          maintenanceComplianceStateId: complianceState.id,
-          maintenanceEventId: maintenanceEvent.id,
-          maintenanceProgramTaskId: task.id,
-          manualReference: task.sourceReference,
-          narrative: description,
-          reportedAt: new Date(),
-          source: AircraftLogbookEntrySource.MAINTENANCE,
-          status: AircraftLogbookEntryStatus.DRAFT,
-          taskReference: task.sourceReference ?? maintenanceNumber,
-          title: task.title,
-          updatedById: currentUser.id,
-        },
-      });
-
-      await tx.aircraftLogbookAuditEvent.create({
-        data: {
-          actorId: currentUser.id,
-          aircraftId,
-          entryId: logbookEntry.id,
-          eventType: AircraftLogbookAuditEventType.CREATED,
-          message: "Scheduled maintenance work package created from maintenance program.",
-          metadata: {
-            maintenanceComplianceStateId: complianceState.id,
-            maintenanceEventId: maintenanceEvent.id,
-            maintenanceProgramTaskId: task.id,
-          },
-        },
-      });
+    await planScheduledMaintenance({
+      actorId: currentUser.id,
+      aircraftId,
+      note: optionalText(formData, "planNote"),
+      plannedAt: parseOptionalDateTime(formData, "scheduledAt", "Scheduled at"),
+      stationId: optionalText(formData, "stationId"),
+      taskId,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Scheduled maintenance work package creation failed.";
+    const message = error instanceof Error ? error.message : "Scheduled maintenance planning failed.";
     redirect(withMessage(returnTo, "error", message));
   }
 
   revalidateMaintenanceProgramPaths(aircraftId);
-  redirect(withMessage(returnTo, "message", "Scheduled maintenance work package created."));
+  redirect(withMessage(returnTo, "message", "Scheduled maintenance planned."));
+}
+
+export async function startScheduledMaintenanceAction(maintenanceEventId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.MAINTENANCE]);
+  const returnTo = maintenanceReturnTo(formData);
+  try {
+    await startScheduledMaintenance({ actorId: currentUser.id, maintenanceEventId });
+  } catch (error) {
+    redirect(withMessage(returnTo, "error", error instanceof Error ? error.message : "Could not start maintenance."));
+  }
+  revalidateMaintenanceProgramPaths();
+  redirect(withMessage(returnTo, "message", "Scheduled maintenance started. Draft logbook entry created."));
+}
+
+export async function releaseMaintenanceOccurrenceAction(maintenanceEventId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.MAINTENANCE]);
+  const returnTo = maintenanceReturnTo(formData);
+  try {
+    await releaseMaintenanceOccurrence({
+      actorId: currentUser.id,
+      maintenanceEventId,
+      note: requiredText(formData, "mxControlReleaseNote", "MX Control release note"),
+    });
+  } catch (error) {
+    redirect(withMessage(returnTo, "error", error instanceof Error ? error.message : "MX Control release failed."));
+  }
+  revalidateMaintenanceProgramPaths();
+  redirect(withMessage(returnTo, "message", "Aircraft released by Maintenance Control."));
+}
+
+export async function placeMaintenanceControlHoldAction(aircraftId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.MAINTENANCE]);
+  const returnTo = maintenanceReturnTo(formData);
+  try {
+    await placeMaintenanceControlHold({
+      actorId: currentUser.id,
+      aircraftId,
+      expectedReturnAt: parseOptionalDateTime(formData, "expectedReturnAt", "Expected return"),
+      note: optionalText(formData, "note"),
+      reason: requiredText(formData, "reason", "Hold reason"),
+    });
+  } catch (error) {
+    redirect(withMessage(returnTo, "error", error instanceof Error ? error.message : "Could not place MX hold."));
+  }
+  revalidateMaintenanceProgramPaths(aircraftId);
+  redirect(withMessage(returnTo, "message", "Aircraft removed from service by Maintenance Control."));
+}
+
+export async function releaseMaintenanceControlHoldAction(holdId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.MAINTENANCE]);
+  const returnTo = maintenanceReturnTo(formData);
+  try {
+    await releaseMaintenanceControlHold({
+      actorId: currentUser.id,
+      holdId,
+      noDefectOrMaintenanceConfirmed:
+        formData.get("noDefectOrMaintenanceConfirmed") === "on",
+      releaseExplanation: requiredText(formData, "releaseExplanation", "Release explanation"),
+    });
+  } catch (error) {
+    redirect(withMessage(returnTo, "error", error instanceof Error ? error.message : "Could not release MX hold."));
+  }
+  revalidateMaintenanceProgramPaths();
+  redirect(withMessage(returnTo, "message", "MX Control hold released."));
+}
+
+export async function convertMaintenanceControlHoldAction(holdId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.MAINTENANCE]);
+  const returnTo = maintenanceReturnTo(formData);
+  try {
+    await convertMaintenanceControlHoldToDiscrepancy({
+      actorId: currentUser.id,
+      description: optionalText(formData, "description"),
+      holdId,
+      title: requiredText(formData, "title", "Write-up title"),
+    });
+  } catch (error) {
+    redirect(withMessage(returnTo, "error", error instanceof Error ? error.message : "Could not convert MX hold."));
+  }
+  revalidateMaintenanceProgramPaths();
+  redirect(withMessage(returnTo, "message", "MX hold converted to an official write-up."));
+}
+
+export async function convertMaintenanceControlHoldToScheduledAction(
+  holdId: string,
+  formData: FormData,
+) {
+  const currentUser = await requireRole([UserRole.MAINTENANCE]);
+  const returnTo = maintenanceReturnTo(formData);
+  try {
+    await convertMaintenanceControlHoldToMaintenanceEvent({
+      actorId: currentUser.id,
+      holdId,
+      maintenanceEventId: requiredText(
+        formData,
+        "maintenanceEventId",
+        "Scheduled maintenance occurrence",
+      ),
+    });
+  } catch (error) {
+    redirect(
+      withMessage(
+        returnTo,
+        "error",
+        error instanceof Error ? error.message : "Could not link MX hold to scheduled maintenance.",
+      ),
+    );
+  }
+  revalidateMaintenanceProgramPaths();
+  redirect(withMessage(returnTo, "message", "MX hold linked to scheduled maintenance."));
 }
 
 export async function markMaintenanceTaskNotApplicableAction(

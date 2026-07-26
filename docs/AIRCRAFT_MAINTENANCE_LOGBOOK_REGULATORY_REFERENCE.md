@@ -1,6 +1,15 @@
 # Aircraft Maintenance Logbook Regulatory Reference
 
-Last updated: 2026-06-30
+Last updated: 2026-07-26
+
+## MX-002R Product Boundary
+
+AeroOps stores technician/inspector approval as immutable logbook signatures.
+Maintenance Control release is a separate operational acknowledgement with its
+own actor, time, and note; it does not impersonate the technician or inspector.
+A required inspection item needs a different authorized inspector. Ordinary
+maintenance does not universally require a second signature. The operator's
+approved manual remains controlling.
 
 This document is a working product reference for building an aircraft-tail-number maintenance logbook inside AeroOps. It is not legal advice, a substitute for an operator manual, or FAA approval. Before this feature is used as an official record system, the operator must align it with its FAA-approved or FAA-accepted manuals, OpSpecs/MSpecs, inspection program, MEL/CDL/NEF procedures, and the expectations of its assigned FAA oversight office.
 
@@ -206,7 +215,8 @@ For a first-class Return to Service record, require:
 - Aircraft and tail number.
 - Linked discrepancy, maintenance event, and logbook entry when applicable.
 - Work completed date/time.
-- Return-to-service statement tied to the specific discrepancy or work package.
+- Return-to-service statement tied to the specific discrepancy or maintenance
+  occurrence.
 - Signer identity and maintenance authority profile.
 - Certificate number, certificate type, and authorization basis.
 - Signature timestamp.

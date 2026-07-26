@@ -5,6 +5,7 @@ import {
   DeferralMethod,
   DeferralStatus,
   DiscrepancyStatus,
+  MaintenanceComplianceStatus,
   MaintenanceEventType,
   MaintenanceEventStatus,
   Prisma,
@@ -147,6 +148,9 @@ const aircraftAirworthinessWorkflowSelect = {
       performedByCertificateNumber: true,
       approvedByCertificateNumber: true,
       approvedByCertificateType: true,
+      requiresIndependentInspection: true,
+      maintenanceApprovedAt: true,
+      inspectionApprovedAt: true,
       returnToServiceAt: true,
       notes: true,
       discrepancy: {
@@ -157,6 +161,18 @@ const aircraftAirworthinessWorkflowSelect = {
           status: true,
         },
       },
+    },
+  },
+  maintenanceControlHolds: {
+    where: { status: "ACTIVE" },
+    select: { id: true, reason: true, status: true },
+  },
+  maintenanceComplianceStates: {
+    where: { status: MaintenanceComplianceStatus.OVERDUE },
+    select: {
+      id: true,
+      status: true,
+      task: { select: { requiredForServiceability: true, title: true } },
     },
   },
   returnToServiceRecords: {

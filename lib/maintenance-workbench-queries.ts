@@ -8,6 +8,7 @@ import {
   DeferralStatus,
   DiscrepancyStatus,
   MaintenanceComplianceStatus,
+  MaintenanceControlHoldStatus,
   MaintenanceEventStatus,
   MaintenanceEventType,
   MaintenanceProgramApplicabilityScope,
@@ -26,6 +27,7 @@ export type MaintenanceQueueItemType =
   | "AOG"
   | "DEFERRAL"
   | "PLANNED_MAINTENANCE"
+  | "MX_HOLD"
   | "SERVICEABLE";
 
 export type MaintenanceBoardStatus =
@@ -81,6 +83,7 @@ export type MaintenanceScheduledItem = {
   taskCategory: MaintenanceProgramTaskCategory | null;
   sourceReference: string | null;
   requiredForServiceability: boolean;
+  requiresIndependentInspection: boolean;
   complianceStatus: MaintenanceComplianceStatus;
   applicabilityLabel: string;
   overrideLabel: string | null;
@@ -148,6 +151,7 @@ export type MaintenanceProgramItem = {
   intervalMonths: number | null;
   overrideCount: number;
   requiredForServiceability: boolean;
+  requiresIndependentInspection: boolean;
   sourceReference: string | null;
   taskKey: string;
   title: string;
@@ -285,6 +289,7 @@ export type MaintenanceWorkbenchData = {
   programItems: MaintenanceProgramItem[];
   queueItems: MaintenanceQueueItem[];
   scheduledItems: MaintenanceScheduledItem[];
+  stationOptions: { id: string; code: string; name: string }[];
   tailOptions: string[];
 };
 
@@ -339,6 +344,10 @@ type AircraftMaintenancePayload = {
     providerName: string | null;
     scheduledAt: Date | null;
     startedAt: Date | null;
+    returnToServiceAt: Date | null;
+    requiresIndependentInspection: boolean;
+    maintenanceApprovedAt: Date | null;
+    inspectionApprovedAt: Date | null;
     status: MaintenanceEventStatus;
     logbookEntries: {
       entryNumber: string;
@@ -353,6 +362,14 @@ type AircraftMaintenancePayload = {
       id: string;
       title: string;
     } | null;
+  }[];
+  maintenanceControlHolds: {
+    expectedReturnAt: Date | null;
+    id: string;
+    note: string | null;
+    placedAt: Date;
+    reason: string;
+    status: MaintenanceControlHoldStatus;
   }[];
   logbookEntries: {
     entryNumber: string;
@@ -572,7 +589,13 @@ async function getMaintenanceWorkbenchAircraft() {
       },
       maintenanceEvents: {
         where: {
-          status: { in: [MaintenanceEventStatus.PLANNED, MaintenanceEventStatus.IN_PROGRESS] },
+          status: {
+            in: [
+              MaintenanceEventStatus.PLANNED,
+              MaintenanceEventStatus.IN_PROGRESS,
+              MaintenanceEventStatus.COMPLETED,
+            ],
+          },
         },
         orderBy: [{ scheduledAt: "asc" }, { startedAt: "asc" }],
         select: {
@@ -595,6 +618,10 @@ async function getMaintenanceWorkbenchAircraft() {
           providerName: true,
           scheduledAt: true,
           startedAt: true,
+          returnToServiceAt: true,
+          requiresIndependentInspection: true,
+          maintenanceApprovedAt: true,
+          inspectionApprovedAt: true,
           status: true,
           discrepancy: {
             select: {
@@ -607,6 +634,18 @@ async function getMaintenanceWorkbenchAircraft() {
           },
         },
         take: 5,
+      },
+      maintenanceControlHolds: {
+        where: { status: MaintenanceControlHoldStatus.ACTIVE },
+        orderBy: { placedAt: "desc" },
+        select: {
+          expectedReturnAt: true,
+          id: true,
+          note: true,
+          placedAt: true,
+          reason: true,
+          status: true,
+        },
       },
       logbookEntries: {
         where: {
@@ -661,6 +700,7 @@ async function getMaintenanceProgramTasks() {
       intervalDays: true,
       intervalMonths: true,
       requiredForServiceability: true,
+      requiresIndependentInspection: true,
       sourceReference: true,
       taskKey: true,
       title: true,
@@ -700,7 +740,10 @@ async function getMaintenanceProgramTasks() {
           status: true,
           maintenanceEvents: {
             where: {
-              status: { in: [MaintenanceEventStatus.PLANNED, MaintenanceEventStatus.IN_PROGRESS] },
+              OR: [
+                { status: { in: [MaintenanceEventStatus.PLANNED, MaintenanceEventStatus.IN_PROGRESS] } },
+                { status: MaintenanceEventStatus.COMPLETED, returnToServiceAt: null },
+              ],
             },
             orderBy: [{ scheduledAt: "asc" }, { startedAt: "asc" }],
             select: {
@@ -893,6 +936,9 @@ function buildAircraftQueueItems(aircraft: AircraftMaintenancePayload): Maintena
 
   for (const maintenanceEvent of aircraft.maintenanceEvents) {
     const isInProgress = maintenanceEvent.status === MaintenanceEventStatus.IN_PROGRESS;
+    const isPendingRelease =
+      maintenanceEvent.status === MaintenanceEventStatus.COMPLETED &&
+      !maintenanceEvent.returnToServiceAt;
 
     items.push({
       ...routes,
@@ -902,7 +948,7 @@ function buildAircraftQueueItems(aircraft: AircraftMaintenancePayload): Maintena
       aogEtaAt: maintenanceEvent.discrepancy?.aogEtaAt ?? null,
       aogMaintenanceNote: maintenanceEvent.discrepancy?.aogMaintenanceNote ?? null,
       aogPhase: inferAogPhaseFromMaintenanceEvent(maintenanceEvent),
-      boardStatus: isInProgress ? "AOG" : "SERVICEABLE_SCHEDULED_MX",
+      boardStatus: isInProgress || isPendingRelease ? "AOG" : "SERVICEABLE_SCHEDULED_MX",
       discrepancyId: maintenanceEvent.discrepancy?.id ?? null,
       dueAt: maintenanceEvent.scheduledAt,
       eventAt: maintenanceEvent.startedAt,
@@ -911,8 +957,35 @@ function buildAircraftQueueItems(aircraft: AircraftMaintenancePayload): Maintena
       reference: maintenanceEvent.maintenanceNumber,
       summary: maintenanceEvent.description ?? maintenanceEvent.providerName,
       tailNumber: aircraft.tailNumber,
-      title: isInProgress ? "Repair in progress" : "Planned maintenance",
-      type: isInProgress ? "AOG" : "PLANNED_MAINTENANCE",
+      title: isPendingRelease
+        ? "MX release required"
+        : isInProgress
+          ? "Maintenance in progress"
+          : "Planned maintenance",
+      type: isInProgress || isPendingRelease ? "AOG" : "PLANNED_MAINTENANCE",
+    });
+  }
+
+  for (const hold of aircraft.maintenanceControlHolds) {
+    items.push({
+      ...routes,
+      aircraftId: aircraft.id,
+      aircraftStatus: aircraft.status,
+      aircraftType: aircraft.type,
+      aogEtaAt: hold.expectedReturnAt,
+      aogMaintenanceNote: hold.note,
+      aogPhase: AogResolutionPhase.NEEDS_ASSESSMENT,
+      boardStatus: "AOG",
+      discrepancyId: null,
+      dueAt: hold.expectedReturnAt,
+      eventAt: hold.placedAt,
+      id: `mx-hold-${hold.id}`,
+      limitation: null,
+      reference: "MX CONTROL",
+      summary: hold.note,
+      tailNumber: aircraft.tailNumber,
+      title: `MX hold: ${hold.reason}`,
+      type: "MX_HOLD",
     });
   }
 
@@ -1257,6 +1330,7 @@ function buildProgramScheduledItem(
     overrideLabel: applicability.overrideLabel,
     providerName: maintenanceEvent?.providerName ?? null,
     requiredForServiceability: task.requiredForServiceability,
+    requiresIndependentInspection: task.requiresIndependentInspection,
     rowKind: "COMPLIANCE",
     serviceabilityLabel: serviceability.label,
     serviceabilityMessage: serviceability.message,
@@ -1269,64 +1343,8 @@ function buildProgramScheduledItem(
 }
 
 function buildEventOnlyScheduledItems(aircraft: AircraftMaintenancePayload): MaintenanceScheduledItem[] {
-  const routes = aircraftRoutes(aircraft.id);
-  const serviceability = evaluateAircraftServiceability(aircraft);
-  const latestMeter = aircraft.meterSnapshots[0] ?? null;
-
-  return aircraft.maintenanceEvents
-    .filter((maintenanceEvent) => !maintenanceEvent.maintenanceProgramTaskId && !maintenanceEvent.maintenanceComplianceStateId)
-    .map((maintenanceEvent) => ({
-      ...routes,
-      aircraftId: aircraft.id,
-      aircraftStatus: aircraft.status,
-      aircraftType: aircraft.type,
-      applicabilityLabel: "Manual maintenance event",
-      complianceStateId: null,
-      complianceStatus: maintenanceEvent.status === MaintenanceEventStatus.IN_PROGRESS
-        ? MaintenanceComplianceStatus.DUE
-        : MaintenanceComplianceStatus.CURRENT,
-      description: maintenanceEvent.description,
-      id: `scheduled-${maintenanceEvent.id}`,
-      lastCompletedAirframeHours: null,
-      lastCompletedAt: null,
-      lastCompletedCycles: null,
-      latestAirframeCycles: latestMeter?.airframeCycles ?? null,
-      latestAirframeHours: decimalToNumber(latestMeter?.airframeHours),
-      latestMeterAt: latestMeter?.recordedAt ?? null,
-      maintenanceEvent: {
-        eventType: maintenanceEvent.eventType,
-        id: maintenanceEvent.id,
-        maintenanceNumber: maintenanceEvent.maintenanceNumber,
-        providerName: maintenanceEvent.providerName,
-        scheduledAt: maintenanceEvent.scheduledAt,
-        startedAt: maintenanceEvent.startedAt,
-        status: maintenanceEvent.status,
-      },
-      logbookEntry: maintenanceEvent.logbookEntries[0]
-        ? {
-            entryNumber: maintenanceEvent.logbookEntries[0].entryNumber,
-            id: maintenanceEvent.logbookEntries[0].id,
-            status: maintenanceEvent.logbookEntries[0].status,
-            title: maintenanceEvent.logbookEntries[0].title,
-          }
-        : null,
-      nextDueAirframeHours: null,
-      nextDueAt: maintenanceEvent.scheduledAt,
-      nextDueCycles: null,
-      overrideLabel: null,
-      providerName: maintenanceEvent.providerName,
-      requiredForServiceability: false,
-      rowKind: "EVENT",
-      serviceabilityLabel: serviceability.label,
-      serviceabilityMessage: serviceability.message,
-      sourceReference: null,
-      tailNumber: aircraft.tailNumber,
-      taskCategory: null,
-      taskId: null,
-      taskTitle: maintenanceEvent.eventType === MaintenanceEventType.SCHEDULED_MAINTENANCE
-        ? "Manual scheduled maintenance"
-        : "Manual maintenance event",
-    }));
+  void aircraft;
+  return [];
 }
 
 function programApplicabilitySummary(task: MaintenanceProgramTaskPayload) {
@@ -1451,6 +1469,7 @@ function buildProgramItem(
       reason: item.reason,
     })),
     requiredForServiceability: task.requiredForServiceability,
+    requiresIndependentInspection: task.requiresIndependentInspection,
     sourceReference: task.sourceReference,
     taskKey: task.taskKey,
     title: task.title,
@@ -1643,6 +1662,11 @@ export async function getMaintenanceWorkbenchData(): Promise<MaintenanceWorkbenc
   const aircraft = await getMaintenanceWorkbenchAircraft();
   const tasks = await getMaintenanceProgramTasks();
   const logbookItems = await getMaintenanceLogbookItems();
+  const stationOptions = await prisma.station.findMany({
+    where: { isActive: true },
+    orderBy: { code: "asc" },
+    select: { code: true, id: true, name: true },
+  });
   const now = new Date();
   const queueItems = aircraft.flatMap(buildAircraftQueueItems).sort(sortQueueItems);
   const scheduledItems = [
@@ -1675,6 +1699,7 @@ export async function getMaintenanceWorkbenchData(): Promise<MaintenanceWorkbenc
     programItems,
     queueItems,
     scheduledItems,
+    stationOptions,
     tailOptions: aircraft.map((item) => item.tailNumber),
   };
 }

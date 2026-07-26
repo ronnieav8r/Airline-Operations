@@ -112,6 +112,12 @@ enum MaintenanceEventStatus {
   CANCELLED
 }
 
+enum MaintenanceControlHoldStatus {
+  ACTIVE
+  RELEASED
+  CONVERTED
+}
+
 enum MaintenanceProgramTaskCategory {
   INSPECTION
   AD
@@ -951,10 +957,16 @@ model User {
   aogPhaseUpdatedDiscrepancies          Discrepancy[]                        @relation("DiscrepancyAogPhaseUpdatedBy")
   authorizedDeferrals                   Deferral[]                           @relation("DeferralAuthorizedBy")
   approvedMaintenanceEvents             MaintenanceEvent[]                   @relation("MaintenanceEventApprovedBy")
+  inspectedMaintenanceEvents            MaintenanceEvent[]                   @relation("MaintenanceEventInspectedBy")
+  maintenanceEventsReleasedByControl    MaintenanceEvent[]                   @relation("MaintenanceEventMxControlReleasedBy")
+  maintenanceControlHoldsPlaced         MaintenanceControlHold[]              @relation("MaintenanceControlHoldPlacedBy")
+  maintenanceControlHoldsReleased       MaintenanceControlHold[]              @relation("MaintenanceControlHoldReleasedBy")
+  maintenanceControlHoldsConverted      MaintenanceControlHold[]              @relation("MaintenanceControlHoldConvertedBy")
   airworthinessReleases                 AirworthinessRelease[]               @relation("AirworthinessReleaseReleasedBy")
   returnToServiceRecordsSigned          ReturnToServiceRecord[]              @relation("ReturnToServiceRecordSigner")
   returnToServiceRecordsCreated         ReturnToServiceRecord[]              @relation("ReturnToServiceRecordCreatedBy")
   returnToServiceRecordsVoided          ReturnToServiceRecord[]              @relation("ReturnToServiceRecordVoidedBy")
+  returnToServiceRecordsMxReleased       ReturnToServiceRecord[]              @relation("ReturnToServiceRecordMxControlReleasedBy")
   evaluatedReleaseSnapshots             ReleaseReadinessSnapshot[]           @relation("ReleaseReadinessSnapshotEvaluatedBy")
   authoredReleaseOverrides              ReleaseOverride[]                    @relation("ReleaseOverrideActor")
   approvedReleaseOverrides              ReleaseOverride[]                    @relation("ReleaseOverrideApprover")
@@ -1113,6 +1125,7 @@ model Station {
   crewRotationPatternDays  CrewRotationPatternDay[]
   crewScheduleEntries      CrewScheduleEntry[]
   crewPlanningDraftChanges CrewPlanningDraftChange[]
+  plannedMaintenanceEvents MaintenanceEvent[]         @relation("MaintenanceEventPlannedStation")
   crewLocationRecords      CrewLocationRecord[]
   logisticsNeedsFrom       CrewLogisticsNeed[]       @relation("CrewLogisticsNeedFromStation")
   logisticsNeedsTo         CrewLogisticsNeed[]       @relation("CrewLogisticsNeedToStation")
@@ -1149,6 +1162,7 @@ model Aircraft {
   maintenanceProgramOverrides       MaintenanceProgramOverride[]
   maintenanceComplianceStates       MaintenanceComplianceState[]
   meterSnapshots                    AircraftMeterSnapshot[]
+  maintenanceControlHolds           MaintenanceControlHold[]
 
   @@index([status])
   @@index([type])
@@ -1773,6 +1787,7 @@ model Discrepancy {
   maintenanceEvents               MaintenanceEvent[]
   returnToServiceRecords          ReturnToServiceRecord[]
   logbookEntries                  AircraftLogbookEntry[]
+  convertedMaintenanceControlHolds MaintenanceControlHold[]
 
   @@unique([aircraftId, discrepancyNumber])
   @@index([aircraftId, status])
@@ -1834,6 +1849,7 @@ model MaintenanceProgramTask {
   sourceReference           String?
   description               String?
   requiredForServiceability Boolean                           @default(true)
+  requiresIndependentInspection Boolean                       @default(false)
   intervalMonths            Int?
   intervalDays              Int?
   intervalAirframeHours     Decimal?                          @db.Decimal(10, 2)
@@ -1963,13 +1979,22 @@ model MaintenanceEvent {
   discrepancyId                String?
   maintenanceProgramTaskId     String?
   maintenanceComplianceStateId String?
+  plannedStationId               String?
   approvedById                 String?
+  inspectedById                String?
+  mxControlReleasedById        String?
   maintenanceNumber            String
   eventType                    MaintenanceEventType
   status                       MaintenanceEventStatus      @default(PLANNED)
   scheduledAt                  DateTime?
+  planNote                     String?
+  requiresIndependentInspection Boolean                       @default(false)
   startedAt                    DateTime?
   completedAt                  DateTime?
+  maintenanceApprovedAt        DateTime?
+  inspectionApprovedAt         DateTime?
+  mxControlReleasedAt          DateTime?
+  mxControlReleaseNote         String?
   providerName                 String?
   description                  String?
   workPerformed                String?
@@ -1987,10 +2012,14 @@ model MaintenanceEvent {
   discrepancy                  Discrepancy?                @relation(fields: [discrepancyId], references: [id], onDelete: SetNull)
   maintenanceProgramTask       MaintenanceProgramTask?     @relation(fields: [maintenanceProgramTaskId], references: [id], onDelete: SetNull)
   maintenanceComplianceState   MaintenanceComplianceState? @relation(fields: [maintenanceComplianceStateId], references: [id], onDelete: SetNull)
+  plannedStation               Station?                    @relation("MaintenanceEventPlannedStation", fields: [plannedStationId], references: [id], onDelete: SetNull)
   approvedBy                   User?                       @relation("MaintenanceEventApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  inspectedBy                  User?                       @relation("MaintenanceEventInspectedBy", fields: [inspectedById], references: [id], onDelete: SetNull)
+  mxControlReleasedBy          User?                       @relation("MaintenanceEventMxControlReleasedBy", fields: [mxControlReleasedById], references: [id], onDelete: SetNull)
   correctiveForDiscrepancies   Discrepancy[]               @relation("DiscrepancyCorrectiveMaintenanceEvent")
   returnToServiceRecords       ReturnToServiceRecord[]
   logbookEntries               AircraftLogbookEntry[]
+  convertedMaintenanceControlHolds MaintenanceControlHold[] @relation("MaintenanceControlHoldConvertedMaintenanceEvent")
 
   @@unique([aircraftId, maintenanceNumber])
   @@index([aircraftId, status])
@@ -2000,7 +2029,10 @@ model MaintenanceEvent {
   @@index([discrepancyId])
   @@index([maintenanceProgramTaskId])
   @@index([maintenanceComplianceStateId])
+  @@index([plannedStationId])
   @@index([approvedById])
+  @@index([inspectedById])
+  @@index([mxControlReleasedById])
 }
 
 model ReturnToServiceRecord {
@@ -2013,6 +2045,7 @@ model ReturnToServiceRecord {
   authorityProfileId   String?
   createdById          String?
   voidedById           String?
+  mxControlReleasedById String?
   rtsNumber            String
   status               ReturnToServiceRecordStatus  @default(DRAFT)
   workSummary          String?
@@ -2023,6 +2056,8 @@ model ReturnToServiceRecord {
   signedSnapshot       Json?
   voidedAt             DateTime?
   voidReason           String?
+  mxControlReleasedAt  DateTime?
+  mxControlReleaseNote String?
   createdAt            DateTime                     @default(now())
   updatedAt            DateTime                     @updatedAt
   aircraft             Aircraft                     @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
@@ -2033,6 +2068,7 @@ model ReturnToServiceRecord {
   authorityProfile     MaintenanceAuthorityProfile? @relation(fields: [authorityProfileId], references: [id], onDelete: SetNull)
   createdBy            User?                        @relation("ReturnToServiceRecordCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   voidedBy             User?                        @relation("ReturnToServiceRecordVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+  mxControlReleasedBy  User?                        @relation("ReturnToServiceRecordMxControlReleasedBy", fields: [mxControlReleasedById], references: [id], onDelete: SetNull)
   clearedDiscrepancies Discrepancy[]                @relation("DiscrepancyClearingReturnToServiceRecord")
 
   @@unique([aircraftId, rtsNumber])
@@ -2044,6 +2080,7 @@ model ReturnToServiceRecord {
   @@index([authorityProfileId])
   @@index([createdById])
   @@index([voidedById])
+  @@index([mxControlReleasedById])
   @@index([returnToServiceAt])
 }
 
@@ -2121,6 +2158,7 @@ model AircraftLogbookEntry {
   deferralAuthority            String?
   dueAt                        DateTime?
   placardRequired              Boolean                     @default(false)
+  requiresIndependentInspection Boolean                    @default(false)
   operatingLimitations         String?
   requiredProcedures           String?
   performedByName              String?
@@ -2173,6 +2211,39 @@ model AircraftLogbookEntry {
   @@index([reportedAt])
   @@index([createdById])
   @@index([updatedById])
+}
+
+model MaintenanceControlHold {
+  id                          String                       @id @default(cuid())
+  aircraftId                  String
+  status                      MaintenanceControlHoldStatus @default(ACTIVE)
+  reason                      String
+  note                        String?
+  expectedReturnAt            DateTime?
+  placedById                  String
+  placedAt                    DateTime                     @default(now())
+  releasedById                String?
+  releasedAt                  DateTime?
+  releaseExplanation          String?
+  convertedById               String?
+  convertedAt                 DateTime?
+  convertedDiscrepancyId      String?
+  convertedMaintenanceEventId String?
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  aircraft                    Aircraft                     @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+  placedBy                    User                         @relation("MaintenanceControlHoldPlacedBy", fields: [placedById], references: [id], onDelete: Restrict)
+  releasedBy                  User?                        @relation("MaintenanceControlHoldReleasedBy", fields: [releasedById], references: [id], onDelete: SetNull)
+  convertedBy                 User?                        @relation("MaintenanceControlHoldConvertedBy", fields: [convertedById], references: [id], onDelete: SetNull)
+  convertedDiscrepancy        Discrepancy?                 @relation(fields: [convertedDiscrepancyId], references: [id], onDelete: SetNull)
+  convertedMaintenanceEvent   MaintenanceEvent?            @relation("MaintenanceControlHoldConvertedMaintenanceEvent", fields: [convertedMaintenanceEventId], references: [id], onDelete: SetNull)
+
+  @@index([aircraftId, status])
+  @@index([placedById])
+  @@index([releasedById])
+  @@index([convertedById])
+  @@index([convertedDiscrepancyId])
+  @@index([convertedMaintenanceEventId])
 }
 
 model AircraftLogbookSignature {

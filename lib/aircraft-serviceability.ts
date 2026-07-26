@@ -3,6 +3,7 @@ import {
   DeferralStatus,
   DiscrepancyStatus,
   MaintenanceComplianceStatus,
+  MaintenanceControlHoldStatus,
   MaintenanceEventStatus,
 } from "@prisma/client";
 
@@ -13,6 +14,9 @@ export type AircraftServiceabilityState =
   | "DEFERRED_WITH_LIMITATIONS"
   | "DEFERRAL_EXPIRED"
   | "IN_MAINTENANCE"
+  | "MX_HOLD"
+  | "INSPECTION_REQUIRED"
+  | "MX_RELEASE_REQUIRED"
   | "AOG";
 
 export type AircraftServiceabilityTone = "green" | "amber" | "rose" | "zinc";
@@ -39,6 +43,15 @@ export type ServiceabilityMaintenanceEvent = {
   id?: string;
   status: MaintenanceEventStatus;
   returnToServiceAt?: Date | null;
+  requiresIndependentInspection?: boolean;
+  maintenanceApprovedAt?: Date | null;
+  inspectionApprovedAt?: Date | null;
+};
+
+export type ServiceabilityMaintenanceControlHold = {
+  id?: string;
+  status: MaintenanceControlHoldStatus;
+  reason?: string | null;
 };
 
 export type ServiceabilityMaintenanceComplianceState = {
@@ -56,6 +69,7 @@ export type AircraftServiceabilityInput = {
   discrepancies?: ServiceabilityDiscrepancy[];
   deferrals?: ServiceabilityDeferral[];
   maintenanceEvents?: ServiceabilityMaintenanceEvent[];
+  maintenanceControlHolds?: ServiceabilityMaintenanceControlHold[];
   maintenanceComplianceStates?: ServiceabilityMaintenanceComplianceState[];
 };
 
@@ -121,6 +135,21 @@ export function evaluateAircraftServiceability(
       item.status === MaintenanceComplianceStatus.OVERDUE &&
       item.task?.requiredForServiceability !== false,
   );
+  const activeHolds = (aircraft.maintenanceControlHolds ?? []).filter(
+    (item) => item.status === MaintenanceControlHoldStatus.ACTIVE,
+  );
+  const activeMaintenance = (aircraft.maintenanceEvents ?? []).filter(
+    (item) => item.status === MaintenanceEventStatus.IN_PROGRESS,
+  );
+  const completedPendingControlRelease = (aircraft.maintenanceEvents ?? []).filter(
+    (item) => item.status === MaintenanceEventStatus.COMPLETED && !item.returnToServiceAt,
+  );
+  const pendingIndependentInspection = completedPendingControlRelease.filter(
+    (item) =>
+      item.requiresIndependentInspection === true &&
+      Boolean(item.maintenanceApprovedAt) &&
+      !item.inspectionApprovedAt,
+  );
   const hasActiveConfiguration = !aircraft.configurations || aircraft.configurations.length > 0;
 
   if (aircraft.status === AircraftStatus.OUT_OF_SERVICE) {
@@ -155,6 +184,38 @@ export function evaluateAircraftServiceability(
     };
   }
 
+  if (activeHolds.length > 0) {
+    return {
+      state: "MX_HOLD",
+      label: "MX hold",
+      message: activeHolds[0]?.reason || "Maintenance Control removed this aircraft from service.",
+      ready: false,
+      blocksRelease: true,
+      tone: "rose",
+      openDiscrepancyCount: openDiscrepancies.length,
+      correctedPendingRtsCount: correctedPendingRts.length,
+      activeDeferralCount: activeDeferrals.length,
+      expiredDeferralCount: expiredDeferrals.length,
+      limitation: firstLimitation(activeDeferrals),
+    };
+  }
+
+  if (activeMaintenance.length > 0) {
+    return {
+      state: "IN_MAINTENANCE",
+      label: "Maintenance in progress",
+      message: `${activeMaintenance.length} maintenance occurrence${activeMaintenance.length === 1 ? " is" : "s are"} in progress.`,
+      ready: false,
+      blocksRelease: true,
+      tone: "rose",
+      openDiscrepancyCount: openDiscrepancies.length,
+      correctedPendingRtsCount: correctedPendingRts.length,
+      activeDeferralCount: activeDeferrals.length,
+      expiredDeferralCount: expiredDeferrals.length,
+      limitation: firstLimitation(activeDeferrals),
+    };
+  }
+
   if (expiredDeferrals.length > 0) {
     return {
       state: "DEFERRAL_EXPIRED",
@@ -173,9 +234,41 @@ export function evaluateAircraftServiceability(
 
   if (correctedPendingRts.length > 0) {
     return {
-      state: "RTS_REQUIRED",
-      label: "RTS required",
-      message: `${correctedPendingRts.length} corrected write-up${correctedPendingRts.length === 1 ? "" : "s"} waiting on return to service.`,
+      state: "MX_RELEASE_REQUIRED",
+      label: "MX release required",
+      message: `${correctedPendingRts.length} corrected write-up${correctedPendingRts.length === 1 ? "" : "s"} waiting on Maintenance Control release.`,
+      ready: false,
+      blocksRelease: true,
+      tone: "amber",
+      openDiscrepancyCount: openDiscrepancies.length,
+      correctedPendingRtsCount: correctedPendingRts.length,
+      activeDeferralCount: activeDeferrals.length,
+      expiredDeferralCount: expiredDeferrals.length,
+      limitation: firstLimitation(activeDeferrals),
+    };
+  }
+
+  if (pendingIndependentInspection.length > 0) {
+    return {
+      state: "INSPECTION_REQUIRED",
+      label: "Inspection required",
+      message: `${pendingIndependentInspection.length} maintenance occurrence${pendingIndependentInspection.length === 1 ? "" : "s"} waiting on independent inspection.`,
+      ready: false,
+      blocksRelease: true,
+      tone: "amber",
+      openDiscrepancyCount: openDiscrepancies.length,
+      correctedPendingRtsCount: correctedPendingRts.length,
+      activeDeferralCount: activeDeferrals.length,
+      expiredDeferralCount: expiredDeferrals.length,
+      limitation: firstLimitation(activeDeferrals),
+    };
+  }
+
+  if (completedPendingControlRelease.length > 0) {
+    return {
+      state: "MX_RELEASE_REQUIRED",
+      label: "MX release required",
+      message: `${completedPendingControlRelease.length} completed maintenance occurrence${completedPendingControlRelease.length === 1 ? "" : "s"} waiting on Maintenance Control release.`,
       ready: false,
       blocksRelease: true,
       tone: "amber",
@@ -253,7 +346,7 @@ export function evaluateAircraftServiceability(
 
   return {
     state: "SERVICEABLE",
-    label: "Serviceable",
+    label: "Available",
     message: "No open write-ups or expired deferrals.",
     ready: true,
     blocksRelease: false,

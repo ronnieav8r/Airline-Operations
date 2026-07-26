@@ -2,6 +2,34 @@
 
 Last updated: 2026-07-26
 
+## MX-002R Simplified Maintenance Lifecycle
+
+The replacement slice removes the work-package product direction. Maintenance
+now answers whether a tail is available, why it is down, what is due, what is
+deferred, and what official logbook evidence exists.
+
+- An official `OPEN` write-up blocks availability. A valid approved deferral
+  restores availability with limitations.
+- Corrective work starts from a write-up/logbook context. Maintenance approval
+  requires an active authority profile. A designated required-inspection item
+  also needs a different authorized inspector.
+- Approval leaves the aircraft at `MX release required`. Maintenance Control
+  then records a distinct acknowledgement; that transaction creates signed
+  `ReturnToServiceRecord` evidence and clears only the linked blocker.
+- Scheduled planning stores date, station, and a short note without creating a
+  logbook entry or blocking. `Start maintenance` creates the draft entry and
+  begins blocking.
+- An audited `MaintenanceControlHold` removes a tail from service without a
+  write-up. One active hold is allowed per aircraft. Direct release requires an
+  explanation; conversion is atomic.
+- Admin can configure/review but cannot sign, place/release holds, or release
+  aircraft. Those actions require `MAINTENANCE`; signatures also require an
+  active authority profile.
+
+Commit `03242f9b3741cbc47ef5ef69837c60d91238dcf4` is rejected. Do not integrate
+it. `MX-002R` starts from `8c923193ca30703271d66075f6ea80fd4c3bcdd7`.
+The older work-package notes below are historical and superseded.
+
 ## 2026-07-26 Integration Baseline Stabilization
 
 The accumulated integration-tree product work is accepted as `BASELINE-001` on
@@ -12,9 +40,8 @@ integrated-product checkpoint are both
 immediately following `chore: accept AeroOps integration baseline` commit.
 `docs/PROJECT_PIPELINE.md` is the durable project-management tracker: every
 future slice must have explicit scope, acceptance commands, blockers, and
-checkpoint/integration records before another feature is dispatched. This
-baseline did not dispatch the next Maintenance feature; the next approved work
-remains the contextual work-package slice described below.
+checkpoint/integration records before another feature is dispatched. MX-002R
+is the replacement Maintenance slice now being delivered from that baseline.
 
 ## Current State
 
@@ -27,7 +54,10 @@ Local review auth note: in non-production environments where
 seeded local admin when there is no valid session cookie. This is for local UI
 review only; production remains session-gated.
 
-## 2026-07-02 Maintenance Handoff Notes
+## 2026-07-02 Maintenance Handoff Notes (historical, superseded)
+
+The work-package recommendations in this dated section are retained only as
+history. MX-002R above controls current implementation and product direction.
 
 The current maintenance workflow should be understood as four connected
 surfaces, not four separate sources of truth:

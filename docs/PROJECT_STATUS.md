@@ -2,6 +2,26 @@
 
 Last updated: 2026-07-26
 
+## MX-002R Current Maintenance State
+
+`MX-002R` replaces the rejected contextual work-package direction. Maintenance
+is logbook- and availability-centered:
+
+- open write-ups, expired deferrals, active maintenance, completed work pending
+  MX release, required overdue tasks, administrative status, and active MX
+  Control holds are independent blockers;
+- scheduled planning is non-blocking and stores a date, `Station`, and note;
+- starting scheduled maintenance creates its draft logbook entry and blocks;
+- maintenance approval and conditional independent inspection precede a
+  separate Maintenance Control release;
+- an active `MaintenanceControlHold` blocks without creating a regulatory
+  logbook entry and can be released with explanation or atomically converted;
+- user-facing work packages and standalone maintenance-event creation are not
+  part of the product.
+
+The replacement starts from `8c923193ca30703271d66075f6ea80fd4c3bcdd7`.
+Commit `03242f9b3741cbc47ef5ef69837c60d91238dcf4` remains rejected.
+
 ## 2026-07-26 Integration Baseline
 
 `BASELINE-001` records the one-time stabilization checkpoint for the
@@ -12,9 +32,8 @@ integrated-product checkpoint are
 immediately following `chore: accept AeroOps integration baseline` commit.
 The adopted workflow is tracked in `docs/PROJECT_PIPELINE.md`: document and
 validate a narrow slice, record blockers and both checkpoint/integration
-records, then explicitly dispatch the next approved slice. The contextual
-Maintenance work-package slice is approved but was not dispatched by this
-checkpoint.
+records, then explicitly dispatch the next approved slice. MX-002R is the
+replacement Maintenance slice delivered from this checkpoint.
 
 This document is the quick onboarding note for planner and builder chats. Read it
 before starting a new AeroOps slice.
@@ -26,10 +45,9 @@ changing production auth behavior.
 
 ## Current Next Steps
 
-`BASELINE-001` is accepted. The contextual Maintenance work-package slice is
-the only approved next feature and remains undispatched. The tracks below are
-current product context and backlog; they do not independently authorize a new
-slice.
+`BASELINE-001` is accepted and MX-002R is the active replacement Maintenance
+slice. The tracks below are current product context and backlog; they do not
+independently authorize another slice.
 
 The current active tracks are:
 
@@ -95,9 +113,9 @@ The current active tracks are:
   Scheduled Maintenance replaces the older generic Tails view and now uses a
   reusable maintenance-program task library, aircraft/type/tail applicability,
   per-tail overrides, per-aircraft compliance state, manual meter snapshots,
-  linked `MaintenanceEvent` records, and linked draft logbook entries for
-  work-package signoff. It shows due status rather than auto-creating work
-  orders. The queue no longer exposes priority labels and is grouped by
+  and linked internal `MaintenanceEvent` occurrences. Planning is non-blocking;
+  starting maintenance creates the linked draft logbook entry. It shows due
+  status rather than auto-creating work. The queue no longer exposes priority labels and is grouped by
   aircraft tail, with individual AOG/deferral/scheduled-maintenance items
   nested under each aircraft. Each collapsed queue row also shows the next
   scheduled-maintenance reference for that tail. The Maintenance header shows
@@ -115,10 +133,9 @@ The current active tracks are:
   the aircraft is serviceable. AOG discrepancies can now track phase,
   ETA/next-update time, and a maintenance-control note. Required overdue
   scheduled-maintenance tasks make the aircraft not serviceable; due and
-  due-soon tasks are warnings. Creating a scheduled work package now creates a
-  linked planned maintenance event and a linked draft aircraft logbook entry;
-  signing that scheduled-program logbook entry completes the linked event and
-  advances calendar-based compliance. `/aircraft` remains the fleet/aircraft
+  due-soon tasks are warnings. Signing a started scheduled-maintenance logbook
+  entry completes the linked occurrence and advances compliance, while
+  Maintenance Control release remains separately required. `/aircraft` remains the fleet/aircraft
   status drilldown. `AirworthinessRelease` history remains available for
   historical/operator-specific workflows, but it is no longer used as the
   visible aircraft maintenance status or required dispatch package artifact. See

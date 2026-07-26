@@ -150,7 +150,7 @@ const aircraftContextSelect = {
   },
   maintenanceEvents: {
     where: {
-      status: MaintenanceEventStatus.COMPLETED,
+      status: { in: [MaintenanceEventStatus.IN_PROGRESS, MaintenanceEventStatus.COMPLETED] },
     },
     orderBy: [{ completedAt: "desc" }],
     select: {
@@ -160,9 +160,16 @@ const aircraftContextSelect = {
       completedAt: true,
       providerName: true,
       returnToServiceAt: true,
+      requiresIndependentInspection: true,
+      maintenanceApprovedAt: true,
+      inspectionApprovedAt: true,
       status: true,
     },
-    take: 1,
+    take: 8,
+  },
+  maintenanceControlHolds: {
+    where: { status: "ACTIVE" },
+    select: { id: true, reason: true, status: true },
   },
 } satisfies Prisma.AircraftSelect;
 

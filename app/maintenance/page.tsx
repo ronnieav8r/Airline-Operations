@@ -26,10 +26,16 @@ import {
   addMaintenanceProgramOverrideAction,
   createAircraftMeterSnapshotAction,
   createMaintenanceProgramTaskAction,
-  createScheduledMaintenanceWorkPackageAction,
+  convertMaintenanceControlHoldAction,
+  convertMaintenanceControlHoldToScheduledAction,
   markMaintenanceTaskNotApplicableAction,
+  placeMaintenanceControlHoldAction,
+  planScheduledMaintenanceAction,
+  releaseMaintenanceControlHoldAction,
+  releaseMaintenanceOccurrenceAction,
   retireMaintenanceProgramApplicabilityAction,
   setMaintenanceProgramTaskActiveAction,
+  startScheduledMaintenanceAction,
   updateDiscrepancyAogPhaseAction,
   updateMaintenanceProgramTaskAction,
   upsertMaintenanceComplianceBaselineAction,
@@ -1579,6 +1585,10 @@ function TaskFields({ item }: { item?: MaintenanceProgramItem }) {
           <input defaultChecked={item?.active ?? true} name="active" type="checkbox" />
           Active
         </label>
+        <label className="flex items-center gap-2 text-xs font-semibold text-zinc-700">
+          <input defaultChecked={item?.requiresIndependentInspection ?? false} name="requiresIndependentInspection" type="checkbox" />
+          Required independent inspection
+        </label>
       </div>
     </>
   );
@@ -1643,14 +1653,22 @@ function AogPhaseForm({ item, returnTo }: { item: MaintenanceQueueItem; returnTo
 }
 
 function QueueDrawer({
+  canControl,
   closeHref,
   item,
   returnTo,
+  scheduledOccurrenceOptions,
 }: {
+  canControl: boolean;
   closeHref: string;
   item: MaintenanceQueueItem;
   returnTo: string;
+  scheduledOccurrenceOptions: Array<{
+    id: string;
+    label: string;
+  }>;
 }) {
+  const holdId = item.id.startsWith("mx-hold-") ? item.id.slice("mx-hold-".length) : null;
   return (
     <aside className="fixed inset-y-0 right-0 z-30 flex w-full max-w-xl flex-col border-l border-zinc-200 bg-white shadow-2xl">
       <div className="flex items-center justify-between border-b border-zinc-200 p-4">
@@ -1704,6 +1722,49 @@ function QueueDrawer({
           </section>
         ) : null}
         <AogPhaseForm item={item} returnTo={returnTo} />
+        {canControl && holdId ? (
+          <>
+            <form action={releaseMaintenanceControlHoldAction.bind(null, holdId)} className="grid gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <input name="returnTo" type="hidden" value={returnTo} />
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-800">Release MX hold</p>
+              <textarea className="min-h-16 rounded-md border border-emerald-300 bg-white px-3 py-2 text-sm" name="releaseExplanation" placeholder="Why no defect or maintenance resulted" required />
+              <label className="flex items-start gap-2 text-xs font-semibold leading-5 text-emerald-950">
+                <input className="mt-1 h-4 w-4" name="noDefectOrMaintenanceConfirmed" required type="checkbox" />
+                I confirm no defect was found and no maintenance was performed.
+              </label>
+              <button className="min-h-9 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white" type="submit">Release hold</button>
+            </form>
+            <form action={convertMaintenanceControlHoldAction.bind(null, holdId)} className="grid gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <input name="returnTo" type="hidden" value={returnTo} />
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-800">Convert to write-up</p>
+              <input className="min-h-9 rounded-md border border-amber-300 bg-white px-3 text-sm" name="title" placeholder="Official write-up title" required />
+              <textarea className="min-h-16 rounded-md border border-amber-300 bg-white px-3 py-2 text-sm" name="description" placeholder="Discrepancy details" />
+              <button className="min-h-9 rounded-md bg-amber-800 px-3 text-sm font-semibold text-white" type="submit">Create write-up</button>
+            </form>
+            {scheduledOccurrenceOptions.length > 0 ? (
+              <form action={convertMaintenanceControlHoldToScheduledAction.bind(null, holdId)} className="grid gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                <input name="returnTo" type="hidden" value={returnTo} />
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-800">Link to scheduled maintenance</p>
+                <select className="min-h-9 rounded-md border border-blue-300 bg-white px-3 text-sm" name="maintenanceEventId" required>
+                  <option value="">Select occurrence</option>
+                  {scheduledOccurrenceOptions.map((option) => (
+                    <option key={option.id} value={option.id}>{option.label}</option>
+                  ))}
+                </select>
+                <button className="min-h-9 rounded-md bg-blue-800 px-3 text-sm font-semibold text-white" type="submit">Link and continue maintenance</button>
+              </form>
+            ) : null}
+          </>
+        ) : canControl ? (
+          <form action={placeMaintenanceControlHoldAction.bind(null, item.aircraftId)} className="grid gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3">
+            <input name="returnTo" type="hidden" value={returnTo} />
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-800">Remove from service</p>
+            <input className="min-h-9 rounded-md border border-rose-300 bg-white px-3 text-sm" name="reason" placeholder="MX Control reason" required />
+            <textarea className="min-h-16 rounded-md border border-rose-300 bg-white px-3 py-2 text-sm" name="note" placeholder="Short note" />
+            <input className="min-h-9 rounded-md border border-rose-300 bg-white px-3 text-sm" name="expectedReturnAt" type="datetime-local" />
+            <button className="min-h-9 rounded-md bg-rose-800 px-3 text-sm font-semibold text-white" type="submit">Remove from service</button>
+          </form>
+        ) : null}
         <ActionLinks
           aircraftHref={item.aircraftHref}
           airworthinessHref={item.airworthinessHref}
@@ -1716,13 +1777,17 @@ function QueueDrawer({
 }
 
 function ScheduledMaintenanceDrawer({
+  canControl,
   closeHref,
   item,
   returnTo,
+  stationOptions,
 }: {
+  canControl: boolean;
   closeHref: string;
   item: MaintenanceScheduledItem;
   returnTo: string;
+  stationOptions: { id: string; code: string; name: string }[];
 }) {
   return (
     <aside className="fixed inset-y-0 right-0 z-30 flex w-full max-w-xl flex-col border-l border-zinc-200 bg-white shadow-2xl">
@@ -1773,7 +1838,7 @@ function ScheduledMaintenanceDrawer({
               {item.maintenanceEvent.providerName ? ` | ${item.maintenanceEvent.providerName}` : ""}
             </p>
           ) : (
-            <p className="mt-1 text-sm text-zinc-600">Create a work package when maintenance is ready to place this task on the working schedule.</p>
+            <p className="mt-1 text-sm text-zinc-600">Plan a date and station. Planning does not remove the aircraft from service.</p>
           )}
           {item.logbookEntry ? (
             <Link className="mt-2 inline-flex min-h-9 items-center rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-100" href={`${item.logbookHref}#${item.logbookEntry.id}`}>
@@ -1838,15 +1903,33 @@ function ScheduledMaintenanceDrawer({
         {item.taskId ? (
           <>
             {!item.maintenanceEvent ? (
-              <form action={createScheduledMaintenanceWorkPackageAction.bind(null, item.aircraftId, item.taskId)} className="grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+              <form action={planScheduledMaintenanceAction.bind(null, item.aircraftId, item.taskId)} className="grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
                 <input name="returnTo" type="hidden" value={returnTo} />
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Create work package</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Plan scheduled maintenance</p>
                 <input className="min-h-9 rounded-md border border-zinc-300 bg-white px-2 text-sm" name="scheduledAt" type="datetime-local" />
-                <input className="min-h-9 rounded-md border border-zinc-300 bg-white px-2 text-sm" name="providerName" placeholder="Provider" />
-                <input className="min-h-9 rounded-md border border-zinc-300 bg-white px-2 text-sm" name="description" placeholder="Work package description" />
+                <select className="min-h-9 rounded-md border border-zinc-300 bg-white px-2 text-sm" name="stationId" defaultValue="">
+                  <option value="">Station not selected</option>
+                  {stationOptions.map((station) => <option key={station.id} value={station.id}>{station.code} — {station.name}</option>)}
+                </select>
+                <input className="min-h-9 rounded-md border border-zinc-300 bg-white px-2 text-sm" name="planNote" placeholder="Short planning note" />
                 <button className="min-h-9 rounded-md border border-zinc-300 bg-white px-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-100" type="submit">
-                  Create work package
+                  Save plan
                 </button>
+              </form>
+            ) : null}
+            {canControl && item.maintenanceEvent?.status === MaintenanceEventStatus.PLANNED ? (
+              <form action={startScheduledMaintenanceAction.bind(null, item.maintenanceEvent.id)} className="grid gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3">
+                <input name="returnTo" type="hidden" value={returnTo} />
+                <p className="text-xs text-rose-900">Starting maintenance creates the draft logbook entry and removes the aircraft from service.</p>
+                <button className="min-h-9 rounded-md bg-rose-800 px-3 text-sm font-semibold text-white" type="submit">Start maintenance</button>
+              </form>
+            ) : null}
+            {canControl && item.maintenanceEvent?.status === MaintenanceEventStatus.COMPLETED ? (
+              <form action={releaseMaintenanceOccurrenceAction.bind(null, item.maintenanceEvent.id)} className="grid gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                <input name="returnTo" type="hidden" value={returnTo} />
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-800">MX Control release</p>
+                <textarea className="min-h-16 rounded-md border border-emerald-300 bg-white px-3 py-2 text-sm" name="mxControlReleaseNote" placeholder="Release note" required />
+                <button className="min-h-9 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white" type="submit">Release aircraft</button>
               </form>
             ) : null}
             <form action={markMaintenanceTaskNotApplicableAction.bind(null, item.aircraftId, item.taskId)} className="grid gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -2040,7 +2123,7 @@ function ProgramDrawer({
 }
 
 export default async function MaintenancePage({ searchParams }: PageProps) {
-  await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
 
   const params = await searchParams;
   const view = normalizeView(firstParam(params.view));
@@ -2633,9 +2716,32 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
         </section>
       </div>
 
-      {selectedQueueItem ? <QueueDrawer closeHref={closeHref} item={selectedQueueItem} returnTo={selectedQueueHref} /> : null}
+      {selectedQueueItem ? (
+        <QueueDrawer
+          canControl={currentUser.role === UserRole.MAINTENANCE}
+          closeHref={closeHref}
+          item={selectedQueueItem}
+          returnTo={selectedQueueHref}
+          scheduledOccurrenceOptions={data.scheduledItems
+            .filter(
+              (scheduledItem) =>
+                scheduledItem.aircraftId === selectedQueueItem.aircraftId &&
+                scheduledItem.maintenanceEvent !== null,
+            )
+            .map((scheduledItem) => ({
+              id: scheduledItem.maintenanceEvent!.id,
+              label: `${scheduledItem.taskTitle} · ${scheduledEventLabel(scheduledItem)}`,
+            }))}
+        />
+      ) : null}
       {selectedScheduledItem ? (
-        <ScheduledMaintenanceDrawer closeHref={closeHref} item={selectedScheduledItem} returnTo={selectedScheduledHref} />
+        <ScheduledMaintenanceDrawer
+          canControl={currentUser.role === UserRole.MAINTENANCE}
+          closeHref={closeHref}
+          item={selectedScheduledItem}
+          returnTo={selectedScheduledHref}
+          stationOptions={data.stationOptions}
+        />
       ) : null}
       {selectedProgramItem ? (
         <ProgramDrawer

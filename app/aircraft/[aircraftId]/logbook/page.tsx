@@ -1,7 +1,6 @@
 import {
   AircraftLogbookEntryStatus,
   AircraftLogbookSignaturePurpose,
-  AirworthinessReleaseStatus,
   DeferralStatus,
   DiscrepancyStatus,
   UserRole,
@@ -21,6 +20,7 @@ import {
   getAircraftLogbookWorkspaceData,
 } from "@/lib/aircraft-logbook";
 import { requireRole } from "@/lib/auth/guards";
+import { evaluateAircraftServiceability } from "@/lib/aircraft-serviceability";
 
 export const dynamic = "force-dynamic";
 
@@ -151,9 +151,12 @@ function CorrectiveActionForm({ aircraft }: { aircraft: AircraftLogbookData }) {
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <FieldLabel label="Linked discrepancy">
-          <select className={inputClassName()} name="discrepancyId">
-            <option value="">No linked discrepancy</option>
-            {aircraft.discrepancies.map((discrepancy) => (
+          <select className={inputClassName()} name="discrepancyId" required>
+            <option value="">Select an open write-up</option>
+            {aircraft.discrepancies.filter((discrepancy) =>
+              discrepancy.status === DiscrepancyStatus.OPEN ||
+              discrepancy.status === DiscrepancyStatus.DEFERRED
+            ).map((discrepancy) => (
               <option key={discrepancy.id} value={discrepancy.id}>
                 {discrepancy.discrepancyNumber} - {discrepancy.title}
               </option>
@@ -178,23 +181,14 @@ function CorrectiveActionForm({ aircraft }: { aircraft: AircraftLogbookData }) {
         <FieldLabel label="Performed by">
           <input className={inputClassName()} name="performedByName" placeholder="Technician or shop" />
         </FieldLabel>
-        <FieldLabel label="Return to service">
-          <input className={inputClassName()} name="returnToServiceAt" type="datetime-local" />
-        </FieldLabel>
       </div>
       <FieldLabel label="Work performed">
         <textarea className={textareaClassName()} name="narrative" required />
       </FieldLabel>
-      <div className="flex flex-wrap gap-3">
-        <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-zinc-700">
-          <input className="h-4 w-4" name="completed" type="checkbox" />
-          Mark work completed
-        </label>
-        <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-zinc-700">
-          <input className="h-4 w-4" name="clearDiscrepancy" type="checkbox" />
-          Mark linked discrepancy corrected pending RTS
-        </label>
-      </div>
+      <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-zinc-700">
+        <input className="h-4 w-4" name="requiresIndependentInspection" type="checkbox" />
+        Required independent inspection item
+      </label>
       <button
         className="min-h-10 w-full cursor-pointer rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 md:w-fit"
         type="submit"
@@ -206,7 +200,16 @@ function CorrectiveActionForm({ aircraft }: { aircraft: AircraftLogbookData }) {
 }
 
 function SignEntryForm({ aircraftId, entry }: { aircraftId: string; entry: LogbookEntry }) {
-  if (entry.lockedAt || entry.status === AircraftLogbookEntryStatus.SIGNED) {
+  const maintenanceSigned = entry.signatures.some(
+    (signature) => signature.purpose === AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL,
+  );
+  const inspectionSigned = entry.signatures.some(
+    (signature) => signature.purpose === AircraftLogbookSignaturePurpose.INSPECTION_APPROVAL,
+  );
+  const inspectionPending =
+    entry.requiresIndependentInspection && maintenanceSigned && !inspectionSigned;
+
+  if ((entry.lockedAt || entry.status === AircraftLogbookEntryStatus.SIGNED) && !inspectionPending) {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500">
         <LockKeyhole className="h-3.5 w-3.5" />
@@ -220,16 +223,10 @@ function SignEntryForm({ aircraftId, entry }: { aircraftId: string; entry: Logbo
       <summary className="cursor-pointer text-xs font-semibold text-zinc-700">Sign entry</summary>
       <form action={signAircraftLogbookEntryAction.bind(null, aircraftId, entry.id)} className="mt-2 grid gap-2">
         <input className={inputClassName()} name="signerName" placeholder="Legal signer name" required />
-        <input className={inputClassName()} name="certificateNumber" placeholder="Certificate number" />
-        <input className={inputClassName()} name="certificateType" placeholder="Certificate type" />
-        <input className={inputClassName()} name="authorizationBasis" placeholder="Authorization basis" />
-        <select className={inputClassName()} name="purpose" defaultValue={AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL}>
-          {Object.values(AircraftLogbookSignaturePurpose).map((purpose) => (
-            <option key={purpose} value={purpose}>
-              {formatStatus(purpose)}
-            </option>
-          ))}
-        </select>
+        <input name="purpose" type="hidden" value={inspectionPending ? AircraftLogbookSignaturePurpose.INSPECTION_APPROVAL : AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL} />
+        <p className="text-xs font-semibold text-zinc-600">
+          {inspectionPending ? "Independent inspection approval" : "Maintenance approval"}
+        </p>
         <textarea
           className={textareaClassName()}
           defaultValue="I certify this logbook entry is accurate for the work or approval described."
@@ -237,7 +234,7 @@ function SignEntryForm({ aircraftId, entry }: { aircraftId: string; entry: Logbo
           required
         />
         <button className="min-h-9 cursor-pointer rounded-md bg-zinc-950 px-3 text-xs font-semibold text-white hover:bg-zinc-800" type="submit">
-          Sign and lock
+          {inspectionPending ? "Sign inspection approval" : "Sign maintenance approval"}
         </button>
       </form>
     </details>
@@ -264,7 +261,7 @@ function AttachmentForm({ aircraftId, entry }: { aircraftId: string; entry: Logb
   );
 }
 
-function LogbookEntryCard({ aircraftId, entry }: { aircraftId: string; entry: LogbookEntry }) {
+function LogbookEntryCard({ aircraftId, canMaintain, entry }: { aircraftId: string; canMaintain: boolean; entry: LogbookEntry }) {
   return (
     <article className="grid gap-3 rounded-lg border border-zinc-200 bg-white p-4 scroll-mt-4" id={entry.id}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -318,15 +315,15 @@ function LogbookEntryCard({ aircraftId, entry }: { aircraftId: string; entry: Lo
         </div>
       ) : null}
       <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(16rem,0.45fr)]">
-        <AttachmentForm aircraftId={aircraftId} entry={entry} />
-        <SignEntryForm aircraftId={aircraftId} entry={entry} />
+        {canMaintain ? <AttachmentForm aircraftId={aircraftId} entry={entry} /> : null}
+        {canMaintain ? <SignEntryForm aircraftId={aircraftId} entry={entry} /> : null}
       </div>
     </article>
   );
 }
 
 export default async function AircraftLogbookPage({ params, searchParams }: PageProps) {
-  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH, UserRole.MAINTENANCE, UserRole.SAFETY, UserRole.VIEWER]);
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.DISPATCH, UserRole.MAINTENANCE, UserRole.SAFETY, UserRole.VIEWER]);
   const { aircraftId } = await params;
   const query = await searchParams;
   const [aircraft, templates] = await Promise.all([
@@ -340,7 +337,7 @@ export default async function AircraftLogbookPage({ params, searchParams }: Page
 
   const openDiscrepancies = aircraft.discrepancies.filter((item) => item.status === DiscrepancyStatus.OPEN);
   const activeDeferrals = aircraft.deferrals.filter((item) => item.status === DeferralStatus.ACTIVE);
-  const currentRelease = aircraft.airworthinessReleases.find((item) => item.status === AirworthinessReleaseStatus.RELEASED);
+  const serviceability = evaluateAircraftServiceability(aircraft);
   const error = firstSearchParam(query.error);
   const submitted = firstSearchParam(query.submitted);
 
@@ -369,8 +366,8 @@ export default async function AircraftLogbookPage({ params, searchParams }: Page
                 {formatStatus(aircraft.type)} | {aircraft.homeStation?.code ?? "No base"} | {formatStatus(aircraft.status)}
               </p>
             </div>
-            <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${currentRelease ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
-              {currentRelease ? `Current release ${currentRelease.releaseNumber}` : "No current release"}
+            <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${serviceability.ready ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+              {serviceability.label}
             </span>
           </div>
         </header>
@@ -385,7 +382,7 @@ export default async function AircraftLogbookPage({ params, searchParams }: Page
           <StatCard label="Last maintenance" value={aircraft.maintenanceEvents[0]?.maintenanceNumber ?? "None"} />
         </section>
 
-        <CorrectiveActionForm aircraft={aircraft} />
+        {currentUser.role === UserRole.MAINTENANCE ? <CorrectiveActionForm aircraft={aircraft} /> : null}
 
         <section className="grid gap-3 rounded-lg border border-zinc-200 bg-white p-4">
           <div className="flex items-center gap-2">
@@ -420,7 +417,12 @@ export default async function AircraftLogbookPage({ params, searchParams }: Page
             </p>
           ) : (
             aircraft.logbookEntries.map((entry) => (
-              <LogbookEntryCard aircraftId={aircraft.id} entry={entry} key={entry.id} />
+              <LogbookEntryCard
+                aircraftId={aircraft.id}
+                canMaintain={currentUser.role === UserRole.MAINTENANCE}
+                entry={entry}
+                key={entry.id}
+              />
             ))
           )}
         </section>

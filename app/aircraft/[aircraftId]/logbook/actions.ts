@@ -32,7 +32,7 @@ function revalidateAircraftLogbook(aircraftId: string) {
 }
 
 export async function createCorrectiveActionDraftAction(aircraftId: string, formData: FormData) {
-  const currentUser = await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
+  const currentUser = await requireRole([UserRole.MAINTENANCE]);
 
   try {
     await createCorrectiveActionDraft({
@@ -53,7 +53,7 @@ export async function signAircraftLogbookEntryAction(
   entryId: string,
   formData: FormData,
 ) {
-  const currentUser = await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
+  const currentUser = await requireRole([UserRole.MAINTENANCE]);
 
   try {
     await signAircraftLogbookEntry({

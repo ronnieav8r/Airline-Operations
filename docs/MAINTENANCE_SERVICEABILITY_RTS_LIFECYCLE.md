@@ -1,6 +1,6 @@
 # Maintenance Serviceability And Return-To-Service Lifecycle
 
-Last updated: 2026-07-01
+Last updated: 2026-07-26
 
 This document is the current source of truth for aircraft maintenance serviceability in AeroOps. It supersedes older planning language that treated a current `AirworthinessRelease` as the normal everyday maintenance gate.
 
@@ -29,8 +29,13 @@ A new official discrepancy or write-up starts as `OPEN`.
 An `OPEN` discrepancy means the aircraft is not serviceable until one of these paths is completed:
 
 - Approved deferral path: create an active deferral under MEL, CDL, NEF, company-approved, or other approved authority. The discrepancy becomes `DEFERRED`.
-- Repair path: complete a corrective maintenance event. The discrepancy becomes `CORRECTED_PENDING_RTS`.
-- Return-to-service path: an authorized signer signs a `ReturnToServiceRecord`. The discrepancy becomes `CLEARED`.
+- Repair path: an authorized Maintenance user signs the corrective logbook
+  entry. The discrepancy becomes `CORRECTED_PENDING_RTS`.
+- Required-inspection path: when designated, a different authorized inspector
+  signs after maintenance approval.
+- Control-release path: Maintenance Control records its distinct
+  acknowledgement. The transaction creates signed `ReturnToServiceRecord`
+  evidence and the discrepancy becomes `CLEARED`.
 
 Erroneous write-ups are not cleared as if maintenance was performed. They are voided or cancelled by maintenance with a required reason and audit metadata.
 
@@ -53,6 +58,10 @@ Current schema support includes:
   - `AircraftMeterSnapshot`
 - optional `MaintenanceEvent` and `AircraftLogbookEntry` links back to
   maintenance-program tasks and compliance states
+- `MaintenanceControlHold` with `ACTIVE`, `RELEASED`, and `CONVERTED` states
+- planned maintenance station/note and required-inspection designation
+- distinct Maintenance Control release actor/time/note on regulatory RTS
+  evidence
 
 `Aircraft.status` remains a coarse fleet or operational marker. It is not the authoritative maintenance-release decision.
 
@@ -62,9 +71,11 @@ Current schema support includes:
 
 The computed serviceability output should support these user-facing concepts:
 
-- `Serviceable`
+- `Available`
 - `Not serviceable`
-- `RTS required`
+- `MX hold`
+- `MX release required`
+- `Inspection required`
 - `Deferred with limitations`
 - `Deferral expired`
 - `In maintenance`
@@ -118,24 +129,20 @@ next due calendar/hour/cycle values, latest manual meter snapshot, and a linked
 planned/in-progress `MaintenanceEvent` if one exists. Missing baseline or next
 due data should show `Needs baseline`; the app should not guess due status.
 
-`MaintenanceEvent` remains the work-order/completion record. Program tasks do
-not automatically create maintenance events. Maintenance users create or link
-events manually when work is actually scheduled.
+`MaintenanceEvent` is an internal occurrence, not a user-facing job or work
+order. Program tasks do not automatically create occurrences.
 
 The Program view is the task-library setup workbench. It manages task details,
 recurrence, applicability, active/inactive state, and tail overrides. Task
 records are not deleted in v1; deactivate tasks or retire applicability rules
 to preserve history.
 
-When a scheduled-maintenance row is ready for work, the app creates a work
-package rather than only a standalone event. The work package contains:
-
-- a linked planned `MaintenanceEvent`
-- a linked draft `AircraftLogbookEntry`
-
-Both records link to the same aircraft, program task, and compliance state. The
-draft logbook entry is the signoff path. Signing a scheduled-program logbook
-entry completes the linked maintenance event and advances the compliance state.
+Planning stores date, station, and a short note on a `PLANNED` occurrence and
+does not affect availability. `Start maintenance` changes it to `IN_PROGRESS`
+and creates the linked draft `AircraftLogbookEntry`. Maintenance approval
+advances compliance but does not set `returnToServiceAt`; Maintenance Control
+does that in the separate release transaction after any required independent
+inspection.
 
 Manual meter snapshots are the v1 source for airframe hours and cycles. Flight
 utilization does not automatically update scheduled-maintenance meters yet.
@@ -146,8 +153,9 @@ Aircraft airworthiness/logbook routes should avoid direct discrepancy status edi
 
 - defer
 - create or link corrective maintenance
-- prepare Return to Service
-- sign Return to Service
+- sign corrective maintenance approval
+- complete any designated independent inspection
+- release through Maintenance Control
 - void erroneous write-up
 
 The top-level Maintenance module now includes a review-first `Logbook` view at

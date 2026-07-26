@@ -91,7 +91,7 @@ const operationsControlSelect = {
               status: true,
               discrepancies: {
                 where: {
-                  status: { in: ["OPEN", "DEFERRED"] },
+                  status: { in: ["OPEN", "DEFERRED", "CORRECTED_PENDING_RTS"] },
                 },
                 select: {
                   id: true,
@@ -104,15 +104,33 @@ const operationsControlSelect = {
                 },
                 select: {
                   id: true,
+                  dueAt: true,
+                  status: true,
                 },
               },
               maintenanceEvents: {
                 where: {
-                  status: { in: ["PLANNED", "IN_PROGRESS"] },
+                  status: { in: ["IN_PROGRESS", "COMPLETED"] },
                 },
                 select: {
                   id: true,
+                  inspectionApprovedAt: true,
+                  maintenanceApprovedAt: true,
+                  requiresIndependentInspection: true,
+                  returnToServiceAt: true,
                   status: true,
+                },
+              },
+              maintenanceControlHolds: {
+                where: { status: "ACTIVE" },
+                select: { id: true, reason: true, status: true },
+              },
+              maintenanceComplianceStates: {
+                where: { status: "OVERDUE" },
+                select: {
+                  id: true,
+                  status: true,
+                  task: { select: { requiredForServiceability: true, title: true } },
                 },
               },
             },
@@ -242,7 +260,7 @@ const operationsControlSelect = {
           status: true,
           discrepancies: {
             where: {
-              status: { in: ["OPEN", "DEFERRED"] },
+              status: { in: ["OPEN", "DEFERRED", "CORRECTED_PENDING_RTS"] },
             },
             select: {
               id: true,
@@ -255,15 +273,33 @@ const operationsControlSelect = {
             },
             select: {
               id: true,
+              dueAt: true,
+              status: true,
             },
           },
           maintenanceEvents: {
             where: {
-              status: { in: ["PLANNED", "IN_PROGRESS"] },
+              status: { in: ["IN_PROGRESS", "COMPLETED"] },
             },
             select: {
               id: true,
+              inspectionApprovedAt: true,
+              maintenanceApprovedAt: true,
+              requiresIndependentInspection: true,
+              returnToServiceAt: true,
               status: true,
+            },
+          },
+          maintenanceControlHolds: {
+            where: { status: "ACTIVE" },
+            select: { id: true, reason: true, status: true },
+          },
+          maintenanceComplianceStates: {
+            where: { status: "OVERDUE" },
+            select: {
+              id: true,
+              status: true,
+              task: { select: { requiredForServiceability: true, title: true } },
             },
           },
         },

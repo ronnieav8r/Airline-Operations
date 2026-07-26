@@ -26,6 +26,16 @@ are required to support approved frontend readiness or UI polish.
 
 ## Maintenance Serviceability And Return To Service
 
+`MX-002R` adds `MaintenanceControlHold` as an independent audited availability
+blocker, with a partial unique index allowing one `ACTIVE` hold per aircraft.
+Scheduled planning uses nullable `MaintenanceEvent.plannedStationId`,
+`scheduledAt`, and `planNote`; `PLANNED` is non-blocking and creates no
+logbook entry. Required-inspection designation propagates from program task to
+occurrence and logbook entry. `ReturnToServiceRecord` retains the regulatory
+maintenance signer/profile snapshot and separately stores Maintenance Control
+release actor/time/note. `MaintenanceEvent.returnToServiceAt` and discrepancy
+clearing are set only by the Maintenance Control release transaction.
+
 Maintenance serviceability is computed, not manually stored as the primary
 aircraft release decision. Use
 `docs/MAINTENANCE_SERVICEABILITY_RTS_LIFECYCLE.md` and

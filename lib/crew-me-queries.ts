@@ -96,6 +96,21 @@ const crewMeFlightLegSelect = {
               status: true,
             },
           },
+          maintenanceEvents: {
+            where: { status: { in: ["IN_PROGRESS", "COMPLETED"] } },
+            select: {
+              id: true,
+              inspectionApprovedAt: true,
+              maintenanceApprovedAt: true,
+              requiresIndependentInspection: true,
+              returnToServiceAt: true,
+              status: true,
+            },
+          },
+          maintenanceControlHolds: {
+            where: { status: "ACTIVE" },
+            select: { id: true, reason: true, status: true },
+          },
         },
       },
     },

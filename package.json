@@ -43,6 +43,7 @@
     "smoke:customer-passenger-manifest": "tsx scripts/smoke-customer-passenger-manifest.ts",
     "smoke:passenger-identity-documents": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-tsx.ps1 scripts/smoke-passenger-identity-documents.ts",
     "smoke:aircraft-logbook": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-tsx.ps1 scripts/smoke-aircraft-logbook.ts",
+    "smoke:maintenance-lifecycle": "tsx scripts/smoke-simplified-maintenance-lifecycle.ts",
     "smoke:fuel-workflow": "tsx scripts/smoke-fuel-workflow.ts",
     "smoke:browser": "playwright test",
     "playwright:install": "playwright install chromium",

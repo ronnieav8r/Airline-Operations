@@ -27,7 +27,7 @@ import { prisma } from "@/lib/prisma";
 
 export class AircraftLogbookError extends Error {}
 
-const maintenanceAuthorityRoles = new Set<UserRole>([UserRole.ADMIN, UserRole.MAINTENANCE]);
+const maintenanceAuthorityRoles = new Set<UserRole>([UserRole.MAINTENANCE]);
 
 function optionalText(value: FormDataEntryValue | null): string | null {
   if (typeof value !== "string") {
@@ -46,22 +46,6 @@ function requiredText(value: FormDataEntryValue | null, label: string): string {
   }
 
   return text;
-}
-
-function parseOptionalDateTime(value: FormDataEntryValue | null, label: string): Date | null {
-  const text = optionalText(value);
-
-  if (!text) {
-    return null;
-  }
-
-  const parsed = new Date(text);
-
-  if (Number.isNaN(parsed.getTime())) {
-    throw new AircraftLogbookError(`${label} must be a valid date/time.`);
-  }
-
-  return parsed;
 }
 
 function addDays(value: Date, days: number) {
@@ -296,9 +280,24 @@ export async function getAircraftLogbookWorkspaceData(aircraftId: string) {
           status: true,
           completedAt: true,
           providerName: true,
+          requiresIndependentInspection: true,
+          maintenanceApprovedAt: true,
+          inspectionApprovedAt: true,
           returnToServiceAt: true,
         },
         take: 10,
+      },
+      maintenanceControlHolds: {
+        where: { status: "ACTIVE" },
+        select: { id: true, reason: true, status: true },
+      },
+      maintenanceComplianceStates: {
+        where: { status: MaintenanceComplianceStatus.OVERDUE },
+        select: {
+          id: true,
+          status: true,
+          task: { select: { requiredForServiceability: true, title: true } },
+        },
       },
       airworthinessReleases: {
         orderBy: [{ createdAt: "desc" }],
@@ -331,6 +330,7 @@ export async function getAircraftLogbookWorkspaceData(aircraftId: string) {
           placardRequired: true,
           operatingLimitations: true,
           requiredProcedures: true,
+          requiresIndependentInspection: true,
           performedByName: true,
           approvedByName: true,
           returnToServiceAt: true,
@@ -518,9 +518,8 @@ export async function createCorrectiveActionDraft({
 }) {
   const title = requiredText(formData.get("title"), "Corrective action title");
   const narrative = requiredText(formData.get("narrative"), "Work performed");
-  const discrepancyId = optionalText(formData.get("discrepancyId"));
-  const completed = formData.get("completed") === "on";
-  const clearDiscrepancy = formData.get("clearDiscrepancy") === "on";
+  const discrepancyId = requiredText(formData.get("discrepancyId"), "Open write-up");
+  const requiresIndependentInspection = formData.get("requiresIndependentInspection") === "on";
 
   return prisma.$transaction(async (transaction) => {
     const aircraft = await transaction.aircraft.findUnique({
@@ -532,22 +531,22 @@ export async function createCorrectiveActionDraft({
       throw new AircraftLogbookError("Aircraft was not found.");
     }
 
-    if (discrepancyId) {
-      const discrepancy = await transaction.discrepancy.findFirst({
-        where: { aircraftId, id: discrepancyId },
-        select: { id: true },
-      });
+    const discrepancy = await transaction.discrepancy.findFirst({
+      where: {
+        aircraftId,
+        id: discrepancyId,
+        status: { in: [DiscrepancyStatus.OPEN, DiscrepancyStatus.DEFERRED] },
+      },
+      select: { id: true },
+    });
 
-      if (!discrepancy) {
-        throw new AircraftLogbookError("Selected discrepancy does not belong to this aircraft.");
-      }
+    if (!discrepancy) {
+      throw new AircraftLogbookError("Select an open or deferred write-up for corrective maintenance.");
     }
 
     const maintenanceEvent = await transaction.maintenanceEvent.create({
       data: {
         aircraftId,
-        approvedById: actorId,
-        completedAt: completed ? new Date() : null,
         description: narrative,
         discrepancyId,
         eventType: MaintenanceEventType.REPAIR,
@@ -555,8 +554,9 @@ export async function createCorrectiveActionDraft({
         manualReference: optionalText(formData.get("manualReference")),
         performedByName: optionalText(formData.get("performedByName")),
         providerName: optionalText(formData.get("providerName")),
-        returnToServiceAt: parseOptionalDateTime(formData.get("returnToServiceAt"), "Return to service"),
-        status: completed ? MaintenanceEventStatus.COMPLETED : MaintenanceEventStatus.IN_PROGRESS,
+        requiresIndependentInspection,
+        startedAt: new Date(),
+        status: MaintenanceEventStatus.IN_PROGRESS,
         taskReference: optionalText(formData.get("taskReference")),
         workPerformed: narrative,
       },
@@ -575,26 +575,14 @@ export async function createCorrectiveActionDraft({
         manualReference: optionalText(formData.get("manualReference")),
         narrative,
         performedByName: optionalText(formData.get("performedByName")),
-        returnToServiceAt: parseOptionalDateTime(formData.get("returnToServiceAt"), "Return to service"),
+        requiresIndependentInspection,
         source: AircraftLogbookEntrySource.MAINTENANCE,
-        status: completed ? AircraftLogbookEntryStatus.READY_FOR_SIGNATURE : AircraftLogbookEntryStatus.DRAFT,
+        status: AircraftLogbookEntryStatus.DRAFT,
         taskReference: optionalText(formData.get("taskReference")),
         title,
         updatedById: actorId,
       },
     });
-
-    if (completed && clearDiscrepancy && discrepancyId) {
-      await transaction.discrepancy.update({
-        where: { id: discrepancyId },
-        data: {
-          activeDeferralId: null,
-          correctiveMaintenanceEventId: maintenanceEvent.id,
-          correctiveSummary: narrative,
-          status: DiscrepancyStatus.CORRECTED_PENDING_RTS,
-        },
-      });
-    }
 
     await transaction.aircraftLogbookAuditEvent.create({
       data: {
@@ -680,7 +668,7 @@ async function completeScheduledProgramWorkFromSignature(
       data: {
         approvedById: actorId,
         completedAt: signedAt,
-        returnToServiceAt: signedAt,
+        maintenanceApprovedAt: signedAt,
         status: MaintenanceEventStatus.COMPLETED,
       },
     });
@@ -726,26 +714,55 @@ export async function signAircraftLogbookEntry({
   return prisma.$transaction(async (transaction) => {
     const entry = await transaction.aircraftLogbookEntry.findUnique({
       where: { id: entryId },
+      include: {
+        signatures: {
+          orderBy: { signedAt: "asc" },
+        },
+      },
     });
 
     if (!entry) {
       throw new AircraftLogbookError("Logbook entry was not found.");
     }
 
-    if (entry.lockedAt) {
-      throw new AircraftLogbookError("Signed logbook entries are locked. Create an amendment instead.");
+    if (
+      purpose !== AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL &&
+      purpose !== AircraftLogbookSignaturePurpose.INSPECTION_APPROVAL
+    ) {
+      throw new AircraftLogbookError("Use maintenance approval or independent inspection approval for this workflow.");
     }
 
-    const authorityProfile = await transaction.maintenanceAuthorityProfile.create({
-      data: {
-        authorizationBasis: optionalText(formData.get("authorizationBasis")),
-        certificateNumber: optionalText(formData.get("certificateNumber")),
-        certificateType: optionalText(formData.get("certificateType")),
-        createdById: actorId,
-        legalName: signerName,
-        userId: actorId,
-      },
+    if (entry.signatures.some((signature) => signature.purpose === purpose)) {
+      throw new AircraftLogbookError("This approval has already been signed.");
+    }
+
+    const authorityProfile = await transaction.maintenanceAuthorityProfile.findFirst({
+      where: { isActive: true, userId: actorId },
+      orderBy: { updatedAt: "desc" },
     });
+    if (!authorityProfile) {
+      throw new AircraftLogbookError("An active maintenance authority profile is required.");
+    }
+    if (signerName !== authorityProfile.legalName) {
+      throw new AircraftLogbookError("Signer name must match the active maintenance authority profile.");
+    }
+
+    const maintenanceSignature = entry.signatures.find(
+      (signature) => signature.purpose === AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL,
+    );
+    if (purpose === AircraftLogbookSignaturePurpose.INSPECTION_APPROVAL) {
+      if (!entry.requiresIndependentInspection) {
+        throw new AircraftLogbookError("This entry is not designated for independent inspection.");
+      }
+      if (!maintenanceSignature) {
+        throw new AircraftLogbookError("Maintenance approval must be signed before independent inspection.");
+      }
+      if (maintenanceSignature.signerUserId === actorId) {
+        throw new AircraftLogbookError("The independent inspector must be different from the maintenance signer.");
+      }
+    } else if (entry.lockedAt) {
+      throw new AircraftLogbookError("Signed logbook entries are locked. Create an amendment instead.");
+    }
 
     const snapshot = logbookEntrySnapshot(entry);
     const signedContentHash = hashSnapshot(snapshot);
@@ -771,25 +788,79 @@ export async function signAircraftLogbookEntry({
     await transaction.aircraftLogbookEntry.update({
       where: { id: entryId },
       data: {
-        approvedByCertificateNumber: authorityProfile.certificateNumber,
-        approvedByCertificateType: authorityProfile.certificateType,
-        approvedByName: signerName,
-        lockedAt: signedAt,
+        approvedByCertificateNumber:
+          purpose === AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL
+            ? authorityProfile.certificateNumber
+            : entry.approvedByCertificateNumber,
+        approvedByCertificateType:
+          purpose === AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL
+            ? authorityProfile.certificateType
+            : entry.approvedByCertificateType,
+        approvedByName:
+          purpose === AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL
+            ? signerName
+            : entry.approvedByName,
+        lockedAt: entry.lockedAt ?? signedAt,
         signedContentHash,
         signedSnapshot: snapshot,
         status:
-          purpose === AircraftLogbookSignaturePurpose.AIRWORTHINESS_RELEASE
-            ? AircraftLogbookEntryStatus.RELEASED
+          purpose === AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL &&
+          entry.requiresIndependentInspection
+            ? AircraftLogbookEntryStatus.READY_FOR_SIGNATURE
             : AircraftLogbookEntryStatus.SIGNED,
         updatedById: actorId,
       },
     });
 
-    if (
-      purpose === AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL ||
-      purpose === AircraftLogbookSignaturePurpose.INSPECTION_APPROVAL
-    ) {
+    if (purpose === AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL) {
       await completeScheduledProgramWorkFromSignature(transaction, entry, signedAt, actorId);
+      if (entry.maintenanceEventId) {
+        const event = await transaction.maintenanceEvent.update({
+          where: { id: entry.maintenanceEventId },
+          data: {
+            approvedById: actorId,
+            completedAt: signedAt,
+            maintenanceApprovedAt: signedAt,
+            status: MaintenanceEventStatus.COMPLETED,
+          },
+        });
+        if (event.discrepancyId && !entry.requiresIndependentInspection) {
+          await transaction.discrepancy.updateMany({
+            where: {
+              id: event.discrepancyId,
+              status: { in: [DiscrepancyStatus.OPEN, DiscrepancyStatus.DEFERRED] },
+            },
+            data: {
+              activeDeferralId: null,
+              correctiveMaintenanceEventId: event.id,
+              correctiveSummary: entry.narrative,
+              status: DiscrepancyStatus.CORRECTED_PENDING_RTS,
+            },
+          });
+        }
+      }
+    } else if (entry.maintenanceEventId) {
+      const event = await transaction.maintenanceEvent.update({
+        where: { id: entry.maintenanceEventId },
+        data: {
+          inspectedById: actorId,
+          inspectionApprovedAt: signedAt,
+        },
+      });
+      if (event.discrepancyId) {
+        await transaction.discrepancy.updateMany({
+          where: {
+            id: event.discrepancyId,
+            status: { in: [DiscrepancyStatus.OPEN, DiscrepancyStatus.DEFERRED] },
+          },
+          data: {
+            activeDeferralId: null,
+            correctiveMaintenanceEventId: event.id,
+            correctiveSummary: entry.narrative,
+            status: DiscrepancyStatus.CORRECTED_PENDING_RTS,
+          },
+        });
+      }
     }
 
     await transaction.aircraftLogbookAuditEvent.create({

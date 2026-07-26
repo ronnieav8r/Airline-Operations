@@ -4,7 +4,6 @@ import {
   DeferralStatus,
   DiscrepancyStatus,
   MaintenanceEventStatus,
-  MaintenanceEventType,
 } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,20 +12,15 @@ import {
   createAirworthinessReleaseAction,
   createDeferralAction,
   createDiscrepancyAction,
-  createMaintenanceEventAction,
-  signReturnToServiceAction,
   updateAirworthinessReleaseAction,
   updateDeferralAction,
   updateDiscrepancyAction,
-  updateMaintenanceEventAction,
   voidDiscrepancyAction,
 } from "@/app/aircraft/[aircraftId]/airworthiness/actions";
 import {
   editableAirworthinessReleaseStatuses,
   editableDeferralMethods,
   editableDeferralStatuses,
-  editableMaintenanceEventStatuses,
-  editableMaintenanceEventTypes,
   getAircraftAirworthinessWorkflowData,
   AircraftAirworthinessWorkflowData,
 } from "@/lib/airworthiness-workflow-queries";
@@ -271,74 +265,6 @@ function DiscrepancySelect({ discrepancies }: { discrepancies: Discrepancy[] }) 
   );
 }
 
-function OptionalDiscrepancySelect({
-  defaultValue,
-  discrepancies,
-}: {
-  defaultValue?: string | null;
-  discrepancies: Discrepancy[];
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium text-zinc-700">Linked discrepancy</span>
-      <select
-        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-        defaultValue={defaultValue ?? ""}
-        name="discrepancyId"
-      >
-        <option value="">No linked discrepancy</option>
-        {discrepancies.map((discrepancy) => (
-          <option key={discrepancy.id} value={discrepancy.id}>
-            {discrepancy.discrepancyNumber} | {discrepancy.title}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function MaintenanceEventTypeSelect({ defaultValue }: { defaultValue?: MaintenanceEventType }) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium text-zinc-700">Event type</span>
-      <select
-        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-        defaultValue={defaultValue ?? MaintenanceEventType.UNSCHEDULED_MAINTENANCE}
-        name="eventType"
-      >
-        {editableMaintenanceEventTypes.map((eventType) => (
-          <option key={eventType} value={eventType}>
-            {eventType}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function MaintenanceEventStatusSelect({
-  defaultValue,
-}: {
-  defaultValue?: MaintenanceEventStatus;
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium text-zinc-700">Status</span>
-      <select
-        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-        defaultValue={defaultValue ?? MaintenanceEventStatus.PLANNED}
-        name="status"
-      >
-        {editableMaintenanceEventStatuses.map((status) => (
-          <option key={status} value={status}>
-            {status}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
 function AirworthinessReleaseStatusSelect({
   defaultValue,
 }: {
@@ -474,80 +400,6 @@ function DeferralForm({
   );
 }
 
-function MaintenanceEventForm({
-  action,
-  discrepancies,
-  event,
-  submitLabel,
-}: {
-  action: (formData: FormData) => Promise<void>;
-  discrepancies: Discrepancy[];
-  event?: MaintenanceEvent;
-  submitLabel: string;
-}) {
-  return (
-    <form action={action} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Field
-          defaultValue={event?.maintenanceNumber ?? ""}
-          label="Maintenance number"
-          name="maintenanceNumber"
-        />
-        <MaintenanceEventTypeSelect defaultValue={event?.eventType} />
-        <MaintenanceEventStatusSelect defaultValue={event?.status} />
-        <OptionalDiscrepancySelect
-          defaultValue={event?.discrepancyId}
-          discrepancies={discrepancies}
-        />
-      </div>
-      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Field
-          defaultValue={toInputDateTime(event?.scheduledAt)}
-          label="Scheduled at"
-          name="scheduledAt"
-          type="datetime-local"
-        />
-        <Field
-          defaultValue={toInputDateTime(event?.startedAt)}
-          label="Started at"
-          name="startedAt"
-          type="datetime-local"
-        />
-        <Field
-          defaultValue={toInputDateTime(event?.completedAt)}
-          label="Completed at"
-          name="completedAt"
-          type="datetime-local"
-        />
-        <Field
-          defaultValue={toInputDateTime(event?.returnToServiceAt)}
-          label="Return to service at"
-          name="returnToServiceAt"
-          type="datetime-local"
-        />
-      </div>
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
-        <Field defaultValue={event?.providerName ?? ""} label="Provider" name="providerName" />
-        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Completed linked maintenance moves the discrepancy to RTS required. It does not clear the discrepancy.
-        </p>
-      </div>
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
-        <TextArea defaultValue={event?.description} label="Description" name="description" />
-        <TextArea defaultValue={event?.notes} label="Notes" name="notes" />
-      </div>
-      <div className="mt-3">
-        <button
-          className="rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
-          type="submit"
-        >
-          {submitLabel}
-        </button>
-      </div>
-    </form>
-  );
-}
-
 function AirworthinessReleaseForm({
   action,
   release,
@@ -596,68 +448,6 @@ function AirworthinessReleaseForm({
           type="submit"
         >
           {submitLabel}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function ReturnToServiceForm({
-  action,
-  discrepancy,
-  maintenanceEvents,
-}: {
-  action: (formData: FormData) => Promise<void>;
-  discrepancy: Discrepancy;
-  maintenanceEvents: MaintenanceEvent[];
-}) {
-  const linkedEvents = maintenanceEvents.filter((event) => event.discrepancyId === discrepancy.id);
-  const latestEvent = linkedEvents[0] ?? null;
-
-  return (
-    <form action={action} className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
-      <input name="discrepancyId" type="hidden" value={discrepancy.id} />
-      <div className="grid gap-3 md:grid-cols-2">
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-700">Maintenance event</span>
-          <select
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-            defaultValue={latestEvent?.id ?? ""}
-            name="maintenanceEventId"
-          >
-            <option value="">No linked event</option>
-            {linkedEvents.map((event) => (
-              <option key={event.id} value={event.id}>
-                {event.maintenanceNumber} | {event.status}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Field label="Return to service at" name="returnToServiceAt" type="datetime-local" />
-      </div>
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
-        <TextArea defaultValue={discrepancy.correctiveSummary} label="Work summary" name="workSummary" />
-        <TextArea label="Approval basis" name="approvalBasis" />
-      </div>
-      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Field label="Signer name" name="signerName" required />
-        <Field label="Certificate number" name="certificateNumber" />
-        <Field label="Certificate type" name="certificateType" />
-        <Field label="Authorization basis" name="authorizationBasis" />
-      </div>
-      <div className="mt-3">
-        <TextArea
-          defaultValue="I certify this aircraft or item has been approved for return to service."
-          label="Signature intent"
-          name="intentText"
-        />
-      </div>
-      <div className="mt-3">
-        <button
-          className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800"
-          type="submit"
-        >
-          Sign RTS and clear write-up
         </button>
       </div>
     </form>
@@ -817,11 +607,9 @@ function ActiveDeferrals({ aircraft }: { aircraft: AircraftAirworthinessWorkflow
 function DiscrepancyList({
   aircraftId,
   discrepancies,
-  maintenanceEvents,
 }: {
   aircraftId: string;
   discrepancies: Discrepancy[];
-  maintenanceEvents: MaintenanceEvent[];
 }) {
   if (discrepancies.length === 0) {
     return <p className="text-sm text-zinc-600">No discrepancies recorded.</p>;
@@ -832,7 +620,6 @@ function DiscrepancyList({
       {discrepancies.map((discrepancy) => {
         const updateAction = updateDiscrepancyAction.bind(null, aircraftId, discrepancy.id);
         const voidAction = voidDiscrepancyAction.bind(null, aircraftId, discrepancy.id);
-        const rtsAction = signReturnToServiceAction.bind(null, aircraftId);
 
         return (
           <article className="rounded-md border border-zinc-200 bg-white p-3" key={discrepancy.id}>
@@ -874,13 +661,9 @@ function DiscrepancyList({
               />
             </div>
             {discrepancy.status === DiscrepancyStatus.CORRECTED_PENDING_RTS ? (
-              <div className="mt-3">
-                <ReturnToServiceForm
-                  action={rtsAction}
-                  discrepancy={discrepancy}
-                  maintenanceEvents={maintenanceEvents}
-                />
-              </div>
+              <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                Maintenance approval is complete. Maintenance Control release is still required.
+              </p>
             ) : null}
             {discrepancy.status !== DiscrepancyStatus.CLEARED &&
             discrepancy.status !== DiscrepancyStatus.CANCELLED ? (
@@ -896,12 +679,8 @@ function DiscrepancyList({
 }
 
 function MaintenanceEventList({
-  aircraftId,
-  discrepancies,
   events,
 }: {
-  aircraftId: string;
-  discrepancies: Discrepancy[];
   events: MaintenanceEvent[];
 }) {
   if (events.length === 0) {
@@ -936,14 +715,6 @@ function MaintenanceEventList({
               {event.description}
             </p>
           ) : null}
-          <div className="mt-3">
-            <MaintenanceEventForm
-              action={updateMaintenanceEventAction.bind(null, aircraftId, event.id)}
-              discrepancies={discrepancies}
-              event={event}
-              submitLabel="Save maintenance event"
-            />
-          </div>
         </article>
       ))}
     </div>
@@ -1130,7 +901,6 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
             <DiscrepancyList
               aircraftId={aircraft.id}
               discrepancies={aircraft.discrepancies}
-              maintenanceEvents={aircraft.maintenanceEvents}
             />
           </div>
         </section>
@@ -1168,28 +938,12 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
         </section>
 
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold">Create maintenance event</h2>
+          <h2 className="text-lg font-semibold">Maintenance occurrences</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Maintenance events may link to a discrepancy. Airworthiness release
-            signing and deferral clearing remain deferred.
+            Corrective work begins from the aircraft logbook. Scheduled work begins from Scheduled Maintenance.
           </p>
           <div className="mt-4">
-            <MaintenanceEventForm
-              action={createMaintenanceEventAction.bind(null, aircraft.id)}
-              discrepancies={aircraft.discrepancies}
-              submitLabel="Create maintenance event"
-            />
-          </div>
-        </section>
-
-        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold">Maintenance events</h2>
-          <div className="mt-4">
-            <MaintenanceEventList
-              aircraftId={aircraft.id}
-              discrepancies={aircraft.discrepancies}
-              events={aircraft.maintenanceEvents}
-            />
+            <MaintenanceEventList events={aircraft.maintenanceEvents} />
           </div>
         </section>
 

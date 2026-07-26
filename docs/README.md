@@ -43,6 +43,7 @@ Current maintenance review targets:
 http://localhost:3200/maintenance
 http://localhost:3200/maintenance?view=scheduled
 http://localhost:3200/maintenance?view=program
+http://localhost:3200/maintenance?view=logbook
 ```
 
 Current scheduling review target:
@@ -144,10 +145,9 @@ Current highest-priority truth order:
 
 ## Current Next Work
 
-`BASELINE-001` is accepted on `codex/aeroops-integration`. The accepted product
-checkpoint is `522ffb3fe4fbaaae643d428b9aa51771dc4d2799`; see
-`docs/PROJECT_PIPELINE.md` for the acceptance record. The only approved next
-feature is the contextual Maintenance work-package slice described in
-`docs/CURRENT_HANDOFF.md`, and it has not been dispatched. Aircraft crew
+`BASELINE-001` is accepted on `codex/aeroops-integration`. `MX-002R` is the
+dispatched replacement Maintenance slice; it focuses on availability, logbook
+evidence, due work, deferrals, and MX Control decisions. See
+`docs/PROJECT_PIPELINE.md` and `docs/CURRENT_HANDOFF.md`. Aircraft crew
 coverage polish, crew portal polish, scheduling hardening, and the remaining UI
 backlog stay deferred until separately approved.

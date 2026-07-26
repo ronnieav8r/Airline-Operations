@@ -203,7 +203,7 @@ const releaseEvidenceDetailSelect = {
           },
           maintenanceEvents: {
             where: {
-              status: MaintenanceEventStatus.COMPLETED,
+              status: { in: [MaintenanceEventStatus.IN_PROGRESS, MaintenanceEventStatus.COMPLETED] },
             },
             orderBy: [{ completedAt: "desc" }],
             select: {
@@ -211,10 +211,17 @@ const releaseEvidenceDetailSelect = {
               eventType: true,
               completedAt: true,
               providerName: true,
+              requiresIndependentInspection: true,
+              maintenanceApprovedAt: true,
+              inspectionApprovedAt: true,
               returnToServiceAt: true,
               status: true,
             },
-            take: 1,
+            take: 8,
+          },
+          maintenanceControlHolds: {
+            where: { status: "ACTIVE" },
+            select: { id: true, reason: true, status: true },
           },
           airworthinessReleases: {
             orderBy: [{ createdAt: "desc" }],

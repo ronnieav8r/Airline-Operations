@@ -17,6 +17,20 @@ slice is accepted.
 
 ## Slice Register
 
+### MX-002R — Simplified maintenance availability lifecycle
+
+| Field | Value |
+| --- | --- |
+| Status | Coder checkpoint implemented on 2026-07-26; integration acceptance remains pending. |
+| Baseline parent commit | `8c923193ca30703271d66075f6ea80fd4c3bcdd7` |
+| Rejected checkpoint | `03242f9b3741cbc47ef5ef69837c60d91238dcf4` is rejected and must not be merged or used as the replacement implementation. Its local migration may still appear in shared development-database history. |
+| Working branch | `codex/slice-002r-simplified-maintenance-lifecycle` |
+| Scope | Logbook-centered discrepancy correction, lightweight scheduled planning/start/sign/release, computed availability, and audited MX Control holds. No user-facing work packages, standalone jobs, labor, parts, or crew execution management. |
+| Acceptance commands | `npm run prisma:validate`; `npm run prisma:generate`; `npm run typecheck`; `npm run lint`; `npm run build`; `npm run smoke:maintenance-lifecycle`; `npm run smoke:aircraft-logbook`; relevant serviceability checks; `git diff --check`; desktop and 390px browser review. |
+| Runtime acceptance | All 32 branch migrations deployed cleanly to isolated database `aeroops_mx002r`; migration status is current; focused lifecycle and direct aircraft-logbook smokes passed. The package logbook wrapper itself requires an untracked `.env.local`, which is intentionally absent from the isolated worktree. Maintenance, scheduled drawer, fleet drawer, and aircraft logbook rendered at desktop and 390px without horizontal overflow. |
+| Coder checkpoint | Local commit message `feat: simplify maintenance availability lifecycle`; exact hash is returned in the coder handoff. |
+| Integrated product checkpoint | Pending lead review. |
+
 ### BASELINE-001 — Integration baseline stabilization
 
 | Field | Value |
@@ -36,6 +50,5 @@ slice is accepted.
 
 ## Approved Next Slice
 
-The next approved feature is the contextual Maintenance work-package slice
-described in `docs/CURRENT_HANDOFF.md`. It is not dispatched by this baseline
-checkpoint.
+`MX-002R` is the dispatched replacement Maintenance slice. No adjacent feature
+is approved until its coder checkpoint is integrated and accepted.

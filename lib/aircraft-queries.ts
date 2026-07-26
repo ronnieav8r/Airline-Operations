@@ -209,9 +209,16 @@ const aircraftBoardSelect = {
       completedAt: true,
       providerName: true,
       returnToServiceAt: true,
+      requiresIndependentInspection: true,
+      maintenanceApprovedAt: true,
+      inspectionApprovedAt: true,
       status: true,
     },
     take: 8,
+  },
+  maintenanceControlHolds: {
+    where: { status: "ACTIVE" },
+    select: { id: true, reason: true, status: true },
   },
 } satisfies Prisma.AircraftSelect;
 
