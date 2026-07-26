@@ -18,6 +18,25 @@ The grouped Logbook header counts `DRAFT`, `OPEN`, `CORRECTED`, and
 shown only when no linked discrepancy is `OPEN`, `DEFERRED`, or
 `CORRECTED_PENDING_RTS`.
 
+MX-004 makes the per-aircraft drawer inside Maintenance the normal logbook
+working surface without changing those lifecycle semantics. Summary clicks
+still only expand or collapse the MX-003 child list. `View full logbook`, child
+`Review`, Queue, and Scheduled Maintenance logbook links open the
+URL-addressable Maintenance drawer rather than navigating the normal workflow
+to `/aircraft/[aircraftId]/logbook`.
+
+The drawer queries each aircraft independently of the overview's fleet-wide
+500-entry cap. It uses bounded newest-first batches, exact filtered/tail counts,
+retained `Load older` growth, and seek-cursor continuation so every filtered
+record remains reachable. A selected record outside the visible batch is read
+separately and does not make the timeline claim it is loaded.
+
+The drawer reuses the existing logbook domain actions. Maintenance authority,
+independent-inspector separation, signed-record immutability, locked attachment
+rules, audit behavior, and Admin's no-sign boundary are unchanged. Validated
+same-app return destinations return action results to the same drawer state
+without allowing external redirects.
+
 ## Current Rule
 
 Aircraft serviceability is computed, not manually released for each flight.
@@ -172,10 +191,12 @@ Aircraft airworthiness/logbook routes should avoid direct discrepancy status edi
 - release through Maintenance Control
 - void erroneous write-up
 
-The top-level Maintenance module now includes a review-first `Logbook` view at
-`/maintenance?view=logbook`. It filters and inspects aircraft-tail logbook
-entries in a compact drawer, but it does not replace the aircraft-tail logbook
-route as the create, attachment-upload, signature, lock, or export workflow.
+The top-level Maintenance module includes the normal `Logbook` working view at
+`/maintenance?view=logbook`. Its per-aircraft drawer supports review,
+corrective-action drafting, role-gated attachment upload, and authorized
+signature actions while staying in Maintenance. The aircraft-tail logbook route
+remains backward compatible for direct/deep links and export rather than being
+the normal Maintenance navigation path.
 
 ### Crew Portal
 

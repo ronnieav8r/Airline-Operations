@@ -2,6 +2,44 @@
 
 Last updated: 2026-07-26
 
+## MX-004 Fleet logbook workspace drawer
+
+MX-004 is implemented and ready for lead review on
+`codex/slice-004-fleet-logbook-drawer`, baseline
+`373a4e3b65aea01c727f9f4e21a52efd1ea174f7`.
+
+The Maintenance Logbook overview remains grouped by aircraft and preserves its
+existing overview filters and summary-only expand/collapse behavior. Expanded
+groups now open a wide, URL-addressable aircraft logbook workspace through
+`View full logbook` or an entry-specific `Review` action. Queue and Scheduled
+Maintenance logbook links route into the same Maintenance drawer instead of
+using the direct aircraft route as normal navigation.
+
+The replacement working surface includes:
+
+- aircraft switcher plus computed serviceability in the header;
+- canonical newest-first per-tail timeline, exact filtered/tail totals, default
+  50-row retained loading, capped hostile limits, and seek-cursor access to
+  every older filtered batch;
+- independent search/status/type/date filters and separately resolved selected
+  detail outside the visible batch;
+- desktop timeline/detail split and full-width narrow detail with a clear Back
+  action;
+- narrative, references, limitations/procedures, compliance links, RTS
+  evidence, attachments, signatures/hash, audit, and secondary
+  aircraft/airworthiness/export links;
+- existing role/service parity: Maintenance corrective drafts, signing, and
+  uploads; Admin upload without signing; existing record locks, authority,
+  independent-inspector, attachment, signature, and audit rules unchanged;
+- validated same-app action return destinations that preserve drawer context
+  and reject open redirects.
+
+There is no schema, migration, serviceability-state, or lifecycle change. The
+direct aircraft logbook route remains compatible for deep links and export.
+Static, focused DB smoke, webpack build fallback, and rendered desktop/390px
+checks passed. The standard Turbopack build is blocked only by the isolated
+worktree dependency junction and its documented out-of-root symlink panic.
+
 ## MX-003 Aircraft-grouped maintenance views
 
 MX-003 is accepted locally on `codex/aeroops-integration`. The Scheduled

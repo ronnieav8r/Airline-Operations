@@ -145,6 +145,7 @@ function CorrectiveActionForm({ aircraft }: { aircraft: AircraftLogbookData }) {
       action={createCorrectiveActionDraftAction.bind(null, aircraft.id)}
       className="grid gap-3 rounded-lg border border-zinc-200 bg-white p-4"
     >
+      <input name="returnTo" type="hidden" value={`/aircraft/${aircraft.id}/logbook`} />
       <div className="flex items-center gap-2">
         <Wrench className="h-4 w-4 text-zinc-500" />
         <h2 className="text-base font-semibold text-zinc-950">Corrective action draft</h2>
@@ -222,6 +223,7 @@ function SignEntryForm({ aircraftId, entry }: { aircraftId: string; entry: Logbo
     <details className="rounded-md border border-zinc-200 bg-zinc-50 p-2">
       <summary className="cursor-pointer text-xs font-semibold text-zinc-700">Sign entry</summary>
       <form action={signAircraftLogbookEntryAction.bind(null, aircraftId, entry.id)} className="mt-2 grid gap-2">
+        <input name="returnTo" type="hidden" value={`/aircraft/${aircraftId}/logbook#${entry.id}`} />
         <input className={inputClassName()} name="signerName" placeholder="Legal signer name" required />
         <input name="purpose" type="hidden" value={inspectionPending ? AircraftLogbookSignaturePurpose.INSPECTION_APPROVAL : AircraftLogbookSignaturePurpose.MAINTENANCE_APPROVAL} />
         <p className="text-xs font-semibold text-zinc-600">
@@ -248,6 +250,7 @@ function AttachmentForm({ aircraftId, entry }: { aircraftId: string; entry: Logb
 
   return (
     <form action={uploadAircraftLogbookAttachmentAction.bind(null, aircraftId, entry.id)} className="mt-2 flex flex-wrap gap-2">
+      <input name="returnTo" type="hidden" value={`/aircraft/${aircraftId}/logbook#${entry.id}`} />
       <input
         accept="image/*,application/pdf,text/plain"
         className="min-h-9 max-w-full cursor-pointer rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-700"

@@ -12,13 +12,17 @@ import {
   uploadAircraftLogbookAttachment,
 } from "@/lib/aircraft-logbook";
 import { requireRole } from "@/lib/auth/guards";
+import {
+  safeSameAppReturnDestination,
+  withSameAppReturnMessage,
+} from "@/lib/same-app-return";
 
-function encodeError(error: unknown): string {
+function errorMessage(error: unknown): string {
   if (error instanceof AircraftLogbookError || error instanceof Error) {
-    return encodeURIComponent(error.message);
+    return error.message;
   }
 
-  return encodeURIComponent("Aircraft logbook action failed.");
+  return "Aircraft logbook action failed.";
 }
 
 function revalidateAircraftLogbook(aircraftId: string) {
@@ -33,6 +37,10 @@ function revalidateAircraftLogbook(aircraftId: string) {
 
 export async function createCorrectiveActionDraftAction(aircraftId: string, formData: FormData) {
   const currentUser = await requireRole([UserRole.MAINTENANCE]);
+  const returnTo = safeSameAppReturnDestination(
+    formData.get("returnTo"),
+    `/aircraft/${aircraftId}/logbook`,
+  );
 
   try {
     await createCorrectiveActionDraft({
@@ -41,11 +49,11 @@ export async function createCorrectiveActionDraftAction(aircraftId: string, form
       formData,
     });
   } catch (error) {
-    redirect(`/aircraft/${aircraftId}/logbook?error=${encodeError(error)}`);
+    redirect(withSameAppReturnMessage(returnTo, "error", errorMessage(error)));
   }
 
   revalidateAircraftLogbook(aircraftId);
-  redirect(`/aircraft/${aircraftId}/logbook?submitted=corrective-action`);
+  redirect(withSameAppReturnMessage(returnTo, "submitted", "corrective-action"));
 }
 
 export async function signAircraftLogbookEntryAction(
@@ -54,6 +62,10 @@ export async function signAircraftLogbookEntryAction(
   formData: FormData,
 ) {
   const currentUser = await requireRole([UserRole.MAINTENANCE]);
+  const returnTo = safeSameAppReturnDestination(
+    formData.get("returnTo"),
+    `/aircraft/${aircraftId}/logbook`,
+  );
 
   try {
     await signAircraftLogbookEntry({
@@ -63,11 +75,11 @@ export async function signAircraftLogbookEntryAction(
       formData,
     });
   } catch (error) {
-    redirect(`/aircraft/${aircraftId}/logbook?error=${encodeError(error)}`);
+    redirect(withSameAppReturnMessage(returnTo, "error", errorMessage(error)));
   }
 
   revalidateAircraftLogbook(aircraftId);
-  redirect(`/aircraft/${aircraftId}/logbook?submitted=signed`);
+  redirect(withSameAppReturnMessage(returnTo, "submitted", "signed"));
 }
 
 export async function uploadAircraftLogbookAttachmentAction(
@@ -76,10 +88,20 @@ export async function uploadAircraftLogbookAttachmentAction(
   formData: FormData,
 ) {
   const currentUser = await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
+  const returnTo = safeSameAppReturnDestination(
+    formData.get("returnTo"),
+    `/aircraft/${aircraftId}/logbook`,
+  );
   const file = parseLogbookAttachmentFile(formData);
 
   if (!file) {
-    redirect(`/aircraft/${aircraftId}/logbook?error=${encodeURIComponent("Choose an attachment before saving.")}`);
+    redirect(
+      withSameAppReturnMessage(
+        returnTo,
+        "error",
+        "Choose an attachment before saving.",
+      ),
+    );
   }
 
   try {
@@ -90,9 +112,9 @@ export async function uploadAircraftLogbookAttachmentAction(
       file,
     });
   } catch (error) {
-    redirect(`/aircraft/${aircraftId}/logbook?error=${encodeError(error)}`);
+    redirect(withSameAppReturnMessage(returnTo, "error", errorMessage(error)));
   }
 
   revalidateAircraftLogbook(aircraftId);
-  redirect(`/aircraft/${aircraftId}/logbook?submitted=attachment`);
+  redirect(withSameAppReturnMessage(returnTo, "submitted", "attachment"));
 }

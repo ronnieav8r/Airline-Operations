@@ -17,6 +17,23 @@ slice is accepted.
 
 ## Slice Register
 
+### MX-004 — Fleet logbook workspace drawer
+
+| Field | Value |
+| --- | --- |
+| Status | Coder implementation complete on 2026-07-26; ready for lead review. |
+| Baseline parent commit | `373a4e3b65aea01c727f9f4e21a52efd1ea174f7` |
+| Working branch | `codex/slice-004-fleet-logbook-drawer` |
+| Scope | Replace the narrow review-only Logbook entry drawer with a wide URL-addressable per-aircraft workspace that keeps Maintenance Control in Maintenance. Preserve MX-003 overview grouping/toggle behavior; add explicit full-logbook and entry Review actions, aircraft switching, bounded/cursor-reachable tail history, independent filters, responsive split/detail presentation, existing Maintenance/Admin action parity, and safe same-app action returns. Keep the direct aircraft route for compatibility and file/deep-link endpoints. No schema, migration, lifecycle, or serviceability-state change. |
+| Acceptance commands | `npm run typecheck`; `npm run lint`; `npm run build` (documented webpack fallback only for isolated dependency junction); `npm run smoke:maintenance-lifecycle`; `npm run smoke:aircraft-logbook`; `npm run smoke:maintenance-logbook-drawer`; `git diff --check`; desktop and 390px rendered browser review. |
+| Runtime acceptance | Typecheck, lint, both existing maintenance/logbook smokes, focused drawer query/return-destination smoke, webpack production build, and diff check passed against healthy local Docker Postgres. Rendered desktop and 390px review passed summary-only toggle, full/entry drawer entry points, aircraft switching, independent filtering, URL retention, desktop split, mobile Back, role-visible actions, and zero horizontal overflow. No bounded browser fixture exceeded 50 records; deterministic DB coverage verifies retained pagination, seek-cursor continuation, exact visible ranges, and selected detail outside the visible batch. |
+| Build note | Standard Next.js 16.2.7 Turbopack build hit the known isolated-worktree `node_modules` junction panic because the junction points outside the worktree root. `npx next build --webpack` passed. |
+| Browser note | Chrome emitted only the known external `perkspotbx` body-class hydration warning. |
+| Blockers | None. |
+| Coder checkpoint | Local commit `feat: add fleet logbook workspace drawer`; hash is recorded in Git history and the coder handoff rather than self-referenced here. |
+| Integrated product checkpoint | Pending lead integration and acceptance. |
+| Lead acceptance gate | Pending. |
+
 ### MX-003 — Aircraft-grouped maintenance views
 
 | Field | Value |
@@ -68,5 +85,5 @@ slice is accepted.
 
 ## Approved Next Slice
 
-`MX-002R` is accepted. No adjacent feature slice is approved or dispatched by
-this acceptance.
+`MX-004` is the currently dispatched slice and is awaiting lead review. No
+adjacent feature slice is approved or dispatched by this coder checkpoint.

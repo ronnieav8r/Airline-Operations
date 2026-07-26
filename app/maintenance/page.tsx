@@ -23,6 +23,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import {
+  MaintenanceLogbookDrawer,
+  type MaintenanceLogbookDrawerUrlState,
+} from "@/components/maintenance-logbook-drawer";
+import {
   addMaintenanceProgramApplicabilityAction,
   addMaintenanceProgramOverrideAction,
   createAircraftMeterSnapshotAction,
@@ -43,6 +47,11 @@ import {
 } from "@/app/maintenance/actions";
 import { requireRole } from "@/lib/auth/guards";
 import {
+  getMaintenanceLogbookDrawerData,
+  normalizeLogbookDrawerLimit,
+  parseLogbookDrawerDate,
+} from "@/lib/maintenance-logbook-drawer";
+import {
   getMaintenanceWorkbenchData,
   type MaintenanceLogbookItem,
   type MaintenanceBoardStatus,
@@ -62,9 +71,19 @@ type PageProps = {
     scheduledStatus?: string | string[];
     entryType?: string | string[];
     logbookStatus?: string | string[];
+    logbookAircraft?: string | string[];
+    logbookDrawerQ?: string | string[];
+    logbookCursor?: string | string[];
+    logbookDrawerStatus?: string | string[];
+    logbookDrawerType?: string | string[];
+    logbookEntry?: string | string[];
+    logbookFrom?: string | string[];
+    logbookLimit?: string | string[];
+    logbookTo?: string | string[];
     category?: string | string[];
     active?: string | string[];
     required?: string | string[];
+    submitted?: string | string[];
     q?: string | string[];
     status?: string | string[];
     tail?: string | string[];
@@ -795,6 +814,15 @@ function buildHref(params: {
   category?: string | null;
   entryType?: string | null;
   logbookStatus?: string | null;
+  logbookAircraft?: string | null;
+  logbookDrawerQ?: string | null;
+  logbookCursor?: string | null;
+  logbookDrawerStatus?: string | null;
+  logbookDrawerType?: string | null;
+  logbookEntry?: string | null;
+  logbookFrom?: string | null;
+  logbookLimit?: number | null;
+  logbookTo?: string | null;
   q?: string | null;
   required?: string | null;
   selected?: string | null;
@@ -822,6 +850,33 @@ function buildHref(params: {
   if (params.logbookStatus) {
     search.set("logbookStatus", params.logbookStatus);
   }
+  if (params.logbookAircraft) {
+    search.set("logbookAircraft", params.logbookAircraft);
+  }
+  if (params.logbookEntry) {
+    search.set("logbookEntry", params.logbookEntry);
+  }
+  if (params.logbookLimit) {
+    search.set("logbookLimit", String(params.logbookLimit));
+  }
+  if (params.logbookDrawerQ) {
+    search.set("logbookDrawerQ", params.logbookDrawerQ);
+  }
+  if (params.logbookCursor) {
+    search.set("logbookCursor", params.logbookCursor);
+  }
+  if (params.logbookDrawerStatus) {
+    search.set("logbookDrawerStatus", params.logbookDrawerStatus);
+  }
+  if (params.logbookDrawerType) {
+    search.set("logbookDrawerType", params.logbookDrawerType);
+  }
+  if (params.logbookFrom) {
+    search.set("logbookFrom", params.logbookFrom);
+  }
+  if (params.logbookTo) {
+    search.set("logbookTo", params.logbookTo);
+  }
   if (params.active) {
     search.set("active", params.active);
   }
@@ -842,6 +897,27 @@ function buildHref(params: {
   }
 
   return `/maintenance?${search.toString()}`;
+}
+
+function maintenanceLogbookDrawerHref(
+  returnTo: string,
+  aircraftId: string,
+  entryId: string | null = null,
+): string {
+  const parsed = new URL(returnTo, "http://aeroops.local");
+  parsed.pathname = "/maintenance";
+  parsed.searchParams.set("view", "logbook");
+  parsed.searchParams.set("logbookAircraft", aircraftId);
+  parsed.searchParams.set("logbookLimit", "50");
+  parsed.searchParams.delete("selected");
+
+  if (entryId) {
+    parsed.searchParams.set("logbookEntry", entryId);
+  } else {
+    parsed.searchParams.delete("logbookEntry");
+  }
+
+  return `${parsed.pathname}${parsed.search}`;
 }
 
 function logbookSearchText(item: MaintenanceLogbookItem): string {
@@ -1353,22 +1429,6 @@ function logbookRelatedLabel(item: MaintenanceLogbookItem): string {
   return item.manualReference ?? item.taskReference ?? item.source;
 }
 
-function fileSizeLabel(bytes: number): string {
-  if (bytes >= 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  }
-
-  if (bytes >= 1024) {
-    return `${Math.round(bytes / 1024)} KB`;
-  }
-
-  return `${bytes} B`;
-}
-
-function hashLabel(hash: string | null): string {
-  return hash ? `${hash.slice(0, 12)}...` : "No hash";
-}
-
 function LogbookRow({
   href,
   item,
@@ -1420,11 +1480,13 @@ function LogbookRow({
 function LogbookGroup({
   aircraftItems,
   buildItemHref,
+  fullLogbookHref,
   group,
   selected,
 }: {
   aircraftItems: MaintenanceLogbookItem[];
   buildItemHref: (item: MaintenanceLogbookItem) => string;
+  fullLogbookHref: string;
   group: LogbookItemGroup;
   selected: string | null;
 }) {
@@ -1466,7 +1528,15 @@ function LogbookGroup({
           <span className="hidden group-open:inline">Collapse</span>
         </span>
       </summary>
-      <div className="divide-y divide-zinc-100 border-t border-zinc-200 bg-white md:ml-9 md:border-l md:border-zinc-200">
+      <div className="flex justify-end border-t border-zinc-200 bg-zinc-50 px-3 py-2 md:ml-9 md:border-l md:border-zinc-200">
+        <Link
+          className="inline-flex min-h-9 items-center rounded-md border border-zinc-950 bg-zinc-950 px-3 text-xs font-semibold text-white hover:bg-zinc-800"
+          href={fullLogbookHref}
+        >
+          View full logbook
+        </Link>
+      </div>
+      <div className="divide-y divide-zinc-100 bg-white md:ml-9 md:border-l md:border-zinc-200">
         {group.items.map((item) => (
           <LogbookRow href={buildItemHref(item)} item={item} key={item.id} selected={selected === item.id} />
         ))}
@@ -1526,168 +1596,11 @@ function ActionLinks({
 
   return (
     <div className="grid gap-2 sm:grid-cols-2">
-      <Link className={linkClass} href={logbookHref}>Open logbook</Link>
-      <Link className={linkClass} href={airworthinessHref}>Open airworthiness</Link>
-      <Link className={linkClass} href={aircraftHref}>Open aircraft</Link>
+      <Link className={linkClass} href={logbookHref}>View aircraft logbook</Link>
+      <Link className={linkClass} href={airworthinessHref}>View airworthiness</Link>
+      <Link className={linkClass} href={aircraftHref}>View aircraft details</Link>
       <a className={linkClass} href={exportHref} target="_blank">Export package</a>
     </div>
-  );
-}
-
-function LogbookDrawer({
-  closeHref,
-  item,
-}: {
-  closeHref: string;
-  item: MaintenanceLogbookItem;
-}) {
-  return (
-    <aside className="fixed inset-y-0 right-0 z-30 flex w-full max-w-xl flex-col border-l border-zinc-200 bg-white shadow-2xl">
-      <div className="flex items-center justify-between border-b border-zinc-200 p-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Aircraft logbook</p>
-          <h2 className="mt-1 text-lg font-semibold text-zinc-950">{item.tailNumber}</h2>
-        </div>
-        <Link className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100" href={closeHref}>
-          Close
-        </Link>
-      </div>
-      <div className="grid gap-4 overflow-y-auto p-4">
-        <div className="flex flex-wrap gap-2">
-          <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${logbookStatusClasses(item.status)}`}>
-            {formatEnum(item.status)}
-          </span>
-          <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-semibold text-zinc-700">
-            {formatEnum(item.entryType)}
-          </span>
-          {item.lockedAt ? (
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
-              Locked
-            </span>
-          ) : null}
-        </div>
-
-        <section className="grid gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">{item.entryNumber} | {formatDateTime(item.reportedAt)}</p>
-          <h3 className="text-base font-semibold text-zinc-950">{item.title}</h3>
-          <p className="text-sm leading-6 text-zinc-700">{item.narrative ?? "No narrative recorded."}</p>
-        </section>
-
-        <dl className="grid gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm">
-          <div className="flex justify-between gap-3">
-            <dt className="font-semibold text-zinc-500">Source</dt>
-            <dd className="text-right text-zinc-900">{formatEnum(item.source)}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="font-semibold text-zinc-500">Manual / task</dt>
-            <dd className="text-right text-zinc-900">{[item.manualReference, item.taskReference].filter(Boolean).join(" | ") || "Not recorded"}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="font-semibold text-zinc-500">Related</dt>
-            <dd className="text-right text-zinc-900">{logbookRelatedLabel(item)}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="font-semibold text-zinc-500">RTS</dt>
-            <dd className="text-right text-zinc-900">{item.returnToServiceAt ? formatDateTime(item.returnToServiceAt) : "Not recorded"}</dd>
-          </div>
-        </dl>
-
-        {item.operatingLimitations || item.requiredProcedures || item.placardRequired ? (
-          <section className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-800">Limitations / procedures</p>
-            {item.placardRequired ? <p className="mt-2 text-sm font-semibold text-amber-950">Placard required</p> : null}
-            {item.operatingLimitations ? <p className="mt-2 text-sm leading-6 text-amber-950">{item.operatingLimitations}</p> : null}
-            {item.requiredProcedures ? <p className="mt-2 text-sm leading-6 text-amber-950">{item.requiredProcedures}</p> : null}
-          </section>
-        ) : null}
-
-        {item.maintenanceProgramTask || item.maintenanceComplianceState ? (
-          <section className="rounded-lg border border-zinc-200 bg-white p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Scheduled maintenance context</p>
-            <p className="mt-2 text-sm font-semibold text-zinc-950">{item.maintenanceProgramTask?.title ?? "Compliance state"}</p>
-            <p className="mt-1 text-xs text-zinc-600">
-              {item.maintenanceProgramTask?.sourceReference ?? item.maintenanceProgramTask?.taskKey ?? "No source reference"}
-              {item.maintenanceComplianceState ? ` | ${formatEnum(item.maintenanceComplianceState.status)}` : ""}
-              {item.maintenanceComplianceState?.nextDueAt ? ` | Next ${formatDateTime(item.maintenanceComplianceState.nextDueAt)}` : ""}
-            </p>
-          </section>
-        ) : null}
-
-        {item.returnToServiceRecords.length > 0 ? (
-          <section className="rounded-lg border border-zinc-200 bg-white p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Return to service</p>
-            <div className="mt-2 grid gap-2">
-              {item.returnToServiceRecords.map((record) => (
-                <p className="rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs text-zinc-700" key={record.id}>
-                  <span className="font-semibold text-zinc-950">{record.rtsNumber}</span> | {formatEnum(record.status)}
-                  {record.signedAt ? ` | signed ${formatDateTime(record.signedAt)}` : ""}
-                </p>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="rounded-lg border border-zinc-200 bg-white p-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Attachments</p>
-          {item.attachments.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-600">No attachments.</p>
-          ) : (
-            <div className="mt-2 grid gap-2">
-              {item.attachments.map((attachment) => (
-                <a
-                  className="flex items-center justify-between gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-100"
-                  href={attachment.href}
-                  key={attachment.id}
-                  target="_blank"
-                >
-                  <span className="truncate">{attachment.originalFilename ?? "Attachment"}</span>
-                  <span className="shrink-0 text-zinc-500">{fileSizeLabel(attachment.byteSize)}</span>
-                </a>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-lg border border-zinc-200 bg-white p-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Signatures</p>
-          {item.signatures.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-600">No signatures.</p>
-          ) : (
-            <div className="mt-2 grid gap-2">
-              {item.signatures.map((signature) => (
-                <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900" key={signature.id}>
-                  <span className="font-semibold">{signature.signerName}</span>
-                  {signature.certificateNumber ? ` #${signature.certificateNumber}` : ""} | {formatEnum(signature.purpose)} | {formatDateTime(signature.signedAt)}
-                </p>
-              ))}
-            </div>
-          )}
-          <p className="mt-2 text-xs font-semibold text-zinc-500">Hash: {hashLabel(item.signedContentHash)}</p>
-        </section>
-
-        <section className="rounded-lg border border-zinc-200 bg-white p-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Recent audit</p>
-          {item.auditEvents.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-600">No audit events.</p>
-          ) : (
-            <div className="mt-2 grid gap-2">
-              {item.auditEvents.map((event) => (
-                <p className="rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs text-zinc-700" key={event.id}>
-                  <span className="font-semibold text-zinc-950">{formatEnum(event.eventType)}</span> | {formatDateTime(event.createdAt)} | {event.message}
-                </p>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <ActionLinks
-          aircraftHref={item.aircraftHref}
-          airworthinessHref={item.airworthinessHref}
-          exportHref={item.exportHref}
-          logbookHref={item.entryHref}
-        />
-      </div>
-    </aside>
   );
 }
 
@@ -1957,7 +1870,7 @@ function QueueDrawer({
           aircraftHref={item.aircraftHref}
           airworthinessHref={item.airworthinessHref}
           exportHref={item.exportHref}
-          logbookHref={item.logbookHref}
+          logbookHref={maintenanceLogbookDrawerHref(returnTo, item.aircraftId)}
         />
       </div>
     </aside>
@@ -2029,8 +1942,8 @@ function ScheduledMaintenanceDrawer({
             <p className="mt-1 text-sm text-zinc-600">Plan a date and station. Planning does not remove the aircraft from service.</p>
           )}
           {item.logbookEntry ? (
-            <Link className="mt-2 inline-flex min-h-9 items-center rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-100" href={`${item.logbookHref}#${item.logbookEntry.id}`}>
-              Open logbook entry {item.logbookEntry.entryNumber}
+            <Link className="mt-2 inline-flex min-h-9 items-center rounded-md border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-100" href={maintenanceLogbookDrawerHref(returnTo, item.aircraftId, item.logbookEntry.id)}>
+              Review logbook entry {item.logbookEntry.entryNumber}
             </Link>
           ) : null}
         </section>
@@ -2134,7 +2047,11 @@ function ScheduledMaintenanceDrawer({
           aircraftHref={item.aircraftHref}
           airworthinessHref={item.airworthinessHref}
           exportHref={item.exportHref}
-          logbookHref={item.logbookHref}
+          logbookHref={maintenanceLogbookDrawerHref(
+            returnTo,
+            item.aircraftId,
+            item.logbookEntry?.id ?? null,
+          )}
         />
       </div>
     </aside>
@@ -2327,9 +2244,36 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
   const tailFilter = firstParam(params.tail);
   const aircraftTypeParam = firstParam(params.aircraftType);
   const requestedAircraftTypeFilter = normalizeAircraftType(aircraftTypeParam);
-  const message = firstParam(params.message);
+  const submitted = firstParam(params.submitted);
+  const message = firstParam(params.message) ?? (submitted ? "Logbook action saved." : null);
   const error = firstParam(params.error);
-  const data = await getMaintenanceWorkbenchData();
+  const logbookAircraftId = view === "logbook" ? firstParam(params.logbookAircraft) : null;
+  const logbookEntryId = view === "logbook" ? firstParam(params.logbookEntry) : null;
+  const logbookCursorEntryId = view === "logbook" ? firstParam(params.logbookCursor) : null;
+  const logbookDrawerLimit = normalizeLogbookDrawerLimit(firstParam(params.logbookLimit));
+  const logbookDrawerSearch = firstParam(params.logbookDrawerQ)?.trim() ?? "";
+  const logbookDrawerStatus = normalizeLogbookStatus(firstParam(params.logbookDrawerStatus));
+  const logbookDrawerEntryType = normalizeLogbookEntryType(firstParam(params.logbookDrawerType));
+  const logbookFromValue = firstParam(params.logbookFrom) ?? "";
+  const logbookToValue = firstParam(params.logbookTo) ?? "";
+  const [data, logbookDrawerData] = await Promise.all([
+    getMaintenanceWorkbenchData(),
+    logbookAircraftId
+      ? getMaintenanceLogbookDrawerData({
+          aircraftId: logbookAircraftId,
+          cursorEntryId: logbookCursorEntryId,
+          filters: {
+            entryType: logbookDrawerEntryType,
+            from: parseLogbookDrawerDate(logbookFromValue),
+            search: logbookDrawerSearch,
+            status: logbookDrawerStatus,
+            to: parseLogbookDrawerDate(logbookToValue, true),
+          },
+          limit: logbookDrawerLimit,
+          selectedEntryId: logbookEntryId,
+        })
+      : Promise.resolve(null),
+  ]);
   const allFleetQueueGroups = groupQueueItems(data.queueItems, "AOG");
   const allFleetStats = buildMaintenanceFleetStats(allFleetQueueGroups);
   const defaultAircraftTypeFilter = largestFleetType(allFleetStats);
@@ -2451,7 +2395,6 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
   const selectedQueueItem = view === "queue" ? data.queueItems.find((item) => item.id === selected) ?? null : null;
   const selectedScheduledItem = view === "scheduled" ? data.scheduledItems.find((item) => item.id === selected) ?? null : null;
   const selectedProgramItem = view === "program" && !isCreatingProgramTask ? data.programItems.find((item) => item.id === selected) ?? null : null;
-  const selectedLogbookItem = view === "logbook" ? data.logbookItems.find((item) => item.id === selected) ?? null : null;
   const closeHref = buildHref({
     active: view === "program" ? activeFilter : null,
     aircraftType: aircraftTypeHrefValue,
@@ -2488,6 +2431,23 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
         view,
       })
     : closeHref;
+  const logbookDrawerUrlState: MaintenanceLogbookDrawerUrlState | null =
+    logbookAircraftId && logbookDrawerData
+      ? {
+          aircraftId: logbookAircraftId,
+          baseParams: Array.from(
+            new URL(closeHref, "http://aeroops.local").searchParams.entries(),
+          ),
+          cursorEntryId: logbookCursorEntryId,
+          entryId: logbookEntryId,
+          entryType: logbookDrawerEntryType,
+          from: logbookFromValue,
+          limit: logbookDrawerLimit,
+          search: logbookDrawerSearch,
+          status: logbookDrawerStatus,
+          to: logbookToValue,
+        }
+      : null;
   const selectedProgramHref = selectedProgramItem
     ? buildHref({
         active: activeFilter,
@@ -2541,6 +2501,11 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
         ) : null}
         {error ? (
           <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800">{error}</p>
+        ) : null}
+        {view === "logbook" && logbookAircraftId && !logbookDrawerData ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+            The requested aircraft logbook was not found. The fleet Logbook overview remains available.
+          </p>
         ) : null}
 
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-2">
@@ -2813,7 +2778,7 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
                 <FileText className="h-4 w-4 text-zinc-500" />
                 <div>
                   <h2 className="text-sm font-semibold text-zinc-950">Aircraft logbook</h2>
-                  <p className="text-xs text-zinc-500">Review aircraft-tail logbook entries. Create, upload, and sign from the aircraft logbook page.</p>
+                  <p className="text-xs text-zinc-500">Stay in Maintenance while reviewing, filtering, and working across aircraft logbooks.</p>
                 </div>
               </div>
               <span className="text-xs font-semibold text-zinc-500">{logbookItemGroups.length} aircraft | {filteredLogbookItems.length} entr{filteredLogbookItems.length === 1 ? "y" : "ies"}</span>
@@ -2828,9 +2793,21 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
                     buildItemHref={(item) => buildHref({
                       aircraftType: aircraftTypeHrefValue,
                       entryType: logbookEntryTypeFilter,
+                      logbookAircraft: item.aircraftId,
+                      logbookEntry: item.id,
+                      logbookLimit: 50,
                       logbookStatus: logbookStatusFilter,
                       q: searchFilter,
-                      selected: item.id,
+                      tail: tailFilter,
+                      view,
+                    })}
+                    fullLogbookHref={buildHref({
+                      aircraftType: aircraftTypeHrefValue,
+                      entryType: logbookEntryTypeFilter,
+                      logbookAircraft: group.aircraftId,
+                      logbookLimit: 50,
+                      logbookStatus: logbookStatusFilter,
+                      q: searchFilter,
                       tail: tailFilter,
                       view,
                     })}
@@ -2945,7 +2922,15 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
           returnTo={selectedProgramHref}
         />
       ) : null}
-      {selectedLogbookItem ? <LogbookDrawer closeHref={closeHref} item={selectedLogbookItem} /> : null}
+      {logbookDrawerData && logbookDrawerUrlState ? (
+        <MaintenanceLogbookDrawer
+          aircraftOptions={data.aircraftOptions}
+          closeHref={closeHref}
+          data={logbookDrawerData}
+          role={currentUser.role}
+          urlState={logbookDrawerUrlState}
+        />
+      ) : null}
       {isCreatingProgramTask ? <ProgramCreateDrawer closeHref={closeHref} returnTo={closeHref} /> : null}
     </main>
   );

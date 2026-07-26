@@ -2,6 +2,59 @@
 
 Last updated: 2026-07-26
 
+## MX-004 Fleet logbook workspace drawer
+
+MX-004 is implemented on `codex/slice-004-fleet-logbook-drawer` from baseline
+`373a4e3b65aea01c727f9f4e21a52efd1ea174f7` and is ready for lead review.
+The implementation commit is named `feat: add fleet logbook workspace drawer`;
+its hash is recorded in Git history and the coder handoff.
+
+Maintenance Control now stays in `/maintenance?view=logbook` while reviewing
+and working across aircraft logbooks. The MX-003 aircraft summary remains a
+native expand/collapse control. Its expanded group adds `View full logbook`,
+and every child `Review` opens the same URL-addressable wide drawer with that
+entry selected.
+
+The drawer has independent tail-level search, status, entry-type, and date
+filters. It loads the newest 50 by default, retains newer rows while `Load
+older` grows the bounded batch, and uses a stable seek cursor to continue
+through older batches after the retained-batch cap. It reports exact visible,
+filtered, and tail totals and resolves a selected entry separately when it is
+outside the visible batch.
+
+Desktop uses a timeline/detail split at approximately 80vw with a `max-w-6xl`
+cap. Narrow screens use the full width and show selected detail with `Back to
+<tail> logbook`; no nested drawer is introduced. The header includes tail,
+type, computed serviceability, and an aircraft switcher.
+
+Authorized actions reuse the existing aircraft-logbook services and rules:
+
+- `MAINTENANCE` can create corrective-action drafts from eligible write-ups,
+  sign within existing authority/independent-inspector rules, and upload to
+  unlocked entries.
+- `ADMIN` can upload to unlocked entries but cannot sign or create corrective
+  action.
+- action wrappers accept a validated same-app `returnTo` and return success or
+  error state to the same drawer, entry, filters, cursor, and retained limit.
+
+Queue and Scheduled Maintenance links that previously navigated to the direct
+aircraft logbook now open this Maintenance drawer. The direct
+`/aircraft/[aircraftId]/logbook` route remains for compatibility and deep
+links; attachment and export endpoints remain aircraft-backed. No schema,
+migration, lifecycle, serviceability, immutable-record, signature, attachment,
+or audit rule changed.
+
+Coder validation passed `npm run typecheck`, `npm run lint`,
+`npm run smoke:maintenance-lifecycle`, `npm run smoke:aircraft-logbook`,
+`npm run smoke:maintenance-logbook-drawer`, webpack production build fallback,
+and `git diff --check`. The standard Turbopack build hit the known isolated
+worktree `node_modules` junction panic; `npx next build --webpack` passed.
+Rendered desktop and 390px checks covered summary-only toggle, drawer entry
+points, aircraft switching, independent filter, split/detail behavior, mobile
+Back, Maintenance URL retention, role-visible actions, and zero horizontal
+overflow. The Chrome `perkspotbx` body-class hydration warning is external
+extension injection.
+
 ## MX-003 Aircraft-grouped maintenance views
 
 MX-003 is accepted locally on `codex/aeroops-integration`. The coder checkpoint

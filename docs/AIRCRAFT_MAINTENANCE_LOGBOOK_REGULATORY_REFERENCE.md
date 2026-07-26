@@ -17,6 +17,14 @@ This document is a working product reference for building an aircraft-tail-numbe
 
 The maintenance logbook should become the aircraft-centered system of record for maintenance status, discrepancies, corrective actions, deferrals, inspections, return-to-service approvals, operator-specific airworthiness releases or maintenance log entries, component status, and supporting documents. The crew-facing maintenance tab can be a simplified view into that aircraft record, but the regulatory record must be tied primarily to the aircraft tail number and the operator's maintenance program.
 
+Current AeroOps UI note: Maintenance Control uses the wide per-aircraft drawer
+inside `/maintenance?view=logbook` as the normal working surface. The fleet
+overview remains aircraft-grouped; summary clicks only expand or collapse the
+quick list, while `View full logbook` and entry `Review` open URL-addressable
+drawer state. The direct aircraft logbook route remains a compatible deep-link
+and export surface. Both surfaces reuse the same domain services and
+authorization rules; the drawer does not create a second record lifecycle.
+
 The application must clearly distinguish between:
 
 - Crew reports, squawks, and operational notes.

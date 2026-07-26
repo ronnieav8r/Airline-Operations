@@ -1,0 +1,161 @@
+import {
+  AircraftLogbookEntrySource,
+  AircraftLogbookEntryStatus,
+  AircraftLogbookEntryType,
+  AircraftStatus,
+  AircraftType,
+} from "@prisma/client";
+
+import {
+  DEFAULT_LOGBOOK_DRAWER_LIMIT,
+  MAX_LOGBOOK_DRAWER_LIMIT,
+  getMaintenanceLogbookDrawerData,
+  normalizeLogbookDrawerLimit,
+  parseLogbookDrawerDate,
+} from "../lib/maintenance-logbook-drawer";
+import { prisma } from "../lib/prisma";
+import {
+  safeSameAppReturnDestination,
+  withSameAppReturnMessage,
+} from "../lib/same-app-return";
+
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
+const noFilters = {
+  entryType: null,
+  from: null,
+  search: "",
+  status: null,
+  to: null,
+};
+
+async function main() {
+  assert(normalizeLogbookDrawerLimit(null) === DEFAULT_LOGBOOK_DRAWER_LIMIT, "Missing limit should use the default.");
+  assert(normalizeLogbookDrawerLimit("-1") === DEFAULT_LOGBOOK_DRAWER_LIMIT, "Invalid limit should use the default.");
+  assert(normalizeLogbookDrawerLimit("999999") === MAX_LOGBOOK_DRAWER_LIMIT, "Hostile limit should be capped.");
+  assert(parseLogbookDrawerDate("2026-02-30") === null, "Invalid calendar date should be ignored.");
+  assert(parseLogbookDrawerDate("2026-07-26")?.toISOString() === "2026-07-26T00:00:00.000Z", "Valid from date should normalize.");
+  assert(
+    safeSameAppReturnDestination("//evil.example/path", "/maintenance") === "/maintenance",
+    "Protocol-relative return destination must be rejected.",
+  );
+  assert(
+    safeSameAppReturnDestination("https://evil.example/path", "/maintenance") === "/maintenance",
+    "External return destination must be rejected.",
+  );
+  const safeReturn = "/maintenance?view=logbook&logbookAircraft=tail-1&logbookLimit=100";
+  assert(
+    safeSameAppReturnDestination(safeReturn, "/maintenance") === safeReturn,
+    "Same-app drawer return destination should be retained.",
+  );
+  assert(
+    withSameAppReturnMessage(safeReturn, "submitted", "signed").includes("logbookAircraft=tail-1"),
+    "Action result should preserve drawer state.",
+  );
+
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
+  const aircraft = await prisma.aircraft.create({
+    data: {
+      status: AircraftStatus.AVAILABLE,
+      tailNumber: `MX4${suffix}`.slice(0, 20),
+      type: AircraftType.CL_65,
+    },
+  });
+
+  try {
+    const base = Date.UTC(2026, 6, 1, 12);
+    const created = [];
+
+    for (let index = 0; index < 6; index += 1) {
+      created.push(
+        await prisma.aircraftLogbookEntry.create({
+          data: {
+            aircraftId: aircraft.id,
+            category: index === 3 ? "TARGET FILTER" : "GENERAL",
+            entryNumber: `MX4-${index + 1}`,
+            entryType:
+              index === 3
+                ? AircraftLogbookEntryType.INSPECTION_ENTRY
+                : AircraftLogbookEntryType.MAINTENANCE_ENTRY,
+            narrative: index === 3 ? "Bounded query target narrative." : `Narrative ${index + 1}`,
+            reportedAt: new Date(base + index * 86_400_000),
+            source: AircraftLogbookEntrySource.MAINTENANCE,
+            status:
+              index === 3
+                ? AircraftLogbookEntryStatus.READY_FOR_SIGNATURE
+                : AircraftLogbookEntryStatus.DRAFT,
+            title: index === 3 ? "Target inspection" : `Maintenance entry ${index + 1}`,
+          },
+        }),
+      );
+    }
+
+    const first = await getMaintenanceLogbookDrawerData({
+      aircraftId: aircraft.id,
+      cursorEntryId: null,
+      filters: noFilters,
+      limit: 2,
+      selectedEntryId: created[0].id,
+    });
+    assert(first, "Drawer aircraft should resolve.");
+    assert(first.filteredCount === 6 && first.totalCount === 6, "Drawer should report filtered and tail totals.");
+    assert(first.entries.length === 2 && first.hasMore, "Drawer should return a bounded limit+1 batch.");
+    assert(first.entries[0].id === created[5].id && first.entries[1].id === created[4].id, "Timeline should be canonical newest-first.");
+    assert(first.selectedEntry?.id === created[0].id, "Selected entry outside the batch should resolve separately.");
+    assert(!first.selectedEntryInBatch, "Outside selected entry must not be marked as part of the visible batch.");
+    assert(first.visibleFrom === 1 && first.visibleTo === 2, "First visible range should be exact.");
+
+    const second = await getMaintenanceLogbookDrawerData({
+      aircraftId: aircraft.id,
+      cursorEntryId: first.nextCursorEntryId,
+      filters: noFilters,
+      limit: 2,
+      selectedEntryId: null,
+    });
+    assert(second, "Older cursor batch should resolve.");
+    assert(second.entries[0].id === created[3].id && second.entries[1].id === created[2].id, "Cursor batch should continue without overlap.");
+    assert(second.visibleFrom === 3 && second.visibleTo === 4, "Cursor visible range should be exact.");
+    assert(second.hasNewer, "Older batch should expose a path back to newest.");
+
+    const filtered = await getMaintenanceLogbookDrawerData({
+      aircraftId: aircraft.id,
+      cursorEntryId: null,
+      filters: {
+        entryType: AircraftLogbookEntryType.INSPECTION_ENTRY,
+        from: parseLogbookDrawerDate("2026-07-04"),
+        search: "target narrative",
+        status: AircraftLogbookEntryStatus.READY_FOR_SIGNATURE,
+        to: parseLogbookDrawerDate("2026-07-04", true),
+      },
+      limit: 50,
+      selectedEntryId: null,
+    });
+    assert(filtered?.filteredCount === 1 && filtered.entries[0].id === created[3].id, "Drawer filters should apply independently and deterministically.");
+
+    const invalid = await getMaintenanceLogbookDrawerData({
+      aircraftId: aircraft.id,
+      cursorEntryId: "invalid-cursor",
+      filters: noFilters,
+      limit: 2,
+      selectedEntryId: "invalid-entry",
+    });
+    assert(invalid?.cursorWasInvalid && invalid.selectedEntryWasInvalid, "Invalid cursor and entry should fail safely.");
+
+    console.log("Maintenance logbook drawer smoke passed.");
+  } finally {
+    await prisma.aircraft.delete({ where: { id: aircraft.id } });
+  }
+}
+
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

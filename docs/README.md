@@ -46,6 +46,12 @@ http://localhost:3200/maintenance?view=program
 http://localhost:3200/maintenance?view=logbook
 ```
 
+The Maintenance Logbook view is the normal fleet-to-tail working surface.
+Aircraft summaries expand/collapse their quick lists; `View full logbook` and
+entry `Review` open the URL-addressable wide per-aircraft drawer. The direct
+`/aircraft/[aircraftId]/logbook` route remains available for compatibility,
+exports, and deep links.
+
 Current scheduling review target:
 
 ```text
