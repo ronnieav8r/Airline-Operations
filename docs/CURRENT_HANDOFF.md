@@ -4,13 +4,10 @@ Last updated: 2026-07-26
 
 ## MX-004 Fleet logbook workspace drawer
 
-MX-004 has a repaired implementation on
-`codex/slice-004-fleet-logbook-drawer` from baseline
-`373a4e3b65aea01c727f9f4e21a52efd1ea174f7` and is ready for lead re-review.
-Checkpoint `05d973e373d80750a7daef2058644ed13c9479c5` was rejected before
-integration and must not be cherry-picked alone. The replacement checkpoint is
-named `fix: harden fleet logbook drawer`; its hash is recorded in Git history
-and the coder handoff.
+MX-004 is accepted locally on `codex/aeroops-integration`. The original coder
+checkpoint `05d973e373d80750a7daef2058644ed13c9479c5` was accepted only with
+coder repair `2a84d3b7` and lead focus-containment repair `2f7c33f2`. Their
+canonical checkpoints are `65290dc`, `2afad43`, and `95e9bc3`.
 
 Maintenance Control now stays in `/maintenance?view=logbook` while reviewing
 and working across aircraft logbooks. The MX-003 aircraft summary remains a
@@ -59,18 +56,18 @@ links; attachment and export endpoints remain aircraft-backed. No schema,
 migration, lifecycle, serviceability, immutable-record, signature, attachment,
 or audit rule changed.
 
-Coder validation passed `npm run typecheck`, `npm run lint`,
+Canonical validation passed the standard Next.js 16.2.7 Turbopack
+`npm run build`, `npm run typecheck`, `npm run lint`,
 `npm run smoke:maintenance-lifecycle`, `npm run smoke:aircraft-logbook`,
-`npm run smoke:maintenance-logbook-drawer`, webpack production build fallback,
-and `git diff --check`. The standard Turbopack build hit the known isolated
-worktree `node_modules` junction panic; `npx next build --webpack` passed.
-Rendered desktop and 390px checks covered summary-only toggle followed by
-drawer navigation without a summary hydration mismatch, named modal semantics,
-focus entry/trap, Escape close, drawer entry points, aircraft switching,
-independent filter, split/detail behavior, mobile Back, Maintenance URL
-retention, role-visible actions, and zero horizontal overflow. The only
-hydration console entry was the external Chrome `perkspotbx` body-class
-injection; it is not product markup.
+`npm run smoke:maintenance-logbook-drawer`, and `git diff --check` against
+healthy local Docker PostgreSQL. Rendered desktop and 390px checks covered
+summary-only toggle followed by drawer navigation without a product hydration
+mismatch, independent filtering with selected-entry invalidation, named modal
+semantics, focus entry/trap and retention across in-drawer navigation, Escape
+close and opener restoration, split/detail behavior, mobile Back, Maintenance
+URL retention, and zero horizontal overflow. The only hydration console entry
+was the external Chrome `perkspotbx` body-class injection; it is not product
+markup.
 
 ## MX-003 Aircraft-grouped maintenance views
 

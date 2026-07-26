@@ -21,19 +21,20 @@ slice is accepted.
 
 | Field | Value |
 | --- | --- |
-| Status | Repaired coder implementation complete on 2026-07-26; ready for lead re-review. |
+| Status | Accepted locally on 2026-07-26. Static, standard build, focused DB smoke, diff, and rendered desktop/390px gates passed. |
 | Baseline parent commit | `373a4e3b65aea01c727f9f4e21a52efd1ea174f7` |
-| Rejected checkpoint | `05d973e373d80750a7daef2058644ed13c9479c5` was rejected before integration and must not be cherry-picked alone. |
+| Initial checkpoint | `05d973e373d80750a7daef2058644ed13c9479c5` was rejected alone and accepted only with coder repair `2a84d3b7` plus lead repair `2f7c33f2`. |
 | Working branch | `codex/slice-004-fleet-logbook-drawer` |
 | Scope | Replace the narrow review-only Logbook entry drawer with a wide URL-addressable per-aircraft workspace that keeps Maintenance Control in Maintenance. Preserve MX-003 overview grouping/toggle behavior; add explicit full-logbook and entry Review actions, aircraft switching, bounded/cursor-reachable tail history, independent filters, responsive split/detail presentation, existing Maintenance/Admin action parity, and safe same-app action returns. Keep the direct aircraft route for compatibility and file/deep-link endpoints. No schema, migration, lifecycle, or serviceability-state change. |
 | Acceptance commands | `npm run typecheck`; `npm run lint`; `npm run build` (documented webpack fallback only for isolated dependency junction); `npm run smoke:maintenance-lifecycle`; `npm run smoke:aircraft-logbook`; `npm run smoke:maintenance-logbook-drawer`; `git diff --check`; desktop and 390px rendered browser review. |
-| Runtime acceptance | Typecheck, lint, both existing maintenance/logbook smokes, focused drawer query/return-destination smoke, webpack production build, and diff check passed against healthy local Docker Postgres. The focused smoke proves summary-only timeline hydration, a separate full-detail query for both visible and out-of-batch selections, and current-state-only serviceability relations. Rendered desktop and 390px review passed URL-neutral native summary expansion followed by drawer navigation without a summary hydration mismatch, named modal semantics, focus entry/trap, Escape close, full/entry drawer entry points, aircraft switching, independent filtering, URL retention, desktop split, mobile Back, role-visible actions, and zero horizontal overflow. |
-| Build note | Standard Next.js 16.2.7 Turbopack build hit the known isolated-worktree `node_modules` junction panic because the junction points outside the worktree root. `npx next build --webpack` passed. |
-| Browser note | The only hydration console entry was the known external `perkspotbx` body-class injection. Focus restoration is best-effort when the prior opener remains mounted after URL navigation. |
+| Runtime acceptance | Canonical typecheck, lint, standard Next.js 16.2.7 Turbopack production build, both existing maintenance/logbook smokes, focused drawer query/return-destination smoke, and diff check passed against healthy local Docker Postgres. The focused smoke proves summary-only timeline hydration, a separate full-detail query for both visible and out-of-batch selections, current-state-only serviceability relations, and stable cursor coverage across more than 250 same-timestamp rows. Rendered desktop and 390px review passed URL-neutral native summary expansion, named modal semantics, focus entry/trap/route retention, Escape close and opener restoration, independent filtering and selected-entry invalidation, URL retention, desktop split, mobile Back, and zero horizontal overflow. |
+| Build note | The standard canonical Next.js 16.2.7 Turbopack build passed. The earlier isolated-worktree junction limitation did not affect canonical acceptance. |
+| Browser note | The only hydration console entry was the known external `perkspotbx` body-class injection. No MX-004 application console error remained. |
 | Blockers | None. |
-| Coder checkpoint | Replacement local commit `fix: harden fleet logbook drawer`; hash is recorded in Git history and the coder handoff rather than self-referenced here. |
-| Integrated product checkpoint | Pending lead integration and acceptance. |
-| Lead acceptance gate | Pending. |
+| Coder checkpoint | `05d973e373d80750a7daef2058644ed13c9479c5` plus repair `2a84d3b7`; canonical cherry-picks `65290dc` and `2afad43`. |
+| Integration repair | `2f7c33f2` retains modal focus across in-drawer route transitions; canonical cherry-pick `95e9bc3`. |
+| Integrated product checkpoint | `95e9bc3`, accepted on `codex/aeroops-integration`. |
+| Lead acceptance gate | Local commit `chore: accept fleet logbook workspace drawer`, immediately following the integrated product checkpoint. Its hash is recorded in Git history rather than self-referenced here. |
 
 ### MX-003 — Aircraft-grouped maintenance views
 
@@ -86,5 +87,5 @@ slice is accepted.
 
 ## Approved Next Slice
 
-`MX-004` is the currently dispatched slice and is awaiting lead review. No
-adjacent feature slice is approved or dispatched by this coder checkpoint.
+No adjacent feature slice is approved or dispatched. Select and explicitly
+dispatch the next bounded slice from the accepted canonical integration branch.
