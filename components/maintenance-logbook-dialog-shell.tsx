@@ -21,10 +21,12 @@ type ObscuredElementState = {
 export function MaintenanceLogbookDialogShell({
   children,
   closeHref,
+  focusKey,
   labelledBy,
 }: {
   children: ReactNode;
   closeHref: string;
+  focusKey: string;
   labelledBy: string;
 }) {
   const dialogRef = useRef<HTMLElement>(null);
@@ -65,7 +67,25 @@ export function MaintenanceLogbookDialogShell({
 
     const closeControl = dialog.querySelector<HTMLElement>("[data-logbook-dialog-close]");
     document.body.style.overflow = "hidden";
-    (closeControl ?? dialog).focus();
+    let recoveryFrame: number | null = null;
+
+    function focusDialogEntry() {
+      (closeControl ?? dialog!).focus();
+    }
+
+    function recoverDialogFocus() {
+      if (recoveryFrame !== null) {
+        window.cancelAnimationFrame(recoveryFrame);
+      }
+
+      recoveryFrame = window.requestAnimationFrame(() => {
+        recoveryFrame = null;
+
+        if (dialog!.isConnected && !dialog!.contains(document.activeElement)) {
+          focusDialogEntry();
+        }
+      });
+    }
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -91,7 +111,10 @@ export function MaintenanceLogbookDialogShell({
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
 
-      if (event.shiftKey && document.activeElement === first) {
+      if (!dialog!.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
       } else if (!event.shiftKey && document.activeElement === last) {
@@ -100,10 +123,33 @@ export function MaintenanceLogbookDialogShell({
       }
     }
 
-    dialog.addEventListener("keydown", onKeyDown);
+    function onFocusIn(event: FocusEvent) {
+      if (!(event.target instanceof Node) || !dialog!.contains(event.target)) {
+        focusDialogEntry();
+      }
+    }
+
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("keydown", onKeyDown);
+    const dialogObserver = new MutationObserver(recoverDialogFocus);
+    dialogObserver.observe(dialog, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    focusDialogEntry();
+    const focusFrame = window.requestAnimationFrame(focusDialogEntry);
+    const focusTimer = window.setTimeout(focusDialogEntry, 0);
 
     return () => {
-      dialog.removeEventListener("keydown", onKeyDown);
+      dialogObserver.disconnect();
+      if (recoveryFrame !== null) {
+        window.cancelAnimationFrame(recoveryFrame);
+      }
+      window.cancelAnimationFrame(focusFrame);
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("keydown", onKeyDown);
 
       for (const state of obscured) {
         state.element.inert = state.inert;
@@ -128,6 +174,7 @@ export function MaintenanceLogbookDialogShell({
       aria-labelledby={labelledBy}
       aria-modal="true"
       className="fixed inset-y-0 right-0 z-30 flex w-full flex-col border-l border-zinc-200 bg-white shadow-2xl md:w-[80vw] md:max-w-6xl"
+      data-logbook-dialog-focus-key={focusKey}
       ref={dialogRef}
       role="dialog"
       tabIndex={-1}

@@ -572,6 +572,7 @@ export function MaintenanceLogbookDrawer({
   return (
     <MaintenanceLogbookDialogShell
       closeHref={closeHref}
+      focusKey={currentHref}
       labelledBy="maintenance-logbook-dialog-title"
     >
       <header className="grid gap-3 border-b border-zinc-200 p-3 sm:p-4">
