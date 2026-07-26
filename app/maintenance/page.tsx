@@ -4,6 +4,7 @@ import {
   AircraftType,
   AircraftStatus,
   AogResolutionPhase,
+  DiscrepancyStatus,
   MaintenanceComplianceStatus,
   MaintenanceEventStatus,
   MaintenanceProgramApplicabilityScope,
@@ -407,27 +408,6 @@ function buildNextScheduledMaintenanceMap(items: MaintenanceScheduledItem[]) {
   }, new Map<string, NextScheduledMaintenance>());
 }
 
-function scheduledStatusRank(status: MaintenanceComplianceStatus): number {
-  return {
-    [MaintenanceComplianceStatus.OVERDUE]: 0,
-    [MaintenanceComplianceStatus.DUE]: 1,
-    [MaintenanceComplianceStatus.DUE_SOON]: 2,
-    [MaintenanceComplianceStatus.NEEDS_BASELINE]: 3,
-    [MaintenanceComplianceStatus.CURRENT]: 4,
-    [MaintenanceComplianceStatus.NOT_APPLICABLE]: 5,
-  }[status];
-}
-
-function compareScheduledItems(first: MaintenanceScheduledItem, second: MaintenanceScheduledItem): number {
-  const statusDelta = scheduledStatusRank(first.complianceStatus) - scheduledStatusRank(second.complianceStatus);
-  if (statusDelta !== 0) {
-    return statusDelta;
-  }
-
-  const timeDelta = scheduledReferenceTime(first) - scheduledReferenceTime(second);
-  return timeDelta !== 0 ? timeDelta : first.taskTitle.localeCompare(second.taskTitle);
-}
-
 function groupScheduledItems(items: MaintenanceScheduledItem[]): ScheduledItemGroup[] {
   const groups = new Map<string, ScheduledItemGroup>();
 
@@ -445,10 +425,7 @@ function groupScheduledItems(items: MaintenanceScheduledItem[]): ScheduledItemGr
     }
   }
 
-  return Array.from(groups.values()).map((group) => ({
-    ...group,
-    items: group.items.slice().sort(compareScheduledItems),
-  }));
+  return Array.from(groups.values());
 }
 
 function groupLogbookItems(items: MaintenanceLogbookItem[]): LogbookItemGroup[] {
@@ -468,25 +445,27 @@ function groupLogbookItems(items: MaintenanceLogbookItem[]): LogbookItemGroup[] 
     }
   }
 
-  return Array.from(groups.values()).map((group) => ({
-    ...group,
-    items: group.items.slice().sort(compareLogbookItems),
-  }));
+  return Array.from(groups.values());
 }
 
 function isUnresolvedLogbookItem(item: MaintenanceLogbookItem): boolean {
   return item.status === AircraftLogbookEntryStatus.OPEN
     || item.status === AircraftLogbookEntryStatus.DEFERRED
+    || item.status === AircraftLogbookEntryStatus.CORRECTED
     || item.status === AircraftLogbookEntryStatus.READY_FOR_SIGNATURE;
 }
 
 function isActionableLogbookItem(item: MaintenanceLogbookItem): boolean {
-  return item.status === AircraftLogbookEntryStatus.OPEN || item.status === AircraftLogbookEntryStatus.READY_FOR_SIGNATURE;
+  return item.status === AircraftLogbookEntryStatus.DRAFT
+    || item.status === AircraftLogbookEntryStatus.OPEN
+    || item.status === AircraftLogbookEntryStatus.CORRECTED
+    || item.status === AircraftLogbookEntryStatus.READY_FOR_SIGNATURE;
 }
 
-function compareLogbookItems(first: MaintenanceLogbookItem, second: MaintenanceLogbookItem): number {
-  const timeDelta = second.reportedAt.getTime() - first.reportedAt.getTime();
-  return timeDelta !== 0 ? timeDelta : second.id.localeCompare(first.id);
+function hasUnresolvedDiscrepancy(item: MaintenanceLogbookItem): boolean {
+  return item.discrepancy?.status === DiscrepancyStatus.OPEN
+    || item.discrepancy?.status === DiscrepancyStatus.DEFERRED
+    || item.discrepancy?.status === DiscrepancyStatus.CORRECTED_PENDING_RTS;
 }
 
 function aircraftStatusLabel(status: AircraftStatus): string {
@@ -1439,18 +1418,20 @@ function LogbookRow({
 }
 
 function LogbookGroup({
+  aircraftItems,
   buildItemHref,
   group,
   selected,
 }: {
+  aircraftItems: MaintenanceLogbookItem[];
   buildItemHref: (item: MaintenanceLogbookItem) => string;
   group: LogbookItemGroup;
   selected: string | null;
 }) {
   const unresolved = group.items.filter(isUnresolvedLogbookItem);
   const actionableCount = group.items.filter(isActionableLogbookItem).length;
-  const oldestUnresolved = unresolved
-    .filter((item) => item.discrepancy)
+  const oldestUnresolvedWriteUp = aircraftItems
+    .filter(hasUnresolvedDiscrepancy)
     .slice()
     .sort((first, second) => first.reportedAt.getTime() - second.reportedAt.getTime())[0];
   const mostRecent = group.items[0];
@@ -1471,10 +1452,10 @@ function LogbookGroup({
           <p className="truncate text-xs text-zinc-500">{formatDateTime(mostRecent.reportedAt)}</p>
         </div>
         <div className="min-w-0">
-          {oldestUnresolved ? (
+          {oldestUnresolvedWriteUp ? (
             <>
-              <p className="truncate text-sm font-semibold text-amber-900">Oldest unresolved: {oldestUnresolved.title}</p>
-              <p className="truncate text-xs text-zinc-500">{formatDateTime(oldestUnresolved.reportedAt)}</p>
+              <p className="truncate text-sm font-semibold text-amber-900">Oldest unresolved write-up: {oldestUnresolvedWriteUp.title}</p>
+              <p className="truncate text-xs text-zinc-500">{formatDateTime(oldestUnresolvedWriteUp.reportedAt)}</p>
             </>
           ) : (
             <p className="text-sm font-semibold text-emerald-800">No unresolved write-ups</p>
@@ -2462,6 +2443,9 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
   });
   const scheduledItemGroups = groupScheduledItems(filteredScheduledItems);
   const logbookItemGroups = groupLogbookItems(filteredLogbookItems);
+  const allLogbookItemGroupsByAircraft = new Map(
+    groupLogbookItems(data.logbookItems).map((group) => [group.aircraftId, group.items]),
+  );
   const programItemGroups = groupProgramItems(filteredProgramItems);
   const isCreatingProgramTask = view === "program" && selected === "new-task";
   const selectedQueueItem = view === "queue" ? data.queueItems.find((item) => item.id === selected) ?? null : null;
@@ -2840,6 +2824,7 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
               <div>
                 {logbookItemGroups.map((group) => (
                   <LogbookGroup
+                    aircraftItems={allLogbookItemGroupsByAircraft.get(group.aircraftId) ?? group.items}
                     buildItemHref={(item) => buildHref({
                       aircraftType: aircraftTypeHrefValue,
                       entryType: logbookEntryTypeFilter,
