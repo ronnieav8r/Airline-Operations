@@ -4,6 +4,11 @@ Last updated: 2026-07-26
 
 ## MX-002R Simplified Maintenance Lifecycle
 
+MX-002R is accepted on `codex/aeroops-integration`. The coder checkpoint is
+`f9778cf7f5a38dd3203d6ef5457e6df96a20944e`; the accepted integrated product,
+including signature-concurrency hardening, is
+`0271da181a1e753947dcb300d58ad81e589e1c12`.
+
 The replacement slice removes the work-package product direction. Maintenance
 now answers whether a tail is available, why it is down, what is due, what is
 deferred, and what official logbook evidence exists.
@@ -28,6 +33,9 @@ deferred, and what official logbook evidence exists.
 
 Commit `03242f9b3741cbc47ef5ef69837c60d91238dcf4` is rejected. Do not integrate
 it. `MX-002R` starts from `8c923193ca30703271d66075f6ea80fd4c3bcdd7`.
+Its additive shared-development migration was backed up and exactly reversed;
+the accepted replacement migrations are current on both local databases and
+Prisma reports no shared-schema difference.
 The older work-package notes below are historical and superseded.
 
 ## 2026-07-26 Integration Baseline Stabilization

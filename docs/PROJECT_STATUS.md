@@ -4,8 +4,10 @@ Last updated: 2026-07-26
 
 ## MX-002R Current Maintenance State
 
-`MX-002R` replaces the rejected contextual work-package direction. Maintenance
-is logbook- and availability-centered:
+`MX-002R` is accepted on `codex/aeroops-integration`. The accepted integrated
+product is `0271da181a1e753947dcb300d58ad81e589e1c12`, following coder checkpoint
+`f9778cf7f5a38dd3203d6ef5457e6df96a20944e`. Maintenance is logbook- and
+availability-centered:
 
 - open write-ups, expired deferrals, active maintenance, completed work pending
   MX release, required overdue tasks, administrative status, and active MX
@@ -21,6 +23,10 @@ is logbook- and availability-centered:
 
 The replacement starts from `8c923193ca30703271d66075f6ea80fd4c3bcdd7`.
 Commit `03242f9b3741cbc47ef5ef69837c60d91238dcf4` remains rejected.
+The rejected additive shared-database migration was safely backed up and
+reversed before the accepted migrations were deployed. Both isolated and
+shared local databases are current at 33 migrations with no Prisma schema
+difference.
 
 ## 2026-07-26 Integration Baseline
 
@@ -45,9 +51,8 @@ changing production auth behavior.
 
 ## Current Next Steps
 
-`BASELINE-001` is accepted and MX-002R is the active replacement Maintenance
-slice. The tracks below are current product context and backlog; they do not
-independently authorize another slice.
+`BASELINE-001` and MX-002R are accepted. The tracks below are current product
+context and backlog; they do not independently authorize another slice.
 
 The current active tracks are:
 

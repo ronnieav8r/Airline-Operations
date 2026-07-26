@@ -21,15 +21,17 @@ slice is accepted.
 
 | Field | Value |
 | --- | --- |
-| Status | Coder checkpoint implemented on 2026-07-26; integration acceptance remains pending. |
+| Status | Accepted locally on 2026-07-26. Product, database, static, smoke, and focused rendered-browser gates passed. |
 | Baseline parent commit | `8c923193ca30703271d66075f6ea80fd4c3bcdd7` |
-| Rejected checkpoint | `03242f9b3741cbc47ef5ef69837c60d91238dcf4` is rejected and must not be merged or used as the replacement implementation. Its local migration may still appear in shared development-database history. |
+| Rejected checkpoint | `03242f9b3741cbc47ef5ef69837c60d91238dcf4` is rejected and must not be merged or used as the replacement implementation. Its additive migration was removed from shared development schema and history during accepted reconciliation. |
 | Working branch | `codex/slice-002r-simplified-maintenance-lifecycle` |
 | Scope | Logbook-centered discrepancy correction, lightweight scheduled planning/start/sign/release, computed availability, and audited MX Control holds. No user-facing work packages, standalone jobs, labor, parts, or crew execution management. |
 | Acceptance commands | `npm run prisma:validate`; `npm run prisma:generate`; `npm run typecheck`; `npm run lint`; `npm run build`; `npm run smoke:maintenance-lifecycle`; `npm run smoke:aircraft-logbook`; relevant serviceability checks; `git diff --check`; desktop and 390px browser review. |
-| Runtime acceptance | All 32 branch migrations deployed cleanly to isolated database `aeroops_mx002r`; migration status is current; focused lifecycle and direct aircraft-logbook smokes passed. The package logbook wrapper itself requires an untracked `.env.local`, which is intentionally absent from the isolated worktree. Maintenance, scheduled drawer, fleet drawer, and aircraft logbook rendered at desktop and 390px without horizontal overflow. |
-| Coder checkpoint | Local commit message `feat: simplify maintenance availability lifecycle`; exact hash is returned in the coder handoff. |
-| Integrated product checkpoint | Pending lead review. |
+| Runtime acceptance | All 33 migrations are current on isolated `aeroops_mx002r` and shared `aeroops_local`. The rejected additive migration was backed up and exactly reversed from shared development state before the accepted migrations were deployed; Prisma reports no schema difference. Focused lifecycle and direct aircraft-logbook smokes passed. Rendered checks confirmed the serviceability queue, Admin planning-only boundary, and review-only top-level Logbook. The Chrome-only `perkspotbx` hydration warning is external extension injection. |
+| Coder checkpoint | `f9778cf7f5a38dd3203d6ef5457e6df96a20944e` (`feat: simplify maintenance availability lifecycle`). |
+| Integration repair | `0271da181a1e753947dcb300d58ad81e589e1c12` adds database-enforced signature-purpose uniqueness and serializable signing. |
+| Integrated product checkpoint | `0271da181a1e753947dcb300d58ad81e589e1c12`, accepted on `codex/aeroops-integration`. |
+| Lead acceptance gate | Local commit `chore: accept simplified maintenance lifecycle`, immediately following the integrated product checkpoint. Its hash is recorded in Git history rather than self-referenced here. |
 
 ### BASELINE-001 — Integration baseline stabilization
 
@@ -50,5 +52,5 @@ slice is accepted.
 
 ## Approved Next Slice
 
-`MX-002R` is the dispatched replacement Maintenance slice. No adjacent feature
-is approved until its coder checkpoint is integrated and accepted.
+`MX-002R` is accepted. No adjacent feature slice is approved or dispatched by
+this acceptance.
