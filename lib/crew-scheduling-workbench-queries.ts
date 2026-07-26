@@ -1,6 +1,9 @@
 import {
   AircraftType,
   AssignmentStatus,
+  CrewPlanningDraftChangeStatus,
+  CrewPlanningDraftChangeType,
+  CrewPlanningDraftStatus,
   CrewLogisticsNeedStatus,
   CrewScheduleEntryStatus,
   CrewScheduleRequestStatus,
@@ -15,7 +18,13 @@ import {
 import { getUpcomingCoverageFlightsForAircrafts } from "@/lib/flightleg-upcoming-coverage";
 import { prisma } from "@/lib/prisma";
 
-export const CREW_SCHEDULING_WORKBENCH_VIEWS = ["month", "week", "day"] as const;
+export const CREW_SCHEDULING_WORKBENCH_VIEWS = [
+  "four-week",
+  "eight-week",
+  "month",
+  "week",
+  "day",
+] as const;
 export const CREW_SCHEDULING_WORKBENCH_TABS = [
   "coverage",
   "planning",
@@ -46,6 +55,7 @@ export type CrewSchedulingWorkbenchFilters = {
 export type CrewSchedulingWorkbenchOptions = {
   date: Date;
   filters: CrewSchedulingWorkbenchFilters;
+  minimumDate?: Date;
   view: CrewSchedulingWorkbenchView;
 };
 
@@ -136,6 +146,32 @@ export type CrewAssignmentOverlaySummary = {
 };
 
 export type CrewSchedulingWorkbenchData = {
+  activePlanningDraft: {
+    autosavedAt: Date | null;
+    baselineAt: Date;
+    changes: Array<{
+      baselineUpdatedAt: Date | null;
+      changeType: CrewPlanningDraftChangeType;
+      crewMemberId: string;
+      date: Date;
+      dutyStatus: DutyStatus | null;
+      endDate: Date;
+      endsAt: Date | null;
+      id: string;
+      notes: string | null;
+      selectedForPublish: boolean;
+      sourcePublishedEntryId: string | null;
+      sourcePublishedEntryUpdatedAt: Date | null;
+      startsAt: Date | null;
+      stationCode: string | null;
+      stationId: string | null;
+      status: CrewPlanningDraftChangeStatus;
+    }>;
+    id: string;
+    name: string;
+    periodId: string;
+    status: CrewPlanningDraftStatus;
+  } | null;
   activePeriods: Array<{
     endsAt: Date;
     id: string;
@@ -148,6 +184,7 @@ export type CrewSchedulingWorkbenchData = {
   assignmentOverlay: CrewAssignmentOverlaySummary[];
   calendarDays: CrewCoverageCalendarDay[];
   crewMembers: CrewCoverageCrewDetail[];
+  focusedCrew: CrewCoverageCrewDetail[];
   pendingRequests: Array<{
     crewMemberId: string;
     crewMemberName: string;
@@ -168,6 +205,31 @@ export type CrewSchedulingWorkbenchData = {
     status: TimeOffRequestStatus;
   }>;
   roleOptions: SeatRole[];
+  monthlyScheduledCounts: Array<{
+    crewMemberId: string;
+    monthKey: string;
+    published: number;
+  }>;
+  countMonths: Array<{
+    end: Date;
+    key: string;
+    label: string;
+    start: Date;
+  }>;
+  rotationPatterns: Array<{
+    cycleLengthDays: number;
+    days: Array<{
+      dayNumber: number;
+      dutyStatus: DutyStatus;
+      endsAtMinutes: number | null;
+      startsAtMinutes: number | null;
+      stationCode: string | null;
+      stationId: string | null;
+    }>;
+    id: string;
+    name: string;
+    patternKey: string;
+  }>;
   stationOptions: Array<{
     code: string;
     id: string;
@@ -226,6 +288,60 @@ function dayKey(value: Date): string {
   ).padStart(2, "0")}`;
 }
 
+function monthKey(value: Date): string {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function countUniqueOnDutyDays(
+  rows: Array<{ crewMemberId: string; date: Date; dutyStatus: DutyStatus }>,
+): Array<{ crewMemberId: string; monthKey: string; published: number }> {
+  const byCrew = new Map<string, Set<string>>();
+
+  for (const row of rows) {
+    if (row.dutyStatus !== DutyStatus.ON_DUTY && row.dutyStatus !== DutyStatus.RESERVE) {
+      continue;
+    }
+
+    const key = `${row.crewMemberId}:${monthKey(row.date)}`;
+    const crewDays = byCrew.get(key) ?? new Set<string>();
+    crewDays.add(dayKey(row.date));
+    byCrew.set(key, crewDays);
+  }
+
+  return Array.from(byCrew.entries()).map(([key, days]) => {
+    const [crewMemberId, rowMonthKey] = key.split(":");
+    return {
+      crewMemberId,
+      monthKey: rowMonthKey,
+      published: days.size,
+    };
+  });
+}
+
+function countMonthsForAnchorDate(anchorDate: Date, maxMonths = 3) {
+  const months: Array<{
+    end: Date;
+    key: string;
+    label: string;
+    start: Date;
+  }> = [];
+  const firstMonth = startOfMonth(anchorDate);
+
+  for (let index = 0; index < maxMonths; index += 1) {
+    const monthStart = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + index, 1);
+    const monthEnd = startOfNextMonth(monthStart);
+
+    months.push({
+      end: monthEnd,
+      key: monthKey(monthStart),
+      label: new Intl.DateTimeFormat("en-US", { month: "short" }).format(monthStart),
+      start: monthStart,
+    });
+  }
+
+  return months;
+}
+
 function formatDayLabel(value: Date): string {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "short",
@@ -254,11 +370,21 @@ function rangesOverlap(
 }
 
 function viewRange(view: CrewSchedulingWorkbenchView, date: Date) {
-  if (view === "month") {
-    const viewStart = startOfMonth(date);
+  if (view === "four-week" || view === "eight-week") {
+    const viewStart = startOfDay(date);
+    const days = view === "four-week" ? 28 : 56;
     return {
-      viewEnd: startOfNextMonth(viewStart),
+      viewEnd: addDays(viewStart, days),
       viewStart,
+    };
+  }
+
+  if (view === "month") {
+    const monthStart = startOfMonth(date);
+    const monthEnd = addDays(startOfNextMonth(monthStart), -1);
+    return {
+      viewEnd: addDays(startOfWeek(monthEnd), 7),
+      viewStart: startOfWeek(monthStart),
     };
   }
 
@@ -330,6 +456,14 @@ function addCrewToBucket(
 
   bucket.crew[bucketName].push(detail);
   bucket.counts[bucketName] += 1;
+}
+
+function normalizeCoverageRollups(bucket: CrewCoverageRoleBucket) {
+  bucket.counts.scheduled = new Set([
+    ...bucket.crew.assigned.map((crewMember) => crewMember.crewMemberId),
+    ...bucket.crew.reserve.map((crewMember) => crewMember.crewMemberId),
+    ...bucket.crew.scheduled.map((crewMember) => crewMember.crewMemberId),
+  ]).size;
 }
 
 function crewName(crewMember: { firstName: string; lastName: string }): string {
@@ -899,7 +1033,15 @@ function buildCalendarDays({
           );
         }
 
-        if (scheduleRows.some((row) => row.dutyStatus === DutyStatus.RESERVE)) {
+        const isAssignedToCurrentPosition = sameAssignments.length > 0 || sameLegAssignments.length > 0;
+        const reserveScheduleRows = scheduleRows.filter(
+          (row) =>
+            row.dutyStatus === DutyStatus.RESERVE ||
+            row.dutyStatus === DutyStatus.ON_DUTY ||
+            row.dutyStatus === DutyStatus.DEADHEADING,
+        );
+
+        if (!isAssignedToCurrentPosition && reserveScheduleRows.length > 0) {
           addCrewToBucket(
             bucket,
             "reserve",
@@ -907,33 +1049,7 @@ function buildCalendarDays({
               aircraftId: assignedAircraftId,
               aircraftType: position.aircraftType,
               crewMember,
-              notes: scheduleTimeNotes(scheduleRows.filter((row) => row.dutyStatus === DutyStatus.RESERVE)),
-              seatRole: position.seatRole,
-            }),
-          );
-        }
-
-        if (
-          scheduleRows.some(
-            (row) =>
-              row.dutyStatus === DutyStatus.ON_DUTY ||
-              row.dutyStatus === DutyStatus.DEADHEADING,
-          )
-        ) {
-          addCrewToBucket(
-            bucket,
-            "scheduled",
-            detailForPosition({
-              aircraftId: assignedAircraftId,
-              aircraftType: position.aircraftType,
-              crewMember,
-              notes: scheduleTimeNotes(
-                scheduleRows.filter(
-                  (row) =>
-                    row.dutyStatus === DutyStatus.ON_DUTY ||
-                    row.dutyStatus === DutyStatus.DEADHEADING,
-                ),
-              ),
+              notes: scheduleTimeNotes(reserveScheduleRows),
               seatRole: position.seatRole,
             }),
           );
@@ -958,7 +1074,8 @@ function buildCalendarDays({
             (row) =>
               row.dutyStatus === DutyStatus.SICK ||
               row.dutyStatus === DutyStatus.TRAINING ||
-              row.dutyStatus === DutyStatus.VACATION,
+              row.dutyStatus === DutyStatus.VACATION ||
+              row.dutyStatus === DutyStatus.PERSONAL,
           )
         ) {
           addCrewToBucket(
@@ -973,7 +1090,8 @@ function buildCalendarDays({
                   (row) =>
                     row.dutyStatus === DutyStatus.SICK ||
                     row.dutyStatus === DutyStatus.TRAINING ||
-                    row.dutyStatus === DutyStatus.VACATION,
+                    row.dutyStatus === DutyStatus.VACATION ||
+                    row.dutyStatus === DutyStatus.PERSONAL,
                 ),
               ),
               seatRole: position.seatRole,
@@ -1002,6 +1120,10 @@ function buildCalendarDays({
     }
 
     const buckets = Array.from(bucketMap.values())
+      .map((bucket) => {
+        normalizeCoverageRollups(bucket);
+        return bucket;
+      })
       .filter(bucketHasContent)
       .sort((first, second) => {
         const aircraftOrder = first.aircraftType.localeCompare(second.aircraftType);
@@ -1121,11 +1243,53 @@ function buildAssignmentOverlay(
   });
 }
 
+function buildFocusedCrew({
+  crewRows,
+  filters,
+  viewEnd,
+}: {
+  crewRows: CrewPayload[];
+  filters: CrewSchedulingWorkbenchFilters;
+  viewEnd: Date;
+}): CrewCoverageCrewDetail[] {
+  if (filters.aircraftType === "all" || filters.role === "all") {
+    return [];
+  }
+
+  return crewRows
+    .filter((crewMember) => filters.base === "all" || crewMember.baseStation.code === filters.base)
+    .filter((crewMember) =>
+      validPositionsForDay(crewMember, viewEnd).some(
+        (position) =>
+          position.aircraftType === filters.aircraftType && position.seatRole === filters.role,
+      ),
+    )
+    .map((crewMember) =>
+      detailForPosition({
+        aircraftId: null,
+        aircraftType: filters.aircraftType as AircraftType,
+        crewMember,
+        notes: [],
+        seatRole: filters.role as SeatRole,
+      }),
+    )
+    .sort((first, second) => first.name.localeCompare(second.name));
+}
+
 export async function getCrewSchedulingWorkbenchData(
   options: CrewSchedulingWorkbenchOptions,
 ): Promise<CrewSchedulingWorkbenchData> {
-  const { viewEnd, viewStart } = viewRange(options.view, options.date);
-  const [crewRows, aircraft, periods, pendingTimeOff, pendingRequests] = await Promise.all([
+  const rawRange = viewRange(options.view, options.date);
+  const minimumDate = options.minimumDate ? startOfDay(options.minimumDate) : null;
+  const viewStart =
+    minimumDate && rawRange.viewStart < minimumDate && rawRange.viewEnd > minimumDate
+      ? minimumDate
+      : rawRange.viewStart;
+  const viewEnd = rawRange.viewEnd;
+  const countMonths = countMonthsForAnchorDate(options.date);
+  const countRangeStart = countMonths[0]?.start ?? startOfMonth(options.date);
+  const countRangeEnd = countMonths[countMonths.length - 1]?.end ?? startOfNextMonth(countRangeStart);
+  const [crewRows, aircraft, periods, pendingTimeOff, pendingRequests, rotationPatterns] = await Promise.all([
     loadCrewRows(viewStart, viewEnd),
     prisma.aircraft.findMany({
       orderBy: [{ tailNumber: "asc" }],
@@ -1201,7 +1365,117 @@ export async function getCrewSchedulingWorkbenchData(
         status: true,
       },
     }),
+    prisma.crewRotationPattern.findMany({
+      where: { isActive: true },
+      orderBy: [{ name: "asc" }],
+      select: {
+        cycleLengthDays: true,
+        days: {
+          orderBy: [{ dayNumber: "asc" }],
+          select: {
+            dayNumber: true,
+            dutyStatus: true,
+            endsAtMinutes: true,
+            startsAtMinutes: true,
+            stationId: true,
+            station: {
+              select: {
+                code: true,
+              },
+            },
+          },
+        },
+        id: true,
+        name: true,
+        patternKey: true,
+      },
+    }),
   ]);
+  const crewIds = crewRows.map((crewMember) => crewMember.id);
+  const [monthlySchedules, monthlyPublishedEntries] = await Promise.all([
+    prisma.crewSchedule.findMany({
+      where: {
+        crewMemberId: { in: crewIds },
+        date: { gte: countRangeStart, lt: countRangeEnd },
+        dutyStatus: { in: [DutyStatus.ON_DUTY, DutyStatus.RESERVE] },
+      },
+      select: {
+        crewMemberId: true,
+        date: true,
+        dutyStatus: true,
+      },
+    }),
+    prisma.crewScheduleEntry.findMany({
+      where: {
+        crewMemberId: { in: crewIds },
+        date: { gte: countRangeStart, lt: countRangeEnd },
+        dutyStatus: { in: [DutyStatus.ON_DUTY, DutyStatus.RESERVE] },
+        status: CrewScheduleEntryStatus.PUBLISHED,
+      },
+      select: {
+        crewMemberId: true,
+        date: true,
+        dutyStatus: true,
+      },
+    }),
+  ]);
+  const activePlanningDraft = await prisma.crewPlanningDraft.findFirst({
+    where: {
+      period: {
+        startsAt: { lt: viewEnd },
+        endsAt: { gt: viewStart },
+      },
+      status: CrewPlanningDraftStatus.ACTIVE,
+    },
+    orderBy: [{ updatedAt: "desc" }],
+    select: {
+      autosavedAt: true,
+      baselineAt: true,
+      changes: {
+        where: {
+          status: {
+            in: [
+              CrewPlanningDraftChangeStatus.DRAFT,
+              CrewPlanningDraftChangeStatus.REVIEW_REQUIRED,
+            ],
+          },
+          date: { lt: viewEnd },
+          endDate: { gte: viewStart },
+        },
+        orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+        select: {
+          baselineUpdatedAt: true,
+          changeType: true,
+          crewMemberId: true,
+          date: true,
+          dutyStatus: true,
+          endDate: true,
+          endsAt: true,
+          id: true,
+          notes: true,
+          selectedForPublish: true,
+          sourcePublishedEntryId: true,
+          sourcePublishedEntry: {
+            select: {
+              updatedAt: true,
+            },
+          },
+          startsAt: true,
+          stationId: true,
+          station: {
+            select: {
+              code: true,
+            },
+          },
+          status: true,
+        },
+      },
+      id: true,
+      name: true,
+      periodId: true,
+      status: true,
+    },
+  });
   const aircraftTypesById = new Map(aircraft.map((item) => [item.id, item.type]));
   const flightsWithCoverage = await getUpcomingCoverageFlightsForAircrafts(
     aircraft.map((item) => item.id),
@@ -1244,6 +1518,34 @@ export async function getCrewSchedulingWorkbenchData(
   };
 
   return {
+    activePlanningDraft: activePlanningDraft
+      ? {
+          autosavedAt: activePlanningDraft.autosavedAt,
+          baselineAt: activePlanningDraft.baselineAt,
+          changes: activePlanningDraft.changes.map((change) => ({
+            baselineUpdatedAt: change.baselineUpdatedAt,
+            changeType: change.changeType,
+            crewMemberId: change.crewMemberId,
+            date: change.date,
+            dutyStatus: change.dutyStatus,
+            endDate: change.endDate,
+            endsAt: change.endsAt,
+            id: change.id,
+            notes: change.notes,
+            selectedForPublish: change.selectedForPublish,
+            sourcePublishedEntryId: change.sourcePublishedEntryId,
+            sourcePublishedEntryUpdatedAt: change.sourcePublishedEntry?.updatedAt ?? null,
+            startsAt: change.startsAt,
+            stationCode: change.station?.code ?? null,
+            stationId: change.stationId,
+            status: change.status,
+          })),
+          id: activePlanningDraft.id,
+          name: activePlanningDraft.name,
+          periodId: activePlanningDraft.periodId,
+          status: activePlanningDraft.status,
+        }
+      : null,
     activePeriods: periods,
     aircraftTypeOptions: AIRCRAFT_TYPE_OPTIONS,
     assignmentOverlay: buildAssignmentOverlay(calendarDays),
@@ -1251,6 +1553,11 @@ export async function getCrewSchedulingWorkbenchData(
     crewMembers: Array.from(allCrewDetails.values()).sort((first, second) =>
       first.name.localeCompare(second.name),
     ),
+    focusedCrew: buildFocusedCrew({
+      crewRows,
+      filters: options.filters,
+      viewEnd,
+    }),
     pendingRequests: pendingRequests.map((request) => ({
       crewMemberId: request.crewMember.id,
       crewMemberName: crewName(request.crewMember),
@@ -1270,7 +1577,23 @@ export async function getCrewSchedulingWorkbenchData(
       startDate: request.startDate,
       status: request.status,
     })),
+    monthlyScheduledCounts: countUniqueOnDutyDays([...monthlySchedules, ...monthlyPublishedEntries]),
+    countMonths,
     roleOptions: ROLE_OPTIONS,
+    rotationPatterns: rotationPatterns.map((pattern) => ({
+      cycleLengthDays: pattern.cycleLengthDays,
+      days: pattern.days.map((day) => ({
+        dayNumber: day.dayNumber,
+        dutyStatus: day.dutyStatus,
+        endsAtMinutes: day.endsAtMinutes,
+        startsAtMinutes: day.startsAtMinutes,
+        stationCode: day.station?.code ?? null,
+        stationId: day.stationId,
+      })),
+      id: pattern.id,
+      name: pattern.name,
+      patternKey: pattern.patternKey,
+    })),
     stationOptions: Array.from(
       new Map(crewRows.map((crewMember) => [crewMember.baseStation.code, crewMember.baseStation])).values(),
     )

@@ -30,8 +30,9 @@ reviewable slices and should not attempt the full product in one pass.
 The current implementation is backend-MVP-ready for the warning-first
 operational scope. It includes FlightLeg-centered operations control, release
 evidence, ReleasePackage preview/final capture, aircraft context, aircraft
-airworthiness, crew assignment, crew compliance, crew scheduling lifecycle,
-crew self-service, and crew logistics foundations.
+airworthiness, computed maintenance serviceability with Return to Service,
+crew assignment, crew compliance, crew scheduling lifecycle, crew self-service,
+and crew logistics foundations.
 
 The latest backend MVP smoke pass completed with static, local DB, workflow,
 route, and browser smoke checks passing. Major remaining work should shift
@@ -57,6 +58,12 @@ A flight resolves crew by finding active assignments for its aircraft at the fli
 `FlightLeg` is now the long-term operational anchor. The legacy `Flight` table
 still exists for compatibility/archive behavior until parity is proven and
 retirement is separately planned.
+
+Maintenance serviceability is computed from aircraft discrepancies, deferrals,
+maintenance events, Return to Service records, and later inspection due
+tracking. A current `AirworthinessRelease` is not the normal everyday
+maintenance gate; it remains historical or operator-specific evidence. See
+[docs/MAINTENANCE_SERVICEABILITY_RTS_LIFECYCLE.md](docs/MAINTENANCE_SERVICEABILITY_RTS_LIFECYCLE.md).
 
 `AircraftCrewAssignment` remains the operational crew coverage source.
 `CrewScheduleEntry` and `CrewSchedule` support crew availability planning, not

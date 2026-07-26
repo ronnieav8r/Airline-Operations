@@ -1,6 +1,6 @@
 # Release Blocking Policy
 
-Last updated: 2026-06-07
+Last updated: 2026-06-30
 
 This document defines the first planning boundary for future FlightLeg release
 blocking.
@@ -16,8 +16,12 @@ remain available. Prompt 46 does not implement hard blocking.
 
 `FlightRelease` is the operational FlightLeg release record.
 
-`AirworthinessRelease` is aircraft maintenance airworthiness release state. It
-is an input to FlightLeg readiness, not a replacement for `FlightRelease`.
+Maintenance serviceability is a computed aircraft state. It is an input to
+FlightLeg readiness, not a replacement for `FlightRelease`.
+
+`AirworthinessRelease` remains historical or operator-specific release evidence
+but is no longer the default everyday maintenance gate. See
+`docs/MAINTENANCE_SERVICEABILITY_RTS_LIFECYCLE.md`.
 
 ## Current Readiness Inputs
 
@@ -31,9 +35,9 @@ The current FlightLeg release readiness checklist covers:
 - NOTAM snapshot.
 - Flight plan reference.
 - Aircraft configuration.
-- Aircraft maintenance airworthiness release.
-- Open/deferred discrepancies.
-- Active deferrals.
+- Computed aircraft maintenance serviceability.
+- Open discrepancies, RTS-required items, deferred discrepancies, and active or
+  expired deferrals.
 - Warning-only duty/rest calculator findings.
 
 ## Future Blocking Classification
@@ -72,20 +76,20 @@ These should likely become hard blockers for normal release:
 - Missing NOTAM affected station codes.
 - Missing flight-plan external reference or route text.
 - Missing active aircraft configuration.
-- Missing current `RELEASED` aircraft airworthiness release.
-- Expired current aircraft airworthiness release.
+- Aircraft not serviceable due to open unresolved discrepancy, AOG,
+  corrected-pending-RTS, or expired deferral.
 
 ## Recommended Future Warnings
 
 These should remain warnings for now:
 
-- Open discrepancies, until severity/category policy is defined.
-- Active deferrals, until MEL/CDL, due-date, and category policy is defined.
+- Active valid deferrals with limitations, until MEL/CDL/NEF/company procedure
+  policy is fully configured.
 - Manual weather evidence, if required fields are present.
 - Manual NOTAM evidence, if required fields are present.
 - Manual flight-plan evidence, if required fields are present.
-- Superseded, voided, or draft airworthiness release history when a current
-  non-expired `RELEASED` aircraft release exists.
+- Superseded, voided, or draft airworthiness release history when computed
+  aircraft serviceability is otherwise current.
 - Missing crew qualification, recency, duty, or rest checks until richer crew
   compliance tables exist.
 - Duty/rest warning calculator findings until legal/operator review, outside
@@ -103,8 +107,10 @@ These likely need authority-specific rules before hard enforcement:
   scheduling/release procedure evidence.
 - Part 135 release strictness for dispatch/current-information evidence.
 - Whether a release may proceed with manual weather/NOTAM/flight-plan evidence.
-- Which discrepancy severity or category blocks release.
-- Which deferral category, due date, or MEL/CDL status blocks release.
+- Which serviceability states may be released only with warnings under an
+  operator-specific policy.
+- Which deferral category, due date, MEL/CDL/NEF status, or limitation blocks
+  dispatch under that operator's manual.
 - Who may override a blocker.
 - What an override must record.
 
@@ -117,15 +123,15 @@ docs/AUTHORITY_RELEASE_POLICY.md
 Current direction:
 
 - Use shared future blockers for assigned aircraft, aircraft configuration,
-  current aircraft maintenance airworthiness release, operational-control
-  context, authority/revision, planned `FlightRelease`, and current W&B.
+  computed aircraft maintenance serviceability, operational-control context,
+  authority/revision, planned `FlightRelease`, and current W&B.
 - Keep baseline Part 91 strictness configurable for manifest, locating,
   dispatch, weather, NOTAM, and flight-plan evidence.
 - Treat Part 91K and Part 135-style operations as stricter planning classes for
   manifest, locating, dispatch/current-information, operational-control, and
-  aircraft airworthiness readiness.
-- Keep discrepancy and deferral blocking deferred until severity, due-date,
-  category, and MEL/CDL policy exists.
+  aircraft serviceability readiness.
+- Keep detailed deferral warning/blocking rules configurable until severity,
+  due-date, category, MEL/CDL/NEF, and operator manual policy exists.
 
 Prompt 51 planned the future release-blocking data model in:
 
@@ -180,8 +186,8 @@ Current direction:
   blocker key, and audit capture.
 - Overrides are exception records, not evidence replacements.
 - Missing FlightLeg, aircraft, operational-control context, authority/revision,
-  planned `FlightRelease`, active aircraft configuration, and current aircraft
-  maintenance airworthiness release should be non-overridable in the normal
+  planned `FlightRelease`, active aircraft configuration, and not-serviceable
+  aircraft maintenance state should be non-overridable in the normal
   operations-control workflow until stronger policy exists.
 - Manual weather, NOTAM, flight-plan, and selected baseline Part 91 evidence
   gaps may become overridable only after auth, roles, and audit capture exist.

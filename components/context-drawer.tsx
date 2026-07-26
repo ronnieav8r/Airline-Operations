@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import { ReactNode } from "react";
+import { PointerEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type ContextDrawerProps = {
   actionSlot?: ReactNode;
@@ -24,17 +26,68 @@ export function ContextDrawer({
   size = "standard",
   title,
 }: ContextDrawerProps) {
-  const drawerSizeClasses =
-    size === "expanded"
-      ? "h-full w-[min(100vw,72rem)] border-l border-zinc-200 bg-white shadow-2xl"
-      : size === "wide"
-        ? "h-full w-[min(100vw,56rem)] border-l border-zinc-200 bg-white shadow-2xl"
-        : "h-full w-full max-w-xl border-l border-zinc-200 bg-white shadow-2xl";
+  const [drawerWidth, setDrawerWidth] = useState<number | null>(null);
+  const drawerSizeLabel = size;
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const storedWidth = window.localStorage.getItem("aeroops:context-drawer-width");
+      const parsedWidth = storedWidth ? Number.parseInt(storedWidth, 10) : Number.NaN;
+
+      setDrawerWidth(Number.isFinite(parsedWidth) ? parsedWidth : 640);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  const widthStyle = useMemo(() => {
+    if (!drawerWidth) {
+      return undefined;
+    }
+
+    return {
+      width: `min(calc(100vw - 1rem), ${drawerWidth}px)`,
+    };
+  }, [drawerWidth]);
+
+  function resizeDrawer(event: PointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const pointerId = event.pointerId;
+    event.currentTarget.setPointerCapture(pointerId);
+
+    function onPointerMove(moveEvent: globalThis.PointerEvent) {
+      const viewportWidth = window.innerWidth;
+      const minWidth = Math.min(420, viewportWidth - 16);
+      const maxWidth = Math.max(minWidth, viewportWidth - 16);
+      const nextWidth = Math.min(maxWidth, Math.max(minWidth, viewportWidth - moveEvent.clientX));
+
+      setDrawerWidth(nextWidth);
+      window.localStorage.setItem("aeroops:context-drawer-width", String(Math.round(nextWidth)));
+    }
+
+    function onPointerUp() {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+    }
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp, { once: true });
+  }
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-zinc-950/35">
       <Link aria-label="Close panel" className="absolute inset-0" href={closeHref} />
-      <aside className={`relative z-10 flex flex-col ${drawerSizeClasses}`}>
+      <aside
+        className="relative z-10 flex h-full w-[min(100vw,40rem)] min-w-[min(100vw,26rem)] max-w-[calc(100vw-1rem)] flex-col border-l border-zinc-200 bg-white shadow-2xl"
+        data-drawer-size={drawerSizeLabel}
+        style={widthStyle}
+      >
+        <div
+          aria-label="Resize panel"
+          className="absolute inset-y-0 left-0 z-20 w-2 -translate-x-1 cursor-ew-resize touch-none border-l border-transparent hover:border-sky-400"
+          onPointerDown={resizeDrawer}
+          role="separator"
+        />
         <div className="flex items-start justify-between gap-4 border-b border-zinc-200 p-4">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">

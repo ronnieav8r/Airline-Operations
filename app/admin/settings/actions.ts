@@ -1,6 +1,6 @@
 "use server";
 
-import { OperatorManifestMode, UserRole } from "@prisma/client";
+import { AuthorityStatus, OperatingPart, OperatorManifestMode, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -16,6 +16,40 @@ function encodeError(error: unknown): string {
   }
 
   throw error;
+}
+
+function optionalInt(value: FormDataEntryValue | null, label: string): number | null {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new AdminSettingsError(`${label} must be a whole number of 0 or greater.`);
+  }
+
+  return parsed;
+}
+
+function requiredInt(value: FormDataEntryValue | null, label: string): number {
+  const parsed = optionalInt(value, label);
+
+  if (parsed === null) {
+    throw new AdminSettingsError(`${label} is required.`);
+  }
+
+  return parsed;
+}
+
+function operatingPartLabel(value: OperatingPart): string {
+  if (value === OperatingPart.PART_91) {
+    return "Part 91";
+  }
+  if (value === OperatingPart.PART_91K) {
+    return "Part 91K";
+  }
+  return "Part 135";
 }
 
 export async function updateOperatorFuelSettingAction(operatorId: string, formData: FormData) {
@@ -80,4 +114,70 @@ export async function updateOperatorReleaseSettingAction(operatorId: string, for
 
   revalidatePath("/admin/settings");
   redirect("/admin/settings");
+}
+
+export async function updateOperatorOperatingAuthoritiesAction(operatorId: string, formData: FormData) {
+  await requireRole([UserRole.ADMIN]);
+
+  try {
+    await prisma.$transaction(
+      Object.values(OperatingPart).map((operatingPart) =>
+        prisma.operatingAuthority.upsert({
+          where: {
+            operatorId_operatingPart: {
+              operatorId,
+              operatingPart,
+            },
+          },
+          create: {
+            displayName: `${operatingPartLabel(operatingPart)} Operations`,
+            operatingPart,
+            operatorId,
+            status: formData.get(operatingPart) === "on" ? AuthorityStatus.ACTIVE : AuthorityStatus.DRAFT,
+          },
+          update: {
+            status: formData.get(operatingPart) === "on" ? AuthorityStatus.ACTIVE : AuthorityStatus.DRAFT,
+          },
+        }),
+      ),
+    );
+  } catch (error) {
+    redirect(`/admin/settings?error=${encodeError(error)}#operating-authorities`);
+  }
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/crew");
+  revalidatePath("/crew/scheduling");
+  revalidatePath("/operations-control");
+  redirect("/admin/settings#operating-authorities");
+}
+
+export async function updateCrewComplianceRuleAction(ruleId: string, formData: FormData) {
+  await requireRole([UserRole.ADMIN]);
+
+  try {
+    const warningLeadDays = requiredInt(formData.get("warningLeadDays"), "Warning lead days");
+    const intervalMonths = optionalInt(formData.get("intervalMonths"), "Interval months");
+    const graceMonthsBefore = requiredInt(formData.get("graceMonthsBefore"), "Grace months before");
+    const graceMonthsAfter = requiredInt(formData.get("graceMonthsAfter"), "Grace months after");
+
+    await prisma.crewComplianceRule.update({
+      where: { id: ruleId },
+      data: {
+        active: formData.get("active") === "on",
+        graceMonthsAfter,
+        graceMonthsBefore,
+        intervalMonths,
+        warningLeadDays,
+      },
+    });
+  } catch (error) {
+    redirect(`/admin/settings?error=${encodeError(error)}#crew-compliance-rules`);
+  }
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/crew");
+  revalidatePath("/crew/scheduling");
+  revalidatePath("/operations-control");
+  redirect("/admin/settings#crew-compliance-rules");
 }

@@ -1585,9 +1585,10 @@ async function captureReleasePackage(
       ),
       packageEvidenceLink(
         ReleasePackageEvidenceType.AIRWORTHINESS_RELEASE,
-        airworthinessRelease?.releaseNumber ?? "Aircraft airworthiness release",
+        airworthinessRelease?.releaseNumber ?? "Aircraft airworthiness release history",
         airworthinessRelease?.id ?? null,
         airworthinessRelease?.status ?? "Missing",
+        false,
       ),
       packageEvidenceLink(
         ReleasePackageEvidenceType.AIRCRAFT_CONFIGURATION,

@@ -1,6 +1,5 @@
 import {
   AircraftStatus,
-  AirworthinessReleaseStatus,
   AlertSeverity,
   AssignmentStatus,
   FlightLegStatus,
@@ -11,6 +10,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { evaluateAircraftServiceability, type AircraftServiceabilityTone } from "@/lib/aircraft-serviceability";
 import {
   AircraftContextCrewAssignment,
   AircraftContextData,
@@ -115,6 +115,22 @@ function severityBadgeClasses(severity: AlertSeverity): string {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
   return "border-sky-200 bg-sky-50 text-sky-700";
+}
+
+function serviceabilityBadgeClasses(tone: AircraftServiceabilityTone): string {
+  if (tone === "green") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (tone === "rose") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+
+  if (tone === "amber") {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
+
+  return "border-zinc-200 bg-zinc-50 text-zinc-700";
 }
 
 function evidenceSummary(leg: AircraftContextLeg): string {
@@ -324,30 +340,6 @@ function CrewAssignmentCard({
   );
 }
 
-function AirworthinessReleaseLabel({
-  aircraft,
-}: {
-  aircraft: AircraftContextData;
-}): string {
-  const latestRelease = aircraft.airworthinessReleases[0] ?? null;
-  const currentRelease =
-    aircraft.airworthinessReleases.find(
-      (release) =>
-        release.status === AirworthinessReleaseStatus.RELEASED &&
-        (!release.expiresAt || release.expiresAt > new Date()),
-    ) ?? null;
-
-  if (currentRelease) {
-    return `Current: ${currentRelease.releaseNumber}`;
-  }
-
-  if (latestRelease) {
-    return `Latest ${latestRelease.status}: ${latestRelease.releaseNumber}`;
-  }
-
-  return "No airworthiness release history";
-}
-
 export default async function AircraftContextPage({ params }: PageProps) {
   const { aircraftId } = await params;
   const aircraft = await getAircraftContextData(aircraftId);
@@ -357,6 +349,7 @@ export default async function AircraftContextPage({ params }: PageProps) {
   }
 
   const now = new Date();
+  const serviceability = evaluateAircraftServiceability(aircraft, now);
   const currentConfiguration = aircraft.configurations[0] ?? null;
   const latestMaintenanceEvent = aircraft.maintenanceEvents[0] ?? null;
   const activeCapabilityCodes = aircraft.capabilities
@@ -430,9 +423,9 @@ export default async function AircraftContextPage({ params }: PageProps) {
             </p>
           </article>
           <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">A/W current</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {aircraft.summary.hasCurrentAirworthinessRelease ? "Yes" : "No"}
+            <p className="text-sm text-zinc-500">Serviceability</p>
+            <p className="mt-2 text-lg font-semibold">
+              {serviceability.label}
             </p>
           </article>
           <article className="rounded-md border border-zinc-200 bg-white p-4">
@@ -526,19 +519,32 @@ export default async function AircraftContextPage({ params }: PageProps) {
         <Section
           id="airworthiness"
           title="Airworthiness"
-          subtitle="Aircraft maintenance airworthiness context. Operational FlightRelease remains separate."
+          subtitle="Computed serviceability, write-ups, deferrals, and maintenance context. Operational FlightRelease remains separate."
         >
           <div className="grid gap-3 lg:grid-cols-2">
             <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">
-              <p className="font-semibold text-zinc-900">Maintenance airworthiness release</p>
-              <p className="mt-1 text-zinc-700">{AirworthinessReleaseLabel({ aircraft })}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-zinc-900">Serviceability</p>
+                <span
+                  className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${serviceabilityBadgeClasses(
+                    serviceability.tone,
+                  )}`}
+                >
+                  {serviceability.label}
+                </span>
+              </div>
+              <p className="mt-1 text-zinc-700">{serviceability.message}</p>
               <p className="mt-1 text-xs text-zinc-500">
-                Latest records: {aircraft.airworthinessReleases.length}
+                {serviceability.openDiscrepancyCount} open write-up
+                {serviceability.openDiscrepancyCount === 1 ? "" : "s"} |{" "}
+                {serviceability.activeDeferralCount} active deferral
+                {serviceability.activeDeferralCount === 1 ? "" : "s"} |{" "}
+                {serviceability.correctedPendingRtsCount} RTS required
               </p>
               <div className="mt-3">
                 <ActionLink
                   href={`/aircraft/${aircraft.id}/airworthiness`}
-                  label="Manage airworthiness"
+                  label="Open airworthiness"
                   primary
                 />
               </div>

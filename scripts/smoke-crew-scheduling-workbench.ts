@@ -1,4 +1,6 @@
 import {
+  AircraftStatus,
+  AircraftType,
   CrewLocationSource,
   CrewLogisticsNeedStatus,
   CrewLogisticsNeedType,
@@ -21,6 +23,9 @@ import {
 const prisma = new PrismaClient();
 const runKey = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
 const smokeLabel = `SCHED-WORKBENCH-${runKey}`;
+const smokeEmployeePrefix = "SCHED-WORKBENCH-";
+const smokeFlightPrefix = "SCHEDWORKBENCH";
+const smokeTailPrefix = "N-SCHED-WB-";
 
 function requireLocalOrExplicitRemoteSmoke() {
   const databaseUrl = process.env.DATABASE_URL ?? "";
@@ -49,6 +54,37 @@ function assertRecord<T>(record: T | null | undefined, label: string): T {
   }
 
   return record;
+}
+
+async function cleanupSmokeRecords() {
+  const smokeCrew = await prisma.crewMember.findMany({
+    where: { employeeNumber: { startsWith: smokeEmployeePrefix } },
+    select: { id: true },
+  });
+  const smokeCrewIds = smokeCrew.map((crewMember) => crewMember.id);
+
+  if (smokeCrewIds.length > 0) {
+    await prisma.$transaction([
+      prisma.crewLogisticsNeed.deleteMany({ where: { crewMemberId: { in: smokeCrewIds } } }),
+      prisma.crewLocationRecord.deleteMany({ where: { crewMemberId: { in: smokeCrewIds } } }),
+      prisma.aircraftCrewAssignment.deleteMany({ where: { crewMemberId: { in: smokeCrewIds } } }),
+      prisma.timeOffRequest.deleteMany({ where: { crewMemberId: { in: smokeCrewIds } } }),
+      prisma.crewPlanningDraftChange.deleteMany({ where: { crewMemberId: { in: smokeCrewIds } } }),
+      prisma.crewScheduleEntry.deleteMany({ where: { crewMemberId: { in: smokeCrewIds } } }),
+      prisma.crewSchedule.deleteMany({ where: { crewMemberId: { in: smokeCrewIds } } }),
+      prisma.crewScheduleRequest.deleteMany({ where: { crewMemberId: { in: smokeCrewIds } } }),
+      prisma.crewQualification.deleteMany({ where: { crewMemberId: { in: smokeCrewIds } } }),
+      prisma.crewMember.deleteMany({ where: { id: { in: smokeCrewIds } } }),
+    ]);
+  }
+
+  await prisma.$transaction([
+    prisma.flight.deleteMany({ where: { flightNumber: { startsWith: smokeFlightPrefix } } }),
+    prisma.aircraft.deleteMany({ where: { tailNumber: { startsWith: smokeTailPrefix } } }),
+    prisma.crewSchedulePeriod.deleteMany({
+      where: { periodKey: { startsWith: smokeEmployeePrefix } },
+    }),
+  ]);
 }
 
 async function createCrew({
@@ -92,22 +128,25 @@ async function main() {
   requireLocalOrExplicitRemoteSmoke();
   assertSmokeTestAuthEnabled();
   await ensureSmokeTestUsers(prisma);
+  await cleanupSmokeRecords();
 
-  const [aircraft, stations] = await Promise.all([
-    prisma.aircraft.findFirst({
-      orderBy: [{ tailNumber: "asc" }],
-      select: { id: true, type: true },
-    }),
-    prisma.station.findMany({
-      where: { isActive: true },
-      orderBy: [{ code: "asc" }],
-      select: { id: true },
-      take: 2,
-    }),
-  ]);
-  const selectedAircraft = assertRecord(aircraft, "Aircraft");
+  const stations = await prisma.station.findMany({
+    where: { isActive: true },
+    orderBy: [{ code: "asc" }],
+    select: { id: true },
+    take: 2,
+  });
   const departureStation = assertRecord(stations[0], "Departure station");
   const arrivalStation = stations[1] ?? departureStation;
+  const selectedAircraft = await prisma.aircraft.create({
+    data: {
+      homeStationId: departureStation.id,
+      status: AircraftStatus.AVAILABLE,
+      tailNumber: `${smokeTailPrefix}${runKey}`,
+      type: AircraftType.CL_65,
+    },
+    select: { id: true, type: true },
+  });
   const periodStart = atLocalDay(95);
   const periodEnd = atLocalDay(99, 23);
   const targetDate = atLocalDay(96);
@@ -233,7 +272,7 @@ async function main() {
         endsAt: atLocalDay(97),
         isActive: true,
         seatRole: SeatRole.CPT,
-        startsAt: atLocalDay(96),
+        startsAt: atLocalDay(96, 14),
         notes: `${smokeLabel} assignment overlay`,
       },
     }),
@@ -243,7 +282,6 @@ async function main() {
         effectiveAt: targetDate,
         locationText: `${smokeLabel} FBO`,
         source: CrewLocationSource.MANUAL,
-        stationId: departureStation.id,
       },
     }),
     prisma.crewLogisticsNeed.create({
@@ -301,8 +339,8 @@ async function main() {
     throw new Error("Workbench aggregation did not include expected CPT, FO, FA, and CA buckets.");
   }
 
-  if (!hasCrew(cptBucket.crew.scheduled, scheduledCpt.id)) {
-    throw new Error("Workbench did not count the draft schedule entry as scheduled CPT coverage.");
+  if (!hasCrew(cptBucket.crew.reserve, scheduledCpt.id)) {
+    throw new Error("Workbench did not count the unassigned draft schedule entry as reserve CPT coverage.");
   }
 
   if (!hasCrew(foBucket.crew.reserve, reserveFo.id)) {
@@ -361,5 +399,6 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
+    await cleanupSmokeRecords();
     await prisma.$disconnect();
   });

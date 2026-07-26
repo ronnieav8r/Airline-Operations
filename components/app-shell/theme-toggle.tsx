@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 type ThemeMode = "dark" | "light";
+const THEME_CHANGE_EVENT = "aeroops-theme-change";
 
 function applyTheme(theme: ThemeMode) {
   document.documentElement.classList.toggle("dark", theme === "dark");
@@ -10,38 +11,42 @@ function applyTheme(theme: ThemeMode) {
   localStorage.setItem("aeroops-theme", theme);
 }
 
+function getResolvedTheme(): ThemeMode {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  const documentTheme = document.documentElement.dataset.theme;
+  const storedTheme = localStorage.getItem("aeroops-theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  if (documentTheme === "dark" || documentTheme === "light") {
+    return documentTheme;
+  }
+  if (storedTheme === "dark" || storedTheme === "light") {
+    return storedTheme;
+  }
+
+  return prefersDark ? "dark" : "light";
+}
+
+function subscribeToTheme(callback: () => void): () => void {
+  window.addEventListener(THEME_CHANGE_EVENT, callback);
+  window.addEventListener("storage", callback);
+
+  return () => {
+    window.removeEventListener(THEME_CHANGE_EVENT, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
 export function ThemeToggle() {
-  const themeLoaded = useRef(false);
-  const [theme, setTheme] = useState<ThemeMode>("light");
-
-  useEffect(() => {
-    const loadTheme = window.setTimeout(() => {
-      const storedTheme = localStorage.getItem("aeroops-theme");
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const nextTheme =
-        storedTheme === "dark" || storedTheme === "light" ? storedTheme : prefersDark ? "dark" : "light";
-
-      themeLoaded.current = true;
-      setTheme(nextTheme);
-      applyTheme(nextTheme);
-    }, 0);
-
-    return () => window.clearTimeout(loadTheme);
-  }, []);
-
-  useEffect(() => {
-    if (!themeLoaded.current) {
-      return;
-    }
-
-    applyTheme(theme);
-  }, [theme]);
+  const theme = useSyncExternalStore(subscribeToTheme, getResolvedTheme, () => "light");
 
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
-    themeLoaded.current = true;
-    setTheme(nextTheme);
     applyTheme(nextTheme);
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   }
 
   return (

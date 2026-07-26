@@ -11,6 +11,7 @@ import {
   UserRole,
 } from "@prisma/client";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import {
@@ -1865,6 +1866,12 @@ function DashboardDrawer({
 
 export default async function Home({ searchParams }: PageProps) {
   const params = await searchParams;
+  const currentUser = await getCurrentUser();
+
+  if (currentUser?.role === UserRole.CREW) {
+    redirect("/crew/me");
+  }
+
   const selectedWindow = parseWindow(params.window);
   const panel = parsePanel(params.panel);
   const drawerObject = parseDrawerObject(params.object);
@@ -1872,10 +1879,7 @@ export default async function Home({ searchParams }: PageProps) {
   const drawerSize = parseDrawerSize(params.size);
   const drawerView = parseFlightLegView(params.view);
   const releaseError = firstParam(params.releaseError);
-  const [dashboard, currentUser] = await Promise.all([
-    getDashboardData({ window: selectedWindow }),
-    getCurrentUser(),
-  ]);
+  const dashboard = await getDashboardData({ window: selectedWindow });
   const visibleFlights = dashboard.flights;
   const selectedFlight =
     drawerObject === "flightLeg"
@@ -2068,19 +2072,34 @@ export default async function Home({ searchParams }: PageProps) {
             )}
           </MiniSection>
 
-          <MiniSection title="AI Review Notes">
-            <div className="flex max-h-[28rem] min-h-[28rem] flex-col justify-between overflow-y-auto rounded-xl border border-dashed border-sky-300 bg-sky-50/70 p-4">
-              <div>
-                <p className="text-sm font-semibold text-sky-950">Future placeholder</p>
-                <p className="mt-2 text-sm text-sky-900">
-                  Reserved for future AI-generated operational observations, release-readiness
-                  review notes, suggested follow-ups, and trend callouts.
-                </p>
-              </div>
-              <p className="mt-4 rounded-lg border border-sky-200 bg-white/80 p-3 text-xs text-sky-900">
-                Inactive: no provider calls, note storage, or automated recommendations.
+          <MiniSection
+            action={<DashboardActionLink href={dashboardHref(dashboard.selectedWindow, { panel: "alerts" })} label="Review alerts" />}
+            title="Active alerts"
+          >
+            {dashboard.alerts.length === 0 ? (
+              <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-800">
+                No active alerts.
               </p>
-            </div>
+            ) : (
+              <div className="max-h-[28rem] space-y-2 overflow-y-auto pr-1">
+                {dashboard.alerts.map((alert) => (
+                  <article className="rounded-lg border border-zinc-200 bg-zinc-50 p-3" key={alert.id}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-zinc-950">{alert.title}</h3>
+                      <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${severityBadgeClasses(alert.severity)}`}>
+                        {alert.severity}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-zinc-600">{alert.message}</p>
+                    {alert.flightNumber || alert.aircraftTail ? (
+                      <p className="mt-2 text-xs font-semibold text-zinc-500">
+                        {[alert.flightNumber, alert.aircraftTail].filter(Boolean).join(" | ")}
+                      </p>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            )}
           </MiniSection>
         </section>
 

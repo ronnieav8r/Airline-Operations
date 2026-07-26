@@ -3,6 +3,7 @@ import {
   AircraftCapabilityStatus,
   AircraftConfigurationStatus,
   AircraftType,
+  DeferralMethod,
   DeferralStatus,
   DiscrepancyStatus,
   MaintenanceEventStatus,
@@ -26,6 +27,7 @@ function addMonths(date: Date, months: number): Date {
 
 async function backfillAirworthiness() {
   const baselineStart = new Date(Date.UTC(2026, 0, 1, 0, 0, 0));
+  const demoNow = new Date();
   const opsUser = await prisma.user.findUnique({
     where: { email: "ops@aeroops.local" },
     select: { id: true },
@@ -172,7 +174,7 @@ async function backfillAirworthiness() {
         reportedById: opsUser?.id ?? null,
         discrepancyNumber: `DISC-${deferredAircraft.tailNumber}-DEMO-001`,
         title: "Demo deferred cabin item",
-        description: "Non-critical cabin placard discrepancy for readiness warning demos.",
+        description: "Deferred cabin placard discrepancy for serviceability demo data.",
         status: DiscrepancyStatus.DEFERRED,
         severity: "LOW",
         reportedAt: addDays(baselineStart, 2),
@@ -180,7 +182,7 @@ async function backfillAirworthiness() {
       update: {
         reportedById: opsUser?.id ?? null,
         title: "Demo deferred cabin item",
-        description: "Non-critical cabin placard discrepancy for readiness warning demos.",
+        description: "Deferred cabin placard discrepancy for serviceability demo data.",
         status: DiscrepancyStatus.DEFERRED,
         severity: "LOW",
         reportedAt: addDays(baselineStart, 2),
@@ -200,19 +202,33 @@ async function backfillAirworthiness() {
         authorizedById: opsUser?.id ?? null,
         deferralNumber: `DEF-${deferredAircraft.tailNumber}-DEMO-001`,
         status: DeferralStatus.ACTIVE,
-        category: "Demo",
+        category: "D",
+        deferralMethod: DeferralMethod.MEL,
+        deferralType: "MEL",
+        melItemNumber: "33-20-01",
         deferredAt: addDays(baselineStart, 2),
-        dueAt: addMonths(baselineStart, 1),
-        notes: "Backfilled active deferral for warning-only airworthiness demos.",
+        dueAt: addDays(demoNow, 30),
+        operatingLimitations: "Affected reading light unavailable. Passenger briefing required.",
+        placardRequired: true,
+        repairInterval: "D",
+        requiredProcedures: "Placard affected seat and brief passengers before flight.",
+        notes: "Backfilled active MEL deferral for serviceability demo data.",
       },
       update: {
         discrepancyId: discrepancy.id,
         authorizedById: opsUser?.id ?? null,
         status: DeferralStatus.ACTIVE,
-        category: "Demo",
+        category: "D",
+        deferralMethod: DeferralMethod.MEL,
+        deferralType: "MEL",
+        melItemNumber: "33-20-01",
         deferredAt: addDays(baselineStart, 2),
-        dueAt: addMonths(baselineStart, 1),
-        notes: "Backfilled active deferral for warning-only airworthiness demos.",
+        dueAt: addDays(demoNow, 30),
+        operatingLimitations: "Affected reading light unavailable. Passenger briefing required.",
+        placardRequired: true,
+        repairInterval: "D",
+        requiredProcedures: "Placard affected seat and brief passengers before flight.",
+        notes: "Backfilled active MEL deferral for serviceability demo data.",
       },
     });
   }

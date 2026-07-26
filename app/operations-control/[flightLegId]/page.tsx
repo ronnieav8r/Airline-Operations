@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  AirworthinessReleaseStatus,
   AircraftFuelEventType,
   DispatchPackageStatus,
   FaaFlightPlanStatus,
@@ -33,6 +32,7 @@ import {
   getReleaseReadinessItems,
   ReleaseReadinessItem,
 } from "@/lib/release-readiness";
+import { evaluateAircraftServiceability } from "@/lib/aircraft-serviceability";
 import {
   isManifestReady,
   isPostflightComplete,
@@ -351,13 +351,7 @@ function ReleaseEvidenceActionPanel({
   const flightPlan = dispatch?.flightPlanReference ?? null;
   const aircraft = detail.aircraftAssignments[0]?.aircraft ?? null;
   const configuration = aircraft?.configurations[0] ?? null;
-  const currentAirworthinessRelease =
-    aircraft?.airworthinessReleases.find(
-      (release) => release.status === AirworthinessReleaseStatus.RELEASED,
-    ) ?? null;
-  const airworthinessExpired =
-    !!currentAirworthinessRelease?.expiresAt &&
-    currentAirworthinessRelease.expiresAt.getTime() <= now.getTime();
+  const serviceability = evaluateAircraftServiceability(aircraft, now);
   const latestSnapshot = detail.readinessSnapshots[0] ?? null;
   const manifestReady =
     !!manifest &&
@@ -391,8 +385,7 @@ function ReleaseEvidenceActionPanel({
         : dispatch
           ? "Needs attention"
           : "Missing";
-  const airworthinessReady =
-    !!aircraft && !!configuration && !!currentAirworthinessRelease && !airworthinessExpired;
+  const airworthinessReady = !!aircraft && !!configuration && serviceability.ready;
   const releaseFuel =
     detail.fuelEvents.find((event) => event.eventType === AircraftFuelEventType.RELEASE_ONBOARD) ??
     null;
@@ -474,12 +467,10 @@ function ReleaseEvidenceActionPanel({
           label="Airworthiness"
           message={
             aircraft
-              ? `${aircraft.tailNumber}: ${
-                  airworthinessReady ? "current release and configuration found" : "review aircraft status"
-                }.`
+              ? `${aircraft.tailNumber}: ${serviceability.message}`
               : "No assigned aircraft is available."
           }
-          status={airworthinessReady ? "Current" : aircraft ? "Review" : "Missing"}
+          status={airworthinessReady ? serviceability.label : aircraft ? "Review" : "Missing"}
           tone={airworthinessReady ? "good" : aircraft ? "warn" : "missing"}
         />
         <EvidenceActionCard
@@ -713,10 +704,8 @@ function ReleasePackagePreview({ detail }: { detail: ReleaseEvidenceDetail }) {
     null;
   const latestUsableWeightBalanceRun =
     detail.weightBalanceRuns.find((run) => run.status !== WeightBalanceStatus.VOIDED) ?? null;
-  const currentAirworthinessRelease =
-    detail.aircraftAssignments[0]?.aircraft.airworthinessReleases.find(
-      (release) => release.status === "RELEASED" && (!release.expiresAt || release.expiresAt > new Date()),
-    ) ?? null;
+  const aircraft = detail.aircraftAssignments[0]?.aircraft ?? null;
+  const serviceability = evaluateAircraftServiceability(aircraft);
   const packageItems = [
     {
       label: "Operational control",
@@ -754,9 +743,9 @@ function ReleasePackagePreview({ detail }: { detail: ReleaseEvidenceDetail }) {
       status: detail.dispatchPackage?.status ?? "Missing",
     },
     {
-      label: "Airworthiness release",
-      ready: Boolean(currentAirworthinessRelease),
-      status: currentAirworthinessRelease?.status ?? "Missing",
+      label: "Aircraft serviceability",
+      ready: serviceability.ready,
+      status: aircraft ? serviceability.label : "Missing",
     },
   ];
   const readyCount = packageItems.filter((item) => item.ready).length;

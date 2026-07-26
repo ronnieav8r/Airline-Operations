@@ -1,6 +1,6 @@
 # AeroOps Builder Onboarding
 
-Last updated: 2026-06-14
+Last updated: 2026-06-30
 
 ## Current App State
 
@@ -19,18 +19,25 @@ Core surfaces:
 - `/operations-control/[flightLegId]/fuel`: FlightLeg release/postflight fuel.
 - `/customers`: customer and passenger records, including customer/passenger
   linking.
-- `/aircraft`: fleet board.
+- `/aircraft`: compact aircraft fleet/status board with aircraft quick-review
+  drawers.
+- `/aircraft?view=crew-coverage`: aircraft crew coverage planner.
 - `/aircraft/[aircraftId]`: aircraft operational context.
+- `/aircraft/[aircraftId]/logbook`: aircraft-tail logbook foundation.
 - `/aircraft/[aircraftId]/crew`: aircraft-block crew assignment workflow.
 - `/aircraft/[aircraftId]/airworthiness`: aircraft airworthiness workflow.
 - `/aircraft/[aircraftId]/fuel`: aircraft fuel ledger.
+- `/maintenance`: maintenance-user action queue and aircraft maintenance state
+  workbench.
 - `/admin/settings`: operator settings including Jet A density, dispatcher
   support, and manifest mode.
 - `/crew`: crew roster.
 - `/crew/[crewMemberId]`: crew member context.
 - `/crew/[crewMemberId]/compliance`: ops/admin crew compliance management.
 - `/crew/[crewMemberId]/logistics`: ops/admin crew logistics management.
-- `/crew/portal`: linked crew-user self-service portal.
+- `/crew/me`: active linked crew-user phone/iPad self-service portal.
+- `/crew/portal`: older linked crew-user self-service portal; do not expand
+  unless explicitly requested.
 - `/crew/scheduling`: crew availability planner.
 - `/crew/scheduling/periods`: schedule period admin.
 - `/crew/scheduling/patterns`: rotation pattern admin.
@@ -71,9 +78,19 @@ Core surfaces:
   a company, broker, or individual account; a passenger is a traveler/person.
   `CustomerPassenger` links them, and `ManifestItem` is the FlightLeg-specific
   manifest source of truth.
-- `/aircraft` is currently a focused fleet-status board, not a maintenance
-  workbench. Its top filters are Aircraft, Available, In flight, AOG, Open MELs,
-  and Open write-ups.
+- `/aircraft` is currently a focused fleet/status board, not the full
+  maintenance workbench. Keep the list compact and aircraft oriented; deeper
+  maintenance concepts belong in drilldowns and the future Maintenance module.
+- Maintenance is a top-level module in the main navigation for `ADMIN` and
+  `MAINTENANCE` users, not a top-level Logbook tab. V1 is a triage workbench:
+  Queue first, Scheduled Maintenance second, compact review drawer, and links
+  to existing aircraft/logbook/airworthiness routes. Create/sign/template/admin
+  workflows remain deeper or later slices.
+- Maintenance serviceability is computed in `lib/aircraft-serviceability.ts`.
+  Do not use a routine current `AirworthinessRelease` as the normal
+  serviceability gate. Open official discrepancies require approved deferral or
+  signed Return to Service before the aircraft is serviceable. See
+  `docs/MAINTENANCE_SERVICEABILITY_RTS_LIFECYCLE.md`.
 
 ## Auth And Roles
 
@@ -126,6 +143,12 @@ Recent frontend/product slices passed:
 - `npm run smoke:customer-passenger-manifest`
 - Browser checks for customer/manifest flows and latest aircraft filters.
 
+Recent UI work also includes `/crew/me` crew-portal refinement, passenger ID
+photo capture, passenger check-in/boarding controls, compact `/aircraft` row
+and drawer cleanup, initial aircraft crew coverage planner cleanup, and the
+first `/maintenance` triage workbench. The latest maintenance lifecycle pass
+also added computed serviceability and Return to Service validation.
+
 ## Required Reading Before New Work
 
 - `docs/README.md`
@@ -145,19 +168,25 @@ Recent frontend/product slices passed:
   - `docs/RELEASEPACKAGE_PLAN.md`
   - `docs/FLIGHTLEG_CUTOVER_PLAN.md`
   - `docs/FUEL_LEDGER_RELEASE_READINESS.md`
+  - `docs/AIRCRAFT_MAINTENANCE_LOGBOOK_REGULATORY_REFERENCE.md`
+  - `docs/MAINTENANCE_SERVICEABILITY_RTS_LIFECYCLE.md`
 
 ## Next Safe Planning Choices
 
 The active priority is frontend/UI polish. Choose one narrow slice at a time,
 and preserve the backend contracts documented in `docs/BACKEND_MVP_STATE.md`.
 
-- Add the `/aircraft` create drawer.
-- Plan the maintenance workbench/tab around AOG, write-ups, MELs, CDL, NEF/EFL
-  terminology, airworthiness, and operational limitations.
-- Continue drawer-contained issue fixing, especially crew assignment from the
-  FlightLeg drawer.
+- Finish aircraft crew coverage planner polish.
+- Continue `/crew/me` crew portal polish around today's flights, passenger
+  workflow, flight detail, requests, schedule, and profile.
+- Continue `/crew/scheduling` hardening while preserving the planning-vs-
+  staffing boundary.
+- Polish `/maintenance` around queue filters, drawer detail, scheduled
+  maintenance rows, and demo data before adding create/sign/admin workflows.
+- Add the `/aircraft` create drawer after the current aircraft/status and
+  maintenance module direction is accepted.
 - Continue UI polish for dashboard, flights, customers, aircraft, crew,
-  scheduling, release evidence, compliance, and logistics.
+  scheduling, release evidence, compliance, logistics, and maintenance.
 - Backend follow-ups only when they are explicit post-MVP decisions.
 
 Avoid broad multi-feature implementation without a fresh plan.

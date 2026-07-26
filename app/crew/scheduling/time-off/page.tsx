@@ -5,6 +5,7 @@ import {
   createTimeOffRequestAction,
   reviewTimeOffRequestAction,
 } from "@/app/crew/scheduling/time-off/actions";
+import { TimeOffAssignmentCoverageReviewPanel } from "@/components/time-off-assignment-coverage-review";
 import { TimeOffCoverageImpactPanel } from "@/components/time-off-coverage-impact";
 import {
   TimeOffWorkflowData,
@@ -288,7 +289,7 @@ function ConflictWarnings({ request }: { request: TimeOffWorkflowRequest }) {
   }
 
   return (
-    <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+    <div className="mt-3 rounded-md border status-embedded-caution p-3 text-sm">
       <p className="font-semibold">Warning-only conflicts</p>
       <ul className="mt-2 space-y-1">
         {request.conflictWarnings.map((warning) => (
@@ -369,6 +370,7 @@ function RequestCard({ request, returnTo }: { request: TimeOffWorkflowRequest; r
         </div>
       </div>
       <ConflictWarnings request={request} />
+      <TimeOffAssignmentCoverageReviewPanel reviews={request.assignmentCoverageReview} />
     </article>
   );
 }
@@ -400,12 +402,6 @@ export default async function TimeOffWorkflowPage({ searchParams }: PageProps) {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link
-                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-                href="/crew/scheduling"
-              >
-                Crew planner
-              </Link>
               <Link
                 className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                 href="/crew"

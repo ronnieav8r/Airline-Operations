@@ -1,21 +1,30 @@
 import {
   AircraftType,
-  CrewComplianceRecordStatus,
   CrewLogisticsNeedStatus,
   CrewScheduleEntryStatus,
   DutyStatus,
   EmploymentStatus,
+  FlightLegStatus,
   Prisma,
   SeatRole,
   TimeOffRequestStatus,
 } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import {
+  CrewComplianceEvaluationInput,
+  evaluateCrewCompliance,
+} from "@/lib/crew-compliance-evaluator";
+import {
+  CrewComplianceRuleDefinition,
+  getActiveCrewComplianceRuleDefinitions,
+} from "@/lib/crew-compliance-rule-defaults";
 
 const aircraftCrewWorkflowSelect = {
   id: true,
   tailNumber: true,
   name: true,
+  seats: true,
   type: true,
   status: true,
   homeStation: {
@@ -43,6 +52,7 @@ const aircraftCrewWorkflowSelect = {
           lastName: true,
           dutyStatus: true,
           employmentStatus: true,
+          dateOfBirth: true,
           qualifications: {
             select: {
               aircraftType: true,
@@ -58,24 +68,61 @@ const aircraftCrewWorkflowSelect = {
           },
           medicals: {
             select: {
+              id: true,
               expiresAt: true,
+              issuedAt: true,
+              medicalClass: true,
               status: true,
             },
           },
           trainingEvents: {
+            orderBy: [{ completedAt: "desc" }],
+            take: 8,
             select: {
+              id: true,
+              completedAt: true,
               expiresAt: true,
+              result: true,
               status: true,
+              trainingType: true,
             },
           },
           checkEvents: {
+            orderBy: [{ completedAt: "desc" }],
+            take: 8,
             select: {
+              id: true,
+              checkType: true,
+              completedAt: true,
               expiresAt: true,
+              result: true,
+              seatRole: true,
               status: true,
             },
           },
           recencyEvents: {
+            orderBy: [{ eventAt: "desc" }],
+            take: 8,
             select: {
+              id: true,
+              eventAt: true,
+              quantity: true,
+              recencyType: true,
+              result: true,
+              seatRole: true,
+              status: true,
+            },
+          },
+          plannedComplianceEvents: {
+            where: {
+              status: "SCHEDULED",
+            },
+            orderBy: [{ scheduledFor: "asc" }],
+            take: 8,
+            select: {
+              id: true,
+              eventType: true,
+              scheduledFor: true,
               status: true,
             },
           },
@@ -229,6 +276,34 @@ const aircraftCrewWorkflowSelect = {
   },
 } satisfies Prisma.AircraftSelect;
 
+const aircraftCrewWorkflowFlightLegSelect = {
+  id: true,
+  flightNumber: true,
+  scheduledDeparture: true,
+  scheduledArrival: true,
+  status: true,
+  departureStation: {
+    select: {
+      code: true,
+    },
+  },
+  arrivalStation: {
+    select: {
+      code: true,
+    },
+  },
+  crewAssignments: {
+    select: {
+      id: true,
+      crewMemberId: true,
+      seatRole: true,
+      status: true,
+      sourceAircraftCrewAssignmentId: true,
+    },
+    orderBy: [{ seatRole: "asc" }],
+  },
+} satisfies Prisma.FlightLegSelect;
+
 const crewMemberOptionSelect = {
   id: true,
   employeeNumber: true,
@@ -236,6 +311,7 @@ const crewMemberOptionSelect = {
   lastName: true,
   dutyStatus: true,
   employmentStatus: true,
+  dateOfBirth: true,
   qualifications: {
     select: {
       aircraftType: true,
@@ -251,24 +327,61 @@ const crewMemberOptionSelect = {
   },
   medicals: {
     select: {
+      id: true,
       expiresAt: true,
+      issuedAt: true,
+      medicalClass: true,
       status: true,
     },
   },
   trainingEvents: {
+    orderBy: [{ completedAt: "desc" }],
+    take: 8,
     select: {
+      id: true,
+      completedAt: true,
       expiresAt: true,
+      result: true,
       status: true,
+      trainingType: true,
     },
   },
   checkEvents: {
+    orderBy: [{ completedAt: "desc" }],
+    take: 8,
     select: {
+      id: true,
+      checkType: true,
+      completedAt: true,
       expiresAt: true,
+      result: true,
+      seatRole: true,
       status: true,
     },
   },
   recencyEvents: {
+    orderBy: [{ eventAt: "desc" }],
+    take: 8,
     select: {
+      id: true,
+      eventAt: true,
+      quantity: true,
+      recencyType: true,
+      result: true,
+      seatRole: true,
+      status: true,
+    },
+  },
+  plannedComplianceEvents: {
+    where: {
+      status: "SCHEDULED",
+    },
+    orderBy: [{ scheduledFor: "asc" }],
+    take: 8,
+    select: {
+      id: true,
+      eventType: true,
+      scheduledFor: true,
       status: true,
     },
   },
@@ -428,16 +541,19 @@ type CrewMemberOptionPayload = Prisma.CrewMemberGetPayload<{
   select: typeof crewMemberOptionSelect;
 }>;
 
+type AircraftCrewWorkflowFlightLegPayload = Prisma.FlightLegGetPayload<{
+  select: typeof aircraftCrewWorkflowFlightLegSelect;
+}>;
+
 export type AircraftCrewWorkflowAssignment =
   AircraftCrewWorkflowPayload["crewAssignments"][number] & {
     timing: "CURRENT" | "UPCOMING";
     warnings: string[];
   };
 
-export type AircraftCrewWorkflowLeg =
-  AircraftCrewWorkflowPayload["aircraftAssignments"][number]["flightLeg"] & {
-    missingRoles: SeatRole[];
-  };
+export type AircraftCrewWorkflowLeg = AircraftCrewWorkflowFlightLegPayload & {
+  missingRoles: SeatRole[];
+};
 
 export type AircraftCrewMemberOption = CrewMemberOptionPayload & {
   availabilityStatus: "CLEAR" | "CAUTION" | "UNAVAILABLE";
@@ -517,54 +633,12 @@ function qualificationWarningsForSeatRole(
   return [];
 }
 
-function isExpired(expiresAt: Date | null, now: Date): boolean {
-  return Boolean(expiresAt && expiresAt < now);
-}
-
-function hasExpiredStatus(status: CrewComplianceRecordStatus): boolean {
-  return status === CrewComplianceRecordStatus.EXPIRED || status === CrewComplianceRecordStatus.VOIDED;
-}
-
 function buildComplianceWarnings(
-  crewMember: Pick<
-    CrewMemberOptionPayload,
-    | "certificates"
-    | "checkEvents"
-    | "dutyPeriods"
-    | "medicals"
-    | "recencyEvents"
-    | "restPeriods"
-    | "trainingEvents"
-  >,
+  crewMember: CrewComplianceEvaluationInput,
+  rules: CrewComplianceRuleDefinition[],
   now: Date,
 ): string[] {
-  const warnings: string[] = [];
-  const missingCategories = [
-    crewMember.certificates.length === 0 ? "certificate" : null,
-    crewMember.medicals.length === 0 ? "medical" : null,
-    crewMember.trainingEvents.length === 0 ? "training" : null,
-    crewMember.checkEvents.length === 0 ? "check" : null,
-    crewMember.recencyEvents.length === 0 ? "recency" : null,
-    crewMember.dutyPeriods.length === 0 ? "duty" : null,
-    crewMember.restPeriods.length === 0 ? "rest" : null,
-  ].filter(Boolean);
-
-  if (missingCategories.length > 0) {
-    warnings.push(`Missing ${missingCategories.join(", ")} evidence.`);
-  }
-
-  const expiredCount =
-    crewMember.certificates.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.medicals.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.trainingEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.checkEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.recencyEvents.filter((item) => hasExpiredStatus(item.status)).length;
-
-  if (expiredCount > 0) {
-    warnings.push(`${expiredCount} expired or voided compliance record${expiredCount === 1 ? "" : "s"}.`);
-  }
-
-  return warnings;
+  return evaluateCrewCompliance(crewMember, rules, now).warnings;
 }
 
 function missingCockpitRoles(assignments: Array<{ seatRole: SeatRole }>): SeatRole[] {
@@ -576,6 +650,7 @@ function missingCockpitRoles(assignments: Array<{ seatRole: SeatRole }>): SeatRo
 function normalizeAssignment(
   assignment: AircraftCrewWorkflowPayload["crewAssignments"][number],
   aircraftType: AircraftType,
+  complianceRules: CrewComplianceRuleDefinition[],
   now: Date,
 ): AircraftCrewWorkflowAssignment | null {
   if (assignment.endsAt && assignment.endsAt <= now) {
@@ -594,7 +669,7 @@ function normalizeAssignment(
         assignment.seatRole,
         assignment.startsAt,
       ),
-      ...buildComplianceWarnings(assignment.crewMember, now),
+      ...buildComplianceWarnings(assignment.crewMember, complianceRules, now),
     ],
   };
 }
@@ -602,24 +677,26 @@ function normalizeAssignment(
 function normalizeCrewOption(
   crewMember: CrewMemberOptionPayload,
   aircraftType: AircraftType,
+  complianceRules: CrewComplianceRuleDefinition[],
   now: Date,
+  windowStart: Date,
   windowEnd: Date,
   currentAircraftId: string,
 ): AircraftCrewMemberOption {
   const currentAssignments = crewMember.assignments.filter((assignment) =>
-    overlapsWindow(assignment.startsAt, assignment.endsAt, now, windowEnd),
+    overlapsWindow(assignment.startsAt, assignment.endsAt, windowStart, windowEnd),
   );
   const otherAircraftAssignments = currentAssignments.filter(
     (assignment) => assignment.aircraftId !== currentAircraftId,
   );
   const schedulesInWindow = crewMember.schedules.filter((schedule) =>
-    overlapsWindow(schedule.startsAt ?? schedule.date, schedule.endsAt, now, windowEnd),
+    overlapsWindow(schedule.startsAt ?? schedule.date, schedule.endsAt, windowStart, windowEnd),
   );
   const scheduleEntriesInWindow = crewMember.scheduleEntries.filter((entry) =>
-    overlapsWindow(entry.startsAt ?? entry.date, entry.endsAt, now, windowEnd),
+    overlapsWindow(entry.startsAt ?? entry.date, entry.endsAt, windowStart, windowEnd),
   );
   const timeOffInWindow = crewMember.timeOffRequests.filter((request) =>
-    overlapsWindow(request.startDate, request.endDate, now, windowEnd),
+    overlapsWindow(request.startDate, request.endDate, windowStart, windowEnd),
   );
   const availabilityWarnings: string[] = [];
 
@@ -640,22 +717,22 @@ function normalizeCrewOption(
   }
 
   if (schedulesInWindow.length === 0 && scheduleEntriesInWindow.length === 0) {
-    availabilityWarnings.push("No CrewSchedule block or schedule-period entry in the next 7 days.");
+    availabilityWarnings.push("No CrewSchedule block or schedule-period entry in the selected gap window.");
   }
 
   if (timeOffInWindow.length > 0) {
-    availabilityWarnings.push("Pending or approved time off overlaps the next 7 days.");
+    availabilityWarnings.push("Pending or approved time off overlaps the selected gap window.");
   }
 
   if (otherAircraftAssignments.length > 0) {
     availabilityWarnings.push(
       `Already assigned to ${otherAircraftAssignments
         .map((assignment) => assignment.aircraft.tailNumber)
-        .join(", ")} in the next 7 days.`,
+        .join(", ")} in the selected gap window.`,
     );
   }
 
-  const complianceWarnings = buildComplianceWarnings(crewMember, now);
+  const complianceWarnings = buildComplianceWarnings(crewMember, complianceRules, now);
 
   if (complianceWarnings.length > 0) {
     availabilityWarnings.push("Crew compliance evidence should be reviewed.");
@@ -689,7 +766,7 @@ function normalizeCrewOption(
 }
 
 function normalizeUpcomingLeg(
-  leg: AircraftCrewWorkflowPayload["aircraftAssignments"][number]["flightLeg"],
+  leg: AircraftCrewWorkflowFlightLegPayload,
 ): AircraftCrewWorkflowLeg {
   const activeSnapshots = leg.crewAssignments.filter(
     (assignment) => assignment.status === "PLANNED" || assignment.status === "ACTIVE",
@@ -703,12 +780,14 @@ function normalizeUpcomingLeg(
 
 export async function getAircraftCrewWorkflowData(
   aircraftId: string,
+  options: { windowStart?: Date | null; windowEnd?: Date | null } = {},
 ): Promise<AircraftCrewWorkflowData | null> {
   const now = new Date();
-  const windowStart = new Date(now);
-  windowStart.setHours(0, 0, 0, 0);
-  const windowEnd = addDays(now, AVAILABILITY_WINDOW_DAYS);
-  const [aircraft, crewMembers] = await Promise.all([
+  const windowStart = options.windowStart ?? new Date(now);
+  const windowEnd = options.windowEnd ?? addDays(windowStart, AVAILABILITY_WINDOW_DAYS);
+  const scheduleWindowStart = new Date(windowStart);
+  scheduleWindowStart.setHours(0, 0, 0, 0);
+  const [aircraft, crewMembers, complianceRules, flightLegs] = await Promise.all([
     prisma.aircraft.findUnique({
       where: { id: aircraftId },
       select: aircraftCrewWorkflowSelect,
@@ -724,7 +803,7 @@ export async function getAircraftCrewWorkflowData(
           ...crewMemberOptionSelect.schedules,
           where: {
             date: {
-              gte: windowStart,
+              gte: scheduleWindowStart,
               lt: windowEnd,
             },
           },
@@ -734,7 +813,7 @@ export async function getAircraftCrewWorkflowData(
           where: {
             status: { in: [TimeOffRequestStatus.PENDING, TimeOffRequestStatus.APPROVED] },
             startDate: { lt: windowEnd },
-            endDate: { gte: now },
+            endDate: { gte: windowStart },
           },
         },
         scheduleEntries: {
@@ -742,12 +821,33 @@ export async function getAircraftCrewWorkflowData(
           where: {
             status: { in: [CrewScheduleEntryStatus.DRAFT, CrewScheduleEntryStatus.PUBLISHED] },
             date: {
-              gte: windowStart,
+              gte: scheduleWindowStart,
               lt: windowEnd,
             },
           },
         },
       },
+    }),
+    getActiveCrewComplianceRuleDefinitions(prisma),
+    prisma.flightLeg.findMany({
+      where: {
+        aircraftAssignments: {
+          some: {
+            aircraftId,
+          },
+        },
+        scheduledArrival: {
+          gt: windowStart,
+        },
+        scheduledDeparture: {
+          lt: windowEnd,
+        },
+        status: {
+          not: FlightLegStatus.CANCELLED,
+        },
+      },
+      orderBy: [{ scheduledDeparture: "asc" }, { flightNumber: "asc" }],
+      select: aircraftCrewWorkflowFlightLegSelect,
     }),
   ]);
 
@@ -756,22 +856,28 @@ export async function getAircraftCrewWorkflowData(
   }
 
   const assignments = aircraft.crewAssignments
-    .map((assignment) => normalizeAssignment(assignment, aircraft.type, now))
+    .map((assignment) => normalizeAssignment(assignment, aircraft.type, complianceRules, now))
     .filter((assignment): assignment is AircraftCrewWorkflowAssignment =>
       Boolean(assignment),
     );
   const currentAssignments = assignments.filter(
     (assignment) => assignment.timing === "CURRENT",
   );
-  const upcomingLegs = aircraft.aircraftAssignments.map((assignment) =>
-    normalizeUpcomingLeg(assignment.flightLeg),
-  );
+  const upcomingLegs = flightLegs.map((flightLeg) => normalizeUpcomingLeg(flightLeg));
 
   return {
     ...aircraft,
     assignments,
     crewOptions: crewMembers.map((crewMember) =>
-      normalizeCrewOption(crewMember, aircraft.type, now, windowEnd, aircraft.id),
+      normalizeCrewOption(
+        crewMember,
+        aircraft.type,
+        complianceRules,
+        now,
+        windowStart,
+        windowEnd,
+        aircraft.id,
+      ),
     ),
     upcomingLegs,
     summary: {

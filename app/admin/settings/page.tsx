@@ -1,6 +1,8 @@
-import { OperatorManifestMode, UserRole } from "@prisma/client";
+import { AuthorityStatus, OperatingPart, OperatorManifestMode, UserRole } from "@prisma/client";
 
 import {
+  updateCrewComplianceRuleAction,
+  updateOperatorOperatingAuthoritiesAction,
   updateOperatorFuelSettingAction,
   updateOperatorReleaseSettingAction,
 } from "@/app/admin/settings/actions";
@@ -23,42 +25,83 @@ function firstParam(value: string | string[] | undefined): string | null {
   return value ?? null;
 }
 
+function formatEnum(value: string | null): string {
+  if (!value) {
+    return "Shared";
+  }
+
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
 export default async function AdminSettingsPage({ searchParams }: PageProps) {
   await requireRole([UserRole.ADMIN]);
   const params = await searchParams;
   const error = firstParam(params.error);
-  const operators = await prisma.operator.findMany({
-    orderBy: { code: "asc" },
-    select: {
-      code: true,
-      fuelSetting: {
-        select: {
-          defaultJetAFuelDensityLbsPerGallon: true,
-          updatedAt: true,
-          updatedBy: {
-            select: {
-              email: true,
+  const [operators, crewComplianceRules] = await Promise.all([
+    prisma.operator.findMany({
+      orderBy: { code: "asc" },
+      select: {
+        code: true,
+        operatingAuthorities: {
+          select: {
+            displayName: true,
+            operatingPart: true,
+            status: true,
+          },
+        },
+        fuelSetting: {
+          select: {
+            defaultJetAFuelDensityLbsPerGallon: true,
+            updatedAt: true,
+            updatedBy: {
+              select: {
+                email: true,
+              },
             },
           },
         },
-      },
-      releaseSetting: {
-        select: {
-          dispatcherEnabled: true,
-          manifestMode: true,
-          updatedAt: true,
-          updatedBy: {
-            select: {
-              email: true,
+        releaseSetting: {
+          select: {
+            dispatcherEnabled: true,
+            manifestMode: true,
+            updatedAt: true,
+            updatedBy: {
+              select: {
+                email: true,
+              },
             },
           },
         },
+        id: true,
+        isActive: true,
+        name: true,
       },
-      id: true,
-      isActive: true,
-      name: true,
-    },
-  });
+    }),
+    prisma.crewComplianceRule.findMany({
+      orderBy: [{ operatingPart: "asc" }, { requirementType: "asc" }, { ruleKey: "asc" }],
+      select: {
+        active: true,
+        applicabilitySummary: true,
+        calculationKind: true,
+        graceMonthsAfter: true,
+        graceMonthsBefore: true,
+        id: true,
+        intervalMonths: true,
+        operatingPart: true,
+        regulationPart: true,
+        requirementType: true,
+        ruleKey: true,
+        sourceCitation: true,
+        sourceUrl: true,
+        title: true,
+        warningLeadDays: true,
+      },
+    }),
+  ]);
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-4 text-zinc-950 sm:px-6 lg:px-8">
@@ -75,10 +118,187 @@ export default async function AdminSettingsPage({ searchParams }: PageProps) {
         </section>
 
         {error ? (
-          <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+          <p className="rounded-xl border status-surface-stop p-3 text-sm">
             {decodeURIComponent(error)}
           </p>
         ) : null}
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm" id="operating-authorities">
+          <div>
+            <h2 className="text-lg font-semibold">Operating parts for crew compliance</h2>
+            <p className="mt-1 max-w-3xl text-sm text-zinc-600">
+              Select which operating parts apply to each operator. Crew compliance warnings use shared
+              medical rules plus rules for active operating parts only.
+            </p>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {operators.map((operator) => {
+              const action = updateOperatorOperatingAuthoritiesAction.bind(null, operator.id);
+              const activeParts = new Set(
+                operator.operatingAuthorities
+                  .filter((authority) => authority.status === AuthorityStatus.ACTIVE)
+                  .map((authority) => authority.operatingPart),
+              );
+
+              return (
+                <form action={action} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3" key={operator.id}>
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <p className="font-semibold text-zinc-950">
+                        {operator.name} <span className="font-mono text-sm text-zinc-500">{operator.code}</span>
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Use this to suppress irrelevant Part 91, 91K, or 135 warning sets.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {Object.values(OperatingPart).map((operatingPart) => (
+                        <label
+                          className="flex h-9 items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700"
+                          key={operatingPart}
+                        >
+                          <input
+                            className="h-4 w-4"
+                            defaultChecked={activeParts.has(operatingPart)}
+                            name={operatingPart}
+                            type="checkbox"
+                          />
+                          {formatEnum(operatingPart)}
+                        </label>
+                      ))}
+                      <button
+                        className="h-9 rounded-md bg-zinc-950 px-3 text-xs font-semibold text-white hover:bg-zinc-800"
+                        type="submit"
+                      >
+                        Save parts
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm" id="crew-compliance-rules">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Crew compliance rules</h2>
+              <p className="mt-1 max-w-3xl text-sm text-zinc-600">
+                These rules drive warning-only crew compliance calculations. They are not legal signoff
+                and should be tightened against operator manuals, OpSpecs, and approved training programs.
+              </p>
+            </div>
+            <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-600">
+              {crewComplianceRules.length} rules
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {crewComplianceRules.length === 0 ? (
+              <p className="rounded-md border status-surface-caution p-3 text-sm">
+                No crew compliance rules are seeded yet. Run the crew compliance rule backfill after migrations.
+              </p>
+            ) : (
+              crewComplianceRules.map((rule) => {
+                const action = updateCrewComplianceRuleAction.bind(null, rule.id);
+
+                return (
+                  <form
+                    action={action}
+                    className="rounded-lg border border-zinc-200 bg-zinc-50 p-3"
+                    key={rule.id}
+                  >
+                    <div className="grid gap-3 xl:grid-cols-[minmax(18rem,1fr)_repeat(4,minmax(7rem,8rem))_auto] xl:items-end">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-zinc-950">{rule.title}</p>
+                          <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-xs font-semibold text-zinc-600">
+                            {formatEnum(rule.operatingPart)}
+                          </span>
+                          <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-xs font-semibold text-zinc-600">
+                            {formatEnum(rule.requirementType)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {rule.ruleKey} | {formatEnum(rule.calculationKind)}
+                        </p>
+                        <p className="mt-1 text-sm text-zinc-600">
+                          {rule.applicabilitySummary ?? "No applicability summary."}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {rule.sourceUrl ? (
+                            <a className="font-semibold text-sky-700 hover:text-sky-900" href={rule.sourceUrl}>
+                              {rule.sourceCitation}
+                            </a>
+                          ) : (
+                            rule.sourceCitation
+                          )}
+                        </p>
+                      </div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                        Lead days
+                        <input
+                          className="mt-1 h-9 w-full rounded-md border border-zinc-300 bg-white px-2 text-sm text-zinc-950"
+                          defaultValue={rule.warningLeadDays}
+                          min={0}
+                          name="warningLeadDays"
+                          type="number"
+                        />
+                      </label>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                        Interval mo.
+                        <input
+                          className="mt-1 h-9 w-full rounded-md border border-zinc-300 bg-white px-2 text-sm text-zinc-950"
+                          defaultValue={rule.intervalMonths ?? ""}
+                          min={0}
+                          name="intervalMonths"
+                          type="number"
+                        />
+                      </label>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                        Grace before
+                        <input
+                          className="mt-1 h-9 w-full rounded-md border border-zinc-300 bg-white px-2 text-sm text-zinc-950"
+                          defaultValue={rule.graceMonthsBefore}
+                          min={0}
+                          name="graceMonthsBefore"
+                          type="number"
+                        />
+                      </label>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                        Grace after
+                        <input
+                          className="mt-1 h-9 w-full rounded-md border border-zinc-300 bg-white px-2 text-sm text-zinc-950"
+                          defaultValue={rule.graceMonthsAfter}
+                          min={0}
+                          name="graceMonthsAfter"
+                          type="number"
+                        />
+                      </label>
+                      <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                        <label className="flex h-9 items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700">
+                          <input
+                            className="h-4 w-4"
+                            defaultChecked={rule.active}
+                            name="active"
+                            type="checkbox"
+                          />
+                          Active
+                        </label>
+                        <button
+                          className="h-9 rounded-md bg-zinc-950 px-3 text-xs font-semibold text-white hover:bg-zinc-800"
+                          type="submit"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                );
+              })
+            )}
+          </div>
+        </section>
 
         <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
           <h2 className="text-lg font-semibold">Release workflow</h2>

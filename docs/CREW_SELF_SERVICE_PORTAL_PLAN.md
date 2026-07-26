@@ -1,12 +1,49 @@
 # Crew Self-Service Portal Plan
 
-Last updated: 2026-06-10
+Last updated: 2026-06-22
 
 ## Current Status Note
 
-Crew portal backend smoke passed during backend MVP closure. Use
-`docs/BACKEND_MVP_FINAL_SMOKE_QA.md` and `docs/CREW_SCHEDULING_MVP_STATUS.md`
-as newer truth if older sections in this file mention runtime QA pending.
+Crew portal backend smoke passed during backend MVP closure. The active crew
+self-service product surface is now `/crew/me`, not `/crew/portal`.
+
+Use `docs/CURRENT_HANDOFF.md`, `docs/PROJECT_STATUS.md`,
+`docs/BACKEND_MVP_FINAL_SMOKE_QA.md`, and
+`docs/CREW_SCHEDULING_MVP_STATUS.md` as newer truth if older sections in this
+file mention runtime QA pending.
+
+## 2026-06-22 `/crew/me` Update
+
+`/crew/me` is the accepted first crew-member mobile app direction. It remains
+separate from ops/admin crew management and is scoped only to the signed-in
+`CREW` user's linked `CrewMember.userId`.
+
+Implemented:
+
+- `CREW` role guard with setup-required state when no linked crew profile
+  exists.
+- Mobile-first tab shell: `Today`, `Schedule`, `Flights`, `Requests`, and
+  `Profile`.
+- `Today` is action-focused and shows next schedule, next flight, open
+  preflight/postflight actions, request status, and plain-language profile
+  review items.
+- `Schedule` shows a 42-day crew schedule window.
+- `Flights` shows assigned FlightLeg cards and links to crew flight details.
+- `Requests` creates only the signed-in crew member's own `TimeOffRequest`
+  rows as `PENDING` and `CrewScheduleRequest` rows as `SUBMITTED`.
+- `Profile` shows crew identity, base, qualifications, and warning-only status.
+- `/crew/me/flights/[flightLegId]` shows assigned flight detail with crew-safe
+  Preflight/Postflight forms using existing readiness semantics.
+- `CREW` users hitting `/` redirect to `/crew/me`; the shell shows crew-only
+  navigation.
+
+Still deferred:
+
+- Redirecting `/crew/portal` to `/crew/me`.
+- Richer trip brief UX on `/crew/me/flights/[flightLegId]`.
+- Demo data ensuring the linked local crew smoke user has an assigned future
+  FlightLeg inside the 42-day window.
+- Additional phone/iPad browser QA after a normal crew login.
 
 ## Purpose
 

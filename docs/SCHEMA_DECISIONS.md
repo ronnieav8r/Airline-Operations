@@ -24,6 +24,25 @@ and `docs/BACKEND_MVP_GAP_REVIEW.md`.
 Future schema changes should be treated as post-MVP backend work unless they
 are required to support approved frontend readiness or UI polish.
 
+## Maintenance Serviceability And Return To Service
+
+Maintenance serviceability is computed, not manually stored as the primary
+aircraft release decision. Use
+`docs/MAINTENANCE_SERVICEABILITY_RTS_LIFECYCLE.md` and
+`lib/aircraft-serviceability.ts` as the current source of truth.
+
+Current lifecycle:
+
+- A new official discrepancy starts `OPEN` and makes the aircraft not
+  serviceable.
+- An approved MEL/CDL/NEF/company/other approved deferral can move the
+  discrepancy to `DEFERRED` and surface limitations.
+- Corrective maintenance can move the discrepancy to
+  `CORRECTED_PENDING_RTS`.
+- Only a signed `ReturnToServiceRecord` clears a corrected discrepancy.
+- `AirworthinessRelease` remains historical/operator-specific evidence, not
+  the normal everyday maintenance gate.
+
 ## Major Scaffolding Roadmap
 
 The remaining major scaffolding is now planned in

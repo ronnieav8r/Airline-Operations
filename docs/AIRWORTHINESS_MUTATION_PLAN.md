@@ -192,11 +192,11 @@ The durable release-blocking policy is:
 docs/RELEASE_BLOCKING_POLICY.md
 ```
 
-Airworthiness impact: missing or expired current aircraft maintenance
-airworthiness release is recommended as a future normal release blocker. Open
-discrepancies and active deferrals remain warnings until severity, category,
-due-date, MEL/CDL, and authority-specific policy exists. Current app behavior
-remains warning-only.
+Airworthiness impact: this older release-blocking recommendation is superseded
+by the 2026-06-30 serviceability/RTS lifecycle. Future maintenance readiness
+should use computed aircraft serviceability, not missing or expired current
+`AirworthinessRelease`, as the normal gate. Current app behavior remains
+warning-first unless a later enforcement slice is explicitly planned.
 
 ## Readiness Policy
 
@@ -204,9 +204,10 @@ Keep warning-first behavior.
 
 - Open discrepancies warn.
 - Active deferrals warn.
-- Missing configuration or released airworthiness record warns.
+- Missing configuration warns. Airworthiness release history may be shown as
+  context, but computed serviceability is the maintenance readiness input.
 - No hard release blocking should be added until a later implementation slice
-  explicitly enforces the Prompt 46 policy.
+  explicitly enforces an updated serviceability policy.
 
 Hard blocking should wait until a policy slice decides which warnings become
 release blockers, which authority contexts they apply to, and who can override

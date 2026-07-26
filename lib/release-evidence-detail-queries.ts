@@ -8,6 +8,10 @@ import {
   Prisma,
 } from "@prisma/client";
 
+import {
+  CrewComplianceRuleDefinition,
+  getActiveCrewComplianceRuleDefinitions,
+} from "@/lib/crew-compliance-rule-defaults";
 import { prisma } from "@/lib/prisma";
 
 const releaseEvidenceDetailSelect = {
@@ -117,6 +121,7 @@ const releaseEvidenceDetailSelect = {
       aircraft: {
         select: {
           id: true,
+          status: true,
           tailNumber: true,
           type: true,
           seats: true,
@@ -160,7 +165,13 @@ const releaseEvidenceDetailSelect = {
           },
           discrepancies: {
             where: {
-              status: { in: [DiscrepancyStatus.OPEN, DiscrepancyStatus.DEFERRED] },
+              status: {
+                in: [
+                  DiscrepancyStatus.OPEN,
+                  DiscrepancyStatus.DEFERRED,
+                  DiscrepancyStatus.CORRECTED_PENDING_RTS,
+                ],
+              },
             },
             orderBy: [{ reportedAt: "desc" }],
             select: {
@@ -180,6 +191,8 @@ const releaseEvidenceDetailSelect = {
               deferralNumber: true,
               category: true,
               dueAt: true,
+              operatingLimitations: true,
+              requiredProcedures: true,
               status: true,
               discrepancy: {
                 select: {
@@ -239,6 +252,7 @@ const releaseEvidenceDetailSelect = {
           employeeNumber: true,
           firstName: true,
           lastName: true,
+          dateOfBirth: true,
           certificates: {
             select: {
               expiresAt: true,
@@ -247,24 +261,61 @@ const releaseEvidenceDetailSelect = {
           },
           medicals: {
             select: {
+              id: true,
               expiresAt: true,
+              issuedAt: true,
+              medicalClass: true,
               status: true,
             },
           },
           trainingEvents: {
+            orderBy: [{ completedAt: "desc" }],
+            take: 8,
             select: {
+              id: true,
+              completedAt: true,
               expiresAt: true,
+              result: true,
               status: true,
+              trainingType: true,
             },
           },
           checkEvents: {
+            orderBy: [{ completedAt: "desc" }],
+            take: 8,
             select: {
+              id: true,
+              checkType: true,
+              completedAt: true,
               expiresAt: true,
+              result: true,
+              seatRole: true,
               status: true,
             },
           },
           recencyEvents: {
+            orderBy: [{ eventAt: "desc" }],
+            take: 8,
             select: {
+              id: true,
+              eventAt: true,
+              quantity: true,
+              recencyType: true,
+              result: true,
+              seatRole: true,
+              status: true,
+            },
+          },
+          plannedComplianceEvents: {
+            where: {
+              status: "SCHEDULED",
+            },
+            orderBy: [{ scheduledFor: "asc" }],
+            take: 8,
+            select: {
+              id: true,
+              eventType: true,
+              scheduledFor: true,
               status: true,
             },
           },
@@ -509,15 +560,33 @@ const releaseEvidenceDetailSelect = {
   },
 } satisfies Prisma.FlightLegSelect;
 
-export type ReleaseEvidenceDetail = Prisma.FlightLegGetPayload<{
+type ReleaseEvidenceDetailPayload = Prisma.FlightLegGetPayload<{
   select: typeof releaseEvidenceDetailSelect;
 }>;
+
+export type ReleaseEvidenceDetail = ReleaseEvidenceDetailPayload & {
+  crewComplianceRules: CrewComplianceRuleDefinition[];
+};
 
 export async function getReleaseEvidenceDetail(
   flightLegId: string,
 ): Promise<ReleaseEvidenceDetail | null> {
-  return prisma.flightLeg.findUnique({
+  const detail = await prisma.flightLeg.findUnique({
     where: { id: flightLegId },
     select: releaseEvidenceDetailSelect,
   });
+
+  if (!detail) {
+    return null;
+  }
+
+  const crewComplianceRules = await getActiveCrewComplianceRuleDefinitions(
+    prisma,
+    detail.operatingAuthority.operatingPart,
+  );
+
+  return {
+    ...detail,
+    crewComplianceRules,
+  };
 }

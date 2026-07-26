@@ -1,5 +1,4 @@
 import {
-  CrewComplianceRecordStatus,
   CrewLogisticsNeedStatus,
   CrewScheduleEntryStatus,
   DutyStatus,
@@ -13,6 +12,11 @@ import {
   getUpcomingCoverageFlightsForAircrafts,
   UpcomingCoverageFlight,
 } from "@/lib/flightleg-upcoming-coverage";
+import { evaluateCrewCompliance } from "@/lib/crew-compliance-evaluator";
+import {
+  CrewComplianceRuleDefinition,
+  getActiveCrewComplianceRuleDefinitions,
+} from "@/lib/crew-compliance-rule-defaults";
 import { prisma } from "@/lib/prisma";
 
 export const CREW_SCHEDULING_WINDOW_DAYS = 7;
@@ -32,6 +36,7 @@ const crewPlannerSelect = {
   lastName: true,
   dutyStatus: true,
   employmentStatus: true,
+  dateOfBirth: true,
   baseStation: {
     select: {
       code: true,
@@ -189,24 +194,61 @@ const crewPlannerSelect = {
   },
   medicals: {
     select: {
+      id: true,
       expiresAt: true,
+      issuedAt: true,
+      medicalClass: true,
       status: true,
     },
   },
   trainingEvents: {
+    orderBy: [{ completedAt: "desc" }],
+    take: 8,
     select: {
+      id: true,
+      completedAt: true,
       expiresAt: true,
+      result: true,
       status: true,
+      trainingType: true,
     },
   },
   checkEvents: {
+    orderBy: [{ completedAt: "desc" }],
+    take: 8,
     select: {
+      id: true,
+      checkType: true,
+      completedAt: true,
       expiresAt: true,
+      result: true,
+      seatRole: true,
       status: true,
     },
   },
   recencyEvents: {
+    orderBy: [{ eventAt: "desc" }],
+    take: 8,
     select: {
+      id: true,
+      eventAt: true,
+      quantity: true,
+      recencyType: true,
+      result: true,
+      seatRole: true,
+      status: true,
+    },
+  },
+  plannedComplianceEvents: {
+    where: {
+      status: "SCHEDULED",
+    },
+    orderBy: [{ scheduledFor: "asc" }],
+    take: 8,
+    select: {
+      id: true,
+      eventType: true,
+      scheduledFor: true,
       status: true,
     },
   },
@@ -357,42 +399,12 @@ function buildAvailabilityWarnings(
   return warnings;
 }
 
-function isExpired(expiresAt: Date | null, now: Date): boolean {
-  return Boolean(expiresAt && expiresAt < now);
-}
-
-function hasExpiredStatus(status: CrewComplianceRecordStatus): boolean {
-  return status === CrewComplianceRecordStatus.EXPIRED || status === CrewComplianceRecordStatus.VOIDED;
-}
-
-function buildComplianceWarnings(crewMember: CrewPlannerPayload, now: Date): string[] {
-  const warnings: string[] = [];
-  const missingCategories = [
-    crewMember.certificates.length === 0 ? "certificate" : null,
-    crewMember.medicals.length === 0 ? "medical" : null,
-    crewMember.trainingEvents.length === 0 ? "training" : null,
-    crewMember.checkEvents.length === 0 ? "check" : null,
-    crewMember.recencyEvents.length === 0 ? "recency" : null,
-    crewMember.dutyPeriods.length === 0 ? "duty" : null,
-    crewMember.restPeriods.length === 0 ? "rest" : null,
-  ].filter(Boolean);
-
-  if (missingCategories.length > 0) {
-    warnings.push(`Missing ${missingCategories.join(", ")} evidence.`);
-  }
-
-  const expiredCount =
-    crewMember.certificates.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.medicals.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.trainingEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.checkEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.recencyEvents.filter((item) => hasExpiredStatus(item.status)).length;
-
-  if (expiredCount > 0) {
-    warnings.push(`${expiredCount} expired or voided compliance record${expiredCount === 1 ? "" : "s"}.`);
-  }
-
-  return warnings;
+function buildComplianceWarnings(
+  crewMember: CrewPlannerPayload,
+  complianceRules: CrewComplianceRuleDefinition[],
+  now: Date,
+): string[] {
+  return evaluateCrewCompliance(crewMember, complianceRules, now).warnings;
 }
 
 export async function getCrewSchedulingPlannerData(
@@ -403,7 +415,8 @@ export async function getCrewSchedulingPlannerData(
   windowStart.setHours(0, 0, 0, 0);
   const windowDays = options.windowDays ?? CREW_SCHEDULING_WINDOW_DAYS;
   const windowEnd = addDays(windowStart, windowDays);
-  const crewMembers = await prisma.crewMember.findMany({
+  const [crewMembers, complianceRules] = await Promise.all([
+    prisma.crewMember.findMany({
     orderBy: [{ employmentStatus: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
     select: {
       ...crewPlannerSelect,
@@ -437,7 +450,9 @@ export async function getCrewSchedulingPlannerData(
         },
       },
     },
-  });
+  }),
+    getActiveCrewComplianceRuleDefinitions(prisma),
+  ]);
   const aircraftIds = Array.from(
     new Set(
       crewMembers.flatMap((crewMember) =>
@@ -472,7 +487,7 @@ export async function getCrewSchedulingPlannerData(
 
       return [{ ...flight, seatRoles }];
     });
-    const complianceWarnings = buildComplianceWarnings(crewMember, now);
+    const complianceWarnings = buildComplianceWarnings(crewMember, complianceRules, now);
     const availabilityWarnings = buildAvailabilityWarnings(
       crewMember,
       complianceWarnings,

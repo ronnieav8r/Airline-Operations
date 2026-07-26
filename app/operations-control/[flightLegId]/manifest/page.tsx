@@ -1,4 +1,10 @@
-import { IdDocumentType, ManifestStatus } from "@prisma/client";
+import {
+  IdDocumentType,
+  ManifestStatus,
+  PassengerAviationInterest,
+  PassengerConversationPreference,
+  PassengerTemperaturePreference,
+} from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -28,6 +34,17 @@ type PageProps = {
 };
 
 type ManifestItem = NonNullable<ManifestWorkflowData["manifest"]>["items"][number];
+type PassengerServiceProfileSummary = {
+  aviationInterest: PassengerAviationInterest;
+  beveragePreferences: string | null;
+  cabinComfortNotes: string | null;
+  cateringAvoidances: string | null;
+  cateringPreferences: string | null;
+  conversationPreference: PassengerConversationPreference;
+  flightDeckInteractionNotes: string | null;
+  serviceNotes: string | null;
+  temperaturePreference: PassengerTemperaturePreference;
+} | null;
 
 function firstSearchParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
@@ -51,6 +68,50 @@ function decimalString(value: { toString(): string } | null): string {
   return value?.toString() ?? "";
 }
 
+function formatEnum(value: string | null | undefined): string {
+  return value ? value.replaceAll("_", " ") : "Not set";
+}
+
+function servicePreferenceLabel(value: string | null | undefined): string {
+  return value && value !== "UNKNOWN" ? formatEnum(value) : "Not set";
+}
+
+function hasServiceProfile(profile: PassengerServiceProfileSummary | undefined): profile is NonNullable<PassengerServiceProfileSummary> {
+  return Boolean(
+    profile &&
+      (profile.aviationInterest !== PassengerAviationInterest.UNKNOWN ||
+        profile.beveragePreferences ||
+        profile.cabinComfortNotes ||
+        profile.cateringAvoidances ||
+        profile.cateringPreferences ||
+        profile.conversationPreference !== PassengerConversationPreference.UNKNOWN ||
+        profile.flightDeckInteractionNotes ||
+        profile.serviceNotes ||
+        profile.temperaturePreference !== PassengerTemperaturePreference.UNKNOWN),
+  );
+}
+
+function serviceProfileOptionSummary(profile: PassengerServiceProfileSummary | undefined): string | null {
+  if (!hasServiceProfile(profile)) {
+    return null;
+  }
+
+  const parts = [
+    profile.cateringPreferences || profile.beveragePreferences ? "service notes" : null,
+    profile.temperaturePreference !== PassengerTemperaturePreference.UNKNOWN
+      ? servicePreferenceLabel(profile.temperaturePreference)
+      : null,
+    profile.conversationPreference !== PassengerConversationPreference.UNKNOWN
+      ? servicePreferenceLabel(profile.conversationPreference)
+      : null,
+    profile.aviationInterest !== PassengerAviationInterest.UNKNOWN
+      ? servicePreferenceLabel(profile.aviationInterest)
+      : null,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(" | ") : "service profile";
+}
+
 function passengerName(item: ManifestItem): string {
   if (item.personName) {
     return item.personName;
@@ -65,17 +126,30 @@ function passengerName(item: ManifestItem): string {
   return "";
 }
 
+function passengerRecordName(passenger: {
+  firstName: string;
+  lastName: string;
+  middleName: string | null;
+}) {
+  return [passenger.firstName, passenger.middleName, passenger.lastName]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function optionName(passenger: {
   email: string | null;
   firstName: string;
   idDocumentType: IdDocumentType | null;
   lastName: string;
   middleName: string | null;
+  serviceProfile?: PassengerServiceProfileSummary;
 }) {
-  const name = [passenger.firstName, passenger.middleName, passenger.lastName]
-    .filter(Boolean)
-    .join(" ");
-  const details = [passenger.email, passenger.idDocumentType?.replaceAll("_", " ")]
+  const name = passengerRecordName(passenger);
+  const details = [
+    passenger.email,
+    passenger.idDocumentType?.replaceAll("_", " "),
+    serviceProfileOptionSummary(passenger.serviceProfile),
+  ]
     .filter(Boolean)
     .join(" | ");
 
@@ -127,6 +201,63 @@ function StatusBadge({ status }: { status: ManifestStatus | null }) {
     >
       {status ?? "Missing"}
     </span>
+  );
+}
+
+function ServiceProfileHighlights({
+  profile,
+  title = "Passenger service profile",
+}: {
+  profile: PassengerServiceProfileSummary | undefined;
+  title?: string;
+}) {
+  if (!hasServiceProfile(profile)) {
+    return null;
+  }
+
+  const highlights = [
+    ["Catering", profile.cateringPreferences],
+    ["Avoid", profile.cateringAvoidances],
+    ["Beverage", profile.beveragePreferences],
+    ["Temperature", servicePreferenceLabel(profile.temperaturePreference)],
+    ["Conversation", servicePreferenceLabel(profile.conversationPreference)],
+    ["Aviation interest", servicePreferenceLabel(profile.aviationInterest)],
+  ].filter(([, value]) => value && value !== "Not set");
+
+  const notes = [
+    ["Cabin", profile.cabinComfortNotes],
+    ["Cockpit / flight deck", profile.flightDeckInteractionNotes],
+    ["Service", profile.serviceNotes],
+  ].filter(([, value]) => value);
+
+  return (
+    <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold">{title}</p>
+        <span className="rounded-full border border-sky-200 bg-white px-2 py-0.5 text-xs font-semibold text-sky-700">
+          Preference notes
+        </span>
+      </div>
+      <div className="mt-2 grid gap-1 sm:grid-cols-2">
+        {highlights.map(([label, value]) => (
+          <p key={label}>
+            <span className="font-medium">{label}:</span> {value}
+          </p>
+        ))}
+      </div>
+      {notes.length > 0 ? (
+        <div className="mt-2 space-y-1">
+          {notes.map(([label, value]) => (
+            <p className="rounded border border-sky-200 bg-white p-2" key={label}>
+              <span className="font-medium">{label}:</span> {value}
+            </p>
+          ))}
+        </div>
+      ) : null}
+      <p className="mt-2 text-xs text-sky-800">
+        Preference notes only; not an operational promise or cockpit-access authorization.
+      </p>
+    </div>
   );
 }
 
@@ -203,6 +334,9 @@ function AddPassengerForm({
 }) {
   const linkedIds = new Set(linkedPassengers.map((passenger) => passenger.id));
   const otherPassengers = globalPassengers.filter((passenger) => !linkedIds.has(passenger.id));
+  const profiledPassengers = [...linkedPassengers, ...otherPassengers]
+    .filter((passenger) => hasServiceProfile(passenger.serviceProfile))
+    .slice(0, 6);
 
   return (
     <form action={action} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
@@ -237,6 +371,20 @@ function AddPassengerForm({
         <Field label="Weight" name="weight" type="number" />
         <Field label="Baggage" name="baggageWeight" type="number" />
       </div>
+      {profiledPassengers.length > 0 ? (
+        <div className="mt-3 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Service profiles on file
+          </p>
+          {profiledPassengers.map((passenger) => (
+            <ServiceProfileHighlights
+              key={passenger.id}
+              profile={passenger.serviceProfile}
+              title={passengerRecordName(passenger)}
+            />
+          ))}
+        </div>
+      ) : null}
       <div className="mt-3">
         <Field label="Manifest notes" name="notes" />
       </div>
@@ -337,6 +485,11 @@ function ManifestItems({
             {warnings.length > 0 ? (
               <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
                 {warnings.join(" ")}
+              </div>
+            ) : null}
+            {item.passenger ? (
+              <div className="mt-3">
+                <ServiceProfileHighlights profile={item.passenger.serviceProfile} />
               </div>
             ) : null}
             <div className="mt-3">

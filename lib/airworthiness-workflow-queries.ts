@@ -2,6 +2,7 @@ import {
   AircraftCapabilityStatus,
   AircraftConfigurationStatus,
   AirworthinessReleaseStatus,
+  DeferralMethod,
   DeferralStatus,
   DiscrepancyStatus,
   MaintenanceEventType,
@@ -66,6 +67,11 @@ const aircraftAirworthinessWorkflowSelect = {
       severity: true,
       reportedAt: true,
       clearedAt: true,
+      voidedAt: true,
+      voidReason: true,
+      activeDeferralId: true,
+      correctiveMaintenanceEventId: true,
+      clearingReturnToServiceRecordId: true,
       correctiveSummary: true,
       deferrals: {
         orderBy: [{ deferredAt: "desc" }],
@@ -74,8 +80,21 @@ const aircraftAirworthinessWorkflowSelect = {
           deferralNumber: true,
           status: true,
           category: true,
+          deferralMethod: true,
+          melItemNumber: true,
           dueAt: true,
         },
+      },
+      returnToServiceRecords: {
+        orderBy: [{ createdAt: "desc" }],
+        select: {
+          id: true,
+          rtsNumber: true,
+          status: true,
+          returnToServiceAt: true,
+          signedAt: true,
+        },
+        take: 3,
       },
     },
   },
@@ -87,9 +106,16 @@ const aircraftAirworthinessWorkflowSelect = {
       deferralNumber: true,
       status: true,
       category: true,
+      deferralMethod: true,
       deferredAt: true,
       dueAt: true,
       clearedAt: true,
+      melItemNumber: true,
+      repairInterval: true,
+      authorityType: true,
+      placardRequired: true,
+      operatingLimitations: true,
+      requiredProcedures: true,
       notes: true,
       discrepancy: {
         select: {
@@ -114,6 +140,13 @@ const aircraftAirworthinessWorkflowSelect = {
       completedAt: true,
       providerName: true,
       description: true,
+      workPerformed: true,
+      manualReference: true,
+      taskReference: true,
+      performedByName: true,
+      performedByCertificateNumber: true,
+      approvedByCertificateNumber: true,
+      approvedByCertificateType: true,
       returnToServiceAt: true,
       notes: true,
       discrepancy: {
@@ -125,6 +158,36 @@ const aircraftAirworthinessWorkflowSelect = {
         },
       },
     },
+  },
+  returnToServiceRecords: {
+    orderBy: [{ createdAt: "desc" }],
+    select: {
+      id: true,
+      discrepancyId: true,
+      maintenanceEventId: true,
+      logbookEntryId: true,
+      rtsNumber: true,
+      status: true,
+      workSummary: true,
+      approvalBasis: true,
+      returnToServiceAt: true,
+      signedAt: true,
+      voidedAt: true,
+      voidReason: true,
+      signer: {
+        select: {
+          email: true,
+        },
+      },
+      authorityProfile: {
+        select: {
+          legalName: true,
+          certificateNumber: true,
+          certificateType: true,
+        },
+      },
+    },
+    take: 20,
   },
   airworthinessReleases: {
     orderBy: [{ createdAt: "desc" }],
@@ -158,8 +221,17 @@ export async function getAircraftAirworthinessWorkflowData(
 export const editableDiscrepancyStatuses = [
   DiscrepancyStatus.OPEN,
   DiscrepancyStatus.DEFERRED,
+  DiscrepancyStatus.CORRECTED_PENDING_RTS,
   DiscrepancyStatus.CLEARED,
   DiscrepancyStatus.CANCELLED,
+];
+
+export const editableDeferralMethods = [
+  DeferralMethod.MEL,
+  DeferralMethod.CDL,
+  DeferralMethod.NEF,
+  DeferralMethod.COMPANY_APPROVED,
+  DeferralMethod.OTHER_APPROVED,
 ];
 
 export const editableDeferralStatuses = [

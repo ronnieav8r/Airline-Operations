@@ -2,6 +2,18 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
+const passengerServiceProfileSelect = {
+  aviationInterest: true,
+  beveragePreferences: true,
+  cabinComfortNotes: true,
+  cateringAvoidances: true,
+  cateringPreferences: true,
+  conversationPreference: true,
+  flightDeckInteractionNotes: true,
+  serviceNotes: true,
+  temperaturePreference: true,
+} satisfies Prisma.PassengerServiceProfileSelect;
+
 const manifestWorkflowSelect = {
   id: true,
   flightNumber: true,
@@ -32,6 +44,9 @@ const manifestWorkflowSelect = {
                   idDocumentType: true,
                   lastName: true,
                   middleName: true,
+                  serviceProfile: {
+                    select: passengerServiceProfileSelect,
+                  },
                 },
               },
             },
@@ -61,6 +76,9 @@ const manifestWorkflowSelect = {
               firstName: true,
               middleName: true,
               lastName: true,
+              serviceProfile: {
+                select: passengerServiceProfileSelect,
+              },
             },
           },
         },
@@ -93,6 +111,9 @@ export async function getManifestPassengerOptions() {
       idDocumentType: true,
       lastName: true,
       middleName: true,
+      serviceProfile: {
+        select: passengerServiceProfileSelect,
+      },
     },
     take: 250,
   });

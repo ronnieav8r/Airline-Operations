@@ -1,6 +1,6 @@
 # Airworthiness Schema Decisions
 
-Last updated: 2026-06-07
+Last updated: 2026-06-30
 
 This document defines the first airworthiness schema boundary after the
 release-evidence workflow batch. It is the source of truth for Prompts 34-36.
@@ -12,6 +12,28 @@ airworthiness decisions for a released FlightLeg.
 
 The next schema slice should add airworthiness evidence additively without
 rewriting aircraft status, flight release, or release evidence.
+
+## 2026-06-30 Serviceability Restructure
+
+The current serviceability lifecycle supersedes the early warning-only
+airworthiness-release framing in this document. Use:
+
+```text
+docs/MAINTENANCE_SERVICEABILITY_RTS_LIFECYCLE.md
+lib/aircraft-serviceability.ts
+```
+
+Current rules:
+
+- Aircraft serviceability is computed, not manually stored as the primary
+  decision.
+- A new official discrepancy starts `OPEN` and makes the aircraft not
+  serviceable until approved deferral or signed Return to Service.
+- Corrective maintenance moves a discrepancy to `CORRECTED_PENDING_RTS`; it
+  does not clear the discrepancy without signed RTS.
+- `AirworthinessRelease` remains historical/operator-specific evidence, not
+  the default everyday maintenance gate.
+- Do not add direct discrepancy clear/status editing as the normal workflow.
 
 ## Prompt 34 Decision
 
@@ -45,13 +67,18 @@ Use these cardinalities:
 
 ## Status Policy
 
-Use warning-first behavior in v1.
+This early warning-first policy is superseded by the serviceability/RTS
+lifecycle in `docs/MAINTENANCE_SERVICEABILITY_RTS_LIFECYCLE.md`.
 
-- Open discrepancies should warn, not block.
-- Active deferrals should warn, not block.
-- Missing current configuration or airworthiness release should warn, not block.
-- Hard release blocking remains deferred until product policy is explicitly
-  approved.
+Current behavior:
+
+- Open discrepancies make the aircraft not serviceable until deferred or
+  cleared through signed Return to Service.
+- Active valid deferrals may leave the aircraft serviceable with limitations.
+- Expired deferrals, corrected-pending-RTS items, and AOG/out-of-service state
+  make the aircraft not serviceable.
+- Missing current `AirworthinessRelease` is not the normal serviceability gate.
+  `AirworthinessRelease` remains historical/operator-specific evidence.
 
 ## Prompt 35 Scope
 
@@ -92,11 +119,12 @@ Prompt 36 should add:
 
 Implementation status: complete.
 
-The read-only implementation surfaces assigned-aircraft configuration,
-capability, discrepancy, deferral, maintenance event, and airworthiness release
-context on `/aircraft` and `/operations-control/[flightLegId]`. The release
-readiness checklist treats airworthiness as warning-only. Release actions stay
-available even when warnings are present.
+The read-only implementation originally surfaced assigned-aircraft
+configuration, capability, discrepancy, deferral, maintenance event, and
+airworthiness release context on `/aircraft` and
+`/operations-control/[flightLegId]`. Current aircraft and release-readiness
+surfaces should derive maintenance state from computed aircraft serviceability,
+not from a missing/current airworthiness-release record.
 
 ## Prompt 37 Scope
 
@@ -163,10 +191,11 @@ generation, `RELEASED` supersede behavior, manual `VOIDED`, and optional
 expiration and notes. `flightLegId`, `releasedById`, operational
 `FlightRelease` mutation, and hard release blocking remain deferred.
 
-Prompt 44 implementation status: complete. Aircraft and FlightLeg detail now
-read recent airworthiness release history and derive warning-only readiness
-from the current non-expired `RELEASED` aircraft record. Expired, voided, and
-superseded context warns only; no operational release blocking was added.
+Prompt 44 implementation status: superseded. Aircraft overview surfaces no
+longer derive maintenance readiness from the current non-expired `RELEASED`
+aircraft record. Airworthiness release history remains available for
+historical/operator-specific workflows, while maintenance readiness uses the
+shared serviceability lifecycle.
 
 ## Deferred
 

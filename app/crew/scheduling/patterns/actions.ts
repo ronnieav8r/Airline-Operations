@@ -33,6 +33,7 @@ const editableDutyStatuses = [
   DutyStatus.OFF_DUTY,
   DutyStatus.VACATION,
   DutyStatus.SICK,
+  DutyStatus.PERSONAL,
   DutyStatus.TRAINING,
   DutyStatus.DEADHEADING,
 ] as const;

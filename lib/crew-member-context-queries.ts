@@ -1,5 +1,4 @@
 import {
-  CrewComplianceRecordStatus,
   CrewLogisticsNeedStatus,
   CrewScheduleEntryStatus,
   CrewSchedulePeriodStatus,
@@ -15,6 +14,12 @@ import {
   getUpcomingCoverageFlightsForAircrafts,
   UpcomingCoverageFlight,
 } from "@/lib/flightleg-upcoming-coverage";
+import {
+  CrewComplianceEvaluationStatus,
+  CrewComplianceFinding,
+  evaluateCrewCompliance,
+} from "@/lib/crew-compliance-evaluator";
+import { getActiveCrewComplianceRuleDefinitions } from "@/lib/crew-compliance-rule-defaults";
 import { prisma } from "@/lib/prisma";
 
 export const CREW_MEMBER_CONTEXT_WINDOW_DAYS = 7;
@@ -26,6 +31,7 @@ const crewMemberContextSelect = {
   lastName: true,
   dutyStatus: true,
   employmentStatus: true,
+  dateOfBirth: true,
   hireDate: true,
   phone: true,
   email: true,
@@ -214,9 +220,11 @@ const crewMemberContextSelect = {
       id: true,
       aircraftType: true,
       certificateType: true,
+      coveredOperatingParts: true,
       expiresAt: true,
       issuedAt: true,
       ratingOrEndorsement: true,
+      satisfiesRequirements: true,
       seatRole: true,
       status: true,
     },
@@ -225,10 +233,12 @@ const crewMemberContextSelect = {
     orderBy: [{ expiresAt: "asc" }, { issuedAt: "desc" }],
     select: {
       id: true,
+      coveredOperatingParts: true,
       expiresAt: true,
       issuedAt: true,
       limitations: true,
       medicalClass: true,
+      satisfiesRequirements: true,
       status: true,
     },
   },
@@ -239,9 +249,11 @@ const crewMemberContextSelect = {
       id: true,
       aircraftType: true,
       completedAt: true,
+      coveredOperatingParts: true,
       expiresAt: true,
       programName: true,
       result: true,
+      satisfiesRequirements: true,
       status: true,
       trainingType: true,
     },
@@ -254,8 +266,10 @@ const crewMemberContextSelect = {
       aircraftType: true,
       checkType: true,
       completedAt: true,
+      coveredOperatingParts: true,
       expiresAt: true,
       result: true,
+      satisfiesRequirements: true,
       seatRole: true,
       status: true,
     },
@@ -267,10 +281,25 @@ const crewMemberContextSelect = {
       id: true,
       aircraftType: true,
       eventAt: true,
+      coveredOperatingParts: true,
       quantity: true,
       recencyType: true,
       result: true,
+      satisfiesRequirements: true,
       seatRole: true,
+      status: true,
+    },
+  },
+  plannedComplianceEvents: {
+    where: {
+      status: "SCHEDULED",
+    },
+    orderBy: [{ scheduledFor: "asc" }],
+    take: 8,
+    select: {
+      id: true,
+      eventType: true,
+      scheduledFor: true,
       status: true,
     },
   },
@@ -322,6 +351,8 @@ export type CrewMemberContextFlight = Pick<
 export type CrewMemberContextData = CrewMemberContextPayload & {
   activeAssignments: CrewMemberContextPayload["assignments"];
   availabilityWarnings: string[];
+  complianceFindings: CrewComplianceFinding[];
+  complianceStatus: CrewComplianceEvaluationStatus;
   complianceWarnings: string[];
   schedulesInWindow: CrewMemberContextPayload["schedules"];
   scheduleEntriesInWindow: CrewMemberContextPayload["scheduleEntries"];
@@ -457,59 +488,6 @@ function buildAvailabilityWarnings(
   return warnings;
 }
 
-function isExpired(expiresAt: Date | null, now: Date): boolean {
-  return Boolean(expiresAt && expiresAt < now);
-}
-
-function hasExpiredStatus(status: CrewComplianceRecordStatus): boolean {
-  return status === CrewComplianceRecordStatus.EXPIRED || status === CrewComplianceRecordStatus.VOIDED;
-}
-
-function buildComplianceWarnings(crewMember: CrewMemberContextPayload, now: Date): string[] {
-  const warnings: string[] = [];
-
-  if (crewMember.certificates.length === 0) {
-    warnings.push("No certificate/rating evidence recorded.");
-  }
-
-  if (crewMember.medicals.length === 0) {
-    warnings.push("No medical certificate evidence recorded.");
-  }
-
-  if (crewMember.trainingEvents.length === 0) {
-    warnings.push("No training event evidence recorded.");
-  }
-
-  if (crewMember.checkEvents.length === 0) {
-    warnings.push("No check event evidence recorded.");
-  }
-
-  if (crewMember.recencyEvents.length === 0) {
-    warnings.push("No recency event evidence recorded.");
-  }
-
-  if (crewMember.dutyPeriods.length === 0) {
-    warnings.push("No duty-period evidence recorded.");
-  }
-
-  if (crewMember.restPeriods.length === 0) {
-    warnings.push("No rest-period evidence recorded.");
-  }
-
-  const expiredCount =
-    crewMember.certificates.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.medicals.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.trainingEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.checkEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-    crewMember.recencyEvents.filter((item) => hasExpiredStatus(item.status)).length;
-
-  if (expiredCount > 0) {
-    warnings.push(`${expiredCount} expired or voided compliance record${expiredCount === 1 ? "" : "s"} found.`);
-  }
-
-  return warnings;
-}
-
 export async function getCrewMemberContextData(
   crewMemberId: string,
 ): Promise<CrewMemberContextData | null> {
@@ -517,7 +495,8 @@ export async function getCrewMemberContextData(
   const windowStart = new Date(now);
   windowStart.setHours(0, 0, 0, 0);
   const windowEnd = addDays(now, CREW_MEMBER_CONTEXT_WINDOW_DAYS);
-  const crewMember = await prisma.crewMember.findUnique({
+  const [crewMember, complianceRules] = await Promise.all([
+    prisma.crewMember.findUnique({
     where: { id: crewMemberId },
     select: {
       ...crewMemberContextSelect,
@@ -551,7 +530,9 @@ export async function getCrewMemberContextData(
         },
       },
     },
-  });
+  }),
+    getActiveCrewComplianceRuleDefinitions(prisma),
+  ]);
 
   if (!crewMember) {
     return null;
@@ -585,7 +566,8 @@ export async function getCrewMemberContextData(
   const timeOffInWindow = crewMember.timeOffRequests.filter((request) =>
     overlapsWindow(request.startDate, request.endDate, now, windowEnd),
   );
-  const complianceWarnings = buildComplianceWarnings(crewMember, now);
+  const complianceEvaluation = evaluateCrewCompliance(crewMember, complianceRules, now);
+  const complianceWarnings = complianceEvaluation.warnings;
 
   return {
     ...crewMember,
@@ -598,6 +580,8 @@ export async function getCrewMemberContextData(
       timeOffInWindow,
       upcomingFlights,
     ),
+    complianceFindings: complianceEvaluation.findings,
+    complianceStatus: complianceEvaluation.strongestStatus,
     complianceWarnings,
     scheduleEntriesInWindow,
     schedulesInWindow,

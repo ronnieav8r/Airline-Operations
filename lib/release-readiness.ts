@@ -1,7 +1,5 @@
 import {
-  AirworthinessReleaseStatus,
   AircraftFuelEventType,
-  CrewComplianceRecordStatus,
   DispatchPackageStatus,
   FlightLocatingStatus,
   ManifestStatus,
@@ -15,6 +13,8 @@ import {
 } from "@prisma/client";
 
 import { evaluateDutyRestForFlightLeg } from "@/lib/duty-rest-evaluator";
+import { evaluateCrewCompliance } from "@/lib/crew-compliance-evaluator";
+import { evaluateAircraftServiceability } from "@/lib/aircraft-serviceability";
 import {
   isFlightPlanBasisReady,
   isLocatingRequired,
@@ -79,28 +79,6 @@ export function getReleaseSnapshotStatus(
   return ReleaseSnapshotStatus.PASS;
 }
 
-function releaseReadinessDate(value: Date | null | undefined): string {
-  if (!value) {
-    return "Not set";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(value);
-}
-
-function hasExpiredStatus(status: CrewComplianceRecordStatus): boolean {
-  return status === CrewComplianceRecordStatus.EXPIRED || status === CrewComplianceRecordStatus.VOIDED;
-}
-
-function isExpired(expiresAt: Date | null, now: Date): boolean {
-  return Boolean(expiresAt && expiresAt < now);
-}
-
 function buildCrewComplianceWarnings(detail: ReleaseEvidenceDetail): string[] {
   const now = new Date();
   const warnings: string[] = [];
@@ -120,31 +98,13 @@ function buildCrewComplianceWarnings(detail: ReleaseEvidenceDetail): string[] {
 
   for (const assignment of crewAssignments) {
     const crewMember = assignment.crewMember;
-    const missingCategories = [
-      crewMember.certificates.length === 0 ? "certificate" : null,
-      crewMember.medicals.length === 0 ? "medical" : null,
-      crewMember.trainingEvents.length === 0 ? "training" : null,
-      crewMember.checkEvents.length === 0 ? "check" : null,
-      crewMember.recencyEvents.length === 0 ? "recency" : null,
-      crewMember.dutyPeriods.length === 0 ? "duty" : null,
-      crewMember.restPeriods.length === 0 ? "rest" : null,
-    ].filter(Boolean);
-    const expiredCount =
-      crewMember.certificates.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-      crewMember.medicals.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-      crewMember.trainingEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-      crewMember.checkEvents.filter((item) => hasExpiredStatus(item.status) || isExpired(item.expiresAt, now)).length +
-      crewMember.recencyEvents.filter((item) => hasExpiredStatus(item.status)).length;
+    const evaluation = evaluateCrewCompliance(crewMember, detail.crewComplianceRules, now);
 
-    if (missingCategories.length > 0 || expiredCount > 0) {
-      warnings.push(
-        `${crewMember.firstName} ${crewMember.lastName} has ${
-          missingCategories.length > 0 ? `missing ${missingCategories.join(", ")} evidence` : ""
-        }${missingCategories.length > 0 && expiredCount > 0 ? " and " : ""}${
-          expiredCount > 0 ? `${expiredCount} expired/voided record(s)` : ""
-        }.`,
-      );
-    }
+    warnings.push(
+      ...evaluation.warnings.map(
+        (warning) => `${crewMember.firstName} ${crewMember.lastName}: ${warning}`,
+      ),
+    );
   }
 
   return warnings;
@@ -155,16 +115,7 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
   const aircraftAssignment = detail.aircraftAssignments[0] ?? null;
   const aircraft = aircraftAssignment?.aircraft ?? null;
   const currentConfiguration = aircraft?.configurations[0] ?? null;
-  const latestAirworthinessRelease = aircraft?.airworthinessReleases[0] ?? null;
-  const currentAirworthinessRelease =
-    aircraft?.airworthinessReleases.find(
-      (release) => release.status === AirworthinessReleaseStatus.RELEASED,
-    ) ?? null;
-  const currentAirworthinessReleaseExpired =
-    !!currentAirworthinessRelease?.expiresAt &&
-    currentAirworthinessRelease.expiresAt.getTime() <= Date.now();
-  const currentAirworthinessReleaseUsable =
-    !!currentAirworthinessRelease && !currentAirworthinessReleaseExpired;
+  const aircraftServiceability = evaluateAircraftServiceability(aircraft);
   const latestUsableWeightBalanceRun =
     detail.weightBalanceRuns.find((run) => run.status !== WeightBalanceStatus.VOIDED) ?? null;
   const releaseFuel =
@@ -198,26 +149,21 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
   const notamReady = !!notam?.affectedStationCodes;
   const flightPlanReady = !!flightPlan?.externalReference && !!flightPlan.routeText;
   const airworthinessHasFutureBlocker =
-    !aircraft || !currentConfiguration || !currentAirworthinessReleaseUsable;
-  const airworthinessReady =
-    !!aircraft &&
-    !!currentConfiguration &&
-    currentAirworthinessReleaseUsable &&
-    aircraft.discrepancies.length === 0 &&
-    aircraft.deferrals.length === 0;
+    !aircraft || !currentConfiguration || aircraftServiceability.blocksRelease;
+  const airworthinessReady = !!aircraft && !!currentConfiguration && aircraftServiceability.ready;
   const airworthinessRuleKey = !aircraft
     ? "flightLeg.assignedAircraft.missing"
     : !currentConfiguration
       ? "aircraftConfiguration.active.missing"
-      : !latestAirworthinessRelease || !currentAirworthinessRelease
-        ? "airworthinessRelease.current.missing"
-        : currentAirworthinessReleaseExpired
-          ? "airworthinessRelease.current.expired"
-          : aircraft.discrepancies.length > 0
-            ? "discrepancy.open.exists"
-            : aircraft.deferrals.length > 0
-              ? "deferral.active.exists"
-              : "airworthinessRelease.current.missing";
+      : aircraftServiceability.state === "DEFERRAL_EXPIRED"
+        ? "deferral.active.expired"
+        : aircraftServiceability.state === "RTS_REQUIRED"
+          ? "discrepancy.returnToService.required"
+          : aircraftServiceability.state === "DEFERRED_WITH_LIMITATIONS"
+            ? "deferral.active.exists"
+            : aircraftServiceability.ready
+              ? "aircraft.serviceability.ready"
+              : "discrepancy.open.exists";
   const crewComplianceWarnings = buildCrewComplianceWarnings(detail);
   const crewComplianceReady = crewComplianceWarnings.length === 0;
   const dutyRestEvaluation = evaluateDutyRestForFlightLeg(detail);
@@ -233,35 +179,21 @@ export function getReleaseReadinessItems(detail: ReleaseEvidenceDetail): Release
         aircraftId: aircraft?.id ?? null,
         tailNumber: aircraft?.tailNumber ?? null,
         activeConfiguration: currentConfiguration?.configurationLabel ?? null,
-        currentAirworthinessRelease: currentAirworthinessRelease?.releaseNumber ?? null,
-        openDiscrepancies: aircraft?.discrepancies.length ?? 0,
-        activeDeferrals: aircraft?.deferrals.length ?? 0,
+        serviceabilityState: aircraftServiceability.state,
+        openDiscrepancies: aircraftServiceability.openDiscrepancyCount,
+        correctedPendingRts: aircraftServiceability.correctedPendingRtsCount,
+        activeDeferrals: aircraftServiceability.activeDeferralCount,
+        expiredDeferrals: aircraftServiceability.expiredDeferralCount,
       },
       evidenceRefId: aircraft?.id,
       evidenceRefType: aircraft ? "Aircraft" : undefined,
       label: "Airworthiness",
       message: airworthinessReady
-        ? `${aircraft.tailNumber} has active configuration and current aircraft airworthiness release ${currentAirworthinessRelease?.releaseNumber ?? "record"}.`
+        ? `${aircraft.tailNumber} is ${aircraftServiceability.label.toLowerCase()}. ${aircraftServiceability.message}`
         : [
             !aircraft ? "Assigned aircraft is missing." : null,
             aircraft && !currentConfiguration ? "No active configuration." : null,
-            aircraft && !latestAirworthinessRelease
-              ? "No aircraft airworthiness release record."
-              : null,
-            aircraft && latestAirworthinessRelease && !currentAirworthinessRelease
-              ? `Latest aircraft airworthiness release ${latestAirworthinessRelease.releaseNumber} is ${latestAirworthinessRelease.status}; no current RELEASED record.`
-              : null,
-            aircraft && currentAirworthinessReleaseExpired
-              ? `Current aircraft airworthiness release ${currentAirworthinessRelease.releaseNumber} expired ${releaseReadinessDate(
-                  currentAirworthinessRelease.expiresAt,
-                )}.`
-              : null,
-            aircraft && aircraft.discrepancies.length > 0
-              ? `${aircraft.discrepancies.length} open/deferred discrepancy warning(s).`
-              : null,
-            aircraft && aircraft.deferrals.length > 0
-              ? `${aircraft.deferrals.length} active deferral warning(s).`
-              : null,
+            aircraft ? aircraftServiceability.message : null,
           ]
             .filter(Boolean)
             .join(" "),

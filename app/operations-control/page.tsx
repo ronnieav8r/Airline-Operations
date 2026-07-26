@@ -1,11 +1,14 @@
 import {
+  FlightLegStatus,
   FlightLocatingStatus,
+  FlightPhaseStatus,
   ManifestStatus,
   OperatingPart,
   ReleaseStatus,
   WeightBalanceStatus,
 } from "@prisma/client";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import {
   getFlightLegOperationsControlData,
@@ -24,10 +27,11 @@ type PageProps = {
   }>;
 };
 
-type GroupByMode = "release" | "schedule" | "aircraft";
+type GroupByMode = "phase" | "release" | "schedule" | "aircraft";
 type ReleaseFilter = "all" | "planned" | "released" | "cancelled-voided" | "no-release";
 type EvidenceFilter = "all" | "ready" | "needs-attention" | "missing";
 type PartFilter = "all" | OperatingPart;
+type Tone = "good" | "warn" | "missing" | "neutral";
 
 type WorkbenchFilters = {
   aircraft: string;
@@ -44,14 +48,22 @@ type BoardGroup = {
   records: OperationsControlRecordRead[];
 };
 
+type PhaseItem = {
+  href?: string;
+  label: string;
+  state: string;
+  tone: Tone;
+};
+
 const GROUP_BY_OPTIONS: Array<{ label: string; value: GroupByMode }> = [
-  { label: "Release state", value: "release" },
-  { label: "Schedule window", value: "schedule" },
+  { label: "Phase", value: "phase" },
+  { label: "Release", value: "release" },
+  { label: "Schedule", value: "schedule" },
   { label: "Aircraft", value: "aircraft" },
 ];
 
 const RELEASE_FILTER_OPTIONS: Array<{ label: string; value: ReleaseFilter }> = [
-  { label: "All releases", value: "all" },
+  { label: "All", value: "all" },
   { label: "Planned", value: "planned" },
   { label: "Released", value: "released" },
   { label: "Cancelled / voided", value: "cancelled-voided" },
@@ -59,7 +71,7 @@ const RELEASE_FILTER_OPTIONS: Array<{ label: string; value: ReleaseFilter }> = [
 ];
 
 const EVIDENCE_FILTER_OPTIONS: Array<{ label: string; value: EvidenceFilter }> = [
-  { label: "All evidence", value: "all" },
+  { label: "All", value: "all" },
   { label: "Ready", value: "ready" },
   { label: "Needs attention", value: "needs-attention" },
   { label: "Missing", value: "missing" },
@@ -72,24 +84,6 @@ const PART_FILTER_OPTIONS: Array<{ label: string; value: PartFilter }> = [
   { label: "Part 135", value: OperatingPart.PART_135 },
 ];
 
-function toDateTimeLabel(value: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(value);
-}
-
-function formatOperatingPart(part: OperatingPart): string {
-  return part.replace("PART_", "Part ");
-}
-
-function formatReleaseStatus(status: ReleaseStatus | null): string {
-  return status ?? "NO RELEASE";
-}
-
 function firstSearchParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
     return value[0] ?? null;
@@ -100,7 +94,12 @@ function firstSearchParam(value: string | string[] | undefined): string | null {
 
 function parseGroupBy(value: string | string[] | undefined): GroupByMode {
   const firstValue = firstSearchParam(value);
-  return firstValue === "schedule" || firstValue === "aircraft" ? firstValue : "release";
+
+  if (firstValue === "release" || firstValue === "schedule" || firstValue === "aircraft") {
+    return firstValue;
+  }
+
+  return "phase";
 }
 
 function parseReleaseFilter(value: string | string[] | undefined): ReleaseFilter {
@@ -156,7 +155,7 @@ function controlHref(filters: WorkbenchFilters, nextFilters: Partial<WorkbenchFi
   const merged = { ...filters, ...nextFilters };
   const params = new URLSearchParams();
 
-  if (merged.groupBy !== "release") {
+  if (merged.groupBy !== "phase") {
     params.set("groupBy", merged.groupBy);
   }
 
@@ -180,25 +179,98 @@ function controlHref(filters: WorkbenchFilters, nextFilters: Partial<WorkbenchFi
   return query ? `/operations-control?${query}` : "/operations-control";
 }
 
-function releaseBadgeClasses(status: ReleaseStatus | null): string {
-  if (status === ReleaseStatus.RELEASED) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+function toDateTimeLabel(value: Date | null): string {
+  if (!value) {
+    return "Not scheduled";
   }
-  if (status === ReleaseStatus.PLANNED) {
-    return "border-sky-200 bg-sky-50 text-sky-700";
-  }
-  if (status === ReleaseStatus.CANCELLED || status === ReleaseStatus.VOIDED) {
-    return "border-zinc-200 bg-zinc-50 text-zinc-500";
-  }
-  return "border-amber-200 bg-amber-50 text-amber-800";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(value);
 }
 
-function evidenceBadgeClasses(ready: boolean): string {
-  if (ready) {
+function formatEnum(value: string | null | undefined): string {
+  if (!value) {
+    return "Missing";
+  }
+
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatOperatingPart(part: OperatingPart): string {
+  return part.replace("PART_", "Part ");
+}
+
+function routeLabel(record: OperationsControlRecordRead): string {
+  if (record.leg?.departureStation && record.leg.arrivalStation) {
+    return `${record.leg.departureStation.code} -> ${record.leg.arrivalStation.code}`;
+  }
+
+  return "Route not assigned";
+}
+
+function identityLabel(record: OperationsControlRecordRead): string {
+  const flightNumber = record.leg?.flightNumber ?? "Unassigned";
+  const legNumber = record.leg?.legNumber ? ` / Leg ${record.leg.legNumber}` : "";
+  const tripNumber = record.leg?.trip?.tripNumber ? `Trip ${record.leg.trip.tripNumber}` : "No trip";
+
+  return `${flightNumber}${legNumber} (${tripNumber})`;
+}
+
+function customerLabel(record: OperationsControlRecordRead): string {
+  return (
+    record.customer?.name ??
+    record.leg?.trip?.customerName ??
+    "Customer not assigned"
+  );
+}
+
+function aircraftLabel(record: OperationsControlRecordRead): string {
+  if (!record.leg?.aircraft) {
+    return "No tail";
+  }
+
+  return `${record.leg.aircraft.tailNumber} (${record.leg.aircraft.type})`;
+}
+
+function releaseTone(status: ReleaseStatus | null): Tone {
+  if (status === ReleaseStatus.RELEASED) {
+    return "good";
+  }
+
+  if (status === ReleaseStatus.PLANNED) {
+    return "warn";
+  }
+
+  if (status === ReleaseStatus.CANCELLED || status === ReleaseStatus.VOIDED) {
+    return "neutral";
+  }
+
+  return "missing";
+}
+
+function toneClasses(tone: Tone): string {
+  if (tone === "good") {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
 
-  return "border-amber-200 bg-amber-50 text-amber-800";
+  if (tone === "warn") {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
+
+  if (tone === "missing") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+
+  return "border-zinc-200 bg-zinc-50 text-zinc-600";
 }
 
 function dispatchEvidenceReady(record: OperationsControlRecordRead): boolean {
@@ -326,6 +398,42 @@ function scheduleGroupKey(record: OperationsControlRecordRead, now: Date): strin
   return "past";
 }
 
+function phaseGroupKey(record: OperationsControlRecordRead, now: Date): string {
+  const legStatus = record.leg?.status;
+  const departure = record.leg?.scheduledDeparture;
+  const releaseStatus = record.release?.status ?? null;
+  const preflightWindowEnd = new Date(now.getTime() + 6 * 60 * 60 * 1000);
+
+  if (
+    legStatus === FlightLegStatus.COMPLETE ||
+    legStatus === FlightLegStatus.CANCELLED ||
+    record.leg?.postflightStatus === FlightPhaseStatus.COMPLETE
+  ) {
+    return "postflight-complete";
+  }
+
+  if (legStatus === FlightLegStatus.ENROUTE || record.leg?.actualDeparture) {
+    return "enroute";
+  }
+
+  if (
+    releaseStatus !== ReleaseStatus.RELEASED &&
+    legStatus !== FlightLegStatus.RELEASED
+  ) {
+    return "needs-release-review";
+  }
+
+  if (
+    legStatus === FlightLegStatus.RELEASED ||
+    legStatus === FlightLegStatus.READY_FOR_RELEASE ||
+    (departure && departure <= preflightWindowEnd)
+  ) {
+    return "preflight-active";
+  }
+
+  return "ready-released";
+}
+
 function buildWorkbenchGroups(
   records: OperationsControlRecordRead[],
   filters: WorkbenchFilters,
@@ -348,9 +456,9 @@ function buildWorkbenchGroups(
         records: filteredRecords.filter((record) => scheduleGroupKey(record, now) === "upcoming"),
       },
       {
-        description: "Scheduled before today or already completed.",
+        description: "Scheduled before today, completed, or waiting on closeout.",
         key: "past",
-        label: "Past / Completed",
+        label: "Past / Complete",
         records: filteredRecords.filter((record) => scheduleGroupKey(record, now) === "past"),
       },
       {
@@ -382,37 +490,71 @@ function buildWorkbenchGroups(
     }));
   }
 
+  if (filters.groupBy === "release") {
+    const groups: BoardGroup[] = [
+      {
+        description: "Release is planned and still needs operational review.",
+        key: "planned",
+        label: "Planned",
+        records: filteredRecords.filter((record) => record.release?.status === ReleaseStatus.PLANNED),
+      },
+      {
+        description: "FlightLegs marked released.",
+        key: "released",
+        label: "Released",
+        records: filteredRecords.filter((record) => record.release?.status === ReleaseStatus.RELEASED),
+      },
+      {
+        description: "No release record is attached yet.",
+        key: "needs-attention",
+        label: "No Release",
+        records: filteredRecords.filter((record) => !record.release?.status),
+      },
+      {
+        description: "Cancelled or voided release records.",
+        key: "closed-other",
+        label: "Cancelled / Voided",
+        records: filteredRecords.filter(
+          (record) =>
+            record.release?.status === ReleaseStatus.CANCELLED ||
+            record.release?.status === ReleaseStatus.VOIDED,
+        ),
+      },
+    ];
+
+    return groups.filter((group) => group.records.length > 0);
+  }
+
   const groups: BoardGroup[] = [
     {
-      description: "Release is planned and still needs operational attention.",
-      key: "planned",
-      label: "Planned",
-      records: filteredRecords.filter((record) => record.release?.status === ReleaseStatus.PLANNED),
+      description: "Release, evidence, or FlightLeg control work should be reviewed before moving forward.",
+      key: "needs-release-review",
+      label: "Needs Release Review",
+      records: filteredRecords.filter((record) => phaseGroupKey(record, now) === "needs-release-review"),
     },
     {
-      description: "FlightLegs marked released.",
-      key: "released",
-      label: "Released",
-      records: filteredRecords.filter((record) => record.release?.status === ReleaseStatus.RELEASED),
+      description: "Released or ready records outside the immediate preflight window.",
+      key: "ready-released",
+      label: "Ready / Released",
+      records: filteredRecords.filter((record) => phaseGroupKey(record, now) === "ready-released"),
     },
     {
-      description: "No release record or non-standard active release state.",
-      key: "needs-attention",
-      label: "Needs Attention",
-      records: filteredRecords.filter((record) => {
-        const status = record.release?.status ?? null;
-        return !status;
-      }),
+      description: "Released FlightLegs close to departure or actively being prepared.",
+      key: "preflight-active",
+      label: "Preflight Active",
+      records: filteredRecords.filter((record) => phaseGroupKey(record, now) === "preflight-active"),
     },
     {
-      description: "Cancelled or voided release records.",
-      key: "closed-other",
-      label: "Closed / Other",
-      records: filteredRecords.filter(
-        (record) =>
-          record.release?.status === ReleaseStatus.CANCELLED ||
-          record.release?.status === ReleaseStatus.VOIDED,
-      ),
+      description: "FlightLegs underway or carrying active flight-following context.",
+      key: "enroute",
+      label: "Enroute",
+      records: filteredRecords.filter((record) => phaseGroupKey(record, now) === "enroute"),
+    },
+    {
+      description: "Completed, cancelled, or postflight-closeout records.",
+      key: "postflight-complete",
+      label: "Postflight / Complete",
+      records: filteredRecords.filter((record) => phaseGroupKey(record, now) === "postflight-complete"),
     },
   ];
 
@@ -425,139 +567,152 @@ function aircraftOptions(records: OperationsControlRecordRead[]) {
   ).sort();
 }
 
-function sourceLabel(record: OperationsControlRecordRead): string {
-  if (record.readSource === "FLIGHT_LEG") {
-    return "FlightLeg read";
-  }
-
-  if (record.readSource === "LEG_MISSING_FALLBACK_FLIGHT") {
-    return "Fallback Flight read";
-  }
-
-  return "Unassigned";
-}
-
-function sourceClasses(record: OperationsControlRecordRead): string {
-  if (record.readSource === "FLIGHT_LEG") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  }
-
-  if (record.readSource === "LEG_MISSING_FALLBACK_FLIGHT") {
-    return "border-amber-200 bg-amber-50 text-amber-800";
-  }
-
-  return "border-zinc-200 bg-zinc-50 text-zinc-500";
-}
-
-function EvidenceCell({ record }: { record: OperationsControlRecordRead }) {
+function phaseItems(record: OperationsControlRecordRead): PhaseItem[] {
+  const legId = record.leg?.id;
   const evidence = record.leg?.releaseEvidence;
+  const aircraft = record.leg?.aircraft;
+  const manifestReady =
+    evidence?.manifestStatus === ManifestStatus.READY ||
+    evidence?.manifestStatus === ManifestStatus.LOCKED;
+  const weightBalanceReady =
+    evidence?.weightBalanceStatus === WeightBalanceStatus.CALCULATED ||
+    evidence?.weightBalanceStatus === WeightBalanceStatus.APPROVED;
+  const locatingReady =
+    evidence?.locatingStatus === FlightLocatingStatus.FILED ||
+    evidence?.locatingStatus === FlightLocatingStatus.ACTIVE ||
+    evidence?.locatingStatus === FlightLocatingStatus.CLOSED;
+  const mxCount =
+    (aircraft?.openDiscrepancyCount ?? 0) +
+    (aircraft?.activeDeferralCount ?? 0) +
+    (aircraft?.openMaintenanceEventCount ?? 0);
+  const crewCount = record.leg?.crewAssignments.length ?? 0;
 
-  if (!evidence) {
-    return <span className="text-zinc-400">No FlightLeg evidence</span>;
-  }
-
-  const dispatchReady =
-    evidence.dispatchPackageReady &&
-    evidence.weatherSnapshotReady &&
-    evidence.notamSnapshotReady &&
-    Boolean(evidence.flightPlanStatus);
-
-  return (
-    <div className="min-w-52 space-y-1.5">
-      <div className="flex flex-wrap gap-1">
-        <span
-          className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${evidenceBadgeClasses(
-            Boolean(evidence.manifestStatus),
-          )}`}
-        >
-          Manifest {evidence.manifestStatus ?? "missing"} ({evidence.manifestItemCount})
-        </span>
-        <span
-          className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${evidenceBadgeClasses(
-            Boolean(evidence.weightBalanceStatus),
-          )}`}
-        >
-          W&B {evidence.weightBalanceStatus ?? "missing"}
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-1">
-        <span
-          className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${evidenceBadgeClasses(
-            Boolean(evidence.locatingStatus),
-          )}`}
-        >
-          Locate {evidence.locatingStatus ?? "missing"}
-        </span>
-        <span
-          className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${evidenceBadgeClasses(
-            dispatchReady,
-          )}`}
-        >
-          Dispatch {dispatchReady ? "ready" : "partial"}
-        </span>
-      </div>
-      {record.leg?.id ? (
-        <div className="flex flex-wrap gap-2">
-          <Link
-            className="inline-flex text-xs font-medium text-sky-700 hover:text-sky-900"
-            href={`/operations-control/${record.leg.id}`}
-          >
-            View evidence detail
-          </Link>
-          {record.readSource === "FLIGHT_LEG" ? (
-            <Link
-              className="inline-flex text-xs font-medium text-zinc-700 hover:text-zinc-950"
-              href={`/operations-control/${record.leg.id}/edit`}
-            >
-              Edit
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
+  return [
+    {
+      href: legId ? `/operations-control/${legId}` : undefined,
+      label: "Ops Release",
+      state: formatEnum(record.release?.status ?? null),
+      tone: releaseTone(record.release?.status ?? null),
+    },
+    {
+      href: legId ? `/operations-control/${legId}` : undefined,
+      label: "Preflight",
+      state: record.leg?.preflightStatus === FlightPhaseStatus.COMPLETE ? "Complete" : "Open",
+      tone: record.leg?.preflightStatus === FlightPhaseStatus.COMPLETE ? "good" : "neutral",
+    },
+    {
+      href: legId ? `/operations-control/${legId}` : undefined,
+      label: "Postflight",
+      state: record.leg?.postflightStatus === FlightPhaseStatus.COMPLETE ? "Complete" : "Open",
+      tone: record.leg?.postflightStatus === FlightPhaseStatus.COMPLETE ? "good" : "neutral",
+    },
+    {
+      href: legId ? `/operations-control/${legId}/manifest` : undefined,
+      label: "Manifest",
+      state: evidence?.manifestStatus ? `${formatEnum(evidence.manifestStatus)} (${evidence.manifestItemCount})` : "Missing",
+      tone: manifestReady ? "good" : evidence?.manifestStatus ? "warn" : "missing",
+    },
+    {
+      href: legId ? `/operations-control/${legId}/fuel` : undefined,
+      label: "Fuel",
+      state: record.leg?.releaseFuel
+        ? record.leg.releaseFuel.fueledReady
+          ? "Ready"
+          : "Recorded"
+        : "Missing",
+      tone: record.leg?.releaseFuel?.fueledReady ? "good" : record.leg?.releaseFuel ? "warn" : "missing",
+    },
+    {
+      href: legId ? `/operations-control/${legId}/weight-balance` : undefined,
+      label: "W&B",
+      state: formatEnum(evidence?.weightBalanceStatus),
+      tone: weightBalanceReady ? "good" : evidence?.weightBalanceStatus ? "warn" : "missing",
+    },
+    {
+      href: legId ? `/operations-control/${legId}/locating` : undefined,
+      label: "Following",
+      state: formatEnum(evidence?.locatingStatus),
+      tone: locatingReady ? "good" : evidence?.locatingStatus ? "warn" : "missing",
+    },
+    {
+      href: aircraft ? `/aircraft/${aircraft.id}/airworthiness` : undefined,
+      label: "MX",
+      state: aircraft ? (mxCount > 0 ? `${mxCount} open` : "Clear") : "No tail",
+      tone: aircraft ? (mxCount > 0 ? "warn" : "good") : "neutral",
+    },
+    {
+      href: aircraft ? `/aircraft/${aircraft.id}/crew` : undefined,
+      label: "Crew",
+      state: crewCount > 0 ? `${crewCount} assigned` : "Missing",
+      tone: crewCount >= 2 ? "good" : crewCount === 1 ? "warn" : "missing",
+    },
+  ];
 }
 
-function ActionLink({
-  href,
-  label,
-  primary = false,
-}: {
-  href: string;
-  label: string;
-  primary?: boolean;
-}) {
-  return (
-    <Link
-      className={
-        primary
-          ? "inline-flex rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800"
-          : "inline-flex rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-      }
-      href={href}
-    >
-      {label}
-    </Link>
-  );
-}
+function strongestWarning(record: OperationsControlRecordRead): { label: string; tone: Tone } {
+  const evidence = record.leg?.releaseEvidence;
+  const aircraft = record.leg?.aircraft;
+  const mxCount =
+    (aircraft?.openDiscrepancyCount ?? 0) +
+    (aircraft?.activeDeferralCount ?? 0) +
+    (aircraft?.openMaintenanceEventCount ?? 0);
 
-function ActionCell({ record }: { record: OperationsControlRecordRead }) {
-  if (!record.leg?.id || record.readSource !== "FLIGHT_LEG") {
-    return <span className="text-xs text-zinc-400">No FlightLeg actions</span>;
+  if (record.readSource !== "FLIGHT_LEG") {
+    return { label: "No linked FlightLeg evidence", tone: "warn" };
   }
 
-  const detailHref = `/operations-control/${record.leg.id}`;
+  if (!record.release?.status) {
+    return { label: "No release record attached", tone: "missing" };
+  }
 
+  if (record.release.status === ReleaseStatus.PLANNED) {
+    return { label: "Release planned, review still open", tone: "warn" };
+  }
+
+  if (!evidence?.manifestStatus || evidence.manifestItemCount === 0) {
+    return { label: "Manifest missing or empty", tone: "missing" };
+  }
+
+  if (!evidence.weightBalanceStatus) {
+    return { label: "Weight and balance missing", tone: "missing" };
+  }
+
+  if (!record.leg?.releaseFuel) {
+    return { label: "Release fuel not recorded", tone: "missing" };
+  }
+
+  if (record.leg.releaseFuel.fueledReady !== true) {
+    return { label: "Fuel recorded, ready flag not confirmed", tone: "warn" };
+  }
+
+  if (!evidence.locatingStatus) {
+    return { label: "Flight following not started", tone: "missing" };
+  }
+
+  if (!dispatchEvidenceReady(record)) {
+    return { label: "Dispatch package evidence incomplete", tone: "warn" };
+  }
+
+  if ((record.leg?.crewAssignments.length ?? 0) === 0) {
+    return { label: "No crew assigned", tone: "missing" };
+  }
+
+  if ((record.leg?.crewAssignments.length ?? 0) === 1) {
+    return { label: "Crew coverage appears partial", tone: "warn" };
+  }
+
+  if (mxCount > 0) {
+    return { label: `${mxCount} aircraft issue(s) to review`, tone: "warn" };
+  }
+
+  return { label: "No high-signal warning", tone: "good" };
+}
+
+function SummaryTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="min-w-64">
-      <div className="flex flex-wrap gap-2">
-        <ActionLink href={detailHref} label="Detail" primary />
-        <ActionLink href={`${detailHref}/edit`} label="Edit" />
-        <ActionLink href={`${detailHref}/manifest`} label="Manifest" />
-        <ActionLink href={`${detailHref}/weight-balance`} label="W&B" />
-        <ActionLink href={`${detailHref}/locating`} label="Locating" />
-        <ActionLink href={`${detailHref}/dispatch`} label="Dispatch" />
-      </div>
+    <div className="rounded-md border border-zinc-200 bg-white px-3 py-2">
+      <p className="text-xs font-medium text-zinc-500">{label}</p>
+      <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
     </div>
   );
 }
@@ -575,8 +730,8 @@ function FilterPill({
     <Link
       className={
         active
-          ? "inline-flex rounded-full border border-zinc-950 bg-zinc-950 px-3 py-1 text-xs font-semibold text-white"
-          : "inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
+          ? "inline-flex rounded-md border border-zinc-950 bg-zinc-950 px-2.5 py-1 text-xs font-semibold text-white"
+          : "inline-flex rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
       }
       href={href}
     >
@@ -589,20 +744,18 @@ function FilterGroup({
   children,
   label,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   label: string;
 }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-2">{children}</div>
+      <p className="mb-1.5 text-xs font-semibold text-zinc-500">{label}</p>
+      <div className="flex flex-wrap gap-1.5">{children}</div>
     </div>
   );
 }
 
-function WorkbenchControls({
+function WorkbenchToolbar({
   aircraft,
   filters,
 }: {
@@ -610,170 +763,203 @@ function WorkbenchControls({
   filters: WorkbenchFilters;
 }) {
   return (
-    <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Operations Workbench</h2>
-            <p className="text-sm text-zinc-600">
-              Filterable board for scanning release state, evidence gaps, schedule,
-              and aircraft context. Filters are URL-driven and shareable.
-            </p>
-          </div>
-          <Link className="text-sm font-semibold text-sky-700 hover:text-sky-900" href="/operations-control">
-            Reset filters
-          </Link>
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-2">
-          <FilterGroup label="Group by">
-            {GROUP_BY_OPTIONS.map((option) => (
-              <FilterPill
-                active={filters.groupBy === option.value}
-                href={controlHref(filters, { groupBy: option.value })}
-                key={option.value}
-                label={option.label}
-              />
-            ))}
-          </FilterGroup>
-          <FilterGroup label="Release">
-            {RELEASE_FILTER_OPTIONS.map((option) => (
-              <FilterPill
-                active={filters.release === option.value}
-                href={controlHref(filters, { release: option.value })}
-                key={option.value}
-                label={option.label}
-              />
-            ))}
-          </FilterGroup>
-          <FilterGroup label="Evidence">
-            {EVIDENCE_FILTER_OPTIONS.map((option) => (
-              <FilterPill
-                active={filters.evidence === option.value}
-                href={controlHref(filters, { evidence: option.value })}
-                key={option.value}
-                label={option.label}
-              />
-            ))}
-          </FilterGroup>
-          <FilterGroup label="Operating part">
-            {PART_FILTER_OPTIONS.map((option) => (
-              <FilterPill
-                active={filters.part === option.value}
-                href={controlHref(filters, { part: option.value })}
-                key={option.value}
-                label={option.label}
-              />
-            ))}
-          </FilterGroup>
-          <FilterGroup label="Aircraft">
+    <section className="rounded-md border border-zinc-200 bg-white p-3 shadow-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-zinc-800">Board</span>
+          {GROUP_BY_OPTIONS.map((option) => (
             <FilterPill
-              active={filters.aircraft === "all"}
-              href={controlHref(filters, { aircraft: "all" })}
-              label="All aircraft"
+              active={filters.groupBy === option.value}
+              href={controlHref(filters, { groupBy: option.value })}
+              key={option.value}
+              label={option.label}
             />
-            {aircraft.map((tailNumber) => (
-              <FilterPill
-                active={filters.aircraft === tailNumber}
-                href={controlHref(filters, { aircraft: tailNumber })}
-                key={tailNumber}
-                label={tailNumber}
-              />
-            ))}
-          </FilterGroup>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <details className="relative">
+            <summary className="inline-flex cursor-pointer list-none rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">
+              Filters
+            </summary>
+            <div className="absolute right-0 z-10 mt-2 w-[min(92vw,760px)] rounded-md border border-zinc-200 bg-white p-3 shadow-lg">
+              <div className="grid gap-3 md:grid-cols-2">
+                <FilterGroup label="Release">
+                  {RELEASE_FILTER_OPTIONS.map((option) => (
+                    <FilterPill
+                      active={filters.release === option.value}
+                      href={controlHref(filters, { release: option.value })}
+                      key={option.value}
+                      label={option.label}
+                    />
+                  ))}
+                </FilterGroup>
+                <FilterGroup label="Evidence">
+                  {EVIDENCE_FILTER_OPTIONS.map((option) => (
+                    <FilterPill
+                      active={filters.evidence === option.value}
+                      href={controlHref(filters, { evidence: option.value })}
+                      key={option.value}
+                      label={option.label}
+                    />
+                  ))}
+                </FilterGroup>
+                <FilterGroup label="Operating part">
+                  {PART_FILTER_OPTIONS.map((option) => (
+                    <FilterPill
+                      active={filters.part === option.value}
+                      href={controlHref(filters, { part: option.value })}
+                      key={option.value}
+                      label={option.label}
+                    />
+                  ))}
+                </FilterGroup>
+                <FilterGroup label="Aircraft">
+                  <FilterPill
+                    active={filters.aircraft === "all"}
+                    href={controlHref(filters, { aircraft: "all" })}
+                    label="All aircraft"
+                  />
+                  {aircraft.map((tailNumber) => (
+                    <FilterPill
+                      active={filters.aircraft === tailNumber}
+                      href={controlHref(filters, { aircraft: tailNumber })}
+                      key={tailNumber}
+                      label={tailNumber}
+                    />
+                  ))}
+                </FilterGroup>
+              </div>
+            </div>
+          </details>
+          <Link className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50" href="/operations-control">
+            Reset
+          </Link>
+          <Link className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800" href="/flights?panel=new-flight">
+            New FlightLeg
+          </Link>
         </div>
       </div>
     </section>
   );
 }
 
-function routeLabel(record: OperationsControlRecordRead): string {
-  if (record.leg?.departureStation && record.leg.arrivalStation) {
-    return `${record.leg.departureStation.code} -> ${record.leg.arrivalStation.code}`;
-  }
-
-  return "Route not assigned";
+function StatusBadge({ children, tone }: { children: ReactNode; tone: Tone }) {
+  return (
+    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[0.68rem] font-semibold ${toneClasses(tone)}`}>
+      {children}
+    </span>
+  );
 }
 
-function WorkbenchCard({ record }: { record: OperationsControlRecordRead }) {
-  const detailHref = record.leg?.id ? `/operations-control/${record.leg.id}` : null;
-  const evidenceState = evidenceStateLabel(record);
+function PhaseStrip({ items }: { items: PhaseItem[] }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((item) => {
+        const content = (
+          <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[0.68rem] font-semibold ${toneClasses(item.tone)}`}>
+            <span>{item.label}</span>
+            <span className="font-medium opacity-75">{item.state}</span>
+          </span>
+        );
+
+        if (item.href) {
+          return (
+            <Link className="hover:opacity-80" href={item.href} key={item.label}>
+              {content}
+            </Link>
+          );
+        }
+
+        return <span key={item.label}>{content}</span>;
+      })}
+    </div>
+  );
+}
+
+function WorkflowLinks({ record }: { record: OperationsControlRecordRead }) {
+  if (!record.leg?.id || record.readSource !== "FLIGHT_LEG") {
+    return <span className="text-xs text-zinc-400">No FlightLeg workflow links</span>;
+  }
+
+  const detailHref = `/operations-control/${record.leg.id}`;
+  const links = [
+    { href: detailHref, label: "Detail" },
+    { href: `${detailHref}/manifest`, label: "Manifest" },
+    { href: `${detailHref}/dispatch`, label: "Dispatch" },
+    { href: `${detailHref}/locating`, label: "Locating" },
+    { href: `${detailHref}/weight-balance`, label: "W&B" },
+    { href: `${detailHref}/fuel`, label: "Fuel" },
+    { href: `${detailHref}/edit`, label: "Edit" },
+  ];
 
   return (
-    <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <details className="relative">
+      <summary className="inline-flex cursor-pointer list-none rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50">
+        Actions
+      </summary>
+      <div className="absolute right-0 z-10 mt-2 w-44 rounded-md border border-zinc-200 bg-white p-1.5 shadow-lg">
+        {links.map((link) => (
+          <Link
+            className="block rounded px-2 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950"
+            href={link.href}
+            key={link.href}
+          >
+            {link.label}
+          </Link>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function WorkbenchRow({ record }: { record: OperationsControlRecordRead }) {
+  const detailHref = record.leg?.id && record.readSource === "FLIGHT_LEG" ? `/operations-control/${record.leg.id}` : null;
+  const warning = strongestWarning(record);
+
+  return (
+    <article className="rounded-md border border-zinc-200 bg-white px-3 py-3 shadow-sm">
+      <div className="grid gap-3 xl:grid-cols-[11rem_minmax(13rem,1fr)_minmax(24rem,2fr)_13rem] xl:items-center">
         <div>
-          {detailHref && record.readSource === "FLIGHT_LEG" ? (
-            <Link className="text-lg font-semibold text-sky-700 hover:text-sky-900" href={detailHref}>
-              {record.leg?.flightNumber ?? "Unassigned"}
+          <p className="text-xs font-medium text-zinc-500">{toDateTimeLabel(record.leg?.scheduledDeparture ?? null)}</p>
+          <p className="mt-1 font-mono text-sm font-semibold text-zinc-900">{routeLabel(record)}</p>
+          <p className="mt-1 text-xs text-zinc-500">{record.leg?.status ? formatEnum(record.leg.status) : "No FlightLeg"}</p>
+        </div>
+
+        <div className="min-w-0">
+          {detailHref ? (
+            <Link className="block truncate text-sm font-semibold text-sky-700 hover:text-sky-900" href={detailHref}>
+              {identityLabel(record)}
             </Link>
           ) : (
-            <p className="text-lg font-semibold text-zinc-900">
-              {record.leg?.flightNumber ?? "Unassigned"}
-            </p>
+            <p className="truncate text-sm font-semibold text-zinc-900">{identityLabel(record)}</p>
           )}
-          <p className="mt-1 text-sm text-zinc-600">{routeLabel(record)}</p>
-          <p className="mt-1 text-xs text-zinc-500">
-            {record.leg?.scheduledDeparture
-              ? toDateTimeLabel(record.leg.scheduledDeparture)
-              : "Not scheduled"}
-          </p>
+          <p className="mt-1 truncate text-xs text-zinc-600">{customerLabel(record)}</p>
+          <p className="mt-1 truncate text-xs text-zinc-500">{aircraftLabel(record)}</p>
         </div>
-        <div className="flex flex-col items-start gap-2 sm:items-end">
-          <span
-            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${releaseBadgeClasses(
-              record.release?.status ?? null,
-            )}`}
-          >
-            {formatReleaseStatus(record.release?.status ?? null)}
-          </span>
-          <span
-            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${evidenceBadgeClasses(
-              evidenceState === "Ready",
-            )}`}
-          >
-            Evidence {evidenceState}
-          </span>
-        </div>
-      </div>
 
-      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-zinc-500">Aircraft</dt>
-          <dd className="font-medium">
-            {record.leg?.aircraft
-              ? `${record.leg.aircraft.tailNumber} (${record.leg.aircraft.type})`
-              : "Unassigned"}
-          </dd>
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StatusBadge tone={releaseTone(record.release?.status ?? null)}>
+              Release {formatEnum(record.release?.status ?? null)}
+            </StatusBadge>
+            <StatusBadge tone={evidenceReady(record) ? "good" : evidenceMissing(record) ? "missing" : "warn"}>
+              Evidence {evidenceStateLabel(record)}
+            </StatusBadge>
+            <StatusBadge tone={warning.tone}>{warning.label}</StatusBadge>
+          </div>
+          <PhaseStrip items={phaseItems(record)} />
         </div>
-        <div>
-          <dt className="text-zinc-500">Operating part</dt>
-          <dd className="font-medium">{formatOperatingPart(record.operatingAuthority.operatingPart)}</dd>
-        </div>
-        <div>
-          <dt className="text-zinc-500">Controller</dt>
-          <dd className="font-medium">{record.controllingEntity}</dd>
-        </div>
-        <div>
-          <dt className="text-zinc-500">Read source</dt>
-          <dd>
-            <span
-              className={`inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceClasses(
-                record,
-              )}`}
-            >
-              {sourceLabel(record)}
-            </span>
-          </dd>
-        </div>
-      </dl>
 
-      <div className="mt-4">
-        <EvidenceCell record={record} />
-      </div>
-
-      <div className="mt-4">
-        <ActionCell record={record} />
+        <div className="flex items-center justify-between gap-2 xl:justify-end">
+          {detailHref ? (
+            <Link className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800" href={detailHref}>
+              Detail
+            </Link>
+          ) : (
+            <span className="text-xs text-zinc-400">No detail</span>
+          )}
+          <WorkflowLinks record={record} />
+        </div>
       </div>
     </article>
   );
@@ -796,21 +982,21 @@ function WorkbenchBoard({ groups }: { groups: BoardGroup[] }) {
   }
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       {groups.map((group) => (
-        <section className="rounded-md border border-zinc-200 bg-zinc-50 p-4" key={group.key}>
-          <div className="flex flex-wrap items-end justify-between gap-2">
+        <section className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={group.key}>
+          <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
             <div>
-              <h2 className="text-lg font-semibold">{group.label}</h2>
-              <p className="text-sm text-zinc-600">{group.description}</p>
+              <h2 className="text-base font-semibold">{group.label}</h2>
+              <p className="text-xs text-zinc-600">{group.description}</p>
             </div>
-            <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-700">
+            <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-700">
               {group.records.length} record(s)
             </span>
           </div>
-          <div className="mt-4 grid gap-3 xl:grid-cols-2">
+          <div className="space-y-2">
             {group.records.map((record) => (
-              <WorkbenchCard key={record.id} record={record} />
+              <WorkbenchRow key={record.id} record={record} />
             ))}
           </div>
         </section>
@@ -819,36 +1005,75 @@ function WorkbenchBoard({ groups }: { groups: BoardGroup[] }) {
   );
 }
 
-function FlightCell({ record }: { record: OperationsControlRecordRead }) {
-  if (!record.leg) {
+function ControlRecordsTable({
+  records,
+  totalRecords,
+}: {
+  records: OperationsControlRecordRead[];
+  totalRecords: number;
+}) {
+  if (records.length === 0) {
+    const hasSourceRecords = totalRecords > 0;
+
     return (
-      <div>
-        <p className="font-medium text-zinc-900">Unassigned</p>
-        <p className="text-xs text-amber-700">No linked flight leg</p>
+      <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p className="font-medium">
+          {hasSourceRecords ? "No records match the current table filters." : "No operational-control records found."}
+        </p>
+        <p className="mt-1">
+          {hasSourceRecords
+            ? "Use Reset or Show all records to return to the full Operations Control board."
+            : "This page is ready for runtime data, but there are no control records to display."}
+        </p>
       </div>
     );
   }
 
   return (
-    <div>
-      {record.readSource === "FLIGHT_LEG" && record.leg.id ? (
-        <Link
-          className="font-medium text-sky-700 hover:text-sky-900"
-          href={`/operations-control/${record.leg.id}`}
-        >
-          {record.leg.flightNumber}
-        </Link>
-      ) : (
-        <p className="font-medium text-zinc-900">{record.leg.flightNumber}</p>
-      )}
-      <p className="text-xs text-zinc-500">{record.leg.status}</p>
-      <span
-        className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${sourceClasses(
-          record,
-        )}`}
-      >
-        {sourceLabel(record)}
-      </span>
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-zinc-200 text-xs text-zinc-500">
+            <th className="px-3 py-2 font-medium">FlightLeg</th>
+            <th className="px-3 py-2 font-medium">Customer</th>
+            <th className="px-3 py-2 font-medium">Authority</th>
+            <th className="px-3 py-2 font-medium">Release</th>
+            <th className="px-3 py-2 font-medium">Strongest warning</th>
+            <th className="px-3 py-2 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {records.map((record) => {
+            const warning = strongestWarning(record);
+            return (
+              <tr className="border-b border-zinc-100 align-top" key={record.id}>
+                <td className="px-3 py-2.5">
+                  <p className="font-medium text-zinc-900">{identityLabel(record)}</p>
+                  <p className="text-xs text-zinc-500">
+                    {toDateTimeLabel(record.leg?.scheduledDeparture ?? null)} | {routeLabel(record)}
+                  </p>
+                </td>
+                <td className="px-3 py-2.5 text-zinc-700">{customerLabel(record)}</td>
+                <td className="px-3 py-2.5">
+                  <p className="font-medium text-zinc-900">{formatOperatingPart(record.operatingAuthority.operatingPart)}</p>
+                  <p className="text-xs text-zinc-500">{record.controllingEntity}</p>
+                </td>
+                <td className="px-3 py-2.5">
+                  <StatusBadge tone={releaseTone(record.release?.status ?? null)}>
+                    {formatEnum(record.release?.status ?? null)}
+                  </StatusBadge>
+                </td>
+                <td className="px-3 py-2.5">
+                  <StatusBadge tone={warning.tone}>{warning.label}</StatusBadge>
+                </td>
+                <td className="px-3 py-2.5">
+                  <WorkflowLinks record={record} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -859,249 +1084,49 @@ export default async function OperationsControlPage({ searchParams }: PageProps)
     searchParams,
   ]);
   const filters = parseFilters(queryParams);
-  const boardGroups = buildWorkbenchGroups(data.records, filters, new Date());
+  const now = new Date();
+  const filteredRecords = data.records.filter((record) => recordMatchesFilters(record, filters));
+  const boardGroups = buildWorkbenchGroups(data.records, filters, now);
   const aircraft = aircraftOptions(data.records);
+  const needsReviewCount = data.records.filter((record) => phaseGroupKey(record, now) === "needs-release-review").length;
+  const enrouteCount = data.records.filter((record) => phaseGroupKey(record, now) === "enroute").length;
+  const warningsCount = data.records.filter((record) => strongestWarning(record).tone !== "good").length;
 
   return (
-    <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-4">
-        <header className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Operations Control
-              </p>
-              <h1 className="mt-1.5 text-2xl font-semibold tracking-tight sm:text-3xl">
-                Authority and Release Board
-              </h1>
-              <p className="mt-2 max-w-3xl text-sm text-zinc-600">
-                Control view for the governing authority, controlling entity, release
-                state, aircraft, and scheduled leg timing in effect.
-              </p>
-            </div>
-            <Link
-              className="inline-flex rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
-              href="/flights?panel=new-flight"
-            >
-              New FlightLeg
-            </Link>
+    <main className="min-h-screen bg-zinc-100 px-3 py-4 text-zinc-950 sm:px-5 lg:px-6">
+      <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3">
+        <header className="flex flex-col gap-2 rounded-md border border-zinc-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold text-zinc-500">Operations Control</p>
+            <h1 className="mt-0.5 text-xl font-semibold tracking-tight">FlightLeg Workbench</h1>
           </div>
+          <p className="max-w-3xl text-sm text-zinc-600">
+            Phase-grouped dispatch board for release review, preflight, enroute, and closeout work.
+            Readiness signals remain warning-first.
+          </p>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Total control records</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {data.summary.totalControlRecords}
-            </p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Released</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {data.summary.released}
-            </p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Planned</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {data.summary.planned}
-            </p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Other release states</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {data.summary.otherReleaseStates}
-            </p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">FlightLeg reads</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {data.summary.flightLegReads}
-            </p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Fallback reads</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {data.summary.fallbackFlightReads}
-            </p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Manifests ready</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {data.summary.manifestReadyOrLocked}
-            </p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">W&B calculated</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {data.summary.weightBalanceCalculatedOrApproved}
-            </p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Locating filed/active</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {data.summary.locatingFiledOrActiveOrClosed}
-            </p>
-          </article>
-          <article className="rounded-md border border-zinc-200 bg-white p-4">
-            <p className="text-sm text-zinc-500">Dispatch packages</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {data.summary.dispatchPackagesReady}
-            </p>
-          </article>
+        <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+          <SummaryTile label="Records" value={data.summary.totalControlRecords} />
+          <SummaryTile label="Needs release" value={needsReviewCount} />
+          <SummaryTile label="Released" value={data.summary.released} />
+          <SummaryTile label="Enroute" value={enrouteCount} />
+          <SummaryTile label="Warnings" value={warningsCount} />
+          <SummaryTile label="Filtered" value={filteredRecords.length} />
         </section>
 
-        <section className="rounded-md border border-zinc-200 bg-white p-4">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Authority mix</h2>
-              <p className="text-sm text-zinc-600">
-                Control records grouped by operating part.
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            {data.summary.authorityMix.map((bucket) => (
-              <div
-                className="rounded-md border border-zinc-200 bg-zinc-50 p-3"
-                key={bucket.part}
-              >
-                <p className="text-xs uppercase tracking-wide text-zinc-500">
-                  {formatOperatingPart(bucket.part)}
-                </p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">{bucket.count}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <WorkbenchControls aircraft={aircraft} filters={filters} />
+        <WorkbenchToolbar aircraft={aircraft} filters={filters} />
 
         <WorkbenchBoard groups={boardGroups} />
 
-        <section className="rounded-md border border-zinc-200 bg-white p-4">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <section className="rounded-md border border-zinc-200 bg-white p-3 shadow-sm">
+          <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Control records</h2>
-              <p className="text-sm text-zinc-600">
-                Flight-linked operating authority and release details.
-              </p>
+              <h2 className="text-base font-semibold">Record Detail Table</h2>
+              <p className="text-xs text-zinc-600">Supporting authority, release, and workflow links for the current filter set.</p>
             </div>
           </div>
-
-          {data.records.length === 0 ? (
-            <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <p className="font-medium">No operational-control records found.</p>
-              <p className="mt-1">
-                This page is ready for runtime data, but there are no control records
-                to display in the connected database.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-3 overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-200 text-zinc-500">
-                    <th className="px-3 py-2 font-medium">Flight</th>
-                    <th className="px-3 py-2 font-medium">Actions</th>
-                    <th className="px-3 py-2 font-medium">Operator</th>
-                    <th className="px-3 py-2 font-medium">Operating part</th>
-                    <th className="px-3 py-2 font-medium">Authority revision</th>
-                    <th className="px-3 py-2 font-medium">Controlling entity</th>
-                    <th className="px-3 py-2 font-medium">Release</th>
-                    <th className="px-3 py-2 font-medium">Evidence</th>
-                    <th className="px-3 py-2 font-medium">Route</th>
-                    <th className="px-3 py-2 font-medium">Aircraft</th>
-                    <th className="px-3 py-2 font-medium">Scheduled</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.records.map((record) => (
-                    <tr className="border-b border-zinc-100 align-top" key={record.id}>
-                      <td className="px-3 py-2.5">
-                        <FlightCell record={record} />
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <ActionCell record={record} />
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <p className="font-medium text-zinc-900">{record.operator.name}</p>
-                        <p className="font-mono text-xs text-zinc-500">{record.operator.code}</p>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <p className="font-medium text-zinc-900">
-                          {formatOperatingPart(record.operatingAuthority.operatingPart)}
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          {record.operatingAuthority.displayName}
-                        </p>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <p className="font-medium text-zinc-900">
-                          {record.authorityRevision.revisionLabel}
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          Effective {toDateTimeLabel(record.authorityRevision.effectiveStart)}
-                        </p>
-                      </td>
-                      <td className="min-w-48 px-3 py-2.5 text-zinc-700">
-                        {record.controllingEntity}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span
-                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${releaseBadgeClasses(
-                            record.release?.status ?? null,
-                          )}`}
-                        >
-                          {formatReleaseStatus(record.release?.status ?? null)}
-                        </span>
-                        {record.release?.releasedAt ? (
-                          <p className="mt-1 text-xs text-zinc-500">
-                            {toDateTimeLabel(record.release.releasedAt)}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <EvidenceCell record={record} />
-                      </td>
-                      <td className="px-3 py-2.5 text-zinc-700">
-                        {record.leg?.departureStation && record.leg.arrivalStation ? (
-                          <>
-                            {record.leg.departureStation.code}
-                            {" -> "}
-                            {record.leg.arrivalStation.code}
-                          </>
-                        ) : (
-                          <span className="text-zinc-400">Not assigned</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        {record.leg?.aircraft ? (
-                          <>
-                            <p className="font-mono text-zinc-800">
-                              {record.leg.aircraft.tailNumber}
-                            </p>
-                            <p className="text-xs text-zinc-500">
-                              {record.leg.aircraft.type}
-                            </p>
-                          </>
-                        ) : (
-                          <span className="text-zinc-400">Not assigned</span>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-zinc-700">
-                        {record.leg?.scheduledDeparture ? (
-                          toDateTimeLabel(record.leg.scheduledDeparture)
-                        ) : (
-                          <span className="text-zinc-400">Not scheduled</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <ControlRecordsTable records={filteredRecords} totalRecords={data.records.length} />
         </section>
       </div>
     </main>

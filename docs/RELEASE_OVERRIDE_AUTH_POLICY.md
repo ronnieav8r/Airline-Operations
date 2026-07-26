@@ -1,6 +1,6 @@
 # Release Override and Auth Policy
 
-Last updated: 2026-06-07
+Last updated: 2026-06-30
 
 This document plans future release override, auth, role, signature, and audit
 requirements. It does not implement override behavior.
@@ -19,8 +19,10 @@ Current release behavior remains warning-only.
 
 `FlightRelease` remains the operational FlightLeg release record.
 
-`AirworthinessRelease` remains aircraft maintenance airworthiness release state.
-It may contribute blockers or warnings, but it is not the operational release.
+Computed aircraft maintenance serviceability is the maintenance-side input to
+release readiness. `AirworthinessRelease` remains historical or
+operator-specific evidence, but it is no longer the default everyday
+maintenance gate. It is not the operational release.
 
 Overrides should never replace missing evidence. They should record an approved
 exception to a specific release-readiness finding.
@@ -53,9 +55,8 @@ workflow until a stronger policy says otherwise:
 - Missing authority revision.
 - Missing planned `FlightRelease` row.
 - Missing active aircraft configuration.
-- Missing current non-expired `RELEASED` aircraft maintenance airworthiness
-  release.
-- Expired current aircraft maintenance airworthiness release.
+- Aircraft not serviceable due to open unresolved discrepancy, AOG,
+  corrected-pending-RTS, or expired deferral.
 
 Maintenance-side exceptions should use a maintenance approval path and should
 not be silently treated as operational overrides.
@@ -72,8 +73,8 @@ These may be overridable after auth, roles, and audit capture exist:
   operator policy explicitly allows it.
 - Stale current-information evidence when a qualified actor confirms updated
   information outside the system.
-- Future discrepancy or deferral warnings where severity, due date, category,
-  MEL/CDL, and maintenance approval policy allow an exception.
+- Future deferral or limitation warnings where severity, due date, category,
+  MEL/CDL/NEF, and maintenance approval policy allow an exception.
 
 Part 91K and Part 135-style policies should be stricter by default than baseline
 Part 91.

@@ -1,10 +1,12 @@
 import {
-  AirworthinessReleaseStatus,
+  AircraftConfigurationStatus,
   AlertSeverity,
   AlertStatus,
   AssignmentStatus,
   AircraftFuelEventType,
   AircraftStatus,
+  DeferralStatus,
+  DiscrepancyStatus,
   DispatchPackageStatus,
   FaaFlightPlanStatus,
   FlightLegStatus,
@@ -19,6 +21,7 @@ import {
 } from "@prisma/client";
 
 import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
+import { evaluateAircraftServiceability } from "@/lib/aircraft-serviceability";
 import {
   isDispatchReady,
   isFlightPlanBasisReady,
@@ -65,22 +68,32 @@ const dashboardFlightLegSelect = {
           id: true,
           status: true,
           tailNumber: true,
-          airworthinessReleases: {
-            select: {
-              expiresAt: true,
-              releaseNumber: true,
-              status: true,
-            },
-            orderBy: { releasedAt: "desc" },
-            take: 3,
+          configurations: {
+            where: { status: AircraftConfigurationStatus.ACTIVE },
+            select: { id: true },
+            take: 1,
           },
           deferrals: {
-            where: { status: "ACTIVE" },
-            select: { id: true },
+            where: { status: DeferralStatus.ACTIVE },
+            select: {
+              dueAt: true,
+              id: true,
+              operatingLimitations: true,
+              requiredProcedures: true,
+              status: true,
+            },
           },
           discrepancies: {
-            where: { status: "OPEN" },
-            select: { id: true },
+            where: {
+              status: {
+                in: [
+                  DiscrepancyStatus.OPEN,
+                  DiscrepancyStatus.DEFERRED,
+                  DiscrepancyStatus.CORRECTED_PENDING_RTS,
+                ],
+              },
+            },
+            select: { id: true, status: true },
           },
         },
       },
@@ -218,12 +231,19 @@ export type DashboardFlight = {
   arrivalCode: string;
   tailNumber: string;
   assignedAircraft: {
-    airworthinessReleases: Array<{
-      expiresAt: Date | null;
-      releaseNumber: string;
-      status: AirworthinessReleaseStatus;
-    }>;
+    configurations: Array<{ id: string }>;
     deferralCount: number;
+    deferrals: Array<{
+      dueAt: Date | null;
+      id: string;
+      operatingLimitations: string | null;
+      requiredProcedures: string | null;
+      status: DeferralStatus;
+    }>;
+    discrepancies: Array<{
+      id: string;
+      status: DiscrepancyStatus;
+    }>;
     discrepancyCount: number;
     id: string;
     status: AircraftStatus;
@@ -494,15 +514,7 @@ function buildReleaseSummary(
 ): DashboardReleaseSummary {
   const evidence = flight.releaseEvidence;
   const aircraft = flight.assignedAircraft;
-  const currentAirworthinessRelease = aircraft?.airworthinessReleases.find(
-    (release) => release.status === AirworthinessReleaseStatus.RELEASED,
-  );
-  const airworthinessExpired =
-    !!currentAirworthinessRelease?.expiresAt &&
-    currentAirworthinessRelease.expiresAt.getTime() <= now.getTime();
-  const mxBlockingStatus =
-    aircraft?.status === AircraftStatus.IN_MAINTENANCE ||
-    aircraft?.status === AircraftStatus.OUT_OF_SERVICE;
+  const serviceability = evaluateAircraftServiceability(aircraft, now);
   const firstCrewWarning = coverage?.warnings[0]?.message;
   const releaseSetting = flight.releaseSetting;
   const manifestReady = isManifestReady(
@@ -511,14 +523,7 @@ function buildReleaseSummary(
   );
   const locatingReady = isLocatingReady(evidence?.locatingStatus);
   const locatingRequired = isLocatingRequired(flight.faaFlightPlanStatus);
-  const mxReady = Boolean(
-    aircraft &&
-      currentAirworthinessRelease &&
-      !airworthinessExpired &&
-      !mxBlockingStatus &&
-      aircraft.discrepancyCount === 0 &&
-      aircraft.deferralCount === 0,
-  );
+  const mxReady = Boolean(aircraft && serviceability.ready);
   const crewStatus: DashboardReleaseComponentStatus = !coverage
     ? "missing"
     : coverage.isCovered && coverage.warnings.length === 0
@@ -546,18 +551,10 @@ function buildReleaseSummary(
     releaseComponent(
       "mx",
       "MX",
-      mxReady ? "ready" : !aircraft || !currentAirworthinessRelease || airworthinessExpired ? "missing" : "warning",
+      mxReady ? "ready" : !aircraft ? "missing" : serviceability.blocksRelease ? "missing" : "warning",
       !aircraft
         ? "No assigned aircraft for MX review."
-        : !currentAirworthinessRelease
-          ? "No current aircraft maintenance release."
-          : airworthinessExpired
-            ? `MX release ${currentAirworthinessRelease.releaseNumber} is expired.`
-            : mxBlockingStatus
-              ? `${aircraft.tailNumber} status is ${aircraft.status}.`
-              : aircraft.discrepancyCount > 0 || aircraft.deferralCount > 0
-                ? `${aircraft.tailNumber} has ${aircraft.discrepancyCount} open discrepancy and ${aircraft.deferralCount} active deferral record(s).`
-                : `${aircraft.tailNumber} has current MX release ${currentAirworthinessRelease.releaseNumber}.`,
+        : `${aircraft.tailNumber}: ${serviceability.message}`,
     ),
   ];
 
@@ -673,8 +670,10 @@ function normalizeFlightLeg(
       assignedAircraft?.tailNumber ?? flightLeg.legacyFlight?.aircraft.tailNumber ?? "Unassigned",
     assignedAircraft: assignedAircraft
       ? {
-          airworthinessReleases: assignedAircraft.airworthinessReleases,
+          configurations: assignedAircraft.configurations,
           deferralCount: assignedAircraft.deferrals.length,
+          deferrals: assignedAircraft.deferrals,
+          discrepancies: assignedAircraft.discrepancies,
           discrepancyCount: assignedAircraft.discrepancies.length,
           id: assignedAircraft.id,
           status: assignedAircraft.status,

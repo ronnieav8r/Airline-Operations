@@ -20,8 +20,9 @@ type ReleaseRuleDefault = {
 const SHARED_BLOCK_RULES: ReleaseRuleDefault[] = [
   rule("flightLeg.assignedAircraft.missing", "aircraft", "BLOCK", false),
   rule("aircraftConfiguration.active.missing", "airworthiness", "BLOCK", false),
-  rule("airworthinessRelease.current.missing", "airworthiness", "BLOCK", false),
-  rule("airworthinessRelease.current.expired", "airworthiness", "BLOCK", false),
+  rule("discrepancy.open.exists", "airworthiness", "BLOCK", false),
+  rule("discrepancy.returnToService.required", "airworthiness", "BLOCK", false),
+  rule("deferral.active.expired", "airworthiness", "BLOCK", false),
   rule("operationalControl.record.missing", "operational-control", "BLOCK", false),
   rule("operationalControl.controllingEntity.missing", "operational-control", "BLOCK", false),
   rule("operatingAuthority.missing", "authority", "BLOCK", false),
@@ -52,7 +53,6 @@ const STRICT_EVIDENCE_BLOCK_RULES: ReleaseRuleDefault[] = [
 ];
 
 const WARNING_ONLY_RULES: ReleaseRuleDefault[] = [
-  rule("discrepancy.open.exists", "airworthiness", "WARN", false),
   rule("deferral.active.exists", "airworthiness", "WARN", false),
   rule("crewCompliance.checks.deferred", "crew-compliance", "WARN", false),
 ];

@@ -1,6 +1,9 @@
 import {
   AssignmentStatus,
+  AircraftFuelEventType,
+  DeferralStatus,
   FlightLocatingStatus,
+  FlightPhaseStatus,
   ManifestStatus,
   OperatingPart,
   Prisma,
@@ -42,12 +45,29 @@ const operationsControlSelect = {
       releasedAt: true,
     },
   },
+  customer: {
+    select: {
+      name: true,
+      customerCode: true,
+    },
+  },
   flightLeg: {
     select: {
       id: true,
       flightNumber: true,
+      legNumber: true,
       scheduledDeparture: true,
+      scheduledArrival: true,
+      actualDeparture: true,
+      actualArrival: true,
       status: true,
+      tripOrMission: {
+        select: {
+          tripNumber: true,
+          customerName: true,
+          missionType: true,
+        },
+      },
       departureStation: {
         select: {
           code: true,
@@ -65,8 +85,36 @@ const operationsControlSelect = {
         select: {
           aircraft: {
             select: {
+              id: true,
               tailNumber: true,
               type: true,
+              status: true,
+              discrepancies: {
+                where: {
+                  status: { in: ["OPEN", "DEFERRED"] },
+                },
+                select: {
+                  id: true,
+                  status: true,
+                },
+              },
+              deferrals: {
+                where: {
+                  status: DeferralStatus.ACTIVE,
+                },
+                select: {
+                  id: true,
+                },
+              },
+              maintenanceEvents: {
+                where: {
+                  status: { in: ["PLANNED", "IN_PROGRESS"] },
+                },
+                select: {
+                  id: true,
+                  status: true,
+                },
+              },
             },
           },
         },
@@ -74,6 +122,25 @@ const operationsControlSelect = {
           assignedAt: "desc",
         },
         take: 1,
+      },
+      crewAssignments: {
+        where: {
+          status: { in: [AssignmentStatus.PLANNED, AssignmentStatus.ACTIVE] },
+        },
+        select: {
+          id: true,
+          seatRole: true,
+          status: true,
+          crewMember: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+        orderBy: {
+          seatRole: "asc",
+        },
       },
       manifest: {
         select: {
@@ -102,9 +169,43 @@ const operationsControlSelect = {
       dispatchPackage: {
         select: {
           id: true,
+          status: true,
           weatherBriefingId: true,
           notamSnapshotId: true,
           flightPlanReferenceId: true,
+        },
+      },
+      fuelEvents: {
+        where: {
+          eventType: {
+            in: [AircraftFuelEventType.RELEASE_ONBOARD, AircraftFuelEventType.POSTFLIGHT_ONBOARD],
+          },
+        },
+        select: {
+          eventType: true,
+          fuelOnboardLbs: true,
+          fuelOnboardGallons: true,
+          fueledReady: true,
+          recordedAt: true,
+        },
+        orderBy: {
+          recordedAt: "desc",
+        },
+      },
+      preflightRecord: {
+        select: {
+          status: true,
+          completedAt: true,
+        },
+      },
+      postflightRecord: {
+        select: {
+          status: true,
+          outTime: true,
+          offTime: true,
+          onTime: true,
+          inTime: true,
+          completedAt: true,
         },
       },
       flightPlanReferences: {
@@ -135,8 +236,36 @@ const operationsControlSelect = {
       },
       aircraft: {
         select: {
+          id: true,
           tailNumber: true,
           type: true,
+          status: true,
+          discrepancies: {
+            where: {
+              status: { in: ["OPEN", "DEFERRED"] },
+            },
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+          deferrals: {
+            where: {
+              status: DeferralStatus.ACTIVE,
+            },
+            select: {
+              id: true,
+            },
+          },
+          maintenanceEvents: {
+            where: {
+              status: { in: ["PLANNED", "IN_PROGRESS"] },
+            },
+            select: {
+              id: true,
+              status: true,
+            },
+          },
         },
       },
     },
@@ -161,8 +290,17 @@ export type OperationsControlReadSource =
 export type OperationsControlLegRead = {
   id: string | null;
   flightNumber: string;
+  legNumber: number | null;
   scheduledDeparture: Date | null;
+  scheduledArrival: Date | null;
+  actualDeparture: Date | null;
+  actualArrival: Date | null;
   status: string;
+  trip: {
+    tripNumber: string;
+    customerName: string | null;
+    missionType: string | null;
+  } | null;
   departureStation: {
     code: string;
   } | null;
@@ -170,10 +308,25 @@ export type OperationsControlLegRead = {
     code: string;
   } | null;
   aircraft: {
+    id: string;
     tailNumber: string;
     type: string;
+    status: string;
+    openDiscrepancyCount: number;
+    activeDeferralCount: number;
+    openMaintenanceEventCount: number;
   } | null;
+  crewAssignments: Array<{
+    id: string;
+    seatRole: string;
+    status: AssignmentStatus;
+    crewName: string;
+  }>;
   releaseEvidence: ReleaseEvidenceRead | null;
+  releaseFuel: FuelEventRead | null;
+  postflightFuel: FuelEventRead | null;
+  preflightStatus: FlightPhaseStatus | null;
+  postflightStatus: FlightPhaseStatus | null;
 };
 
 export type ReleaseEvidenceRead = {
@@ -181,11 +334,20 @@ export type ReleaseEvidenceRead = {
   manifestItemCount: number;
   weightBalanceStatus: WeightBalanceStatus | null;
   locatingStatus: FlightLocatingStatus | null;
+  dispatchStatus: string | null;
   dispatchPackageReady: boolean;
   weatherSnapshotReady: boolean;
   notamSnapshotReady: boolean;
   flightPlanStatus: string | null;
   flightPlanFiledAt: Date | null;
+};
+
+export type FuelEventRead = {
+  eventType: AircraftFuelEventType;
+  fuelOnboardLbs: Prisma.Decimal;
+  fuelOnboardGallons: Prisma.Decimal;
+  fueledReady: boolean | null;
+  recordedAt: Date;
 };
 
 export type OperationsControlRecordRead = Omit<
@@ -233,6 +395,7 @@ function buildReleaseEvidenceRead(
     notamSnapshotReady: Boolean(flightLeg.dispatchPackage?.notamSnapshotId),
     flightPlanStatus: flightPlan?.status ?? null,
     flightPlanFiledAt: flightPlan?.filedAt ?? null,
+    dispatchStatus: flightLeg.dispatchPackage?.status ?? null,
   };
 }
 
@@ -241,6 +404,12 @@ function normalizeRecord(record: OperationsControlRecordPayload): OperationsCont
 
   if (flightLeg) {
     const aircraft = flightLeg.aircraftAssignments[0]?.aircraft ?? null;
+    const releaseFuel =
+      flightLeg.fuelEvents.find((event) => event.eventType === AircraftFuelEventType.RELEASE_ONBOARD) ??
+      null;
+    const postflightFuel =
+      flightLeg.fuelEvents.find((event) => event.eventType === AircraftFuelEventType.POSTFLIGHT_ONBOARD) ??
+      null;
 
     return {
       ...controlRecord,
@@ -248,12 +417,37 @@ function normalizeRecord(record: OperationsControlRecordPayload): OperationsCont
       leg: {
         id: flightLeg.id,
         flightNumber: flightLeg.flightNumber ?? "Unnumbered",
+        legNumber: flightLeg.legNumber,
         scheduledDeparture: flightLeg.scheduledDeparture,
+        scheduledArrival: flightLeg.scheduledArrival,
+        actualDeparture: flightLeg.actualDeparture,
+        actualArrival: flightLeg.actualArrival,
         status: flightLeg.status,
+        trip: flightLeg.tripOrMission,
         departureStation: flightLeg.departureStation,
         arrivalStation: flightLeg.arrivalStation,
-        aircraft,
+        aircraft: aircraft
+          ? {
+              id: aircraft.id,
+              tailNumber: aircraft.tailNumber,
+              type: aircraft.type,
+              status: aircraft.status,
+              openDiscrepancyCount: aircraft.discrepancies.length,
+              activeDeferralCount: aircraft.deferrals.length,
+              openMaintenanceEventCount: aircraft.maintenanceEvents.length,
+            }
+          : null,
+        crewAssignments: flightLeg.crewAssignments.map((assignment) => ({
+          id: assignment.id,
+          seatRole: assignment.seatRole,
+          status: assignment.status,
+          crewName: `${assignment.crewMember.firstName} ${assignment.crewMember.lastName}`,
+        })),
         releaseEvidence: buildReleaseEvidenceRead(flightLeg),
+        releaseFuel,
+        postflightFuel,
+        preflightStatus: flightLeg.preflightRecord?.status ?? null,
+        postflightStatus: flightLeg.postflightRecord?.status ?? null,
       },
     };
   }
@@ -265,12 +459,32 @@ function normalizeRecord(record: OperationsControlRecordPayload): OperationsCont
       leg: {
         id: flight.id,
         flightNumber: flight.flightNumber,
+        legNumber: null,
         scheduledDeparture: flight.scheduledDeparture,
+        scheduledArrival: null,
+        actualDeparture: null,
+        actualArrival: null,
         status: flight.status,
+        trip: null,
         departureStation: flight.departureStation,
         arrivalStation: flight.arrivalStation,
-        aircraft: flight.aircraft,
+        aircraft: flight.aircraft
+          ? {
+              id: flight.aircraft.id,
+              tailNumber: flight.aircraft.tailNumber,
+              type: flight.aircraft.type,
+              status: flight.aircraft.status,
+              openDiscrepancyCount: flight.aircraft.discrepancies.length,
+              activeDeferralCount: flight.aircraft.deferrals.length,
+              openMaintenanceEventCount: flight.aircraft.maintenanceEvents.length,
+            }
+          : null,
+        crewAssignments: [],
         releaseEvidence: null,
+        releaseFuel: null,
+        postflightFuel: null,
+        preflightStatus: null,
+        postflightStatus: null,
       },
     };
   }

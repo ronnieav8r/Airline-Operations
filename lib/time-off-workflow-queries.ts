@@ -15,6 +15,14 @@ import { prisma } from "@/lib/prisma";
 
 const ACTIVE_REVIEW_STATUSES = [TimeOffRequestStatus.PENDING, TimeOffRequestStatus.APPROVED];
 
+function formatStatusLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
 const timeOffRequestSelect = {
   id: true,
   crewMemberId: true,
@@ -45,7 +53,31 @@ export type TimeOffWorkflowRequest = Prisma.TimeOffRequestGetPayload<{
   select: typeof timeOffRequestSelect;
 }> & {
   conflictWarnings: string[];
+  assignmentCoverageReview: TimeOffAssignmentCoverageReview[];
   coverageImpact: TimeOffCoverageImpact[];
+};
+
+export type TimeOffAssignmentCoverageFlight = {
+  arrivalCode: string;
+  flightLegId: string | null;
+  flightNumber: string;
+  id: string;
+  readSource: "FLIGHT_LEG" | "LEG_MISSING_FALLBACK_FLIGHT";
+  route: string;
+  scheduledArrival: Date;
+  scheduledDeparture: Date;
+  status: string;
+};
+
+export type TimeOffAssignmentCoverageReview = {
+  aircraftId: string;
+  aircraftType: AircraftType;
+  assignmentId: string;
+  endsAt: Date | null;
+  flights: TimeOffAssignmentCoverageFlight[];
+  seatRole: SeatRole;
+  startsAt: Date;
+  tailNumber: string;
 };
 
 export type TimeOffCoverageCrew = {
@@ -546,21 +578,21 @@ async function getTimeOffConflictWarnings(
     warnings.push(
       `${overlappingRequests.length} pending/approved time-off request${
         overlappingRequests.length === 1 ? "" : "s"
-      } already overlap this range.`,
+      } already overlap this request window. Review before approval.`,
     );
   }
 
   if (schedules.length > 0) {
     warnings.push(
-      `${schedules.length} CrewSchedule block${schedules.length === 1 ? "" : "s"} overlap this range.`,
+      `${schedules.length} schedule block${schedules.length === 1 ? "" : "s"} overlap this request window.`,
     );
   }
 
   if (assignments.length > 0) {
     warnings.push(
-      `${assignments.length} active aircraft-block assignment${
+      `${assignments.length} active aircraft assignment${
         assignments.length === 1 ? "" : "s"
-      } overlap this range.`,
+      } overlap this request window. Review aircraft coverage before approval.`,
     );
   }
 
@@ -587,10 +619,79 @@ async function getTimeOffConflictWarnings(
   }
 
   if (request.crewMember.employmentStatus !== EmploymentStatus.ACTIVE) {
-    warnings.push(`Crew member employment status is ${request.crewMember.employmentStatus}.`);
+    warnings.push(
+      `Crew member is currently marked ${formatStatusLabel(
+        request.crewMember.employmentStatus,
+      )}. Confirm the request is intentional before approval.`,
+    );
   }
 
   return warnings;
+}
+
+async function getTimeOffAssignmentCoverageReview(
+  request: Prisma.TimeOffRequestGetPayload<{ select: typeof timeOffRequestSelect }>,
+): Promise<TimeOffAssignmentCoverageReview[]> {
+  const windowStart = request.startDate;
+  const windowEnd = request.endDate;
+  const assignments = await prisma.aircraftCrewAssignment.findMany({
+    where: {
+      crewMemberId: request.crewMemberId,
+      isActive: true,
+      startsAt: { lt: windowEnd },
+      OR: [{ endsAt: null }, { endsAt: { gt: windowStart } }],
+    },
+    orderBy: [{ startsAt: "asc" }],
+    select: {
+      id: true,
+      aircraft: {
+        select: {
+          id: true,
+          tailNumber: true,
+          type: true,
+        },
+      },
+      endsAt: true,
+      seatRole: true,
+      startsAt: true,
+    },
+  });
+  const aircraftIds = Array.from(new Set(assignments.map((assignment) => assignment.aircraft.id)));
+  const flights = await getUpcomingCoverageFlightsForAircrafts(aircraftIds, windowStart, windowEnd);
+
+  return assignments.map((assignment) => {
+    const affectedFlights = flights
+      .filter((flight) => flight.aircraftId === assignment.aircraft.id)
+      .filter((flight) =>
+        flight.coverage?.assignedCrew.some(
+          (crewAssignment) =>
+            crewAssignment.crewMemberId === request.crewMemberId &&
+            crewAssignment.seatRole === assignment.seatRole,
+        ),
+      )
+      .map((flight) => ({
+        arrivalCode: flight.arrivalCode,
+        flightLegId: flight.flightLegId,
+        flightNumber: flight.flightNumber,
+        id: flight.id,
+        readSource: flight.readSource,
+        route: flight.route,
+        scheduledArrival: flight.scheduledArrival,
+        scheduledDeparture: flight.scheduledDeparture,
+        status: String(flight.status),
+      }));
+
+    return {
+      aircraftId: assignment.aircraft.id,
+      aircraftType: assignment.aircraft.type,
+      assignmentId: assignment.id,
+      endsAt: assignment.endsAt,
+      flights: affectedFlights,
+      seatRole: assignment.seatRole,
+      startsAt: assignment.startsAt,
+      tailNumber: assignment.aircraft.tailNumber,
+    };
+  });
 }
 
 export async function getTimeOffWorkflowData(
@@ -643,13 +744,15 @@ export async function getTimeOffWorkflowData(
   ]);
   const requestsWithWarnings = await Promise.all(
     requests.map(async (request) => {
-      const [conflictWarnings, coverageImpact] = await Promise.all([
+      const [conflictWarnings, assignmentCoverageReview, coverageImpact] = await Promise.all([
         getTimeOffConflictWarnings(request),
+        getTimeOffAssignmentCoverageReview(request),
         getTimeOffCoverageImpact(request),
       ]);
 
       return {
         ...request,
+        assignmentCoverageReview,
         conflictWarnings,
         coverageImpact,
       };

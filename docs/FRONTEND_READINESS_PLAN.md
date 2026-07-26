@@ -1,6 +1,6 @@
 # Frontend Readiness Plan
 
-Last updated: 2026-06-14
+Last updated: 2026-06-30
 
 ## Status
 
@@ -45,7 +45,7 @@ Suggested slices:
 
 - Refine global navigation labels and active states.
 - Add clearer module grouping for Operations, Aircraft, Crew, Scheduling,
-  Logistics, and Admin/Diagnostics.
+  Maintenance, Logistics, and Admin/Diagnostics.
 - Improve page headers and breadcrumb patterns.
 - Add role-aware affordances without hiding core read visibility prematurely.
 
@@ -57,8 +57,9 @@ Suggested slices:
 
 - Improve visual hierarchy for today, attention, release state, evidence gaps,
   crew coverage, duty/rest warnings, logistics needs, and aircraft issues.
-- Preserve the AI Review Notes placeholder as inactive unless separately
-  planned.
+- Keep provider-backed AI features out of the visible dashboard unless they
+  are separately planned and wired. The old inactive AI Review Notes placeholder
+  has been removed.
 - Add clearer direct links into FlightLeg evidence workflows.
 
 ### Track 3: Operations Control Workbench
@@ -92,17 +93,26 @@ views.
 
 Suggested slices:
 
-- Keep the aircraft board focused on fleet status: Aircraft, Available, In
-  flight, AOG, Open MELs, and Open write-ups.
+- Keep the aircraft board focused on fleet and tail-number status. The current
+  `/aircraft` direction is compact fleet counts, clickable aircraft rows, and a
+  quick-review drawer rather than large aircraft cards or separate action
+  columns.
 - Add a drawer-based aircraft create workflow before adding more aircraft-board
   metrics.
-- Move deeper maintenance concepts into a focused maintenance workflow/tab:
-  AOG, write-ups, MELs, CDL, NEF/EFL terminology, airworthiness, and
-  operational limitations.
-- Improve aircraft detail hierarchy for assignment, airworthiness, upcoming
-  legs, crew coverage, and logistics.
+- Keep the top-level `Maintenance` module as a maintenance-user workbench rather
+  than a top-level `Logbook` tab. V1 is Queue plus Scheduled Maintenance with a
+  compact review drawer and links into aircraft, airworthiness, logbook, and
+  export routes.
+  Logbook remains a deeper aircraft-tail workspace alongside later write-up,
+  MEL/deferral, corrective action, release, template, attachment, export, and
+  signer/authority workflows.
+- Improve aircraft detail hierarchy for aircraft status, airworthiness,
+  upcoming legs, maintenance state, and logistics. Crew coverage belongs in its
+  own aircraft crew coverage tab or scheduling/assignment workflow, not in the
+  aircraft quick-review drawer.
 - Improve crew detail hierarchy for compliance, schedule, assignments, time
-  off, logistics, and portal-scoped context.
+  off, and logistics. Crew self-service work should target `/crew/me`, not the
+  older `/crew/portal`.
 - Polish aircraft crew assignment and crew compliance admin workflows.
 
 ### Track 6: Crew Scheduling And Logistics UX
@@ -111,9 +121,19 @@ Goal: make planning workflows understandable before adding more backend depth.
 
 Suggested slices:
 
-- Improve crew scheduling planner filters/grouping/empty states.
+- Continue the Crew Schedule Board visualization and planning workflow:
+  four-week, 8-week, month, week, and day drilldowns; summary vs names display
+  modes; all-position and single-position personnel timelines; status language;
+  action affordance styling; and focus-mode ergonomics.
+- Harden the Scheduling Planning tab now that the local draft prototype exists:
+  Quick Blocks, Reusable Templates, segmented repeating rotations, draft/live
+  visual distinction, drag/drop and resize behavior, conflict warnings, and
+  publish semantics.
+- Keep schedule visualization separate from aircraft assignment truth.
 - Improve schedule period, pattern, request, and time-off admin surfaces.
-- Improve crew portal readability.
+- Continue `/crew/me` as the mobile-first crew self-service app: Today,
+  Schedule, Flights, Requests, Profile, assigned-flight details, and crew-safe
+  Preflight/Postflight.
 - Improve logistics workbench and crew-scoped logistics forms.
 
 ## Frontend Design Direction
@@ -152,10 +172,61 @@ simplified the aircraft board into clickable fleet status filters.
   FlightLeg create, reusable passengers, and passenger-first manifest workflow.
 - Current drawer refinement: dashboard FlightLeg workspace summary cleanup plus
   manifest add-passenger access.
-- Current aircraft refinement: `/aircraft` fleet-status tiles and URL filters
-  for AOG, Open MELs, and Open write-ups.
-- Next recommended slice: add the aircraft create drawer, then plan the
-  maintenance workbench/tab information architecture.
+- Current aircraft refinement: `/aircraft` is being reviewed as a compact
+  fleet-status page. It now favors one-row fleet counts, clickable aircraft
+  rows, alternating row shading, and an aircraft quick-review drawer. The
+  aircraft list should stay aircraft/status focused; maintenance depth belongs
+  in drilldowns and the future Maintenance module.
+- Current aircraft crew coverage refinement: `/aircraft?view=crew-coverage`
+  still needs more polish. Previous/Today/Next controls have been moved into
+  the Aircraft crew coverage planner header so they do not blend into the main
+  mode buttons.
+- Current crew scheduling refinement: `/crew/scheduling` defaults to the Crew
+  Schedule Board in `4 week` view; four-week, 8-week, month, week, and day
+  drilldowns are URL-driven; summary mode shows position count cards; names
+  mode shows grouped all-position personnel timelines; selected positions
+  render compact personnel timelines with continuous status bars and
+  `Unscheduled` fallback status. The large page header and always-visible
+  filter rows were replaced with a compact board toolbar and `focus=board`
+  mode. Planning now has a local draft canvas with Quick Blocks, Reusable
+  Templates, segmented 7 on / 7 off rotation placement, cycle-count placement,
+  resize/extend behavior, monthly published/draft ON_DUTY counters, generic
+  `Assigned` labels, and no sign-in redirect for local template/draft actions.
+  The 2026-06-21 focus-mode hardening pass also records an important guardrail:
+  layout repairs should preserve current view options, colors, data boundaries,
+  and scheduling semantics unless the user explicitly approves broader changes.
+- Current crew member app refinement: `/crew/me` is the active self-service
+  target for linked `CREW` users. It redirects crew users from `/`, uses a
+  crew-only shell, has Today/Schedule/Flights/Requests/Profile tabs, creates
+  only the signed-in crew member's own requests, and exposes assigned-flight
+  Preflight/Postflight forms at `/crew/me/flights/[flightLegId]`. Recent crew
+  portal work added today's flight cards, crew contact access, passenger access,
+  passenger ID photo capture, and passenger check-in/boarding controls.
+- Current maintenance/logbook direction: `/maintenance` is now the top-level
+  task-first workbench for `ADMIN` and `MAINTENANCE` users. It opens to an
+  action queue, has a Scheduled Maintenance view for planned/in-progress
+  maintenance events, and drills into existing aircraft-tail logbook/
+  airworthiness routes. Keep `/aircraft` as the fleet/status drilldown.
+- Current UI planning refinement: `docs/AEROOPS_UI_WORKFLOW_MACRO_PLAN.md`
+  records the macro app-wide direction from the scheduling interaction model,
+  and `docs/AEROOPS_UI_PAGE_DESIGN_DRILLDOWN.md` translates it into
+  page-specific layout, drawer, row/card, and QA guidance.
+- Handoff status: the macro/page drilldown planning pass is complete and linked
+  from `docs/README.md`, `docs/CURRENT_HANDOFF.md`, and
+  `docs/PROJECT_STATUS.md`. Continue with the recommended implementation order
+  unless the user asks for another design-planning iteration.
+- Next recommended crew slice: seed or select a linked crew user with assigned
+  future FlightLegs inside the 42-day window, then expand
+  `/crew/me/flights/[flightLegId]` into a true crew trip brief with route,
+  times, tail, assigned crew, readiness, manifest, fuel/W&B/release,
+  preflight, postflight, and delay capture.
+- Next recommended scheduling slice: harden the current Scheduling Planning
+  workflow, especially conflict blocking, baseline/live-change review states,
+  publish messaging, cancelled-change behavior, reusable-template management,
+  and horizontal panning ergonomics.
+- Next recommended aircraft/maintenance slice: finish aircraft crew coverage
+  polish, then polish the Maintenance queue/drawer/scheduled-maintenance
+  experience before adding create/sign/admin workflows.
 
 ## Backend Work To Avoid During UI Polish
 
@@ -169,6 +240,10 @@ simplified the aircraft board into clickable fleet status filters.
 - ADS-B integration.
 - Duty/rest enforcement expansion.
 - Automatic aircraft assignment generation from scheduling or logistics.
+- Additional scheduling schema changes beyond the current draft/template
+  prototype unless a specific workflow requires them.
+- Hard scheduling enforcement or automatic coverage replacement from planning
+  drafts.
 
 ## Release UI Configuration Follow-Up
 

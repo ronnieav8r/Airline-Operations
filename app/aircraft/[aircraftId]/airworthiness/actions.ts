@@ -1,12 +1,22 @@
 "use server";
 
+import { createHash } from "node:crypto";
+
 import {
+  AircraftLogbookAuditEventType,
+  AircraftLogbookEntrySource,
+  AircraftLogbookEntryStatus,
+  AircraftLogbookEntryType,
+  AircraftLogbookSignaturePurpose,
   AirworthinessReleaseStatus,
+  DeferralMethod,
   DeferralStatus,
   DiscrepancyStatus,
+  MaintenanceComplianceStatus,
   MaintenanceEventStatus,
   MaintenanceEventType,
   Prisma,
+  ReturnToServiceRecordStatus,
   UserRole,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -22,20 +32,24 @@ type DiscrepancyInput = {
   title: string;
   description: string | null;
   severity: string | null;
-  status: DiscrepancyStatus;
   correctiveSummary: string | null;
-  clearedAt: Date | null;
 };
 
 type DeferralInput = {
   discrepancyId: string | null;
   deferralNumber: string | null;
+  deferralMethod: DeferralMethod;
   category: string | null;
   status: DeferralStatus;
   dueAt: Date | null;
   clearedAt: Date | null;
+  melItemNumber: string | null;
+  repairInterval: string | null;
+  authorityType: string | null;
+  placardRequired: boolean;
+  operatingLimitations: string | null;
+  requiredProcedures: string | null;
   notes: string | null;
-  discrepancyResolution: "KEEP_DEFERRED" | "MARK_CLEARED";
 };
 
 type MaintenanceEventInput = {
@@ -50,7 +64,40 @@ type MaintenanceEventInput = {
   description: string | null;
   returnToServiceAt: Date | null;
   notes: string | null;
-  discrepancyResolution: "NO_CHANGE" | "MARK_CLEARED";
+};
+
+function addDays(value: Date, days: number) {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function addMonths(value: Date, months: number) {
+  const next = new Date(value);
+  next.setMonth(next.getMonth() + months);
+  return next;
+}
+
+function decimalToNumber(value: Prisma.Decimal | number | null | undefined): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+type ReturnToServiceInput = {
+  discrepancyId: string;
+  maintenanceEventId: string | null;
+  workSummary: string;
+  approvalBasis: string | null;
+  returnToServiceAt: Date;
+  signerName: string;
+  certificateNumber: string | null;
+  certificateType: string | null;
+  authorizationBasis: string | null;
+  intentText: string;
 };
 
 type AirworthinessReleaseInput = {
@@ -82,21 +129,6 @@ function getRequiredText(formData: FormData, key: string, label: string): string
   return value;
 }
 
-function parseStatus(formData: FormData): DiscrepancyStatus {
-  const value = getOptionalText(formData, "status") ?? DiscrepancyStatus.OPEN;
-
-  if (
-    value === DiscrepancyStatus.OPEN ||
-    value === DiscrepancyStatus.DEFERRED ||
-    value === DiscrepancyStatus.CLEARED ||
-    value === DiscrepancyStatus.CANCELLED
-  ) {
-    return value;
-  }
-
-  throw new AirworthinessWorkflowError("Discrepancy status is not valid.");
-}
-
 function parseDeferralStatus(formData: FormData): DeferralStatus {
   const value = getOptionalText(formData, "status") ?? DeferralStatus.ACTIVE;
 
@@ -110,6 +142,22 @@ function parseDeferralStatus(formData: FormData): DeferralStatus {
   }
 
   throw new AirworthinessWorkflowError("Deferral status is not valid.");
+}
+
+function parseDeferralMethod(formData: FormData): DeferralMethod {
+  const value = getOptionalText(formData, "deferralMethod") ?? DeferralMethod.MEL;
+
+  if (
+    value === DeferralMethod.MEL ||
+    value === DeferralMethod.CDL ||
+    value === DeferralMethod.NEF ||
+    value === DeferralMethod.COMPANY_APPROVED ||
+    value === DeferralMethod.OTHER_APPROVED
+  ) {
+    return value;
+  }
+
+  throw new AirworthinessWorkflowError("Deferral method is not valid.");
 }
 
 function parseMaintenanceEventType(formData: FormData): MaintenanceEventType {
@@ -176,25 +224,18 @@ function parseOptionalDateTime(formData: FormData, key: string, label: string): 
 }
 
 function parseDiscrepancyInput(formData: FormData): DiscrepancyInput {
-  const status = parseStatus(formData);
-  const enteredClearedAt = parseOptionalDateTime(formData, "clearedAt", "Cleared at");
-
   return {
     discrepancyNumber: getOptionalText(formData, "discrepancyNumber")?.toUpperCase() ?? null,
     title: getRequiredText(formData, "title", "Title"),
     description: getOptionalText(formData, "description"),
     severity: getOptionalText(formData, "severity")?.toUpperCase() ?? null,
-    status,
     correctiveSummary: getOptionalText(formData, "correctiveSummary"),
-    clearedAt:
-      status === DiscrepancyStatus.CLEARED ? enteredClearedAt ?? new Date() : null,
   };
 }
 
 function parseDeferralInput(formData: FormData, requireDiscrepancy: boolean): DeferralInput {
   const status = parseDeferralStatus(formData);
   const discrepancyId = getOptionalText(formData, "discrepancyId");
-  const resolution = getOptionalText(formData, "discrepancyResolution");
 
   if (requireDiscrepancy && !discrepancyId) {
     throw new AirworthinessWorkflowError("Discrepancy is required.");
@@ -203,6 +244,7 @@ function parseDeferralInput(formData: FormData, requireDiscrepancy: boolean): De
   return {
     discrepancyId,
     deferralNumber: getOptionalText(formData, "deferralNumber")?.toUpperCase() ?? null,
+    deferralMethod: parseDeferralMethod(formData),
     category: getOptionalText(formData, "category")?.toUpperCase() ?? null,
     status,
     dueAt: parseOptionalDateTime(formData, "dueAt", "Due at"),
@@ -210,16 +252,19 @@ function parseDeferralInput(formData: FormData, requireDiscrepancy: boolean): De
       status === DeferralStatus.CLEARED
         ? parseOptionalDateTime(formData, "clearedAt", "Cleared at") ?? new Date()
         : null,
+    melItemNumber: getOptionalText(formData, "melItemNumber")?.toUpperCase() ?? null,
+    repairInterval: getOptionalText(formData, "repairInterval"),
+    authorityType: getOptionalText(formData, "authorityType"),
+    placardRequired: formData.get("placardRequired") === "on",
+    operatingLimitations: getOptionalText(formData, "operatingLimitations"),
+    requiredProcedures: getOptionalText(formData, "requiredProcedures"),
     notes: getOptionalText(formData, "notes"),
-    discrepancyResolution:
-      resolution === "MARK_CLEARED" ? "MARK_CLEARED" : "KEEP_DEFERRED",
   };
 }
 
 function parseMaintenanceEventInput(formData: FormData): MaintenanceEventInput {
   const status = parseMaintenanceEventStatus(formData);
   const enteredCompletedAt = parseOptionalDateTime(formData, "completedAt", "Completed at");
-  const resolution = getOptionalText(formData, "discrepancyResolution");
 
   return {
     maintenanceNumber: getOptionalText(formData, "maintenanceNumber")?.toUpperCase() ?? null,
@@ -240,8 +285,26 @@ function parseMaintenanceEventInput(formData: FormData): MaintenanceEventInput {
       "Return to service at",
     ),
     notes: getOptionalText(formData, "notes"),
-    discrepancyResolution:
-      resolution === "MARK_CLEARED" ? "MARK_CLEARED" : "NO_CHANGE",
+  };
+}
+
+function parseReturnToServiceInput(formData: FormData): ReturnToServiceInput {
+  const returnToServiceAt =
+    parseOptionalDateTime(formData, "returnToServiceAt", "Return to service at") ?? new Date();
+
+  return {
+    discrepancyId: getRequiredText(formData, "discrepancyId", "Discrepancy"),
+    maintenanceEventId: getOptionalText(formData, "maintenanceEventId"),
+    workSummary: getRequiredText(formData, "workSummary", "Work summary"),
+    approvalBasis: getOptionalText(formData, "approvalBasis"),
+    returnToServiceAt,
+    signerName: getRequiredText(formData, "signerName", "Signer name"),
+    certificateNumber: getOptionalText(formData, "certificateNumber"),
+    certificateType: getOptionalText(formData, "certificateType"),
+    authorizationBasis: getOptionalText(formData, "authorizationBasis"),
+    intentText:
+      getOptionalText(formData, "intentText") ??
+      "I certify this aircraft or item has been approved for return to service.",
   };
 }
 
@@ -490,6 +553,66 @@ async function generateAirworthinessReleaseNumber(
   throw new AirworthinessWorkflowError("Could not generate an airworthiness release number.");
 }
 
+async function generateReturnToServiceNumber(
+  tx: Prisma.TransactionClient,
+  aircraftId: string,
+  tailNumber: string,
+) {
+  const dateKey = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  const prefix = `RTS-${tailNumber.replace(/\s+/g, "").toUpperCase()}-${dateKey}`;
+
+  for (let index = 1; index <= 999; index += 1) {
+    const candidate = `${prefix}-${String(index).padStart(2, "0")}`;
+    const existing = await tx.returnToServiceRecord.findFirst({
+      where: {
+        aircraftId,
+        rtsNumber: candidate,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  throw new AirworthinessWorkflowError("Could not generate a return-to-service number.");
+}
+
+async function generateLogbookEntryNumber(
+  tx: Prisma.TransactionClient,
+  aircraftId: string,
+  tailNumber: string,
+) {
+  const dateKey = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  const prefix = `LB-${tailNumber.replace(/\s+/g, "").toUpperCase()}-${dateKey}`;
+
+  for (let index = 1; index <= 999; index += 1) {
+    const candidate = `${prefix}-${String(index).padStart(3, "0")}`;
+    const existing = await tx.aircraftLogbookEntry.findFirst({
+      where: {
+        aircraftId,
+        entryNumber: candidate,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  throw new AirworthinessWorkflowError("Could not generate a logbook entry number.");
+}
+
+function signedHash(snapshot: unknown) {
+  return createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
+}
+
 async function supersedePriorReleasedAirworthinessReleases(
   tx: Prisma.TransactionClient,
   aircraftId: string,
@@ -512,11 +635,11 @@ async function supersedePriorReleasedAirworthinessReleases(
 async function applyMaintenanceDiscrepancyResolution(
   tx: Prisma.TransactionClient,
   input: MaintenanceEventInput,
+  maintenanceEventId: string,
 ) {
   if (
     !input.discrepancyId ||
-    input.status !== MaintenanceEventStatus.COMPLETED ||
-    input.discrepancyResolution !== "MARK_CLEARED"
+    input.status !== MaintenanceEventStatus.COMPLETED
   ) {
     return;
   }
@@ -524,8 +647,96 @@ async function applyMaintenanceDiscrepancyResolution(
   await tx.discrepancy.update({
     where: { id: input.discrepancyId },
     data: {
-      status: DiscrepancyStatus.CLEARED,
-      clearedAt: input.completedAt ?? new Date(),
+      activeDeferralId: null,
+      correctiveMaintenanceEventId: maintenanceEventId,
+      correctiveSummary: input.description,
+      status: DiscrepancyStatus.CORRECTED_PENDING_RTS,
+    },
+  });
+}
+
+async function advanceLinkedMaintenanceCompliance(
+  tx: Prisma.TransactionClient,
+  input: MaintenanceEventInput,
+  maintenanceEventId: string,
+  updatedById: string,
+) {
+  if (input.status !== MaintenanceEventStatus.COMPLETED) {
+    return;
+  }
+
+  const maintenanceEvent = await tx.maintenanceEvent.findUnique({
+    where: { id: maintenanceEventId },
+    select: {
+      maintenanceComplianceStateId: true,
+      maintenanceProgramTaskId: true,
+    },
+  });
+
+  if (!maintenanceEvent?.maintenanceComplianceStateId || !maintenanceEvent.maintenanceProgramTaskId) {
+    return;
+  }
+
+  const [task, currentState] = await Promise.all([
+    tx.maintenanceProgramTask.findUnique({
+      where: { id: maintenanceEvent.maintenanceProgramTaskId },
+      select: {
+        intervalAirframeHours: true,
+        intervalCycles: true,
+        intervalDays: true,
+        intervalMonths: true,
+      },
+    }),
+    tx.maintenanceComplianceState.findUnique({
+      where: { id: maintenanceEvent.maintenanceComplianceStateId },
+      select: {
+        lastCompletedAirframeHours: true,
+        lastCompletedCycles: true,
+      },
+    }),
+  ]);
+
+  if (!task) {
+    return;
+  }
+
+  const completedAt = input.completedAt ?? new Date();
+  let nextDueAt: Date | null = null;
+
+  if (task.intervalMonths || task.intervalDays) {
+    nextDueAt = new Date(completedAt);
+
+    if (task.intervalMonths) {
+      nextDueAt = addMonths(nextDueAt, task.intervalMonths);
+    }
+
+    if (task.intervalDays) {
+      nextDueAt = addDays(nextDueAt, task.intervalDays);
+    }
+  }
+
+  const lastCompletedAirframeHours = decimalToNumber(currentState?.lastCompletedAirframeHours);
+  const intervalAirframeHours = decimalToNumber(task.intervalAirframeHours);
+  const nextDueAirframeHours =
+    lastCompletedAirframeHours !== null && intervalAirframeHours !== null
+      ? lastCompletedAirframeHours + intervalAirframeHours
+      : null;
+  const nextDueCycles =
+    currentState?.lastCompletedCycles !== null &&
+    currentState?.lastCompletedCycles !== undefined &&
+    task.intervalCycles
+      ? currentState.lastCompletedCycles + task.intervalCycles
+      : null;
+
+  await tx.maintenanceComplianceState.update({
+    where: { id: maintenanceEvent.maintenanceComplianceStateId },
+    data: {
+      lastCompletedAt: completedAt,
+      nextDueAt,
+      nextDueAirframeHours,
+      nextDueCycles,
+      status: MaintenanceComplianceStatus.CURRENT,
+      updatedById,
     },
   });
 }
@@ -538,7 +749,7 @@ function revalidateAirworthinessPaths(aircraftId: string) {
 }
 
 export async function createDiscrepancyAction(aircraftId: string, formData: FormData) {
-  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
 
   try {
     const input = parseDiscrepancyInput(formData);
@@ -556,9 +767,9 @@ export async function createDiscrepancyAction(aircraftId: string, formData: Form
           title: input.title,
           description: input.description,
           severity: input.severity,
-          status: input.status,
+          status: DiscrepancyStatus.OPEN,
           correctiveSummary: input.correctiveSummary,
-          clearedAt: input.clearedAt,
+          clearedAt: null,
           reportedById: currentUser.id,
         },
       });
@@ -576,7 +787,7 @@ export async function updateDiscrepancyAction(
   discrepancyId: string,
   formData: FormData,
 ) {
-  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+  await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
 
   try {
     const input = parseDiscrepancyInput(formData);
@@ -594,9 +805,7 @@ export async function updateDiscrepancyAction(
           title: input.title,
           description: input.description,
           severity: input.severity,
-          status: input.status,
           correctiveSummary: input.correctiveSummary,
-          clearedAt: input.clearedAt,
         },
       });
     });
@@ -609,7 +818,7 @@ export async function updateDiscrepancyAction(
 }
 
 export async function createDeferralAction(aircraftId: string, formData: FormData) {
-  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
 
   try {
     const input = parseDeferralInput(formData, true);
@@ -635,17 +844,28 @@ export async function createDeferralAction(aircraftId: string, formData: FormDat
         input.deferralNumber ??
         (await generateDeferralNumber(tx, aircraft.id, aircraft.tailNumber));
 
-      await tx.deferral.create({
+      const deferral = await tx.deferral.create({
         data: {
           aircraftId,
           discrepancyId: discrepancy.id,
           deferralNumber,
           category: input.category,
+          deferralMethod: input.deferralMethod,
+          deferralType: input.deferralMethod,
+          authorityType: input.authorityType,
+          melItemNumber: input.melItemNumber,
+          repairInterval: input.repairInterval,
+          placardRequired: input.placardRequired,
+          operatingLimitations: input.operatingLimitations,
+          requiredProcedures: input.requiredProcedures,
           status: input.status,
           dueAt: input.dueAt,
           clearedAt: input.clearedAt,
           notes: input.notes,
           authorizedById: currentUser.id,
+        },
+        select: {
+          id: true,
         },
       });
 
@@ -653,6 +873,7 @@ export async function createDeferralAction(aircraftId: string, formData: FormDat
         await tx.discrepancy.update({
           where: { id: discrepancy.id },
           data: {
+            activeDeferralId: deferral.id,
             status: DiscrepancyStatus.DEFERRED,
             clearedAt: null,
           },
@@ -672,7 +893,7 @@ export async function updateDeferralAction(
   deferralId: string,
   formData: FormData,
 ) {
-  await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+  await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
 
   try {
     const input = parseDeferralInput(formData, false);
@@ -689,6 +910,14 @@ export async function updateDeferralAction(
         data: {
           deferralNumber,
           category: input.category,
+          deferralMethod: input.deferralMethod,
+          deferralType: input.deferralMethod,
+          authorityType: input.authorityType,
+          melItemNumber: input.melItemNumber,
+          repairInterval: input.repairInterval,
+          placardRequired: input.placardRequired,
+          operatingLimitations: input.operatingLimitations,
+          requiredProcedures: input.requiredProcedures,
           status: input.status,
           dueAt: input.dueAt,
           clearedAt: input.clearedAt,
@@ -700,21 +929,22 @@ export async function updateDeferralAction(
         await tx.discrepancy.update({
           where: { id: deferral.discrepancyId },
           data: {
+            activeDeferralId: deferral.id,
             status: DiscrepancyStatus.DEFERRED,
             clearedAt: null,
           },
         });
       }
 
-      if (
-        input.status === DeferralStatus.CLEARED &&
-        input.discrepancyResolution === "MARK_CLEARED"
-      ) {
-        await tx.discrepancy.update({
-          where: { id: deferral.discrepancyId },
+      if (input.status !== DeferralStatus.ACTIVE) {
+        await tx.discrepancy.updateMany({
+          where: {
+            id: deferral.discrepancyId,
+            status: DiscrepancyStatus.DEFERRED,
+          },
           data: {
-            status: DiscrepancyStatus.CLEARED,
-            clearedAt: input.clearedAt ?? new Date(),
+            activeDeferralId: null,
+            status: DiscrepancyStatus.OPEN,
           },
         });
       }
@@ -728,7 +958,7 @@ export async function updateDeferralAction(
 }
 
 export async function createMaintenanceEventAction(aircraftId: string, formData: FormData) {
-  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
 
   try {
     const input = parseMaintenanceEventInput(formData);
@@ -744,7 +974,7 @@ export async function createMaintenanceEventAction(aircraftId: string, formData:
         input.maintenanceNumber ??
         (await generateMaintenanceNumber(tx, aircraft.id, aircraft.tailNumber));
 
-      await tx.maintenanceEvent.create({
+      const maintenanceEvent = await tx.maintenanceEvent.create({
         data: {
           aircraftId,
           discrepancyId: input.discrepancyId,
@@ -761,9 +991,13 @@ export async function createMaintenanceEventAction(aircraftId: string, formData:
           approvedById:
             input.status === MaintenanceEventStatus.COMPLETED ? currentUser.id : null,
         },
+        select: {
+          id: true,
+        },
       });
 
-      await applyMaintenanceDiscrepancyResolution(tx, input);
+      await applyMaintenanceDiscrepancyResolution(tx, input, maintenanceEvent.id);
+      await advanceLinkedMaintenanceCompliance(tx, input, maintenanceEvent.id, currentUser.id);
     });
   } catch (error) {
     redirect(`/aircraft/${aircraftId}/airworthiness?error=${encodeError(error)}`);
@@ -778,7 +1012,7 @@ export async function updateMaintenanceEventAction(
   maintenanceEventId: string,
   formData: FormData,
 ) {
-  const currentUser = await requireRole([UserRole.ADMIN, UserRole.OPS, UserRole.MAINTENANCE]);
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
 
   try {
     const input = parseMaintenanceEventInput(formData);
@@ -814,7 +1048,211 @@ export async function updateMaintenanceEventAction(
         },
       });
 
-      await applyMaintenanceDiscrepancyResolution(tx, input);
+      await applyMaintenanceDiscrepancyResolution(tx, input, maintenanceEventId);
+      await advanceLinkedMaintenanceCompliance(tx, input, maintenanceEventId, currentUser.id);
+    });
+  } catch (error) {
+    redirect(`/aircraft/${aircraftId}/airworthiness?error=${encodeError(error)}`);
+  }
+
+  revalidateAirworthinessPaths(aircraftId);
+  redirect(`/aircraft/${aircraftId}/airworthiness`);
+}
+
+export async function voidDiscrepancyAction(
+  aircraftId: string,
+  discrepancyId: string,
+  formData: FormData,
+) {
+  const currentUser = await requireRole([UserRole.MAINTENANCE]);
+
+  try {
+    const voidReason = getRequiredText(formData, "voidReason", "Void reason");
+
+    await prisma.$transaction(async (tx) => {
+      await ensureAircraftExists(tx, aircraftId);
+      await ensureDiscrepancyBelongsToAircraft(tx, aircraftId, discrepancyId);
+
+      await tx.discrepancy.update({
+        where: { id: discrepancyId },
+        data: {
+          activeDeferralId: null,
+          status: DiscrepancyStatus.CANCELLED,
+          voidReason,
+          voidedAt: new Date(),
+          voidedById: currentUser.id,
+        },
+      });
+    });
+  } catch (error) {
+    redirect(`/aircraft/${aircraftId}/airworthiness?error=${encodeError(error)}`);
+  }
+
+  revalidateAirworthinessPaths(aircraftId);
+  redirect(`/aircraft/${aircraftId}/airworthiness`);
+}
+
+export async function signReturnToServiceAction(aircraftId: string, formData: FormData) {
+  const currentUser = await requireRole([UserRole.ADMIN, UserRole.MAINTENANCE]);
+
+  try {
+    const input = parseReturnToServiceInput(formData);
+
+    await prisma.$transaction(async (tx) => {
+      const aircraft = await ensureAircraftExists(tx, aircraftId);
+      const discrepancy = await tx.discrepancy.findFirst({
+        where: {
+          aircraftId,
+          id: input.discrepancyId,
+        },
+        select: {
+          id: true,
+          discrepancyNumber: true,
+          status: true,
+          title: true,
+        },
+      });
+
+      if (!discrepancy) {
+        throw new AirworthinessWorkflowError("Discrepancy was not found for this aircraft.");
+      }
+
+      if (discrepancy.status !== DiscrepancyStatus.CORRECTED_PENDING_RTS) {
+        throw new AirworthinessWorkflowError(
+          "Return to service can only be signed after a corrective action is completed.",
+        );
+      }
+
+      if (input.maintenanceEventId) {
+        await ensureMaintenanceEventBelongsToAircraft(tx, aircraftId, input.maintenanceEventId);
+      }
+
+      const authorityProfile = await tx.maintenanceAuthorityProfile.create({
+        data: {
+          authorizationBasis: input.authorizationBasis,
+          certificateNumber: input.certificateNumber,
+          certificateType: input.certificateType,
+          createdById: currentUser.id,
+          legalName: input.signerName,
+          userId: currentUser.id,
+        },
+      });
+      const entry = await tx.aircraftLogbookEntry.create({
+        data: {
+          aircraftId,
+          approvedByCertificateNumber: input.certificateNumber,
+          approvedByCertificateType: input.certificateType,
+          approvedByName: input.signerName,
+          category: "RETURN_TO_SERVICE",
+          createdById: currentUser.id,
+          discrepancyId: discrepancy.id,
+          entryNumber: await generateLogbookEntryNumber(tx, aircraftId, aircraft.tailNumber),
+          entryType: AircraftLogbookEntryType.CORRECTIVE_ACTION,
+          maintenanceEventId: input.maintenanceEventId,
+          narrative: input.workSummary,
+          returnToServiceAt: input.returnToServiceAt,
+          source: AircraftLogbookEntrySource.MAINTENANCE,
+          status: AircraftLogbookEntryStatus.READY_FOR_SIGNATURE,
+          title: `Return to service: ${discrepancy.title}`,
+          updatedById: currentUser.id,
+        },
+      });
+      const snapshot = {
+        aircraftId,
+        aircraftTailNumber: aircraft.tailNumber,
+        discrepancyId: discrepancy.id,
+        discrepancyNumber: discrepancy.discrepancyNumber,
+        entryId: entry.id,
+        entryNumber: entry.entryNumber,
+        maintenanceEventId: input.maintenanceEventId,
+        returnToServiceAt: input.returnToServiceAt.toISOString(),
+        signerName: input.signerName,
+        workSummary: input.workSummary,
+      };
+      const signedContentHash = signedHash(snapshot);
+      const signedAt = new Date();
+
+      await tx.aircraftLogbookSignature.create({
+        data: {
+          authorityProfileId: authorityProfile.id,
+          authorizationBasis: authorityProfile.authorizationBasis,
+          certificateNumber: authorityProfile.certificateNumber,
+          certificateType: authorityProfile.certificateType,
+          entryId: entry.id,
+          intentText: input.intentText,
+          purpose: AircraftLogbookSignaturePurpose.RETURN_TO_SERVICE,
+          signedAt,
+          signedContentHash,
+          signedSnapshot: snapshot,
+          signerName: input.signerName,
+          signerUserId: currentUser.id,
+        },
+      });
+
+      await tx.aircraftLogbookEntry.update({
+        where: { id: entry.id },
+        data: {
+          lockedAt: signedAt,
+          signedContentHash,
+          signedSnapshot: snapshot,
+          status: AircraftLogbookEntryStatus.SIGNED,
+        },
+      });
+
+      const rts = await tx.returnToServiceRecord.create({
+        data: {
+          aircraftId,
+          approvalBasis: input.approvalBasis,
+          authorityProfileId: authorityProfile.id,
+          createdById: currentUser.id,
+          discrepancyId: discrepancy.id,
+          logbookEntryId: entry.id,
+          maintenanceEventId: input.maintenanceEventId,
+          returnToServiceAt: input.returnToServiceAt,
+          rtsNumber: await generateReturnToServiceNumber(tx, aircraftId, aircraft.tailNumber),
+          signedAt,
+          signedContentHash,
+          signedSnapshot: snapshot,
+          signerUserId: currentUser.id,
+          status: ReturnToServiceRecordStatus.SIGNED,
+          workSummary: input.workSummary,
+        },
+        select: {
+          id: true,
+          rtsNumber: true,
+        },
+      });
+
+      await tx.discrepancy.update({
+        where: { id: discrepancy.id },
+        data: {
+          activeDeferralId: null,
+          clearedAt: input.returnToServiceAt,
+          clearingReturnToServiceRecordId: rts.id,
+          correctiveSummary: input.workSummary,
+          status: DiscrepancyStatus.CLEARED,
+        },
+      });
+
+      if (input.maintenanceEventId) {
+        await tx.maintenanceEvent.update({
+          where: { id: input.maintenanceEventId },
+          data: {
+            returnToServiceAt: input.returnToServiceAt,
+          },
+        });
+      }
+
+      await tx.aircraftLogbookAuditEvent.create({
+        data: {
+          actorId: currentUser.id,
+          aircraftId,
+          entryId: entry.id,
+          eventType: AircraftLogbookAuditEventType.SIGNED,
+          message: `Return to service signed as ${rts.rtsNumber}.`,
+          metadata: { returnToServiceRecordId: rts.id, signedContentHash },
+        },
+      });
     });
   } catch (error) {
     redirect(`/aircraft/${aircraftId}/airworthiness?error=${encodeError(error)}`);

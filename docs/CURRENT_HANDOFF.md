@@ -1,12 +1,571 @@
 # AeroOps Current Handoff
 
-Last updated: 2026-06-14
+Last updated: 2026-07-26
+
+## 2026-07-26 Integration Baseline Stabilization
+
+The accumulated integration-tree product work is being checkpointed as
+`BASELINE-001` on `codex/aeroops-integration`, with parent commit
+`9e3522fa35baca3cc20db59cc31bea1f5d2a4713`. `docs/PROJECT_PIPELINE.md` is now
+the durable project-management tracker: every future slice must have explicit
+scope, acceptance commands, blockers, and checkpoint/integration records
+before another feature is dispatched. This baseline does not dispatch the next
+Maintenance feature; the next approved work remains the contextual
+work-package slice described below.
 
 ## Current State
 
 AeroOps is in frontend/UI polish after backend MVP completion. The backend
 contract is stable enough for UI work, with remaining backend items treated as
 post-MVP unless separately planned.
+
+Local review auth note: in non-production environments where
+`AEROOPS_ENABLE_TEST_AUTH=1`, pages that require an app user fall back to the
+seeded local admin when there is no valid session cookie. This is for local UI
+review only; production remains session-gated.
+
+## 2026-07-02 Maintenance Handoff Notes
+
+The current maintenance workflow should be understood as four connected
+surfaces, not four separate sources of truth:
+
+- `Queue` is a computed aircraft-status control board. It groups each tail once
+  and nests the reasons that drive the current status: open write-ups,
+  deferrals, scheduled-maintenance compliance, AOG phase, RTS pending items, and
+  linked work.
+- `Scheduled Maintenance` is the due/compliance board. It is driven by reusable
+  maintenance-program tasks, applicability, per-tail overrides, compliance
+  state, and manual meter snapshots.
+- `Program` is the task-library setup view. It manages recurring task
+  definitions and applicability. It does not create work orders automatically.
+- `Logbook` is a review-first aircraft-tail logbook browser. It is not the v1
+  place to create, upload, sign, lock, or export records; those controls remain
+  on the existing aircraft-tail logbook route.
+
+The next maintenance workflow slice should add contextual work-package actions,
+not a generic event creator. Recommended entry points:
+
+- Queue drawer: open or create the work package for an AOG/open write-up item.
+- Aircraft detail/drawer: create a new maintenance event when the work is not
+  tied to a scheduled task.
+- Aircraft logbook entry: create/link corrective work only from a specific
+  write-up or draft that requires maintenance action.
+- Scheduled Maintenance drawer: continue using the existing `Create work
+  package` action for recurring task work.
+
+When a work package is created, keep linking the same source records together:
+`MaintenanceEvent` is the work-order/execution container, `AircraftLogbookEntry`
+is the record/signoff path, `Discrepancy` is the serviceability-impacting
+write-up, `Deferral` is the approved limitation path, and `ReturnToServiceRecord`
+is the signoff that clears corrected work where required.
+
+## 2026-07-01 Maintenance Program Tab And Work Packages
+
+At that point `/maintenance` had three views:
+
+- `Queue`
+- `Scheduled Maintenance`
+- `Program`
+
+The `Program` view is the setup side of scheduled maintenance. It manages the
+reusable `MaintenanceProgramTask` library, task recurrence, required-for-
+serviceability flags, applicability, and tail overrides. It is intentionally
+separate from `Scheduled Maintenance`, which remains the aircraft-by-aircraft
+working board for what is due.
+
+Current Program behavior:
+
+- The Program page now opens directly to the task library. Task creation is a
+  `Create task` action that opens a right-side drawer instead of occupying the
+  top of the library page.
+- The library is grouped by applicability: fleet-wide tasks, aircraft-type
+  sections such as `CL 65`, multi-type tasks, and tasks with no active
+  applicability.
+- Compact task rows show category, interval, required/optional state,
+  active/inactive state, applicability summary, and override count.
+- Filters for category, aircraft type, tail, active/inactive,
+  required/optional, and title/source text search.
+- Program drawer supports task edit, activate/deactivate, add applicability,
+  retire applicability, add tail override, and affected-aircraft preview.
+- Applicability supports all aircraft, aircraft type, or individual tail.
+- Tail overrides support include, exclude, and deactivate with required reason.
+- Task records are not deleted in v1; deactivate/retire preserve history.
+
+Scheduled Maintenance work creation was upgraded from `Create planned event` to
+`Create work package`. Creating a work package now creates both:
+
+- a linked `MaintenanceEvent`
+- a linked draft `AircraftLogbookEntry`
+
+Both records link to the aircraft, maintenance program task, and compliance
+state. The draft logbook entry is the signoff path. When the linked scheduled-
+program logbook entry is signed, the app marks the linked maintenance event
+completed and advances the compliance state to current with the next due date
+where the task has calendar recurrence. Hours/cycles recurrence still depends
+on the existing baseline/meter workflow until deeper utilization tracking is
+built.
+
+## 2026-07-01 Scheduled Maintenance Program Foundation
+
+Scheduled Maintenance is now a maintenance-program compliance view instead of
+an event-only list.
+
+Implemented foundation:
+
+- `MaintenanceProgramTask` stores reusable inspection/AD/service bulletin/
+  component/STC/service-check tasks, source references, required-for-service
+  flags, warning thresholds, and calendar/hour/cycle recurrence intervals.
+- `MaintenanceProgramApplicability` applies tasks to all aircraft, an aircraft
+  type such as `CL_65`, or a specific tail.
+- `MaintenanceProgramOverride` supports per-tail include, exclude, or
+  deactivate decisions with reasons and effective windows.
+- `MaintenanceComplianceState` stores each aircraft/task baseline, last
+  completed values, next due values, manual next-due overrides, and current
+  compliance state.
+- `AircraftMeterSnapshot` stores manual tail-specific airframe hours/cycles;
+  v1 does not derive utilization from flight activity.
+- `MaintenanceEvent` remains the actual work-order/completion record and can
+  link to a program task and compliance state. Program tasks do not
+  auto-create maintenance events.
+
+`/maintenance?view=scheduled` now expands task applicability into per-aircraft
+compliance rows ordered by urgency. Rows show tail, type, task, category/source,
+status, next due date/hours/cycles, latest meter, and linked planned/in-progress
+maintenance event when one exists. Filters include aircraft type, tail, status,
+and task category.
+
+The scheduled-maintenance drawer supports v1 manual actions:
+
+- set or update baseline and next due values
+- enter a manual meter snapshot
+- create a linked planned maintenance event
+- mark a task not applicable for a tail through an exclude override
+
+Required `Overdue` scheduled-maintenance compliance now feeds computed aircraft
+serviceability and appears in the Maintenance queue as an `AOG` row. `Due` and
+`Due soon` remain warnings. Non-required overdue tasks remain visible in
+Scheduled Maintenance but do not block serviceability.
+
+Demo data was added through `npm run seed:maintenance-program-demo`, including
+all-aircraft tasks, CL-65 type-level tasks, one tail-specific task, one excluded
+tail, overdue, due, due-soon, current, not-applicable, and needs-baseline
+examples.
+
+Latest validation for this pass:
+
+- `npm run prisma:validate`
+- `npm run prisma:generate`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+- local scheduled-maintenance read-model smoke
+
+## 2026-07-01 Maintenance Queue Status Simplification
+
+The `/maintenance` Queue view now uses aircraft serviceability status instead
+of visible `Critical / High / Medium / Low` priority labels.
+
+The Maintenance header no longer shows a large title/subtitle block. It keeps
+the Queue/Scheduled Maintenance/Program view buttons and uses compact fleet
+stats instead: percent in service, AOG count, deferred aircraft count, planned
+maintenance work-package count, and in-service/total counts by aircraft type.
+These stats are derived from the same queue grouping/serviceability model, not
+the old coarse `Aircraft.status` AOG field.
+The type stat is now a dropdown. When no aircraft type is selected, Maintenance
+defaults to the largest fleet type; choosing `All types` explicitly shows the
+whole fleet. The visible stats scope to the selected type while the dropdown
+options retain in-service/total counts for every type.
+
+The Queue is now grouped by aircraft tail instead of repeating the same tail as
+separate top-level rows. Each aircraft group shows the worst current
+serviceability status, aircraft type, total item count, AOG/MEL/CDL/NEF/
+scheduled-maintenance counts, a short phase/status summary, and a compact
+`Next scheduled MX` reference pulled from the scheduled-maintenance read model.
+The individual maintenance items remain nested underneath the tail and still
+open the existing review drawer.
+
+Current visible queue statuses:
+
+- `AOG`
+- `Serviceable`
+- `MEL`
+- `CDL`
+- `NEF`
+- `Deferred`
+- `Scheduled MX`
+
+The top queue status controls are now `AOG`, `Serviceable`, `MEL`, `CDL`, and
+`NEF`. They sort matching rows to the top instead of hiding the rest of the
+stack, with `AOG` as the default focus. Tail and aircraft type remain dropdown
+filters. The old priority filter, priority pill, and `All` status button were
+removed from the visible UI.
+
+AOG rows now show the current AOG phase when available. The first phase set is:
+
+- `Needs assessment`
+- `Troubleshooting`
+- `Awaiting parts`
+- `Repair in progress`
+- `RTS pending`
+
+The AOG phase, ETA/next-update time, and maintenance-control note are stored on
+`Discrepancy`. Existing open write-ups infer `Needs assessment` until
+maintenance updates them. Corrected-pending-RTS discrepancies infer
+`RTS pending`; in-progress corrective maintenance infers
+`Repair in progress`.
+
+Maintenance/Admin users can update a discrepancy's AOG phase, ETA, and note
+from the `/maintenance` queue drawer. The deeper parts workflow,
+troubleshooting tree, and inspection/AD/component due tracking remain future
+maintenance slices.
+
+Latest validation for this pass:
+
+- `npm run prisma:validate`
+- `npm run db:local:migrate`
+- `npm run prisma:generate`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+
+## 2026-07-01 Maintenance Cleanup Pass
+
+The aircraft board and aircraft context page were cleaned up so they no longer
+use current `AirworthinessRelease` records as the visible maintenance status
+signal. Those surfaces now use computed aircraft serviceability for aircraft
+status labels and summary text.
+
+Cleanup performed:
+
+- Removed the old `MX Current` / `MX Review` and `A/W current` /
+  `A/W warnings` aircraft UI language.
+- Removed the aircraft-board query data that only supported those current
+  airworthiness-release status pills.
+- Kept `AirworthinessRelease` model/actions/history because the current docs
+  still retain it for historical or operator-specific Part 135/manual evidence.
+- Changed dispatch package capture so airworthiness-release history is optional
+  package evidence, not a required everyday release artifact.
+- Removed the unused app-shell placeholder component.
+- Removed stale local `.next-local-logs` generated artifacts.
+- Cleaned local demo data markers that came from the old warning-only
+  airworthiness-release demo path.
+
+## 2026-06-30 Maintenance Serviceability And RTS Handoff
+
+The maintenance model was restructured around computed aircraft serviceability
+and Return to Service instead of treating a current `AirworthinessRelease` as
+the everyday maintenance-release gate.
+
+Current source of truth:
+
+```text
+docs/MAINTENANCE_SERVICEABILITY_RTS_LIFECYCLE.md
+lib/aircraft-serviceability.ts
+```
+
+Current implemented lifecycle:
+
+- New official discrepancies start `OPEN` and make the aircraft not
+  serviceable until deferred or cleared through signed RTS.
+- Approved deferrals use MEL, CDL, NEF, company-approved, or other-approved
+  methods and move the discrepancy to `DEFERRED` while surfacing limitations.
+- Completed corrective maintenance moves the linked discrepancy to
+  `CORRECTED_PENDING_RTS`; it does not clear the write-up by itself.
+- Signed `ReturnToServiceRecord` clears the discrepancy.
+- Erroneous write-ups use a maintenance-only void/cancel path with required
+  reason and audit metadata.
+- `AirworthinessRelease` remains historical/operator-specific evidence, not
+  the default serviceability requirement.
+
+Latest maintenance UI behavior:
+
+- `/maintenance` no longer queues `No current airworthiness release` items.
+- The queue now centers on open write-ups, RTS-required items, active or
+  expired deferrals, AOG/out-of-service aircraft, planned/in-progress
+  maintenance, and ready-for-signature records.
+- `/aircraft/[aircraftId]/airworthiness` no longer treats direct discrepancy
+  clearing as the normal path. Use defer, corrective action, prepare/sign RTS,
+  or void erroneous write-up.
+- Crew squawks from `/crew/me` create official `OPEN` discrepancies for
+  assigned aircraft only; crew sees serviceability and limitations, not
+  maintenance signoff controls.
+- Flight release readiness now reads computed maintenance serviceability
+  instead of requiring a current aircraft airworthiness release.
+
+Latest validation for this maintenance lifecycle pass:
+
+- `npm run prisma:validate`
+- `npm run db:local:migrate`
+- `npm run prisma:generate`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+- Browser checks for `/maintenance` and aircraft airworthiness/logbook detail.
+
+## 2026-06-30 Aircraft, Crew, Scheduling, And Maintenance Handoff
+
+Current review targets:
+
+```text
+http://localhost:3200/aircraft
+http://localhost:3200/aircraft?view=crew-coverage
+http://localhost:3200/maintenance
+http://localhost:3200/crew/me
+http://localhost:3200/crew
+http://localhost:3200/crew/scheduling
+```
+
+Latest visible aircraft state:
+
+- `/aircraft` is now a compact fleet-status page instead of large aircraft
+  cards. The summary counts are consolidated into one row and the aircraft list
+  uses compact, clickable rows.
+- The aircraft list is intentionally maintenance/status focused. The separate
+  maintenance-pill column, crew coverage status, detail buttons, grid lines, and
+  extra action columns were removed from the fleet list.
+- Each aircraft row opens the aircraft quick-review drawer. The drawer is the
+  place to drill into aircraft details rather than exposing multiple buttons in
+  the fleet list.
+- Alternating aircraft row shading is used for row separation without heavy grid
+  lines.
+- The current/next leg area in the aircraft drawer is now an expandable compact
+  row. Expanded state shows the next seven days of schedule in a capped,
+  scrollable list.
+- The drawer no longer shows the crew coverage bridge. Aircraft drawer content
+  should remain aircraft and maintenance oriented.
+- The aircraft crew coverage tab has started its cleanup pass. Previous/Today/
+  Next controls were moved out of the top mode button row and into the planner
+  header, but the page still needs additional UI tuning.
+
+Latest visible crew/member state:
+
+- `/crew/me` remains the crew-member phone/iPad portal, separate from the ops
+  crew management page.
+- Recent crew-portal work moved the Today/home tab toward crew-specific flight
+  cards, flight crew contact details, passenger access from flight cards,
+  passenger ID photo capture, and passenger check-in/boarding controls.
+- The crew portal still needs continued polish around the flight detail flow,
+  schedule/request/profile surfaces, and mobile spacing.
+- `/crew` remains the ops/admin crew workspace, not the crew member's personal
+  portal.
+
+Scheduling state:
+
+- `/crew/scheduling` remains the primary scheduling/planning workbench.
+- Scheduling still needs continued hardening and UI cleanup. Keep schedule
+  planning separate from aircraft assignment truth unless a later slice
+  explicitly changes that boundary.
+
+Maintenance/logbook direction:
+
+- `/maintenance` is now the top-level Maintenance module in the main app
+  navigation for `ADMIN` and `MAINTENANCE` users. It is intentionally not a
+  top-level `Logbook` tab.
+- Maintenance serviceability is computed from discrepancies, deferrals,
+  maintenance events, Return to Service records, and later inspection due
+  tracking. It is not based on a routine current-airworthiness-release
+  requirement.
+- V1 is triage plus drilldown: Queue opens first, Scheduled Maintenance handles
+  due/work-board review, Program manages reusable scheduled-maintenance tasks,
+  and Logbook provides a review-first aircraft-tail logbook workbench. Clicking
+  queue, scheduled-maintenance, program, or logbook rows opens a compact drawer
+  with links to the aircraft, airworthiness, logbook, and export routes.
+  Scheduled Maintenance replaces the older generic Tails tab and is now driven
+  by reusable maintenance-program tasks, applicability, overrides, compliance
+  states, manual meter snapshots, and linked maintenance events.
+- The Maintenance Logbook tab is review-only in V1. Corrective-action forms,
+  attachment upload, signing, locking, and export still live on the existing
+  aircraft-tail logbook routes.
+- Planned/upcoming maintenance uses the maintenance-program compliance layer
+  for due tracking. `MaintenanceEvent` remains the work-order/completion record
+  and is created manually when maintenance chooses to schedule actual work.
+  Deeper parts workflow, troubleshooting workflow, AD/component detail,
+  life-limited parts, and overhaul tracking remain later slices.
+- Keep aircraft-tail logbooks available from aircraft detail and maintenance
+  workflows, but make `Maintenance` the task-first workbench for maintenance
+  users.
+- Keep `/aircraft` as the fleet/aircraft status drilldown surface. It can link
+  into maintenance/logbook detail, but it should not become the full
+  maintenance workbench.
+- Keep the crew portal limited to crew-facing maintenance status, limitations,
+  and squawk/report entry. Crew should not sign maintenance records.
+
+Recommended next slices:
+
+1. Add contextual maintenance work-package creation/open actions from Queue,
+   aircraft detail, and aircraft-tail logbook entry drawers while keeping the
+   top-level Logbook tab review-first.
+2. Finish aircraft crew coverage tab polish after the date controls move.
+3. Continue crew portal polish around today's flights, passenger flow, flight
+   detail, and profile/request surfaces.
+4. Continue scheduling board hardening and layout cleanup.
+5. Continue Maintenance in small slices: polish `/maintenance`, then add deeper
+   parts, troubleshooting, and scheduled-maintenance due-tracking workflows.
+
+## 2026-06-22 Crew Member Mobile App Handoff
+
+The active crew self-service surface is now:
+
+```text
+http://localhost:3200/crew/me
+```
+
+Completed in the latest crew-app pass:
+
+- Added `/crew/me` as the crew-member self-service app for `CREW` users linked
+  through `CrewMember.userId`.
+- Added tabs for `Today`, `Schedule`, `Flights`, `Requests`, and `Profile`.
+- Added crew-scoped request submission actions for `TimeOffRequest` with
+  `PENDING` status and `CrewScheduleRequest` with `SUBMITTED` status.
+- Added `/crew/me/flights/[flightLegId]` as the assigned-flight detail route.
+  It exposes crew-safe Preflight and Postflight forms and reuses the existing
+  operational readiness semantics.
+- Added a crew-only shell mode. `CREW` users see `Crew App`, the shell labels
+  the workspace as `Crew Workspace`, and the shell logo returns to `/crew/me`.
+- Redirected `CREW` users from `/` to `/crew/me` so crew users do not land on
+  the ops dashboard.
+- Removed the dashboard `AI Review Notes` / `Future placeholder` panel and
+  replaced it with a real `Active alerts` panel.
+- Reworked the `/crew/me` Today tab around `Action needed` instead of generic
+  dashboard-style metrics.
+- Cleaned `/crew/me` request swap labels so aircraft-derived demo names such
+  as `920AOCaptain` and `930AOFirstofficer` do not display as crew last names.
+
+Important implementation files:
+
+- `app/crew/me/page.tsx`
+- `app/crew/me/actions.ts`
+- `app/crew/me/flights/[flightLegId]/page.tsx`
+- `app/crew/me/flights/[flightLegId]/actions.ts`
+- `lib/crew-me-queries.ts`
+- `app/page.tsx`
+- `components/app-shell/app-shell.tsx`
+
+Validation captured for this pass:
+
+- `npm run typecheck`
+- `npm run lint`
+- Local HTTP check confirmed a linked `CREW` session hitting `/` receives a
+  `307` redirect to `/crew/me`.
+- Local HTTP check confirmed `/crew/me` renders `Crew Workspace`, `Crew App`,
+  and the `Action needed` section without the operations-console shell label.
+- Local HTTP check confirmed `/crew/me?tab=requests` no longer exposes the
+  aircraft-derived demo name labels.
+- Local HTTP check confirmed `/` no longer renders the AI/future placeholder
+  and renders the `Active alerts` panel instead.
+
+Crew-app guardrails for the next builder:
+
+- Keep `/crew/me` separate from ops/admin crew management. Do not expose
+  another crew member's data by URL or request form.
+- `CREW` users must not approve requests, publish schedules, assign aircraft,
+  edit compliance records, or access ops/admin scheduling tools from the crew
+  app.
+- Keep `/crew`, `/crew/scheduling`, `/operations-control`, and aircraft
+  assignment drawers as ops tools.
+- The old `/crew/portal` remains in place for now. Do not route new work there
+  unless the user explicitly asks; a later slice can redirect it to `/crew/me`
+  after acceptance.
+- Preserve the crew app's mobile-first card/tab pattern. Avoid desktop tables
+  and avoid internal workflow explanations on crew screens.
+- Keep dashboard AI/provider-call placeholders out of the visible app until a
+  specific provider-backed AI feature is deliberately planned.
+
+Known caveats:
+
+- The local linked smoke user is `crew@aeroops.local` / Jordan Miles. In the
+  current local 42-day `/crew/me` window, Jordan has no assigned future flights,
+  so the Flights tab can legitimately show an empty state until demo data is
+  adjusted.
+- The flight detail route is assignment-scoped. `PLANNED`/`ACTIVE` crew
+  snapshots or overlapping aircraft-block coverage are accepted; `RELIEVED`
+  historical snapshots are rejected.
+- Preflight/Postflight forms are wired, but the next UX pass should make the
+  flight detail feel more like a trip brief rather than a reduced ops page.
+
+Recommended next crew-app slice:
+
+1. Add or adjust demo data so the linked crew smoke user has at least one
+   assigned future FlightLeg inside the 42-day window.
+2. Expand `/crew/me/flights/[flightLegId]` into a true crew trip brief: route,
+   times, tail, assigned crew, readiness, manifest status, fuel/W&B/release,
+   preflight, postflight, and delay capture.
+3. Simplify request forms further for phone use, especially schedule request
+   type selection and period labeling.
+4. Add phone-width and iPad-width browser QA after a normal crew login.
+
+## 2026-06-21 Scheduling/UI Handoff Update
+
+The active review target is the focused scheduling planning board:
+
+```text
+http://localhost:3200/crew/scheduling?date=2026-06-01&view=month&tab=planning&layer=schedule&aircraftType=all&role=all&base=all&sort=status&detail=names&focus=board
+```
+
+Current scheduling behavior to preserve:
+
+- Scheduling is still planning/availability only. Publishing planning drafts
+  must not create `AircraftCrewAssignment`, `CrewLegAssignment`, or FlightLeg
+  staffing records.
+- Current view choices are four-week, eight-week, month, week, and day. The
+  13-week and 120-day options were removed from the active UI after the
+  scrolling review.
+- Four-week/eight-week/month windows move by explicit previous/today/next
+  controls. Do not reintroduce auto-infinite horizontal scrolling without a
+  separate UX plan.
+- In planning names mode, published and draft lanes share one crew row.
+  Published assigned bars use generic `Assigned`/`Asn` labels; aircraft tail
+  numbers should not appear next to the crew member name in this board.
+- `Scheduled` is treated as reserve by default unless an aircraft assignment is
+  known. Reserve/scheduled visual treatment is green; assigned remains blue.
+- The planning toolbar is not sticky. The schedule grid owns vertical and
+  horizontal scrolling. The month/date header and crew/name rail are the sticky
+  schedule elements.
+- The top schedule toolbar, planning action toolbar, outer planning panel, and
+  schedule grid should share the same computed board width so the focused board
+  does not leave a large empty black area to the right.
+- The current planning controls are labeled `Save draft`, `Select all`,
+  `Clear selection`, `Remove selected`, `Publish selected`, and `Publish all`.
+  Draft changes autosave shortly after edits; `Save draft` is the manual save
+  affordance.
+
+Recent validation captured for this scheduling pass:
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+- The focused planning URL above returned 200 locally and reflected the latest
+  button labels and board-width changes.
+
+Guardrails for the next builder:
+
+- Before changing scheduling UI, restate the exact visible issue, the exact
+  files expected to be touched, and the things that must not change.
+- Keep scheduling fixes page-local unless the user explicitly approves broader
+  shared behavior changes.
+- Do not change view options, status semantics, colors, staffing data
+  boundaries, schema, or other pages while fixing a layout-only scheduling
+  issue.
+- Browser-check the exact focused URL after layout changes. A typecheck alone
+  is not enough for this page.
+
+## Final Handoff Snapshot
+
+This handoff closes the current scheduling/UI-planning pass:
+
+- The planning-board pseudo-crew issue was traced to local
+  `SCHED-WORKBENCH-*` smoke-test records. The smoke script now cleans up those
+  artifacts before and after it runs, and the local database was cleaned.
+- The current browser planning board was checked at the focused scheduling URL;
+  it renders the planning surface and no longer contains `Workbench` crew text.
+- The app-wide UI direction now lives in
+  `docs/AEROOPS_UI_WORKFLOW_MACRO_PLAN.md`.
+- The page-by-page UI blueprint now lives in
+  `docs/AEROOPS_UI_PAGE_DESIGN_DRILLDOWN.md`.
+- Next implementation should not start with another broad planning pass unless
+  the user asks for revisions. The recommended first builder slice remains
+  Scheduling Hardening, followed by Aircraft Create Drawer, Customers Workspace,
+  and Operations Control Board polish.
 
 Latest completed work:
 
@@ -16,12 +575,39 @@ Latest completed work:
 - Time-off review now shows affected aircraft/seat position, available crew,
   pending and approved overlapping time off, occupied crew, and whether the
   count is schedule-backed or unscheduled planning context.
-- `/crew/scheduling` was reworked into a read-only scheduler workbench with
-  Coverage Board, Schedule Planning, Assignment Overlay, and Requests tabs.
-  Month/week/day views are URL-driven and count crew by aircraft type and role
-  using `CPT` for captain and `CA` for cabin attendant.
-- Scheduling remains read/drill-only in the latest slice. It does not create
-  schedule rows, aircraft crew assignments, or FlightLeg assignments.
+- `/crew/scheduling` is being reworked into the default Crew Schedule Board.
+  The first screen is now the coverage/schedule visualization rather than a
+  multi-tab admin workbench. Four-week, eight-week, month, week, and day views
+  remain URL-driven.
+- The default Scheduling nav and reset target now use `view=four-week`. Four
+  week view shows the full current week row plus the next three weeks, with
+  past days faded and the active day outlined.
+- Month view still renders full Sunday-through-Saturday calendar weeks,
+  including adjacent-month days. Each week has a highlighted Week view action,
+  and each day drills to the day view.
+- Calendar summary mode uses count pills by position. Calendar names mode is
+  an experimental all-position timeline: positions are grouped as horizontal
+  personnel timelines with crew names on the left and status bars across days.
+- Single-position drilldown now switches from bucket counts to a
+  person-by-person schedule timeline. Continuous blocks span adjacent days,
+  `Assigned` blocks show known tail numbers such as `Assigned N215AO`, and
+  the old `Available` label is shown as `Unscheduled`.
+- Planning now has a draft-canvas implementation for names-first editing. It
+  shows published and draft lanes in the same crew row, creates draft blocks,
+  supports Quick Blocks and Reusable Templates, saves/autosaves drafts, cancels
+  selected draft changes, and publishes selected/all draft changes into the
+  live schedule availability layer.
+- Reusable Templates are backed by rotation patterns and per-day pattern rows.
+  A 7 on / 7 off template is treated as a 14-day rotation with segmented
+  scheduled/off visual bars, cycle-count placement, and resize behavior that
+  repeats the pattern. Quick Blocks cover one-off single-status ranges.
+- Crew scheduling now has a compact board toolbar and focus mode. The large
+  page header and always-visible filter rows were removed; schedule/planning,
+  horizon/detail selectors, filters, and focus controls now live in the board
+  toolbar.
+- Scheduling still must not create aircraft crew assignments or FlightLeg
+  assignments from planning. Publishing draft schedule changes materializes
+  availability/schedule rows only.
 - Crew eligibility now resolves as of the flight scheduled departure. Pending
   planned compliance events show planning intent, but only eligible/warning
   crew count as clean coverage.
@@ -42,6 +628,14 @@ Latest completed work:
 - `/aircraft` was simplified from a dense metric board into six clickable fleet
   status filters: Aircraft, Available, In flight, AOG, Open MELs, and Open
   write-ups. AOG currently maps to aircraft `OUT_OF_SERVICE`.
+- `docs/AEROOPS_UI_WORKFLOW_MACRO_PLAN.md` now captures the app-wide UI
+  direction from the scheduling work: board first, focused drawers/actions
+  second, compact toolbars, context menus where inline controls crowd the
+  screen, and module-specific plans for dashboard, operations, scheduling,
+  crew, aircraft, customers/passengers, manifest, and logistics.
+- `docs/AEROOPS_UI_PAGE_DESIGN_DRILLDOWN.md` is the page-level companion plan
+  with recommended layouts, drawer content, row/card content, interaction
+  boundaries, risks, and next-slice sequencing for the major app surfaces.
 
 ## Current UI Direction
 
@@ -62,22 +656,119 @@ The dashboard drawer should become an object-action workspace:
 - Crew and scheduling should continue the same task-first pattern: compact
   list or board first, then focused drawers for review, edit, coverage,
   location, logistics, and assignment handoff tasks.
+- Scheduling is the current reference pattern for large operational surfaces:
+  compact toolbar, focused controls, sticky object labels, context-menu actions,
+  rolling work window, and compact counters beside the row identity.
 - Scheduling has two layers: schedule coverage planning first, then assignment
   coverage overlay. `AircraftCrewAssignment` remains the staffing truth.
+- The active scheduling UI direction is: four-week/month/week/day calendar
+  coverage first; then position drilldown by personnel; then planning/editing.
+  Planning should feel like a draft/development layer where published schedule
+  data remains visible until selected draft changes are explicitly published.
+
+## Active Local Scheduling Slice
+
+The current uncommitted working tree contains the scheduling visualization and
+planning draft canvas work discussed with the user:
+
+- `components/app-shell/app-shell.tsx`: Scheduling nav points to
+  `/crew/scheduling?view=four-week&tab=coverage`, the Crew nav item no longer
+  stays active on scheduling pages, and the shell header has an
+  `app-shell-header` class so board focus mode can hide it from the scheduling
+  page.
+- `app/crew/scheduling/page.tsx`: default view is four-week; the page title is
+  removed from the visible UI; Schedule Board and Planning remain URL-driven;
+  4-week, 8-week, month, week, and day views are available; summary and names
+  modes are URL-driven; summary mode uses day cards and count pills; names mode
+  uses grouped all-position personnel timelines; single-position drilldown
+  keeps the compact personnel timeline; past days use muted treatment; active
+  days have a low-contrast graphite marker; gap badges use fuchsia with a
+  subtle pulse; assigned count pills match the blue assigned timeline
+  treatment. The compact `BoardToolbar` contains schedule/planning, horizon,
+  detail, filters, and focus controls. `focus=board` hides app chrome, tightens
+  page padding, and shares the computed board width with the outer planning
+  panel and planning action toolbar.
+- `app/crew/scheduling/planning-draft-canvas.tsx`: client canvas for Planning
+  names mode. It renders published bars on the top lane and draft bars on the
+  bottom lane inside the same crew row, includes draft checkboxes, Select all,
+  Clear selection, Save draft, Remove selected, Publish selected, Publish all,
+  active tool selection, Quick Blocks, Reusable Templates, cycle-count
+  placement, segmented template rendering, right-edge resize/extend handles,
+  monthly published/draft scheduled-day counters, draft status changes, remove
+  markers, and a first move/swap prompt. The month/date header and crew rail
+  are sticky inside the schedule scroll container; the planning toolbar is not
+  sticky and should scroll away.
+- `app/crew/scheduling/planning-actions.ts`: new server actions for draft
+  autosave/manual save, draft-change upsert, selection toggles, cancel selected,
+  publish selected/all, and reusable template persistence. Actor fields are
+  nullable for the local prototype, so template creation, placement, resize,
+  save, and publish marking do not redirect to sign-in. Publishing writes crew
+  schedule availability rows and schedule entries; it does not write aircraft
+  crew assignments.
+- `app/globals.css`: added scheduling-specific surface, hover, selected,
+  past-day, planning-draft, planning-canvas, sticky rail, and gap-pulse styles
+  for light/dark view.
+- `lib/crew-scheduling-workbench-queries.ts`: supports four-week and 8-week
+  horizons plus month/week/day; month query windows cover full visible calendar
+  weeks and can be clamped to today for scheduling planning views; `focusedCrew`
+  supplies all qualified crew for the selected aircraft type/role position;
+  planning queries return active draft data, rotation-pattern templates with
+  per-day statuses, and monthly scheduled-day counters.
+- `prisma/schema.prisma` and
+  `prisma/migrations/20260615230000_crew_planning_draft_canvas/`: new
+  `CrewPlanningDraft` and `CrewPlanningDraftChange` models plus draft/change
+  status enums and relations to schedule periods, crew, users, stations, and
+  source published schedule entries.
+- `prisma/migrations/20260616120000_add_personal_duty_status/`: adds
+  `DutyStatus.PERSONAL` for personal-day planning.
+- `package.json`, `scripts/seed-scheduling-demo-pilots.ts`, and
+  `scripts/smoke-reusable-templates.ts`: added a local guarded demo crew seed
+  and focused reusable-template smoke. The reusable-template smoke cleans up
+  its own `REUSABLE-TEMPLATE-SMOKE-*` artifacts before and after each run.
+- `scripts/smoke-crew-scheduling-workbench.ts`: now cleans up its own
+  `SCHED-WORKBENCH-*` crew, period, and flight smoke artifacts before and after
+  the smoke so Workbench pseudo-crew do not remain visible on planning boards.
+
+Local inspection URL:
+
+```text
+http://127.0.0.1:3200/crew/scheduling?view=four-week&tab=coverage
+http://localhost:3200/crew/scheduling?date=2026-06-01&view=month&tab=planning&layer=schedule&aircraftType=all&role=all&base=all&sort=status&detail=names&focus=board
+http://127.0.0.1:3200/crew/scheduling?date=2026-06-20&view=eight-week&tab=coverage&layer=schedule&aircraftType=all&role=all&base=all&sort=status&detail=names&focus=board
+```
 
 ## Known Current Follow-Ups
 
+- Focus-mode browser polish: verify the focused planning names URL manually
+  after any layout change. The next likely issue is visual containment around
+  the top toolbar, planning action toolbar, and outer board panel; keep fixes
+  limited to those containers unless a broader change is explicitly approved.
+- Reusable template management is still basic. Add edit/delete/search and a
+  more deliberate pattern builder later; keep the current drawer as the local
+  prototype surface.
 - Start Docker/local Postgres before running DB-backed crew smoke or browser
   checks. Useful sequence: `npm run db:local:up`, `npm run db:local:migrate`,
   and `npm run db:local:seed` when the database needs refresh.
 - Rerun crew scheduling checks with the local DB available:
-  `npm run smoke:crew-scheduling-workbench`, then browser-check
-  `/crew/scheduling?view=month`, `/crew/scheduling?view=week`, and
-  `/crew/scheduling?view=day`.
-- Continue the crew scheduling workbench from read/drill into focused drawer
-  workflows for schedule planning actions, request review, and assignment
-  handoff. Do not add auto-assignment or duty/rest hard enforcement without a
-  separate plan.
+  `npm run smoke:crew-scheduling-workbench`, `npm run smoke:reusable-templates`,
+  then browser-check `/crew/scheduling?view=four-week`,
+  `/crew/scheduling?view=month`, `/crew/scheduling?view=week`,
+  `/crew/scheduling?view=day`, and focused coverage/planning names URLs.
+- Harden the planning draft workflow after the UI cleanup: review conflict
+  blocking, baseline/live-change review states, browser-confirmed selection
+  persistence, publish result messaging, and whether cancelled local changes
+  should disappear immediately without a reload.
+- Continue the crew scheduling workbench into focused drawer workflows for
+  schedule planning actions, request review, and assignment handoff. Do not add
+  auto-assignment or duty/rest hard enforcement without a separate plan.
+- Use `docs/AEROOPS_UI_WORKFLOW_MACRO_PLAN.md` before broad UI changes. It is
+  the current macro plan for translating the scheduling board interaction model
+  across dashboard, operations, aircraft, crew, customers/passengers, manifest,
+  and logistics workflows. The doc also records UI variants, the current
+  recommendation per module, a detailed slice backlog, and acceptance checks.
+- Use `docs/AEROOPS_UI_PAGE_DESIGN_DRILLDOWN.md` when starting a page-specific
+  UI slice. It translates the macro plan into concrete page layout, drawer,
+  row/card, and QA guidance.
 - Add aircraft fuel burn/range/endurance settings before showing calculated
   endurance or conservative range.
 - Add an aircraft create drawer from `/aircraft`.
@@ -97,17 +788,63 @@ The dashboard drawer should become an object-action workspace:
 
 ## Validation Status
 
-Most recent crew scheduling workbench slice passed:
+Latest scheduling validation on 2026-06-17 passed:
 
-- `npm run prisma:validate`
 - `npm run typecheck`
 - `npm run lint`
+- `npm run prisma:validate`
 - `npm run build`
+- `npm run smoke:reusable-templates` with `.env.local` loaded
 
-DB-backed crew scheduling smoke and browser checks are pending because local
-Postgres was not available during the latest run. The user confirmed Docker can
-be started for future checks; do that before marking the DB-backed checks
-blocked.
+Browser checks covered the focused coverage and planning names URLs, compact
+toolbar, filter popover staying inside the viewport, app chrome hiding in focus
+mode, redundant schedule/planning status pill removal, Reusable Templates
+drawer persistence after reload, 7 on / 7 off segmented placement, Quick Block
+drag placement, resize/extend behavior, draft save without sign-in redirect,
+and sticky crew/date behavior inside the planning board.
+
+One build attempt failed when shell hiding was implemented with
+`useSearchParams` inside the app shell. That was resolved by keeping the
+app-shell change to a static class and applying page-scoped focus CSS from the
+scheduling page.
+
+Focused DB smoke status:
+
+- `npm run smoke:crew-scheduling-workbench` initially refused to run because
+  the shell had a non-local `DATABASE_URL`.
+- Docker/local Postgres was started with `npm run db:local:up`.
+- Local migrations were checked with `npm run db:local:migrate`; no pending
+  migrations were reported.
+- Rerunning the smoke with `.env.local` loaded reached the local DB but failed
+  on: `Workbench did not surface existing CPT/FO flight-derived gaps.`
+  Treat this as the current open regression/check before commit.
+
+Previous browser checks for the earlier scheduling visualization slice covered
+four-week default, month/week/day switching, summary/names modes,
+all-position names timeline, single-position timeline, Schedule Board vs
+Planning tab, fuchsia pulsing gap badges, assigned blue summary pills,
+active-day outline, past-day opacity, and hover affordances.
+
+The local demo pilot seed was run successfully:
+
+- `npm run seed:scheduling-demo-pilots`
+- Result: 30 CL-65 captain demo pilots and 1,050 visible-calendar-week schedule
+  rows for June 2026 local review.
+
+Formal DB-backed crew scheduling smoke is not currently green. Fix or
+intentionally update the flight-gap assertion before commit or deploy. Local
+page/browser checks are not a substitute for that focused smoke.
+
+Latest handoff/planning verification on 2026-06-17:
+
+- `npm run typecheck` passed after the smoke cleanup code change.
+- `npm run lint` passed after the smoke cleanup code change.
+- `git diff --check` passed for the handoff/planning docs and smoke cleanup;
+  output only included normal Windows line-ending warnings.
+- Local database check reported `Remaining smoke crew rows: 0` for
+  `SCHED-WORKBENCH-*`.
+- In-app browser check on the planning URL reported the scheduling surface
+  present and `hasWorkbenchText: false`.
 
 Most recent aircraft-board slice passed:
 
@@ -127,5 +864,7 @@ coverage. Keep DB-backed smoke checks narrow when continuing UI slices.
 - `docs/PROJECT_STATUS.md`
 - `docs/BACKEND_MVP_STATE.md`
 - `docs/FRONTEND_READINESS_PLAN.md`
+- `docs/AEROOPS_UI_WORKFLOW_MACRO_PLAN.md`
+- `docs/AEROOPS_UI_PAGE_DESIGN_DRILLDOWN.md`
 - `docs/SCHEMA_DECISIONS.md`
 - `docs/FUEL_LEDGER_RELEASE_READINESS.md`

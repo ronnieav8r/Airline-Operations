@@ -15,6 +15,7 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { FlightCoverage, resolveFlightCoverage } from "@/lib/crew-resolution";
 
 const aircraftBoardSelect = {
   id: true,
@@ -76,6 +77,7 @@ const aircraftBoardSelect = {
   crewAssignments: {
     select: {
       id: true,
+      isActive: true,
       seatRole: true,
       startsAt: true,
       endsAt: true,
@@ -149,7 +151,13 @@ const aircraftBoardSelect = {
   },
   discrepancies: {
     where: {
-      status: { in: [DiscrepancyStatus.OPEN, DiscrepancyStatus.DEFERRED] },
+      status: {
+        in: [
+          DiscrepancyStatus.OPEN,
+          DiscrepancyStatus.DEFERRED,
+          DiscrepancyStatus.CORRECTED_PENDING_RTS,
+        ],
+      },
     },
     orderBy: [{ reportedAt: "desc" }],
     select: {
@@ -171,6 +179,8 @@ const aircraftBoardSelect = {
       deferralNumber: true,
       category: true,
       dueAt: true,
+      operatingLimitations: true,
+      requiredProcedures: true,
       status: true,
       discrepancy: {
         select: {
@@ -181,32 +191,27 @@ const aircraftBoardSelect = {
   },
   maintenanceEvents: {
     where: {
-      status: MaintenanceEventStatus.COMPLETED,
+      status: {
+        in: [
+          MaintenanceEventStatus.PLANNED,
+          MaintenanceEventStatus.IN_PROGRESS,
+          MaintenanceEventStatus.COMPLETED,
+        ],
+      },
     },
-    orderBy: [{ completedAt: "desc" }],
+    orderBy: [{ scheduledAt: "asc" }, { completedAt: "desc" }],
     select: {
       id: true,
       maintenanceNumber: true,
       eventType: true,
+      scheduledAt: true,
+      startedAt: true,
       completedAt: true,
       providerName: true,
       returnToServiceAt: true,
       status: true,
     },
-    take: 1,
-  },
-  airworthinessReleases: {
-    orderBy: [{ createdAt: "desc" }],
-    select: {
-      id: true,
-      releaseNumber: true,
-      releasedAt: true,
-      expiresAt: true,
-      status: true,
-      flightLegId: true,
-      updatedAt: true,
-    },
-    take: 5,
+    take: 8,
   },
 } satisfies Prisma.AircraftSelect;
 
@@ -266,6 +271,7 @@ type AircraftBoardAlert = {
 };
 
 export type AircraftBoardFlight = {
+  coverage: FlightCoverage | null;
   id: string;
   legacyFlightId: string;
   flightLegId: string | null;
@@ -285,6 +291,7 @@ export type AircraftBoardFlight = {
 };
 
 export type AircraftBoardItem = Omit<AircraftBoardPayload, "flights" | "crewAssignments" | "alerts"> & {
+  coverageAssignments: AircraftBoardCrewAssignment[];
   flights: AircraftBoardFlight[];
   crewAssignments: AircraftBoardCrewAssignment[];
   alerts: AircraftBoardAlert[];
@@ -305,9 +312,19 @@ export type AircraftBoardData = {
   summary: AircraftBoardSummary;
 };
 
+export type AircraftCreateOptions = {
+  stations: Array<{
+    city: string;
+    code: string;
+    id: string;
+    name: string;
+  }>;
+};
+
 function normalizeFlight(flight: AircraftBoardPayload["flights"][number]): AircraftBoardFlight {
   if (flight.flightLeg) {
     return {
+      coverage: null,
       id: flight.id,
       legacyFlightId: flight.id,
       flightLegId: flight.flightLeg.id,
@@ -322,6 +339,7 @@ function normalizeFlight(flight: AircraftBoardPayload["flights"][number]): Aircr
   }
 
   return {
+    coverage: null,
     id: flight.id,
     legacyFlightId: flight.id,
     flightLegId: null,
@@ -337,6 +355,7 @@ function normalizeFlight(flight: AircraftBoardPayload["flights"][number]): Aircr
 
 function normalizeFlightLeg(flightLeg: AircraftBoardFlightLegPayload): AircraftBoardFlight {
   return {
+    coverage: null,
     id: flightLeg.legacyFlightId ?? flightLeg.legacyFlight?.id ?? flightLeg.id,
     legacyFlightId: flightLeg.legacyFlightId ?? flightLeg.legacyFlight?.id ?? flightLeg.id,
     flightLegId: flightLeg.id,
@@ -382,36 +401,50 @@ export async function getAircraftBoard(): Promise<AircraftBoardData> {
     }
   }
 
-  const aircraft = aircraftRows.map((item) => ({
-    ...item,
-    flights: [
-      ...(flightLegsByAircraftId.get(item.id) ?? []),
-      ...item.flights
-        .filter(
-          (flight) =>
-            !flight.flightLeg &&
-            flight.scheduledArrival >= now &&
-            flight.status !== FlightStatus.CANCELLED,
-        )
-        .map(normalizeFlight),
-    ]
-      .sort((first, second) => {
-        const departureDelta =
-          first.scheduledDeparture.getTime() - second.scheduledDeparture.getTime();
+  const aircraft = await Promise.all(
+    aircraftRows.map(async (item) => {
+      const flights = [
+        ...(flightLegsByAircraftId.get(item.id) ?? []),
+        ...item.flights
+          .filter(
+            (flight) =>
+              !flight.flightLeg &&
+              flight.scheduledArrival >= now &&
+              flight.status !== FlightStatus.CANCELLED,
+          )
+          .map(normalizeFlight),
+      ]
+        .sort((first, second) => {
+          const departureDelta =
+            first.scheduledDeparture.getTime() - second.scheduledDeparture.getTime();
 
-        if (departureDelta !== 0) {
-          return departureDelta;
-        }
+          if (departureDelta !== 0) {
+            return departureDelta;
+          }
 
-        return first.flightNumber.localeCompare(second.flightNumber);
-      })
-      .slice(0, 3),
-    crewAssignments: item.crewAssignments.filter(
-      (assignment) =>
-        assignment.startsAt <= now && (assignment.endsAt === null || assignment.endsAt > now),
-    ),
-    alerts: item.alerts,
-  }));
+          return first.flightNumber.localeCompare(second.flightNumber);
+        })
+        .slice(0, 12);
+
+      return {
+        ...item,
+        coverageAssignments: item.crewAssignments.filter(
+          (assignment) => assignment.isActive && (!assignment.endsAt || assignment.endsAt >= now),
+        ),
+        flights: await Promise.all(
+          flights.map(async (flight) => ({
+            ...flight,
+            coverage: await resolveFlightCoverage(flight.flightLegId ?? flight.legacyFlightId),
+          })),
+        ),
+        crewAssignments: item.crewAssignments.filter(
+          (assignment) =>
+            assignment.startsAt <= now && (assignment.endsAt === null || assignment.endsAt > now),
+        ),
+        alerts: item.alerts,
+      };
+    }),
+  );
 
   return {
     aircraft,
@@ -427,4 +460,19 @@ export async function getAircraftBoard(): Promise<AircraftBoardData> {
       total: aircraft.length,
     },
   };
+}
+
+export async function getAircraftCreateOptions(): Promise<AircraftCreateOptions> {
+  const stations = await prisma.station.findMany({
+    where: { isActive: true },
+    orderBy: [{ code: "asc" }],
+    select: {
+      city: true,
+      code: true,
+      id: true,
+      name: true,
+    },
+  });
+
+  return { stations };
 }

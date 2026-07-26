@@ -1,7 +1,6 @@
 import {
   AircraftCapabilityStatus,
   AircraftConfigurationStatus,
-  AirworthinessReleaseStatus,
   AlertSeverity,
   AlertStatus,
   AlertType,
@@ -111,7 +110,13 @@ const aircraftContextSelect = {
   },
   discrepancies: {
     where: {
-      status: { in: [DiscrepancyStatus.OPEN, DiscrepancyStatus.DEFERRED] },
+      status: {
+        in: [
+          DiscrepancyStatus.OPEN,
+          DiscrepancyStatus.DEFERRED,
+          DiscrepancyStatus.CORRECTED_PENDING_RTS,
+        ],
+      },
     },
     orderBy: [{ reportedAt: "desc" }],
     select: {
@@ -133,6 +138,8 @@ const aircraftContextSelect = {
       deferralNumber: true,
       category: true,
       dueAt: true,
+      operatingLimitations: true,
+      requiredProcedures: true,
       status: true,
       discrepancy: {
         select: {
@@ -156,19 +163,6 @@ const aircraftContextSelect = {
       status: true,
     },
     take: 1,
-  },
-  airworthinessReleases: {
-    orderBy: [{ createdAt: "desc" }],
-    select: {
-      id: true,
-      releaseNumber: true,
-      releasedAt: true,
-      expiresAt: true,
-      status: true,
-      flightLegId: true,
-      updatedAt: true,
-    },
-    take: 5,
   },
 } satisfies Prisma.AircraftSelect;
 
@@ -326,9 +320,8 @@ export type AircraftContextData = Omit<
     activeCrewCount: number;
     activeAlertCount: number;
     activeDeferralCount: number;
-    openDiscrepancyCount: number;
-    hasCurrentAirworthinessRelease: boolean;
     missingCockpitRoles: SeatRole[];
+    openDiscrepancyCount: number;
   };
 };
 
@@ -368,19 +361,6 @@ function normalizeLegAssignment(assignment: AircraftLegAssignmentPayload): Aircr
       flightPlanStatus: latestFlightPlan?.status ?? null,
     },
   };
-}
-
-function isCurrentAirworthinessRelease(
-  release: {
-    status: AirworthinessReleaseStatus;
-    expiresAt: Date | null;
-  },
-  now: Date,
-): boolean {
-  return (
-    release.status === AirworthinessReleaseStatus.RELEASED &&
-    (!release.expiresAt || release.expiresAt > now)
-  );
 }
 
 export async function getAircraftContextData(
@@ -445,9 +425,6 @@ export async function getAircraftContextData(
       activeAlertCount: aircraft.alerts.length,
       activeDeferralCount: aircraft.deferrals.length,
       openDiscrepancyCount: aircraft.discrepancies.length,
-      hasCurrentAirworthinessRelease: aircraft.airworthinessReleases.some((release) =>
-        isCurrentAirworthinessRelease(release, now),
-      ),
       missingCockpitRoles: missingCockpitRoles(activeCrewAssignments),
     },
   };

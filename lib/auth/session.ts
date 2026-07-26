@@ -16,6 +16,12 @@ export type CurrentUser = {
   name: string;
 };
 
+const DEFAULT_LOCAL_ADMIN_EMAIL = "admin@aeroops.local";
+
+function isLocalAuthBypassEnabled() {
+  return process.env.AEROOPS_ENABLE_TEST_AUTH === "1" && process.env.NODE_ENV !== "production";
+}
+
 function hashSessionToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -27,6 +33,33 @@ function formatName(user: {
   const fullName = [user.profile?.firstName, user.profile?.lastName].filter(Boolean).join(" ");
 
   return fullName || user.email;
+}
+
+async function getLocalBypassUser(): Promise<CurrentUser | null> {
+  if (!isLocalAuthBypassEnabled()) {
+    return null;
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      email: process.env.AEROOPS_DEV_ADMIN_EMAIL ?? DEFAULT_LOCAL_ADMIN_EMAIL,
+      isActive: true,
+    },
+    include: {
+      profile: true,
+    },
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    name: formatName(user),
+  };
 }
 
 export async function createSession(userId: string) {
@@ -62,7 +95,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!token) {
-    return null;
+    return getLocalBypassUser();
   }
 
   const session = await prisma.userSession.findUnique({
@@ -82,7 +115,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     session.expiresAt <= new Date() ||
     !session.user.isActive
   ) {
-    return null;
+    return getLocalBypassUser();
   }
 
   return {

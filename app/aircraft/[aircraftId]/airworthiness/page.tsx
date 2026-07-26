@@ -1,5 +1,6 @@
 import {
   AirworthinessReleaseStatus,
+  DeferralMethod,
   DeferralStatus,
   DiscrepancyStatus,
   MaintenanceEventStatus,
@@ -13,20 +14,23 @@ import {
   createDeferralAction,
   createDiscrepancyAction,
   createMaintenanceEventAction,
+  signReturnToServiceAction,
   updateAirworthinessReleaseAction,
   updateDeferralAction,
   updateDiscrepancyAction,
   updateMaintenanceEventAction,
+  voidDiscrepancyAction,
 } from "@/app/aircraft/[aircraftId]/airworthiness/actions";
 import {
   editableAirworthinessReleaseStatuses,
+  editableDeferralMethods,
   editableDeferralStatuses,
-  editableDiscrepancyStatuses,
   editableMaintenanceEventStatuses,
   editableMaintenanceEventTypes,
   getAircraftAirworthinessWorkflowData,
   AircraftAirworthinessWorkflowData,
 } from "@/lib/airworthiness-workflow-queries";
+import { evaluateAircraftServiceability } from "@/lib/aircraft-serviceability";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +47,7 @@ type Discrepancy = AircraftAirworthinessWorkflowData["discrepancies"][number];
 type Deferral = AircraftAirworthinessWorkflowData["deferrals"][number];
 type MaintenanceEvent = AircraftAirworthinessWorkflowData["maintenanceEvents"][number];
 type AirworthinessRelease = AircraftAirworthinessWorkflowData["airworthinessReleases"][number];
+type ReturnToServiceRecord = AircraftAirworthinessWorkflowData["returnToServiceRecords"][number];
 
 function firstSearchParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
@@ -74,31 +79,15 @@ function toInputDateTime(value: Date | null | undefined): string {
   return value.toISOString().slice(0, 16);
 }
 
-function isAirworthinessReleaseExpired(release: AirworthinessRelease | null): boolean {
-  return !!release?.expiresAt && release.expiresAt <= new Date();
-}
-
-function airworthinessReleaseStateLabel(
-  latestRelease: AirworthinessRelease | null,
-  currentRelease: AirworthinessRelease | null,
-): string {
-  if (currentRelease && !isAirworthinessReleaseExpired(currentRelease)) {
-    return `Current: ${currentRelease.releaseNumber}`;
-  }
-
-  if (currentRelease && isAirworthinessReleaseExpired(currentRelease)) {
-    return `Expired: ${currentRelease.releaseNumber}`;
-  }
-
-  if (latestRelease) {
-    return `Latest ${latestRelease.status}: ${latestRelease.releaseNumber}`;
-  }
-
-  return "No airworthiness release history";
-}
-
 function statusClasses(status: DiscrepancyStatus | null): string {
-  if (status === DiscrepancyStatus.OPEN || status === DiscrepancyStatus.DEFERRED) {
+  if (status === DiscrepancyStatus.OPEN) {
+    return "border-rose-200 bg-rose-50 text-rose-800";
+  }
+
+  if (
+    status === DiscrepancyStatus.DEFERRED ||
+    status === DiscrepancyStatus.CORRECTED_PENDING_RTS
+  ) {
     return "border-amber-200 bg-amber-50 text-amber-800";
   }
 
@@ -224,25 +213,6 @@ function TextArea({
   );
 }
 
-function StatusSelect({ defaultValue }: { defaultValue?: DiscrepancyStatus }) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium text-zinc-700">Status</span>
-      <select
-        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-        defaultValue={defaultValue ?? DiscrepancyStatus.OPEN}
-        name="status"
-      >
-        {editableDiscrepancyStatuses.map((status) => (
-          <option key={status} value={status}>
-            {status}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
 function DeferralStatusSelect({ defaultValue }: { defaultValue?: DeferralStatus }) {
   return (
     <label className="block">
@@ -255,6 +225,25 @@ function DeferralStatusSelect({ defaultValue }: { defaultValue?: DeferralStatus 
         {editableDeferralStatuses.map((status) => (
           <option key={status} value={status}>
             {status}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function DeferralMethodSelect({ defaultValue }: { defaultValue?: DeferralMethod | null }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-zinc-700">Method</span>
+      <select
+        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+        defaultValue={defaultValue ?? DeferralMethod.MEL}
+        name="deferralMethod"
+      >
+        {editableDeferralMethods.map((method) => (
+          <option key={method} value={method}>
+            {method}
           </option>
         ))}
       </select>
@@ -392,7 +381,6 @@ function DiscrepancyForm({
         />
         <Field defaultValue={discrepancy?.title ?? ""} label="Title" name="title" required />
         <Field defaultValue={discrepancy?.severity ?? ""} label="Severity" name="severity" />
-        <StatusSelect defaultValue={discrepancy?.status} />
       </div>
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <TextArea
@@ -404,14 +392,6 @@ function DiscrepancyForm({
           defaultValue={discrepancy?.correctiveSummary}
           label="Corrective summary"
           name="correctiveSummary"
-        />
-      </div>
-      <div className="mt-3 max-w-sm">
-        <Field
-          defaultValue={toInputDateTime(discrepancy?.clearedAt)}
-          label="Cleared at"
-          name="clearedAt"
-          type="datetime-local"
         />
       </div>
       <div className="mt-3">
@@ -450,7 +430,13 @@ function DeferralForm({
           label="Deferral number"
           name="deferralNumber"
         />
+        <DeferralMethodSelect defaultValue={deferral?.deferralMethod} />
+        <Field defaultValue={deferral?.melItemNumber ?? ""} label="MEL/CDL/NEF item" name="melItemNumber" />
+        <Field defaultValue={deferral?.repairInterval ?? ""} label="Repair interval" name="repairInterval" />
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Field defaultValue={deferral?.category ?? ""} label="Category" name="category" />
+        <Field defaultValue={deferral?.authorityType ?? ""} label="Authority" name="authorityType" />
         <DeferralStatusSelect defaultValue={deferral?.status} />
         <Field
           defaultValue={toInputDateTime(deferral?.dueAt)}
@@ -461,18 +447,11 @@ function DeferralForm({
       </div>
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <TextArea defaultValue={deferral?.notes} label="Notes" name="notes" />
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-700">
-            Discrepancy handling when cleared
-          </span>
-          <select
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-            defaultValue="KEEP_DEFERRED"
-            name="discrepancyResolution"
-          >
-            <option value="KEEP_DEFERRED">Keep discrepancy deferred</option>
-            <option value="MARK_CLEARED">Mark discrepancy cleared</option>
-          </select>
+        <TextArea defaultValue={deferral?.operatingLimitations} label="Operating limitations" name="operatingLimitations" />
+        <TextArea defaultValue={deferral?.requiredProcedures} label="Required procedures" name="requiredProcedures" />
+        <label className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700">
+          <input defaultChecked={deferral?.placardRequired ?? false} name="placardRequired" type="checkbox" />
+          Placard required
         </label>
       </div>
       <div className="mt-3 max-w-sm">
@@ -549,19 +528,9 @@ function MaintenanceEventForm({
       </div>
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <Field defaultValue={event?.providerName ?? ""} label="Provider" name="providerName" />
-        <label className="block">
-          <span className="text-sm font-medium text-zinc-700">
-            Discrepancy handling when completed
-          </span>
-          <select
-            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
-            defaultValue="NO_CHANGE"
-            name="discrepancyResolution"
-          >
-            <option value="NO_CHANGE">Leave linked discrepancy unchanged</option>
-            <option value="MARK_CLEARED">Mark linked discrepancy cleared</option>
-          </select>
-        </label>
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Completed linked maintenance moves the discrepancy to RTS required. It does not clear the discrepancy.
+        </p>
       </div>
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <TextArea defaultValue={event?.description} label="Description" name="description" />
@@ -633,13 +602,113 @@ function AirworthinessReleaseForm({
   );
 }
 
+function ReturnToServiceForm({
+  action,
+  discrepancy,
+  maintenanceEvents,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  discrepancy: Discrepancy;
+  maintenanceEvents: MaintenanceEvent[];
+}) {
+  const linkedEvents = maintenanceEvents.filter((event) => event.discrepancyId === discrepancy.id);
+  const latestEvent = linkedEvents[0] ?? null;
+
+  return (
+    <form action={action} className="rounded-md border border-emerald-200 bg-emerald-50 p-3">
+      <input name="discrepancyId" type="hidden" value={discrepancy.id} />
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block">
+          <span className="text-sm font-medium text-zinc-700">Maintenance event</span>
+          <select
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 shadow-sm outline-none focus:border-zinc-500"
+            defaultValue={latestEvent?.id ?? ""}
+            name="maintenanceEventId"
+          >
+            <option value="">No linked event</option>
+            {linkedEvents.map((event) => (
+              <option key={event.id} value={event.id}>
+                {event.maintenanceNumber} | {event.status}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Field label="Return to service at" name="returnToServiceAt" type="datetime-local" />
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <TextArea defaultValue={discrepancy.correctiveSummary} label="Work summary" name="workSummary" />
+        <TextArea label="Approval basis" name="approvalBasis" />
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Field label="Signer name" name="signerName" required />
+        <Field label="Certificate number" name="certificateNumber" />
+        <Field label="Certificate type" name="certificateType" />
+        <Field label="Authorization basis" name="authorizationBasis" />
+      </div>
+      <div className="mt-3">
+        <TextArea
+          defaultValue="I certify this aircraft or item has been approved for return to service."
+          label="Signature intent"
+          name="intentText"
+        />
+      </div>
+      <div className="mt-3">
+        <button
+          className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800"
+          type="submit"
+        >
+          Sign RTS and clear write-up
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function VoidDiscrepancyForm({ action }: { action: (formData: FormData) => Promise<void> }) {
+  return (
+    <form action={action} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+      <TextArea label="Void reason" name="voidReason" />
+      <div className="mt-3">
+        <button
+          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-100"
+          type="submit"
+        >
+          Void erroneous write-up
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function ReturnToServiceList({ records }: { records: ReturnToServiceRecord[] }) {
+  if (records.length === 0) {
+    return <p className="text-sm text-zinc-600">No return-to-service records signed yet.</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {records.map((record) => (
+        <article className="rounded-md border border-zinc-200 bg-white p-3 text-sm" key={record.id}>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold text-zinc-950">{record.rtsNumber}</p>
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+              {record.status}
+            </span>
+          </div>
+          <p className="mt-1 text-zinc-700">{record.workSummary ?? "No work summary recorded."}</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            RTS {toDateTimeLabel(record.returnToServiceAt)} | Signed {toDateTimeLabel(record.signedAt)} |{" "}
+            {record.authorityProfile?.legalName ?? record.signer?.email ?? "Unknown signer"}
+          </p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 function ContextCards({ aircraft }: { aircraft: AircraftAirworthinessWorkflowData }) {
   const configuration = aircraft.configurations[0] ?? null;
-  const latestRelease = aircraft.airworthinessReleases[0] ?? null;
-  const release =
-    aircraft.airworthinessReleases.find(
-      (item) => item.status === AirworthinessReleaseStatus.RELEASED,
-    ) ?? null;
+  const serviceability = evaluateAircraftServiceability(aircraft);
   const latestMaintenance = aircraft.maintenanceEvents[0] ?? null;
   const capabilityCodes = aircraft.capabilities
     .map((capability) => capability.capabilityCode)
@@ -659,14 +728,9 @@ function ContextCards({ aircraft }: { aircraft: AircraftAirworthinessWorkflowDat
         </p>
       </article>
       <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
-        <p className="text-sm font-semibold text-zinc-900">Airworthiness release</p>
-        <p className="mt-2 text-sm text-zinc-700">
-          {airworthinessReleaseStateLabel(latestRelease, release)}
-        </p>
-        <p className="mt-1 text-xs text-zinc-500">
-          Released {toDateTimeLabel(release?.releasedAt)} | Expires{" "}
-          {toDateTimeLabel(release?.expiresAt)}
-        </p>
+        <p className="text-sm font-semibold text-zinc-900">Serviceability</p>
+        <p className="mt-2 text-sm text-zinc-700">{serviceability.label}</p>
+        <p className="mt-1 text-xs text-zinc-500">{serviceability.message}</p>
       </article>
       <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
         <p className="text-sm font-semibold text-zinc-900">Capabilities</p>
@@ -707,6 +771,10 @@ function ActiveDeferrals({ aircraft }: { aircraft: AircraftAirworthinessWorkflow
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-semibold text-zinc-950">{deferral.deferralNumber}</p>
                 <DeferralStatusBadge status={deferral.status} />
+                <span className="text-zinc-600">{deferral.deferralMethod ?? "No method"}</span>
+                {deferral.melItemNumber ? (
+                  <span className="text-zinc-600">{deferral.melItemNumber}</span>
+                ) : null}
                 <span className="text-zinc-600">{deferral.category ?? "No category"}</span>
               </div>
               <p className="mt-1 text-zinc-700">
@@ -719,6 +787,20 @@ function ActiveDeferrals({ aircraft }: { aircraft: AircraftAirworthinessWorkflow
               </p>
             </div>
           </div>
+          {deferral.operatingLimitations || deferral.requiredProcedures ? (
+            <div className="mt-2 grid gap-2 lg:grid-cols-2">
+              {deferral.operatingLimitations ? (
+                <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-sm text-amber-950">
+                  {deferral.operatingLimitations}
+                </p>
+              ) : null}
+              {deferral.requiredProcedures ? (
+                <p className="rounded-md border border-zinc-200 bg-zinc-50 p-2 text-sm text-zinc-700">
+                  {deferral.requiredProcedures}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <div className="mt-3">
             <DeferralForm
               action={updateDeferralAction.bind(null, aircraft.id, deferral.id)}
@@ -735,9 +817,11 @@ function ActiveDeferrals({ aircraft }: { aircraft: AircraftAirworthinessWorkflow
 function DiscrepancyList({
   aircraftId,
   discrepancies,
+  maintenanceEvents,
 }: {
   aircraftId: string;
   discrepancies: Discrepancy[];
+  maintenanceEvents: MaintenanceEvent[];
 }) {
   if (discrepancies.length === 0) {
     return <p className="text-sm text-zinc-600">No discrepancies recorded.</p>;
@@ -747,6 +831,8 @@ function DiscrepancyList({
     <div className="space-y-3">
       {discrepancies.map((discrepancy) => {
         const updateAction = updateDiscrepancyAction.bind(null, aircraftId, discrepancy.id);
+        const voidAction = voidDiscrepancyAction.bind(null, aircraftId, discrepancy.id);
+        const rtsAction = signReturnToServiceAction.bind(null, aircraftId);
 
         return (
           <article className="rounded-md border border-zinc-200 bg-white p-3" key={discrepancy.id}>
@@ -767,6 +853,9 @@ function DiscrepancyList({
                   {toDateTimeLabel(discrepancy.clearedAt)} | Severity{" "}
                   {discrepancy.severity ?? "not set"}
                 </p>
+                {discrepancy.voidReason ? (
+                  <p className="mt-1 text-xs text-zinc-500">Void reason: {discrepancy.voidReason}</p>
+                ) : null}
               </div>
               <div className="text-xs text-zinc-500">
                 {discrepancy.deferrals.length} deferral(s)
@@ -784,6 +873,21 @@ function DiscrepancyList({
                 submitLabel="Save discrepancy"
               />
             </div>
+            {discrepancy.status === DiscrepancyStatus.CORRECTED_PENDING_RTS ? (
+              <div className="mt-3">
+                <ReturnToServiceForm
+                  action={rtsAction}
+                  discrepancy={discrepancy}
+                  maintenanceEvents={maintenanceEvents}
+                />
+              </div>
+            ) : null}
+            {discrepancy.status !== DiscrepancyStatus.CLEARED &&
+            discrepancy.status !== DiscrepancyStatus.CANCELLED ? (
+              <div className="mt-3">
+                <VoidDiscrepancyForm action={voidAction} />
+              </div>
+            ) : null}
           </article>
         );
       })}
@@ -906,20 +1010,23 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
   }
 
   const createAction = createDiscrepancyAction.bind(null, aircraft.id);
+  const serviceability = evaluateAircraftServiceability(aircraft);
   const activeDiscrepancies = aircraft.discrepancies.filter(
     (discrepancy) =>
       discrepancy.status === DiscrepancyStatus.OPEN ||
       discrepancy.status === DiscrepancyStatus.DEFERRED,
   );
+  const deferrableDiscrepancies = aircraft.discrepancies.filter(
+    (discrepancy) =>
+      discrepancy.status === DiscrepancyStatus.OPEN ||
+      discrepancy.status === DiscrepancyStatus.DEFERRED,
+  );
+  const rtsRequiredDiscrepancies = aircraft.discrepancies.filter(
+    (discrepancy) => discrepancy.status === DiscrepancyStatus.CORRECTED_PENDING_RTS,
+  );
   const activeDeferrals = aircraft.deferrals.filter(
     (deferral) => deferral.status === DeferralStatus.ACTIVE,
   );
-  const currentRelease =
-    aircraft.airworthinessReleases.find(
-      (release) => release.status === AirworthinessReleaseStatus.RELEASED,
-    ) ?? null;
-  const currentReleaseUsable =
-    !!currentRelease && !isAirworthinessReleaseExpired(currentRelease);
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-6 text-zinc-950 sm:px-6 lg:px-8">
@@ -935,6 +1042,12 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
             >
               Operations Control
             </Link>
+            <Link
+              className="text-sm font-medium text-zinc-700 hover:text-zinc-950"
+              href={`/aircraft/${aircraft.id}/logbook`}
+            >
+              Logbook
+            </Link>
           </div>
           <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Aircraft Airworthiness
@@ -944,8 +1057,8 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-zinc-600">
             Aircraft-level discrepancy, deferral, maintenance event, and
-            maintenance airworthiness release workflow. Operational FlightRelease
-            actions and hard release blocking remain separate.
+            return-to-service workflow. Historical aircraft release records are
+            separate from the computed serviceability state.
           </p>
         </header>
 
@@ -956,6 +1069,10 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
         ) : null}
 
         <section className="grid gap-3 md:grid-cols-4">
+          <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-sm text-zinc-500">Serviceability</p>
+            <p className="mt-2 text-sm font-semibold text-zinc-900">{serviceability.label}</p>
+          </article>
           <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-zinc-500">Open/deferred</p>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
@@ -987,9 +1104,9 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
             </p>
           </article>
           <article className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-zinc-500">Current A/W release</p>
-            <p className="mt-2 text-sm font-semibold text-zinc-900">
-              {currentReleaseUsable ? currentRelease.releaseNumber : "Needs attention"}
+            <p className="text-sm text-zinc-500">RTS required</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {rtsRequiredDiscrepancies.length}
             </p>
           </article>
         </section>
@@ -1010,7 +1127,11 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
           <h2 className="text-lg font-semibold">Discrepancies</h2>
           <div className="mt-4">
-            <DiscrepancyList aircraftId={aircraft.id} discrepancies={aircraft.discrepancies} />
+            <DiscrepancyList
+              aircraftId={aircraft.id}
+              discrepancies={aircraft.discrepancies}
+              maintenanceEvents={aircraft.maintenanceEvents}
+            />
           </div>
         </section>
 
@@ -1021,14 +1142,14 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
             release blocking remains deferred.
           </p>
           <div className="mt-4">
-            {activeDiscrepancies.length === 0 ? (
+            {deferrableDiscrepancies.length === 0 ? (
               <p className="text-sm text-zinc-600">
                 No OPEN or DEFERRED discrepancies are available for deferral.
               </p>
             ) : (
               <DeferralForm
                 action={createDeferralAction.bind(null, aircraft.id)}
-                discrepancies={activeDiscrepancies}
+                discrepancies={deferrableDiscrepancies}
                 submitLabel="Create deferral"
               />
             )}
@@ -1069,6 +1190,16 @@ export default async function AircraftAirworthinessPage({ params, searchParams }
               discrepancies={aircraft.discrepancies}
               events={aircraft.maintenanceEvents}
             />
+          </div>
+        </section>
+
+        <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-semibold">Return to service records</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Signed RTS records clear corrected write-ups and provide the linked logbook evidence.
+          </p>
+          <div className="mt-4">
+            <ReturnToServiceList records={aircraft.returnToServiceRecords} />
           </div>
         </section>
 

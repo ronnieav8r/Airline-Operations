@@ -1,4 +1,7 @@
 import {
+  AircraftLogbookEntrySource,
+  AircraftLogbookEntryStatus,
+  AircraftLogbookEntryType,
   AirworthinessReleaseStatus,
   AlertSeverity,
   AlertStatus,
@@ -9,6 +12,7 @@ import {
   AssignmentStatus,
   AircraftStatus,
   AircraftType,
+  DeferralMethod,
   DeferralStatus,
   DiscrepancyStatus,
   CrewScheduleEntryStatus,
@@ -37,6 +41,7 @@ import {
 
 import { createPasswordHash } from "../lib/auth/password";
 import { seedCrewComplianceDemo } from "../lib/crew-compliance-demo-seed";
+import { seedDefaultCrewComplianceRules } from "../lib/crew-compliance-rule-defaults";
 import { seedDefaultDutyRestPolicies } from "../lib/duty-rest-policy-defaults";
 import { seedDefaultReleasePolicies } from "../lib/release-policy-defaults";
 
@@ -665,6 +670,7 @@ async function seedFuelFoundation() {
 
 async function seedAirworthinessFoundation() {
   const baselineStart = new Date(Date.UTC(2026, 0, 1, 0, 0, 0));
+  const demoNow = new Date();
   const opsUser = await prisma.user.findUnique({
     where: { email: "ops@aeroops.local" },
     select: { id: true },
@@ -796,9 +802,115 @@ async function seedAirworthinessFoundation() {
     });
   }
 
+  const activeAircraft = aircraft[0];
+
+  if (activeAircraft) {
+    const openDiscrepancy = await prisma.discrepancy.upsert({
+      where: {
+        aircraftId_discrepancyNumber: {
+          aircraftId: activeAircraft.id,
+          discrepancyNumber: `DISC-${activeAircraft.tailNumber}-DEMO-OPEN`,
+        },
+      },
+      create: {
+        aircraftId: activeAircraft.id,
+        reportedById: opsUser?.id ?? null,
+        discrepancyNumber: `DISC-${activeAircraft.tailNumber}-DEMO-OPEN`,
+        title: "Hydraulic seep at service panel",
+        description: "Crew reported light hydraulic seepage at the left service panel after shutdown.",
+        status: DiscrepancyStatus.OPEN,
+        severity: "REVIEW",
+        reportedAt: addHours(demoNow, -8),
+      },
+      update: {
+        reportedById: opsUser?.id ?? null,
+        title: "Hydraulic seep at service panel",
+        description: "Crew reported light hydraulic seepage at the left service panel after shutdown.",
+        status: DiscrepancyStatus.OPEN,
+        severity: "REVIEW",
+        reportedAt: addHours(demoNow, -8),
+      },
+    });
+
+    const plannedMaintenance = await prisma.maintenanceEvent.upsert({
+      where: {
+        aircraftId_maintenanceNumber: {
+          aircraftId: activeAircraft.id,
+          maintenanceNumber: `MX-${activeAircraft.tailNumber}-DEMO-PLANNED`,
+        },
+      },
+      create: {
+        aircraftId: activeAircraft.id,
+        approvedById: opsUser?.id ?? null,
+        maintenanceNumber: `MX-${activeAircraft.tailNumber}-DEMO-PLANNED`,
+        eventType: MaintenanceEventType.SCHEDULED_MAINTENANCE,
+        status: MaintenanceEventStatus.PLANNED,
+        scheduledAt: addDays(demoNow, 3),
+        providerName: "AeroOps Demo Maintenance",
+        description: "Upcoming phase inspection package review.",
+        notes: "Seeded planned maintenance for Maintenance tab queue.",
+      },
+      update: {
+        approvedById: opsUser?.id ?? null,
+        eventType: MaintenanceEventType.SCHEDULED_MAINTENANCE,
+        status: MaintenanceEventStatus.PLANNED,
+        scheduledAt: addDays(demoNow, 3),
+        providerName: "AeroOps Demo Maintenance",
+        description: "Upcoming phase inspection package review.",
+        notes: "Seeded planned maintenance for Maintenance tab queue.",
+      },
+    });
+
+    await prisma.aircraftLogbookEntry.upsert({
+      where: {
+        aircraftId_entryNumber: {
+          aircraftId: activeAircraft.id,
+          entryNumber: `LB-${activeAircraft.tailNumber}-DEMO-SIGN`,
+        },
+      },
+      create: {
+        aircraftId: activeAircraft.id,
+        category: "CORRECTIVE_ACTION",
+        createdById: opsUser?.id ?? null,
+        discrepancyId: openDiscrepancy.id,
+        entryNumber: `LB-${activeAircraft.tailNumber}-DEMO-SIGN`,
+        entryType: AircraftLogbookEntryType.CORRECTIVE_ACTION,
+        maintenanceEventId: plannedMaintenance.id,
+        manualReference: "AMM demo reference",
+        narrative: "Corrective action drafted and ready for maintenance signature review.",
+        performedByName: "AeroOps Demo Maintenance",
+        reportedAt: addHours(demoNow, -2),
+        source: AircraftLogbookEntrySource.MAINTENANCE,
+        status: AircraftLogbookEntryStatus.READY_FOR_SIGNATURE,
+        title: "Corrective action ready for signature",
+        updatedById: opsUser?.id ?? null,
+      },
+      update: {
+        category: "CORRECTIVE_ACTION",
+        createdById: opsUser?.id ?? null,
+        discrepancyId: openDiscrepancy.id,
+        entryType: AircraftLogbookEntryType.CORRECTIVE_ACTION,
+        maintenanceEventId: plannedMaintenance.id,
+        manualReference: "AMM demo reference",
+        narrative: "Corrective action drafted and ready for maintenance signature review.",
+        performedByName: "AeroOps Demo Maintenance",
+        reportedAt: addHours(demoNow, -2),
+        source: AircraftLogbookEntrySource.MAINTENANCE,
+        status: AircraftLogbookEntryStatus.READY_FOR_SIGNATURE,
+        title: "Corrective action ready for signature",
+        updatedById: opsUser?.id ?? null,
+      },
+    });
+  }
+
   const deferredAircraft = aircraft[1];
 
   if (deferredAircraft) {
+    await prisma.aircraft.update({
+      where: { id: deferredAircraft.id },
+      data: { status: AircraftStatus.OUT_OF_SERVICE },
+    });
+
     const discrepancy = await prisma.discrepancy.upsert({
       where: {
         aircraftId_discrepancyNumber: {
@@ -811,7 +923,7 @@ async function seedAirworthinessFoundation() {
         reportedById: opsUser?.id ?? null,
         discrepancyNumber: `DISC-${deferredAircraft.tailNumber}-DEMO-001`,
         title: "Demo deferred cabin item",
-        description: "Non-critical cabin placard discrepancy for readiness warning demos.",
+        description: "Deferred cabin placard discrepancy for serviceability demo data.",
         status: DiscrepancyStatus.DEFERRED,
         severity: "LOW",
         reportedAt: addDays(baselineStart, 2),
@@ -819,14 +931,14 @@ async function seedAirworthinessFoundation() {
       update: {
         reportedById: opsUser?.id ?? null,
         title: "Demo deferred cabin item",
-        description: "Non-critical cabin placard discrepancy for readiness warning demos.",
+        description: "Deferred cabin placard discrepancy for serviceability demo data.",
         status: DiscrepancyStatus.DEFERRED,
         severity: "LOW",
         reportedAt: addDays(baselineStart, 2),
       },
     });
 
-    await prisma.deferral.upsert({
+    const activeDeferral = await prisma.deferral.upsert({
       where: {
         aircraftId_deferralNumber: {
           aircraftId: deferredAircraft.id,
@@ -839,21 +951,70 @@ async function seedAirworthinessFoundation() {
         authorizedById: opsUser?.id ?? null,
         deferralNumber: `DEF-${deferredAircraft.tailNumber}-DEMO-001`,
         status: DeferralStatus.ACTIVE,
-        category: "Demo",
+        category: "D",
+        deferralMethod: DeferralMethod.MEL,
+        deferralType: "MEL",
+        melItemNumber: "33-20-01",
         deferredAt: addDays(baselineStart, 2),
-        dueAt: addMonths(baselineStart, 1),
-        notes: "Seeded active deferral for warning-only airworthiness demos.",
+        dueAt: addDays(demoNow, 5),
+        operatingLimitations: "Affected reading light unavailable. Passenger briefing required.",
+        placardRequired: true,
+        repairInterval: "D",
+        requiredProcedures: "Placard affected seat and brief passengers before flight.",
+        notes: "Seeded active MEL deferral for serviceability demo data.",
       },
       update: {
         discrepancyId: discrepancy.id,
         authorizedById: opsUser?.id ?? null,
         status: DeferralStatus.ACTIVE,
-        category: "Demo",
+        category: "D",
+        deferralMethod: DeferralMethod.MEL,
+        deferralType: "MEL",
+        melItemNumber: "33-20-01",
         deferredAt: addDays(baselineStart, 2),
-        dueAt: addMonths(baselineStart, 1),
-        notes: "Seeded active deferral for warning-only airworthiness demos.",
+        dueAt: addDays(demoNow, 5),
+        operatingLimitations: "Affected reading light unavailable. Passenger briefing required.",
+        placardRequired: true,
+        repairInterval: "D",
+        requiredProcedures: "Placard affected seat and brief passengers before flight.",
+        notes: "Seeded active MEL deferral for serviceability demo data.",
       },
     });
+
+    await prisma.discrepancy.update({
+      where: { id: discrepancy.id },
+      data: { activeDeferralId: activeDeferral.id },
+    });
+
+    await prisma.maintenanceEvent.upsert({
+      where: {
+        aircraftId_maintenanceNumber: {
+          aircraftId: deferredAircraft.id,
+          maintenanceNumber: `MX-${deferredAircraft.tailNumber}-DEMO-AOG`,
+        },
+      },
+      create: {
+        aircraftId: deferredAircraft.id,
+        approvedById: opsUser?.id ?? null,
+        maintenanceNumber: `MX-${deferredAircraft.tailNumber}-DEMO-AOG`,
+        eventType: MaintenanceEventType.UNSCHEDULED_MAINTENANCE,
+        status: MaintenanceEventStatus.IN_PROGRESS,
+        startedAt: addHours(demoNow, -4),
+        providerName: "AeroOps Demo Maintenance",
+        description: "AOG inspection in progress after crew write-up review.",
+        notes: "Seeded in-progress maintenance for Maintenance tab queue.",
+      },
+      update: {
+        approvedById: opsUser?.id ?? null,
+        eventType: MaintenanceEventType.UNSCHEDULED_MAINTENANCE,
+        status: MaintenanceEventStatus.IN_PROGRESS,
+        startedAt: addHours(demoNow, -4),
+        providerName: "AeroOps Demo Maintenance",
+        description: "AOG inspection in progress after crew write-up review.",
+        notes: "Seeded in-progress maintenance for Maintenance tab queue.",
+      },
+    });
+
   }
 }
 
@@ -1833,6 +1994,7 @@ async function main() {
 
   await seedDefaultReleasePolicies(prisma);
   await seedDefaultDutyRestPolicies(prisma);
+  await seedDefaultCrewComplianceRules(prisma);
 
   await prisma.timeOffRequest.create({
     data: {

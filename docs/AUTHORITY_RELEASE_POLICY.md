@@ -1,6 +1,6 @@
 # Authority Release Policy
 
-Last updated: 2026-06-07
+Last updated: 2026-06-30
 
 This document plans how FlightLeg release-readiness policy should vary by
 operating authority. It is product planning, not legal advice.
@@ -49,8 +49,8 @@ classes once enforcement exists:
 - Missing FlightLeg.
 - Missing assigned aircraft.
 - Missing active aircraft configuration.
-- Missing current non-expired `RELEASED` aircraft maintenance airworthiness
-  release.
+- Aircraft not serviceable due to open unresolved discrepancy, AOG,
+  corrected-pending-RTS, or expired deferral.
 - Missing operational-control record.
 - Missing controlling entity.
 - Missing operating authority.
@@ -67,7 +67,7 @@ The app can still show these as warning-only until a later hard-blocking slice.
 | --- | --- | --- | --- |
 | Assigned aircraft | Future blocker | Future blocker | Future blocker |
 | Aircraft configuration | Future blocker | Future blocker | Future blocker |
-| Aircraft airworthiness release | Future blocker | Future blocker | Future blocker |
+| Aircraft maintenance serviceability | Future blocker | Future blocker | Future blocker |
 | Operational control record | Future blocker | Future blocker | Future blocker |
 | Controlling entity | Future blocker | Future blocker | Future blocker |
 | Operating authority/revision | Future blocker | Future blocker | Future blocker |
@@ -80,8 +80,8 @@ The app can still show these as warning-only until a later hard-blocking slice.
 | Weather briefing evidence | Operator-configurable blocker or warning | Future blocker | Future blocker |
 | NOTAM evidence | Operator-configurable blocker or warning | Future blocker | Future blocker |
 | Flight-plan reference | Operator-configurable blocker or warning | Future blocker | Future blocker |
-| Open discrepancies | Warning until severity/MEL/CDL policy exists | Warning until severity/MEL/CDL policy exists | Warning until severity/MEL/CDL policy exists |
-| Active deferrals | Warning until due-date/MEL/CDL policy exists | Warning until due-date/MEL/CDL policy exists | Warning until due-date/MEL/CDL policy exists |
+| Open unresolved discrepancies / RTS required | Future blocker | Future blocker | Future blocker |
+| Active valid deferrals with limitations | Warning until due-date/MEL/CDL/NEF policy exists | Warning until due-date/MEL/CDL/NEF policy exists | Warning until due-date/MEL/CDL/NEF policy exists |
 | Crew compliance | Deferred warning until richer crew tables exist | Deferred warning until richer crew tables exist | Deferred warning until richer crew tables exist |
 
 ## Part 91 Baseline Direction

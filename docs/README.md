@@ -1,6 +1,6 @@
 # AeroOps Docs Map
 
-Last updated: 2026-06-13
+Last updated: 2026-07-26
 
 ## Start Here
 
@@ -10,12 +10,51 @@ planner chats:
 - `docs/BUILDER_ONBOARDING.md`: quick orientation for new work.
 - `docs/CURRENT_HANDOFF.md`: current handoff summary for the next builder.
 - `docs/PROJECT_STATUS.md`: current status plus long running history.
+- `docs/PROJECT_PIPELINE.md`: canonical branch, approved slice register, and
+  checkpoint/acceptance tracking. Check this before dispatching a new slice.
 - `docs/BACKEND_MVP_STATE.md`: stable backend contracts after backend MVP.
 - `docs/FRONTEND_READINESS_PLAN.md`: current frontend/UI handoff plan.
+- `docs/AEROOPS_UI_WORKFLOW_MACRO_PLAN.md`: app-wide UI/workflow plan built
+  from the current scheduling interaction model.
+- `docs/AEROOPS_UI_PAGE_DESIGN_DRILLDOWN.md`: page-by-page UI blueprint for
+  dashboard, operations, flights, crew, scheduling, aircraft, customers,
+  passengers, manifest, logistics, and settings.
 - `docs/SMOKE_TESTING.md`: command-driven local smoke test harness.
 - `docs/SCHEMA_DECISIONS.md`: current schema and data-boundary decisions.
 - `docs/DOCUMENTATION_AUDIT.md`: documentation cleanup notes and stale-doc
   handling.
+
+Current active crew app review target:
+
+```text
+http://localhost:3200/crew/me
+```
+
+Current aircraft review targets:
+
+```text
+http://localhost:3200/aircraft
+http://localhost:3200/aircraft?view=crew-coverage
+```
+
+Current maintenance review targets:
+
+```text
+http://localhost:3200/maintenance
+http://localhost:3200/maintenance?view=scheduled
+http://localhost:3200/maintenance?view=program
+```
+
+Current scheduling review target:
+
+```text
+http://localhost:3200/crew/scheduling?date=2026-06-01&view=month&tab=planning&layer=schedule&aircraftType=all&role=all&base=all&sort=status&detail=names&focus=board
+```
+
+For aircraft, crew-app, scheduling, or maintenance UI work, start in
+`docs/CURRENT_HANDOFF.md`. It captures the active `/aircraft`, `/maintenance`,
+`/crew/me`, and `/crew/scheduling` handoffs, the current no-auto-assignment
+boundary, and the maintenance-module direction.
 
 ## Current Backend MVP Evidence
 
@@ -42,10 +81,12 @@ planner chats:
   - `docs/RELEASE_EVIDENCE_MUTATION_PLAN.md`
   - `docs/FLIGHT_LOCATING_POSITION_HISTORY_PLAN.md`
 - Aircraft and airworthiness:
+  - `docs/MAINTENANCE_SERVICEABILITY_RTS_LIFECYCLE.md`
   - `docs/AIRWORTHINESS_SCHEMA_DECISIONS.md`
   - `docs/AIRWORTHINESS_RELEASE_POLICY.md`
   - `docs/AIRWORTHINESS_MUTATION_PLAN.md`
   - `docs/FUEL_LEDGER_RELEASE_READINESS.md`
+  - `docs/AIRCRAFT_MAINTENANCE_LOGBOOK_REGULATORY_REFERENCE.md`
 - Crew:
   - `docs/CREW_COMPLIANCE_PLAN.md`
   - `docs/CREW_COMPLIANCE_MVP_STATUS.md`
@@ -105,5 +146,10 @@ Current highest-priority truth order:
 
 Frontend/UI polish is active. Recent completed work includes compact dashboard
 passes, FlightLeg drawer/object-action refinement, fuel ledger/release fuel
-readiness, and dashboard drawer summary cleanup. Start with
-`docs/CURRENT_HANDOFF.md` before selecting the next UI slice.
+readiness, dashboard drawer summary cleanup, Crew Schedule Board hardening, the
+`/crew/me` crew-member mobile app foundation, passenger ID/check-in workflow
+work, the compact `/aircraft` fleet-status pass, the maintenance
+serviceability/Return-to-Service lifecycle, and the scheduled-maintenance
+program foundation. Current next work should focus on aircraft crew coverage
+polish, Maintenance tab polish, crew portal polish, and scheduling hardening.
+Start with `docs/CURRENT_HANDOFF.md` before selecting the next UI slice.

@@ -48,6 +48,14 @@ function toDate(value: Date | null): string {
   }).format(value);
 }
 
+function toDueDate(value: Date | null): string {
+  return value ? toDate(value) : "Not calculated";
+}
+
+function toProfileDate(value: Date | null): string {
+  return value ? toDate(value) : "Not set";
+}
+
 function toDateTime(value: Date | null): string {
   if (!value) {
     return "Not set";
@@ -92,42 +100,42 @@ function formatAircraftType(value: string): string {
 
 function employmentBadgeClasses(status: EmploymentStatus): string {
   if (status === EmploymentStatus.ACTIVE) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "status-badge-success";
   }
   if (status === EmploymentStatus.ON_LEAVE) {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "status-badge-caution";
   }
   return "border-zinc-200 bg-zinc-50 text-zinc-600";
 }
 
 function dutyBadgeClasses(status: DutyStatus): string {
   if (status === DutyStatus.ON_DUTY || status === DutyStatus.RESERVE) {
-    return "border-blue-200 bg-blue-50 text-blue-700";
+    return "status-badge-info";
   }
   if (status === DutyStatus.SICK || status === DutyStatus.VACATION) {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return status === DutyStatus.SICK ? "status-badge-stop" : "status-badge-caution";
   }
   if (status === DutyStatus.TRAINING || status === DutyStatus.DEADHEADING) {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "status-badge-info";
   }
   return "border-zinc-200 bg-zinc-50 text-zinc-600";
 }
 
 function qualificationBadgeClasses(qualification: QualificationRow, now: Date): string {
   if (!qualification.expiresAt) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "status-badge-success";
   }
 
   const expiringSoon = new Date(now);
   expiringSoon.setDate(expiringSoon.getDate() + 30);
 
   if (qualification.expiresAt < now) {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return "status-badge-stop";
   }
   if (qualification.expiresAt <= expiringSoon) {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "status-badge-caution";
   }
-  return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  return "status-badge-success";
 }
 
 function qualificationStatus(qualification: QualificationRow, now: Date): string {
@@ -149,15 +157,43 @@ function qualificationStatus(qualification: QualificationRow, now: Date): string
 
 function complianceBadgeClasses(status: string, expiresAt?: Date | null): string {
   if (status === "EXPIRED" || status === "VOIDED") {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return "status-badge-stop";
   }
   if (expiresAt && expiresAt < new Date()) {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return "status-badge-stop";
   }
   if (status === "SUPERSEDED") {
     return "border-zinc-200 bg-zinc-50 text-zinc-600";
   }
-  return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  return "status-badge-success";
+}
+
+function complianceStatusBadgeClasses(status: string): string {
+  if (status === "EXPIRED" || status === "MISSING") {
+    return "status-badge-stop";
+  }
+  if (status === "DUE_SOON" || status === "NOT_ENOUGH_DATA") {
+    return "status-badge-caution";
+  }
+  return "status-badge-success";
+}
+
+function complianceEvidenceLabel(
+  evidenceRef: CrewMemberContextData["complianceFindings"][number]["evidenceRef"],
+): string {
+  if (!evidenceRef) {
+    return "Evidence missing";
+  }
+
+  const labels: Record<typeof evidenceRef.type, string> = {
+    CrewCertificate: "Certificate record",
+    CrewCheckEvent: "Check record",
+    CrewMedical: "Medical record",
+    CrewRecencyEvent: "Recency record",
+    CrewTrainingEvent: "Training record",
+  };
+
+  return labels[evidenceRef.type];
 }
 
 function flightCoverageLabel(flight: CrewMemberContextFlight): string {
@@ -267,6 +303,10 @@ function CrewMemberEditForm({
         <label className="block">
           <span className="text-xs font-medium text-zinc-600">Hire date</span>
           <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={toInputDate(crewMember.hireDate)} name="hireDate" type="date" />
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-zinc-600">Date of birth</span>
+          <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={toInputDate(crewMember.dateOfBirth)} name="dateOfBirth" type="date" />
         </label>
         <label className="block">
           <span className="text-xs font-medium text-zinc-600">Phone</span>
@@ -389,12 +429,12 @@ function QualificationManagement({
                 <QualificationForm action={updateAction} buttonLabel="Save qualification" qualification={qualification} />
                 <div className="mt-2 flex flex-wrap gap-2">
                   <form action={expireAction}>
-                    <button className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100" type="submit">
+                    <button className="rounded-md border status-surface-caution px-3 py-1.5 text-xs font-semibold hover:bg-yellow-100" type="submit">
                       Expire now
                     </button>
                   </form>
                   <form action={deleteAction}>
-                    <button className="rounded-md border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100" type="submit">
+                    <button className="rounded-md border status-surface-stop px-3 py-1.5 text-xs font-semibold hover:bg-red-800" type="submit">
                       Delete
                     </button>
                   </form>
@@ -479,6 +519,7 @@ export default async function CrewMemberContextPage({ params, searchParams }: Pa
                 #{crewMember.employeeNumber} | Base {crewMember.baseStation.code} -{" "}
                 {crewMember.baseStation.city}
               </p>
+              <p className="mt-1 text-sm text-zinc-600">DOB {toProfileDate(crewMember.dateOfBirth)}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <span
@@ -500,7 +541,7 @@ export default async function CrewMemberContextPage({ params, searchParams }: Pa
         </header>
 
         {error ? (
-          <section className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+          <section className="rounded-md border status-surface-stop p-3 text-sm">
             {decodeURIComponent(error)}
           </section>
         ) : null}
@@ -558,14 +599,14 @@ export default async function CrewMemberContextPage({ params, searchParams }: Pa
 
         <Section eyebrow="Warning-only" title="Availability Snapshot">
           {crewMember.availabilityWarnings.length === 0 ? (
-            <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+            <p className="rounded-md border status-surface-success p-3 text-sm">
               No availability warnings found in the {CREW_MEMBER_CONTEXT_WINDOW_DAYS}-day planning
               window.
             </p>
           ) : (
-            <ul className="mt-3 grid gap-2 text-sm text-amber-900 md:grid-cols-2">
+            <ul className="mt-3 grid gap-2 text-sm md:grid-cols-2">
               {crewMember.availabilityWarnings.map((warning) => (
-                <li className="rounded-md border border-amber-200 bg-amber-50 p-3" key={warning}>
+                <li className="rounded-md border status-surface-caution p-3" key={warning}>
                   {warning}
                 </li>
               ))}
@@ -574,7 +615,7 @@ export default async function CrewMemberContextPage({ params, searchParams }: Pa
         </Section>
 
         <Section eyebrow="Planning context" title="Crew Logistics">
-          <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+          <div className="rounded-md border status-surface-info p-3 text-sm">
             Logistics records show location and travel-support context only. They do not
             create bookings, expenses, aircraft assignments, schedule entries, or duty/rest
             compliance decisions.
@@ -650,21 +691,65 @@ export default async function CrewMemberContextPage({ params, searchParams }: Pa
         <div className="grid gap-4 lg:grid-cols-2" id="qualifications">
           <QualificationManagement crewMember={crewMember} />
 
-          <Section eyebrow="Warning-only" title="Compliance Evidence">
+          <Section eyebrow="Warning-only" title="Compliance Requirements">
             <Link
               className="inline-flex rounded-md bg-zinc-950 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
               href={`/crew/${crewMember.id}/compliance`}
             >
               Manage compliance records
             </Link>
+            <div className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-zinc-950">Requirements checklist</p>
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${complianceStatusBadgeClasses(
+                    crewMember.complianceStatus,
+                  )}`}
+                >
+                  {formatStatus(crewMember.complianceStatus)}
+                </span>
+              </div>
+              {crewMember.complianceFindings.length === 0 ? (
+                <p className="mt-2 text-sm text-zinc-600">No active crew compliance rules.</p>
+              ) : (
+                <ul className="mt-3 grid gap-2">
+                  {crewMember.complianceFindings.map((finding) => (
+                    <li className="rounded-md border border-zinc-200 bg-white p-3" key={finding.ruleKey}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-zinc-950">{finding.title}</p>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${complianceStatusBadgeClasses(
+                            finding.status,
+                          )}`}
+                        >
+                          {formatStatus(finding.status)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-600">
+                        Due {toDueDate(finding.dueAt)} | lead {finding.warningLeadDays} days |{" "}
+                        {finding.sourceCitation}
+                      </p>
+                      <p className="mt-1 text-xs font-medium text-zinc-700">
+                        {complianceEvidenceLabel(finding.evidenceRef)}
+                        {finding.lastSatisfiedAt ? ` | last satisfied ${toDate(finding.lastSatisfiedAt)}` : ""}
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-500">{finding.message}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-3 text-xs text-zinc-500">
+                Warning-only review. Planned events remain planning context until completed evidence is recorded.
+              </p>
+            </div>
             {crewMember.complianceWarnings.length === 0 ? (
-              <p className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+              <p className="mt-3 rounded-md border status-surface-success p-3 text-sm">
                 No compliance warnings found from recorded evidence.
               </p>
             ) : (
-              <ul className="mt-3 grid gap-2 text-sm text-amber-900">
+              <ul className="mt-3 grid gap-2 text-sm">
                 {crewMember.complianceWarnings.map((warning) => (
-                  <li className="rounded-md border border-amber-200 bg-amber-50 p-3" key={warning}>
+                  <li className="rounded-md border status-surface-stop p-3" key={warning}>
                     {warning}
                   </li>
                 ))}
@@ -998,8 +1083,8 @@ export default async function CrewMemberContextPage({ params, searchParams }: Pa
                       <span
                         className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
                           request.status === TimeOffRequestStatus.APPROVED
-                            ? "border-rose-200 bg-rose-50 text-rose-700"
-                            : "border-amber-200 bg-amber-50 text-amber-700"
+                            ? "status-badge-caution"
+                            : "status-badge-info"
                         }`}
                       >
                         {formatStatus(request.status)}

@@ -1,18 +1,29 @@
 import {
   AircraftType,
+  CrewComplianceRequirementType,
   DutyStatus,
   EmploymentStatus,
+  MedicalCertificateClass,
+  OperatingPart,
   SeatRole,
   TimeOffRequestStatus,
 } from "@prisma/client";
 import Link from "next/link";
 import { ReactNode } from "react";
 
-import { createCrewMemberAction } from "@/app/crew/actions";
+import {
+  createCrewDrawerComplianceEvidenceAction,
+  createCrewMemberAction,
+  createCrewQualificationAction,
+  updateCrewMemberAction,
+} from "@/app/crew/actions";
 import { reviewTimeOffRequestAction } from "@/app/crew/scheduling/time-off/actions";
 import { ContextDrawer } from "@/components/context-drawer";
+import { TimeOffAssignmentCoverageReviewPanel } from "@/components/time-off-assignment-coverage-review";
 import { TimeOffCoverageImpactPanel } from "@/components/time-off-coverage-impact";
 import { prisma } from "@/lib/prisma";
+import { evaluateCrewCompliance } from "@/lib/crew-compliance-evaluator";
+import { getActiveCrewComplianceRuleDefinitions } from "@/lib/crew-compliance-rule-defaults";
 import {
   getUpcomingCoverageFlightsForAircrafts,
   UpcomingCoverageFlight,
@@ -105,7 +116,7 @@ function parseCrewFilters(searchParams: Awaited<PageProps["searchParams"]>): Cre
         ? panelParam
         : null,
     selected: firstParam(searchParams.selected),
-    status: oneOf(firstParam(searchParams.status), ["all", ...Object.values(EmploymentStatus)], "all"),
+    status: oneOf(firstParam(searchParams.status), ["all", ...Object.values(EmploymentStatus)], EmploymentStatus.ACTIVE),
     timeOffStatus: oneOf(
       firstParam(searchParams.timeOffStatus),
       ["all", ...Object.values(TimeOffRequestStatus)],
@@ -118,7 +129,7 @@ function crewHref(filters: CrewFilters, next: Partial<CrewFilters> = {}) {
   const merged = { ...filters, ...next };
   const params = new URLSearchParams();
 
-  if (merged.status !== "all") {
+  if (merged.status !== EmploymentStatus.ACTIVE) {
     params.set("status", merged.status);
   }
   if (merged.duty !== "all") {
@@ -165,6 +176,22 @@ function toDate(value: Date | null): string {
   }).format(value);
 }
 
+function toDateOrNotSet(value: Date | null): string {
+  if (!value) {
+    return "Not recorded";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(value);
+}
+
+function toInputDate(value: Date | null | undefined): string {
+  return value ? value.toISOString().slice(0, 10) : "";
+}
+
 function toDateTime(value: Date): string {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -184,65 +211,136 @@ function formatRoleLabel(role: SeatRole): string {
 }
 
 function statusLabel(value: string): string {
-  return value.replaceAll("_", " ");
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
+function dutyStatusLabel(status: DutyStatus): string {
+  const labels: Record<DutyStatus, string> = {
+    DEADHEADING: "Deadheading",
+    OFF_DUTY: "Off duty",
+    ON_DUTY: "On duty",
+    PERSONAL: "Personal",
+    RESERVE: "Reserve",
+    SICK: "Sick",
+    TRAINING: "Training",
+    VACATION: "Vacation",
+  };
+
+  return labels[status];
+}
+
+function employmentFilterNote(status: CrewFilters["status"]): string {
+  if (status === EmploymentStatus.ACTIVE) {
+    return "Normal roster view.";
+  }
+  if (status === EmploymentStatus.ON_LEAVE) {
+    return "Retained, temporarily unavailable.";
+  }
+  if (status === EmploymentStatus.INACTIVE) {
+    return "Retained record, not normally available.";
+  }
+  if (status === EmploymentStatus.TERMINATED) {
+    return "Separated historical record.";
+  }
+
+  return "Includes active and non-active records.";
+}
+
+function SelectFilter({
+  children,
+  defaultValue,
+  label,
+  name,
+}: {
+  children: ReactNode;
+  defaultValue: string;
+  label: string;
+  name: string;
+}) {
+  return (
+    <label className="block min-w-0">
+      <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">{label}</span>
+      <select
+        className="mt-1 h-9 w-full rounded-md border border-zinc-300 bg-white px-2 text-sm font-medium text-zinc-900"
+        defaultValue={defaultValue}
+        name={name}
+      >
+        {children}
+      </select>
+    </label>
+  );
 }
 
 function employmentBadgeClasses(status: EmploymentStatus): string {
   if (status === EmploymentStatus.ACTIVE) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "status-badge-success";
   }
   if (status === EmploymentStatus.ON_LEAVE) {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "status-badge-caution";
   }
   if (status === EmploymentStatus.TERMINATED) {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return "status-badge-stop";
   }
   return "border-zinc-200 bg-zinc-50 text-zinc-500";
 }
 
 function dutyBadgeClasses(status: DutyStatus): string {
   if (status === DutyStatus.ON_DUTY || status === DutyStatus.RESERVE) {
-    return "border-blue-200 bg-blue-50 text-blue-700";
+    return "status-badge-info";
   }
   if (status === DutyStatus.TRAINING || status === DutyStatus.DEADHEADING) {
-    return "border-sky-200 bg-sky-50 text-sky-700";
+    return "status-badge-info";
   }
   if (status === DutyStatus.SICK) {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return "status-badge-stop";
   }
   if (status === DutyStatus.VACATION) {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "status-badge-caution";
   }
   return "border-zinc-200 bg-zinc-50 text-zinc-600";
 }
 
+function complianceStatusBadgeClasses(status: string): string {
+  if (status === "EXPIRED" || status === "MISSING") {
+    return "status-badge-stop";
+  }
+  if (status === "DUE_SOON" || status === "NOT_ENOUGH_DATA") {
+    return "status-badge-caution";
+  }
+  return "status-badge-success";
+}
+
 function timeOffBadgeClasses(status: TimeOffRequestStatus): string {
   if (status === TimeOffRequestStatus.APPROVED) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "status-badge-success";
   }
   if (status === TimeOffRequestStatus.PENDING) {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "status-badge-caution";
   }
   if (status === TimeOffRequestStatus.DENIED) {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return "status-badge-stop";
   }
   return "border-zinc-200 bg-zinc-50 text-zinc-600";
 }
 
 function qualificationBadgeClasses(qualification: QualificationRow, now: Date): string {
   if (!qualification.expiresAt) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "status-badge-success";
   }
 
   if (qualification.expiresAt.getTime() < now.getTime()) {
-    return "border-rose-200 bg-rose-50 text-rose-700";
+    return "status-badge-stop";
   }
 
   if (qualification.expiresAt.getTime() <= addDays(now, EXPIRING_SOON_DAYS).getTime()) {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "status-badge-caution";
   }
 
-  return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  return "status-badge-success";
 }
 
 function qualificationStatus(qualification: QualificationRow, now: Date): string {
@@ -259,39 +357,6 @@ function qualificationStatus(qualification: QualificationRow, now: Date): string
   }
 
   return "Current";
-}
-
-function getMissingAssignmentQualifications(
-  assignment: CrewAssignmentRow,
-  qualifications: QualificationRow[],
-  now: Date,
-): string[] {
-  const matchingQualification = qualifications.find(
-    (qualification) =>
-      qualification.aircraftType === assignment.aircraft.type &&
-      qualification.seatRole === assignment.seatRole,
-  );
-
-  if (!matchingQualification) {
-    return [
-      `Missing ${formatRoleLabel(assignment.seatRole)} qualification for ${formatAircraftType(
-        assignment.aircraft.type,
-      )}.`,
-    ];
-  }
-
-  if (
-    matchingQualification.expiresAt &&
-    matchingQualification.expiresAt.getTime() < now.getTime()
-  ) {
-    return [
-      `${formatRoleLabel(assignment.seatRole)} qualification for ${formatAircraftType(
-        assignment.aircraft.type,
-      )} expired ${toDate(matchingQualification.expiresAt)}.`,
-    ];
-  }
-
-  return [];
 }
 
 function getQualificationWarnings(qualifications: QualificationRow[], now: Date): string[] {
@@ -319,7 +384,7 @@ async function getCrewRosterData() {
   const now = new Date();
   const upcomingEnd = addDays(now, UPCOMING_WINDOW_DAYS);
 
-  const [crewMembers, stations] = await Promise.all([
+  const [crewMembers, stations, complianceRules, activeOperatingParts] = await Promise.all([
   prisma.crewMember.findMany({
     orderBy: [{ employmentStatus: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
     select: {
@@ -329,10 +394,13 @@ async function getCrewRosterData() {
       lastName: true,
       dutyStatus: true,
       employmentStatus: true,
+      dateOfBirth: true,
+      hireDate: true,
       phone: true,
       email: true,
       baseStation: {
         select: {
+          id: true,
           code: true,
           city: true,
         },
@@ -345,6 +413,20 @@ async function getCrewRosterData() {
           seatRole: true,
           issuedAt: true,
           expiresAt: true,
+        },
+      },
+      certificates: {
+        orderBy: [{ aircraftType: "asc" }, { seatRole: "asc" }, { issuedAt: "desc" }],
+        select: {
+          aircraftType: true,
+          certificateType: true,
+          coveredOperatingParts: true,
+          expiresAt: true,
+          id: true,
+          issuedAt: true,
+          satisfiesRequirements: true,
+          seatRole: true,
+          status: true,
         },
       },
       assignments: {
@@ -369,6 +451,75 @@ async function getCrewRosterData() {
           },
         },
       },
+      medicals: {
+        orderBy: [{ expiresAt: "asc" }, { issuedAt: "desc" }],
+        select: {
+          coveredOperatingParts: true,
+          id: true,
+          expiresAt: true,
+          issuedAt: true,
+          medicalClass: true,
+          satisfiesRequirements: true,
+          status: true,
+        },
+      },
+      trainingEvents: {
+        orderBy: [{ completedAt: "desc" }],
+        take: 8,
+        select: {
+          id: true,
+          completedAt: true,
+          coveredOperatingParts: true,
+          expiresAt: true,
+          result: true,
+          satisfiesRequirements: true,
+          status: true,
+          trainingType: true,
+        },
+      },
+      checkEvents: {
+        orderBy: [{ completedAt: "desc" }],
+        take: 8,
+        select: {
+          id: true,
+          checkType: true,
+          completedAt: true,
+          coveredOperatingParts: true,
+          expiresAt: true,
+          result: true,
+          satisfiesRequirements: true,
+          seatRole: true,
+          status: true,
+        },
+      },
+      recencyEvents: {
+        orderBy: [{ eventAt: "desc" }],
+        take: 8,
+        select: {
+          id: true,
+          eventAt: true,
+          coveredOperatingParts: true,
+          quantity: true,
+          recencyType: true,
+          result: true,
+          satisfiesRequirements: true,
+          seatRole: true,
+          status: true,
+        },
+      },
+      plannedComplianceEvents: {
+        where: {
+          status: "SCHEDULED",
+        },
+        orderBy: [{ scheduledFor: "asc" }],
+        take: 8,
+        select: {
+          id: true,
+          eventType: true,
+          scheduledFor: true,
+          status: true,
+        },
+      },
     },
   }),
   prisma.station.findMany({
@@ -379,6 +530,15 @@ async function getCrewRosterData() {
       code: true,
       city: true,
     },
+  }),
+  getActiveCrewComplianceRuleDefinitions(prisma),
+  prisma.operatingAuthority.findMany({
+    where: {
+      operator: { isActive: true },
+      status: "ACTIVE",
+    },
+    orderBy: { operatingPart: "asc" },
+    select: { operatingPart: true },
   }),
   ]);
 
@@ -429,9 +589,21 @@ async function getCrewRosterData() {
     upcomingFlightsByCrewId.set(crewMember.id, crewFlights.slice(0, 3));
   }
 
+  const crewMembersWithCompliance = crewMembers.map((crewMember) => {
+    const evaluation = evaluateCrewCompliance(crewMember, complianceRules, now);
+
+    return {
+      ...crewMember,
+      complianceFindings: evaluation.findings,
+      complianceStatus: evaluation.strongestStatus,
+      complianceWarnings: evaluation.warnings,
+    };
+  });
+
   return {
-    crewMembers,
+    crewMembers: crewMembersWithCompliance,
     stations,
+    activeOperatingParts: Array.from(new Set(activeOperatingParts.map((authority) => authority.operatingPart))),
     upcomingFlightsByCrewId,
     now,
   };
@@ -443,24 +615,28 @@ function CrewMemberCreateForm({
   stations: Awaited<ReturnType<typeof getCrewRosterData>>["stations"];
 }) {
   const defaultStation = stations[0]?.id;
+  const inputClass = "mt-1 h-9 w-full rounded-md border border-zinc-300 px-2 text-sm";
+  const labelClass = "block min-w-0";
+  const labelTextClass = "text-xs font-medium text-zinc-600";
 
   return (
     <form action={createCrewMemberAction} className="grid gap-3">
-      <label className="block">
-        <span className="text-xs font-medium text-zinc-600">Employee #</span>
-        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="employeeNumber" required />
+      <div className="grid gap-3 sm:grid-cols-2">
+      <label className={labelClass}>
+        <span className={labelTextClass}>Employee #</span>
+        <input className={inputClass} name="employeeNumber" required />
       </label>
-      <label className="block">
-        <span className="text-xs font-medium text-zinc-600">First name</span>
-        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="firstName" required />
+      <label className={labelClass}>
+        <span className={labelTextClass}>First name</span>
+        <input className={inputClass} name="firstName" required />
       </label>
-      <label className="block">
-        <span className="text-xs font-medium text-zinc-600">Last name</span>
-        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="lastName" required />
+      <label className={labelClass}>
+        <span className={labelTextClass}>Last name</span>
+        <input className={inputClass} name="lastName" required />
       </label>
-      <label className="block">
-        <span className="text-xs font-medium text-zinc-600">Base</span>
-        <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={defaultStation} name="baseStationId" required>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Base</span>
+        <select className={inputClass} defaultValue={defaultStation} name="baseStationId" required>
           {stations.map((station) => (
             <option key={station.id} value={station.id}>
               {station.code} - {station.city}
@@ -468,9 +644,9 @@ function CrewMemberCreateForm({
           ))}
         </select>
       </label>
-      <label className="block">
-        <span className="text-xs font-medium text-zinc-600">Employment</span>
-        <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={EmploymentStatus.ACTIVE} name="employmentStatus" required>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Employment</span>
+        <select className={inputClass} defaultValue={EmploymentStatus.ACTIVE} name="employmentStatus" required>
           {Object.values(EmploymentStatus).map((status) => (
             <option key={status} value={status}>
               {statusLabel(status)}
@@ -478,28 +654,118 @@ function CrewMemberCreateForm({
           ))}
         </select>
       </label>
-      <label className="block">
-        <span className="text-xs font-medium text-zinc-600">Duty</span>
-        <select className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" defaultValue={DutyStatus.OFF_DUTY} name="dutyStatus" required>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Duty</span>
+        <select className={inputClass} defaultValue={DutyStatus.OFF_DUTY} name="dutyStatus" required>
           {Object.values(DutyStatus).map((status) => (
             <option key={status} value={status}>
-              {statusLabel(status)}
+              {dutyStatusLabel(status)}
             </option>
           ))}
         </select>
       </label>
-      <label className="block">
-        <span className="text-xs font-medium text-zinc-600">Hire date</span>
-        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="hireDate" type="date" />
+      <label className={labelClass}>
+        <span className={labelTextClass}>Hire date</span>
+        <input className={inputClass} name="hireDate" type="date" />
       </label>
-      <label className="block">
-        <span className="text-xs font-medium text-zinc-600">Phone</span>
-        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="phone" />
+      <label className={labelClass}>
+        <span className={labelTextClass}>Date of birth</span>
+        <input className={inputClass} name="dateOfBirth" type="date" />
       </label>
-      <label className="block">
-        <span className="text-xs font-medium text-zinc-600">Email</span>
-        <input className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm" name="email" type="email" />
+      <label className={labelClass}>
+        <span className={labelTextClass}>Phone</span>
+        <input className={inputClass} name="phone" />
       </label>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Email</span>
+        <input className={inputClass} name="email" type="email" />
+      </label>
+      </div>
+
+      <details className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+        <summary className="cursor-pointer text-sm font-semibold text-zinc-950">
+          Starter medical, ratings, and currency
+        </summary>
+        <div className="mt-3 grid gap-4">
+          <section className="grid gap-3 sm:grid-cols-3">
+            <label className={labelClass}>
+              <span className={labelTextClass}>Medical class</span>
+              <select className={inputClass} defaultValue={MedicalCertificateClass.FIRST_CLASS} name="initialMedicalClass">
+                {Object.values(MedicalCertificateClass).map((medicalClass) => (
+                  <option key={medicalClass} value={medicalClass}>
+                    {statusLabel(medicalClass)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>Medical issued</span>
+              <input className={inputClass} name="initialMedicalIssuedAt" type="date" />
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>Medical expires</span>
+              <input className={inputClass} name="initialMedicalExpiresAt" type="date" />
+            </label>
+          </section>
+
+          <section className="grid gap-3 sm:grid-cols-2">
+            <label className={labelClass}>
+              <span className={labelTextClass}>Type / aircraft</span>
+              <select className={inputClass} defaultValue="" name="initialTypeRatingAircraftType">
+                <option value="">No starter type rating</option>
+                {Object.values(AircraftType).map((aircraftType) => (
+                  <option key={aircraftType} value={aircraftType}>
+                    {formatAircraftType(aircraftType)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>Qualification seat</span>
+              <select className={inputClass} defaultValue="" name="initialTypeRatingSeatRole">
+                <option value="">No seat qualification</option>
+                {Object.values(SeatRole).map((role) => (
+                  <option key={role} value={role}>
+                    {formatRoleLabel(role)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>Type issued</span>
+              <input className={inputClass} name="initialTypeRatingIssuedAt" type="date" />
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>Type expires</span>
+              <input className={inputClass} name="initialTypeRatingExpiresAt" type="date" />
+            </label>
+          </section>
+
+          <section className="grid gap-3 sm:grid-cols-2">
+            <label className={labelClass}>
+              <span className={labelTextClass}>Recurrent training</span>
+              <input className={inputClass} name="initialRecurrentTrainingCompletedAt" type="date" />
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>Proficiency check</span>
+              <input className={inputClass} name="initialProficiencyCheckCompletedAt" type="date" />
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>Instrument check / IPC</span>
+              <input className={inputClass} name="initialInstrumentCheckCompletedAt" type="date" />
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>Line check</span>
+              <input className={inputClass} name="initialLineCheckCompletedAt" type="date" />
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>Takeoff / landing recency</span>
+              <input className={inputClass} name="initialTakeoffLandingRecencyAt" type="date" />
+            </label>
+          </section>
+        </div>
+      </details>
+
       <div className="flex items-end">
         <button className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800" type="submit">
           Create crew member
@@ -509,13 +775,297 @@ function CrewMemberCreateForm({
   );
 }
 
-function crewWarnings(crewMember: CrewMemberRow, now: Date): string[] {
-  const assignmentWarnings = crewMember.assignments.flatMap((assignment) =>
-    getMissingAssignmentQualifications(assignment, crewMember.qualifications, now),
+function CrewMemberInlineEditForm({
+  crewMember,
+  returnTo,
+  stations,
+}: {
+  crewMember: CrewMemberRow;
+  returnTo: string;
+  stations: Awaited<ReturnType<typeof getCrewRosterData>>["stations"];
+}) {
+  const action = updateCrewMemberAction.bind(null, crewMember.id);
+  const inputClass = "mt-1 h-8 w-full rounded-md border border-zinc-300 bg-white px-2 text-sm";
+  const labelClass = "block min-w-0";
+  const labelTextClass = "text-xs font-medium text-zinc-600";
+
+  return (
+    <form action={action} className="mt-3 grid gap-3 sm:grid-cols-2">
+      <input name="returnTo" type="hidden" value={returnTo} />
+      <label className={labelClass}>
+        <span className={labelTextClass}>Employee #</span>
+        <input className={inputClass} defaultValue={crewMember.employeeNumber} name="employeeNumber" required />
+      </label>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Base</span>
+        <select className={inputClass} defaultValue={crewMember.baseStation.id} name="baseStationId" required>
+          {stations.map((station) => (
+            <option key={station.id} value={station.id}>
+              {station.code} - {station.city}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={labelClass}>
+        <span className={labelTextClass}>First name</span>
+        <input className={inputClass} defaultValue={crewMember.firstName} name="firstName" required />
+      </label>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Last name</span>
+        <input className={inputClass} defaultValue={crewMember.lastName} name="lastName" required />
+      </label>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Employment</span>
+        <select className={inputClass} defaultValue={crewMember.employmentStatus} name="employmentStatus" required>
+          {Object.values(EmploymentStatus).map((status) => (
+            <option key={status} value={status}>
+              {statusLabel(status)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Duty</span>
+        <select className={inputClass} defaultValue={crewMember.dutyStatus} name="dutyStatus" required>
+          {Object.values(DutyStatus).map((status) => (
+            <option key={status} value={status}>
+              {dutyStatusLabel(status)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Hire date</span>
+        <input className={inputClass} defaultValue={toInputDate(crewMember.hireDate)} name="hireDate" type="date" />
+      </label>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Date of birth</span>
+        <input className={inputClass} defaultValue={toInputDate(crewMember.dateOfBirth)} name="dateOfBirth" type="date" />
+      </label>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Phone</span>
+        <input className={inputClass} defaultValue={crewMember.phone ?? ""} name="phone" />
+      </label>
+      <label className={labelClass}>
+        <span className={labelTextClass}>Email</span>
+        <input className={inputClass} defaultValue={crewMember.email ?? ""} name="email" type="email" />
+      </label>
+      <div className="sm:col-span-2">
+        <button className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800" type="submit">
+          Save profile
+        </button>
+      </div>
+    </form>
   );
+}
+
+function CrewQualificationInlineCreateForm({
+  crewMember,
+  returnTo,
+}: {
+  crewMember: CrewMemberRow;
+  returnTo: string;
+}) {
+  const action = createCrewQualificationAction.bind(null, crewMember.id);
+  const inputClass = "mt-1 h-8 w-full rounded-md border border-zinc-300 bg-white px-2 text-sm";
+
+  return (
+    <form action={action} className="mt-3 grid gap-3 sm:grid-cols-2">
+      <input name="returnTo" type="hidden" value={returnTo} />
+      <label className="block min-w-0">
+        <span className="text-xs font-medium text-zinc-600">Aircraft type</span>
+        <select className={inputClass} name="aircraftType" required>
+          {Object.values(AircraftType).map((aircraftType) => (
+            <option key={aircraftType} value={aircraftType}>
+              {formatAircraftType(aircraftType)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block min-w-0">
+        <span className="text-xs font-medium text-zinc-600">Seat</span>
+        <select className={inputClass} name="seatRole" required>
+          {Object.values(SeatRole).map((role) => (
+            <option key={role} value={role}>
+              {formatRoleLabel(role)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block min-w-0">
+        <span className="text-xs font-medium text-zinc-600">Issued</span>
+        <input className={inputClass} name="issuedAt" required type="date" />
+      </label>
+      <label className="block min-w-0">
+        <span className="text-xs font-medium text-zinc-600">Administrative expires</span>
+        <input className={inputClass} name="expiresAt" type="date" />
+      </label>
+      <label className="block min-w-0 sm:col-span-2">
+        <span className="text-xs font-medium text-zinc-600">Notes</span>
+        <input className={inputClass} name="notes" placeholder="Type rating, company qualification, or limitation notes" />
+      </label>
+      <div className="sm:col-span-2">
+        <button className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50" type="submit">
+          Add qualification
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function defaultEvidenceAircraftType(crewMember: CrewMemberRow): AircraftType | "" {
+  return crewMember.qualifications[0]?.aircraftType ?? "";
+}
+
+function defaultEvidenceSeatRole(crewMember: CrewMemberRow): SeatRole | "" {
+  return crewMember.qualifications[0]?.seatRole ?? "";
+}
+
+function relatedRequirementTypes(requirementType: CrewComplianceRequirementType): CrewComplianceRequirementType[] {
+  if (requirementType === CrewComplianceRequirementType.INSTRUMENT_CHECK) {
+    return [CrewComplianceRequirementType.INSTRUMENT_CHECK, CrewComplianceRequirementType.PROFICIENCY_CHECK];
+  }
+  if (requirementType === CrewComplianceRequirementType.PROFICIENCY_CHECK) {
+    return [CrewComplianceRequirementType.PROFICIENCY_CHECK, CrewComplianceRequirementType.INSTRUMENT_CHECK];
+  }
+  if (
+    requirementType === CrewComplianceRequirementType.RECURRENT_TRAINING ||
+    requirementType === CrewComplianceRequirementType.COMPETENCY_CHECK
+  ) {
+    return [CrewComplianceRequirementType.RECURRENT_TRAINING, CrewComplianceRequirementType.COMPETENCY_CHECK];
+  }
+  if (requirementType === CrewComplianceRequirementType.TYPE_RATING) {
+    return [CrewComplianceRequirementType.TYPE_RATING, CrewComplianceRequirementType.PROFICIENCY_CHECK];
+  }
+
+  return [requirementType];
+}
+
+function EvidenceQuickForm({
+  activeOperatingParts,
+  crewMember,
+  finding,
+  returnTo,
+}: {
+  activeOperatingParts: OperatingPart[];
+  crewMember: CrewMemberRow;
+  finding: CrewMemberRow["complianceFindings"][number];
+  returnTo: string;
+}) {
+  const action = createCrewDrawerComplianceEvidenceAction.bind(null, crewMember.id);
+  const inputClass = "mt-1 h-8 w-full rounded-md border border-zinc-300 bg-white px-2 text-sm";
+  const showMedical = finding.requirementType === CrewComplianceRequirementType.MEDICAL;
+  const showAircraft =
+    finding.requirementType !== CrewComplianceRequirementType.MEDICAL &&
+    finding.requirementType !== CrewComplianceRequirementType.FLIGHT_REVIEW;
+  const coverageParts = finding.operatingPart ? [finding.operatingPart] : activeOperatingParts;
+  const requirementTypes = relatedRequirementTypes(finding.requirementType);
+
+  return (
+    <form action={action} className="mt-3 grid gap-3 sm:grid-cols-2">
+      <input name="returnTo" type="hidden" value={returnTo} />
+      <input name="requirementType" type="hidden" value={finding.requirementType} />
+      <input name="title" type="hidden" value={finding.title} />
+      {showMedical ? (
+        <label className="block min-w-0">
+          <span className="text-xs font-medium text-zinc-600">Medical class</span>
+          <select className={inputClass} defaultValue={MedicalCertificateClass.FIRST_CLASS} name="medicalClass">
+            {Object.values(MedicalCertificateClass).map((medicalClass) => (
+              <option key={medicalClass} value={medicalClass}>
+                {statusLabel(medicalClass)}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {showAircraft ? (
+        <>
+          <label className="block min-w-0">
+            <span className="text-xs font-medium text-zinc-600">Aircraft type</span>
+            <select className={inputClass} defaultValue={defaultEvidenceAircraftType(crewMember)} name="aircraftType">
+              <option value="">Not aircraft-specific</option>
+              {Object.values(AircraftType).map((aircraftType) => (
+                <option key={aircraftType} value={aircraftType}>
+                  {formatAircraftType(aircraftType)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block min-w-0">
+            <span className="text-xs font-medium text-zinc-600">Seat</span>
+            <select className={inputClass} defaultValue={defaultEvidenceSeatRole(crewMember)} name="seatRole">
+              <option value="">Not seat-specific</option>
+              {Object.values(SeatRole).map((role) => (
+                <option key={role} value={role}>
+                  {formatRoleLabel(role)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      ) : null}
+      <label className="block min-w-0">
+        <span className="text-xs font-medium text-zinc-600">{showMedical ? "Issued" : "Completed"}</span>
+        <input className={inputClass} name="completedAt" required type="date" />
+      </label>
+      <label className="block min-w-0">
+        <span className="text-xs font-medium text-zinc-600">Expiration override</span>
+        <input className={inputClass} name="expiresAt" type="date" />
+      </label>
+      <label className="block min-w-0 sm:col-span-2">
+        <span className="text-xs font-medium text-zinc-600">Notes</span>
+        <input className={inputClass} name="notes" placeholder="Provider, evaluator, limitations, or source notes" />
+      </label>
+      {activeOperatingParts.length ? (
+        <fieldset className="rounded-md border border-zinc-200 bg-zinc-50 p-2 sm:col-span-2">
+          <legend className="px-1 text-xs font-semibold text-zinc-600">Operating parts covered</legend>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {activeOperatingParts.map((operatingPart) => (
+              <label className="inline-flex items-center gap-2 text-xs font-medium text-zinc-700" key={operatingPart}>
+                <input
+                  defaultChecked={coverageParts.includes(operatingPart)}
+                  name="coveredOperatingParts"
+                  type="checkbox"
+                  value={operatingPart}
+                />
+                {statusLabel(operatingPart)}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
+      <fieldset className="rounded-md border border-zinc-200 bg-zinc-50 p-2 sm:col-span-2">
+        <legend className="px-1 text-xs font-semibold text-zinc-600">Requirements this evidence satisfies</legend>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {requirementTypes.map((requirementType) => (
+            <label className="inline-flex items-center gap-2 text-xs font-medium text-zinc-700" key={requirementType}>
+              <input
+                defaultChecked={requirementType === finding.requirementType}
+                name="satisfiesRequirements"
+                type="checkbox"
+                value={requirementType}
+              />
+              {statusLabel(requirementType)}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div className="sm:col-span-2">
+        <p className="mb-2 text-xs text-zinc-500">
+          Leave expiration blank when the rule can calculate the next due date from the completed or issued date.
+        </p>
+        <button className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800" type="submit">
+          Save evidence
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function crewWarnings(crewMember: CrewMemberRow, now: Date): string[] {
   const qualificationWarnings = getQualificationWarnings(crewMember.qualifications, now);
 
-  return [...assignmentWarnings, ...qualificationWarnings];
+  return [...qualificationWarnings, ...crewMember.complianceWarnings];
 }
 
 function filterCrewMembers(crewMembers: CrewMemberRow[], filters: CrewFilters, now: Date) {
@@ -541,48 +1091,6 @@ function filterCrewMembers(crewMembers: CrewMemberRow[], filters: CrewFilters, n
 
     return true;
   });
-}
-
-function CrewFilterLink({
-  active,
-  href,
-  label,
-}: {
-  active: boolean;
-  href: string;
-  label: string;
-}) {
-  return (
-    <Link
-      className={
-        active
-          ? "rounded-lg bg-zinc-950 px-2.5 py-1 text-xs font-semibold text-white"
-          : "rounded-lg px-2.5 py-1 text-xs font-semibold text-zinc-600 hover:bg-zinc-100"
-      }
-      href={href}
-    >
-      {label}
-    </Link>
-  );
-}
-
-function CrewFilterGroup({
-  children,
-  label,
-}: {
-  children: ReactNode;
-  label: string;
-}) {
-  return (
-    <div className="min-w-fit">
-      <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
-        {children}
-      </div>
-    </div>
-  );
 }
 
 function TimeOffReviewButton({
@@ -694,14 +1202,18 @@ function TimeOffRequestRow({
         </div>
       </div>
       {request.conflictWarnings.length > 0 ? (
-        <ul className="mt-3 space-y-1.5 text-xs text-amber-900">
+        <ul className="mt-3 space-y-1.5 text-xs">
           {request.conflictWarnings.map((warning) => (
-            <li className="rounded-md border border-amber-200 bg-amber-50 p-2" key={warning}>
+            <li className="rounded-md border status-embedded-caution p-2" key={warning}>
               {warning}
             </li>
           ))}
         </ul>
       ) : null}
+      <TimeOffAssignmentCoverageReviewPanel
+        reviews={request.assignmentCoverageReview}
+        variant="compact"
+      />
     </article>
   );
 }
@@ -835,7 +1347,7 @@ function CrewDrawer({
     return (
       <ContextDrawer closeHref={closeHref} eyebrow="Crew workflow" size="wide" title="Add Crew Member">
         <div className="space-y-4">
-          <section className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+          <section className="rounded-md border status-surface-info p-3 text-sm">
             Create the core crew record first. Qualifications, compliance evidence,
             logistics, scheduling, and aircraft assignments stay in their focused
             workflows after the person exists.
@@ -860,8 +1372,22 @@ function CrewDrawer({
     );
   }
 
+  const qualificationWarnings = getQualificationWarnings(crewMember.qualifications, roster.now);
   const warnings = crewWarnings(crewMember, roster.now);
-  const upcomingFlights = roster.upcomingFlightsByCrewId.get(crewMember.id) ?? [];
+  const currentDrawerHref = crewHref(filters, { panel: "crew", selected: crewMember.id });
+  const complianceStatusOrder = ["EXPIRED", "MISSING", "NOT_ENOUGH_DATA", "DUE_SOON", "CURRENT"];
+  const actionableFindings = crewMember.complianceFindings
+    .filter((finding) => finding.status !== "CURRENT")
+    .sort((left, right) => {
+      if (left.requirementType === CrewComplianceRequirementType.MEDICAL) {
+        return -1;
+      }
+      if (right.requirementType === CrewComplianceRequirementType.MEDICAL) {
+        return 1;
+      }
+
+      return complianceStatusOrder.indexOf(left.status) - complianceStatusOrder.indexOf(right.status);
+    });
 
   return (
     <ContextDrawer
@@ -877,7 +1403,7 @@ function CrewDrawer({
               {statusLabel(crewMember.employmentStatus)}
             </span>
             <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${dutyBadgeClasses(crewMember.dutyStatus)}`}>
-              {statusLabel(crewMember.dutyStatus)}
+              {dutyStatusLabel(crewMember.dutyStatus)}
             </span>
           </div>
           <p className="mt-2 text-sm text-zinc-600">
@@ -889,12 +1415,77 @@ function CrewDrawer({
           <p className="mt-1 text-xs text-zinc-500">
             Employee #{crewMember.employeeNumber}
           </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            DOB {toDateOrNotSet(crewMember.dateOfBirth)}
+          </p>
+          <details className="mt-3 rounded-lg border border-zinc-200 bg-white p-2">
+            <summary className="cursor-pointer text-xs font-semibold text-zinc-700">
+              Edit profile
+            </summary>
+            <CrewMemberInlineEditForm
+              crewMember={crewMember}
+              returnTo={currentDrawerHref}
+              stations={roster.stations}
+            />
+          </details>
         </section>
 
         <section className="rounded-xl border border-zinc-200 bg-white p-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Qualifications
-          </h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              Warnings
+            </h3>
+            <span
+              className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${complianceStatusBadgeClasses(
+                crewMember.complianceStatus,
+              )}`}
+            >
+              {warnings.length} open
+            </span>
+          </div>
+          {actionableFindings.length || qualificationWarnings.length ? (
+            <div className="mt-2 space-y-2">
+              {actionableFindings.map((finding) => (
+                <details className="rounded-lg border status-surface-stop p-2 text-sm" key={finding.ruleKey}>
+                  <summary className="cursor-pointer font-semibold">
+                    {finding.title} <span className="font-medium">({statusLabel(finding.status)})</span>
+                  </summary>
+                  <p className="mt-2 text-xs status-on-stop-muted">{finding.message}</p>
+                  <p className="mt-1 text-xs status-on-stop-muted">
+                    Due {toDateOrNotSet(finding.dueAt)} | {finding.sourceCitation}
+                  </p>
+                  <EvidenceQuickForm
+                    activeOperatingParts={roster.activeOperatingParts}
+                    crewMember={crewMember}
+                    finding={finding}
+                    returnTo={currentDrawerHref}
+                  />
+                </details>
+              ))}
+              {qualificationWarnings.map((warning) => (
+                <p className="rounded-lg border status-surface-stop p-2 text-sm" key={warning}>
+                  {warning}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 rounded-lg border status-surface-success p-3 text-sm">
+              No current crew-profile warnings.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                Aircraft qualifications
+              </h3>
+              <p className="mt-1 text-xs text-zinc-500">
+                These are aircraft/seat qualification records. Recurrent, IPC, medical, and line-check currency are tracked under compliance requirements.
+              </p>
+            </div>
+          </div>
           {crewMember.qualifications.length ? (
             <ul className="mt-2 grid gap-2 sm:grid-cols-2">
               {crewMember.qualifications.map((qualification) => (
@@ -917,7 +1508,7 @@ function CrewDrawer({
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-zinc-600">
-                    Issued {toDate(qualification.issuedAt)} | Expires{" "}
+                    Issued {toDate(qualification.issuedAt)} | Admin expires{" "}
                     {toDate(qualification.expiresAt)}
                   </p>
                 </li>
@@ -926,74 +1517,75 @@ function CrewDrawer({
           ) : (
             <p className="mt-2 text-sm text-zinc-600">No qualifications recorded.</p>
           )}
+          <details className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-2">
+            <summary className="cursor-pointer text-xs font-semibold text-zinc-700">
+              Add aircraft/seat qualification
+            </summary>
+            <CrewQualificationInlineCreateForm crewMember={crewMember} returnTo={currentDrawerHref} />
+          </details>
         </section>
 
         <section className="rounded-xl border border-zinc-200 bg-white p-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Current assignment
-          </h3>
-          {crewMember.assignments.length ? (
-            <ul className="mt-2 space-y-2 text-sm">
-              {crewMember.assignments.map((assignment) => (
-                <li className="rounded-lg border border-zinc-200 bg-zinc-50 p-2" key={assignment.id}>
-                  <p className="font-semibold text-zinc-950">{assignmentLabel(assignment)}</p>
-                  <p className="mt-1 text-xs text-zinc-600">
-                    Since {toDateTime(assignment.startsAt)}
-                    {assignment.endsAt ? ` | Ends ${toDateTime(assignment.endsAt)}` : " | Open-ended"}
-                  </p>
-                </li>
-              ))}
-            </ul>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              Compliance snapshot
+            </h3>
+            <span
+              className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${complianceStatusBadgeClasses(
+                crewMember.complianceStatus,
+              )}`}
+            >
+              {statusLabel(crewMember.complianceStatus)}
+            </span>
+          </div>
+          {crewMember.complianceFindings.length === 0 ? (
+            <p className="mt-2 text-sm text-zinc-600">No crew compliance rules are active.</p>
           ) : (
-            <p className="mt-2 text-sm text-zinc-600">No active aircraft assignment.</p>
-          )}
-        </section>
-
-        <section className="rounded-xl border border-zinc-200 bg-white p-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Warnings
-          </h3>
-          {warnings.length ? (
             <ul className="mt-2 space-y-2">
-              {warnings.map((warning) => (
-                <li className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-sm text-amber-900" key={warning}>
-                  {warning}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-              No current qualification warnings in this roster view.
-            </p>
-          )}
-        </section>
-
-        <section className="rounded-xl border border-zinc-200 bg-white p-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Upcoming covered legs
-          </h3>
-          {upcomingFlights.length ? (
-            <ul className="mt-2 space-y-2 text-sm">
-              {upcomingFlights.map((flight) => (
-                <li className="rounded-lg border border-zinc-200 bg-zinc-50 p-2" key={flight.id}>
-                  <p className="font-semibold text-zinc-950">
-                    {flight.flightNumber} | {flight.departureCode} -&gt; {flight.arrivalCode}
-                  </p>
+              {crewMember.complianceFindings.map((finding) => (
+                <li className="rounded-lg border border-zinc-200 bg-zinc-50 p-2 text-sm" key={finding.ruleKey}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-zinc-950">{finding.title}</span>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${complianceStatusBadgeClasses(
+                        finding.status,
+                      )}`}
+                    >
+                      {statusLabel(finding.status)}
+                    </span>
+                  </div>
                   <p className="mt-1 text-xs text-zinc-600">
-                    {toDateTime(flight.scheduledDeparture)} | {flight.tailNumber}
+                    Due {toDateOrNotSet(finding.dueAt)} | {finding.sourceCitation}
                   </p>
+                  <p className="mt-1 text-xs text-zinc-500">{finding.message}</p>
+                  {finding.evidenceRef ? (
+                    <p className="mt-1 text-xs font-medium text-emerald-700">
+                      Evidence on file: {finding.evidenceRef.type.replace("Crew", "").replace("Event", " event")}
+                    </p>
+                  ) : null}
+                  {finding.status !== "CURRENT" ? (
+                    <details className="mt-2 rounded-md border border-zinc-200 bg-white p-2">
+                      <summary className="cursor-pointer text-xs font-semibold text-zinc-700">
+                        Add completed evidence
+                      </summary>
+                      <EvidenceQuickForm
+                        activeOperatingParts={roster.activeOperatingParts}
+                        crewMember={crewMember}
+                        finding={finding}
+                        returnTo={currentDrawerHref}
+                      />
+                    </details>
+                  ) : null}
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="mt-2 text-sm text-zinc-600">No covered legs in the upcoming window.</p>
           )}
+          <p className="mt-2 text-xs text-zinc-500">
+            Preference/warning review only. Planned items do not satisfy a rule until completed evidence is recorded.
+          </p>
         </section>
 
         <div className="flex flex-wrap gap-2">
-          <Link className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white" href={`/crew/${crewMember.id}`}>
-            Crew detail
-          </Link>
           <Link
             className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700"
             href={crewHref(filters, {
@@ -1029,50 +1621,111 @@ export default async function CrewPage({ searchParams }: PageProps) {
   const error = firstParam(params.error);
   const filteredCrewMembers = filterCrewMembers(roster.crewMembers, filters, roster.now);
   const baseOptions = Array.from(new Set(roster.crewMembers.map((crewMember) => crewMember.baseStation.code))).sort();
-  const activeCrew = roster.crewMembers.filter(
+  const activeCrewMembers = roster.crewMembers.filter(
     (crewMember) => crewMember.employmentStatus === EmploymentStatus.ACTIVE,
+  );
+  const activeCrew = activeCrewMembers.length;
+  const warningCrewCount = activeCrewMembers.filter(
+    (crewMember) => crewWarnings(crewMember, roster.now).length > 0,
   ).length;
-  const onDutyCrew = roster.crewMembers.filter(
-    (crewMember) => crewMember.dutyStatus === DutyStatus.ON_DUTY,
-  ).length;
-  const assignedCrew = roster.crewMembers.filter((crewMember) => crewMember.assignments.length > 0)
-    .length;
-  const allUpcomingFlights = Array.from(roster.upcomingFlightsByCrewId.values()).flat();
-  const flightLegReads = allUpcomingFlights.filter((flight) => flight.readSource === "FLIGHT_LEG")
-    .length;
-  const fallbackFlightReads = allUpcomingFlights.filter(
-    (flight) => flight.readSource === "LEG_MISSING_FALLBACK_FLIGHT",
-  ).length;
-  const warningCount = roster.crewMembers.reduce((count, crewMember) => {
+  const warningCount = activeCrewMembers.reduce((count, crewMember) => {
     return count + crewWarnings(crewMember, roster.now).length;
   }, 0);
+  const leaveOrInactiveCount = roster.crewMembers.filter(
+    (crewMember) => crewMember.employmentStatus !== EmploymentStatus.ACTIVE,
+  ).length;
+  const pendingTimeOffCount = timeOffData.summary[TimeOffRequestStatus.PENDING];
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-4 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-4">
-        <header className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Crew Operations
-          </p>
-          <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Crew</h1>
-              <p className="mt-1 text-xs text-zinc-600">
-                Roster, qualification, assignment, and upcoming coverage context.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
+        {error ? (
+          <section className="rounded-md border status-surface-stop p-3 text-sm">
+            {decodeURIComponent(error)}
+          </section>
+        ) : null}
+
+        <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Active roster</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
+              {activeCrew}
+            </p>
+          </article>
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Visible crew</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">{filteredCrewMembers.length}</p>
+          </article>
+          <article className="rounded-xl border status-surface-stop px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide status-on-stop-muted">Crew warnings</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">
+              {warningCrewCount} / {warningCount}
+            </p>
+          </article>
+          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Pending time off</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums">{pendingTimeOffCount}</p>
+          </article>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <form className="grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-5" method="get">
+              <SelectFilter defaultValue={filters.status} label="Employment" name="status">
+                <option value={EmploymentStatus.ACTIVE}>Active</option>
+                <option value={EmploymentStatus.ON_LEAVE}>On leave</option>
+                <option value={EmploymentStatus.INACTIVE}>Inactive</option>
+                <option value={EmploymentStatus.TERMINATED}>Terminated</option>
+                <option value="all">All statuses</option>
+              </SelectFilter>
+              <SelectFilter defaultValue={filters.duty} label="Duty availability" name="duty">
+                <option value="all">All duty states</option>
+                <optgroup label="Scheduled / available">
+                  <option value={DutyStatus.ON_DUTY}>On duty</option>
+                  <option value={DutyStatus.RESERVE}>Reserve</option>
+                  <option value={DutyStatus.TRAINING}>Training</option>
+                  <option value={DutyStatus.DEADHEADING}>Deadheading</option>
+                </optgroup>
+                <optgroup label="Off / unavailable">
+                  <option value={DutyStatus.OFF_DUTY}>Off duty</option>
+                  <option value={DutyStatus.VACATION}>Vacation</option>
+                  <option value={DutyStatus.SICK}>Sick</option>
+                  <option value={DutyStatus.PERSONAL}>Personal</option>
+                </optgroup>
+              </SelectFilter>
+              <SelectFilter defaultValue={filters.assignment} label="Assignment" name="assignment">
+                <option value="all">All assignments</option>
+                <option value="assigned">Assigned</option>
+                <option value="unassigned">Unassigned</option>
+              </SelectFilter>
+              <SelectFilter defaultValue={filters.issue} label="Issue focus" name="issue">
+                <option value="all">All crew</option>
+                <option value="warnings">Warnings only</option>
+              </SelectFilter>
+              <SelectFilter defaultValue={filters.base} label="Base" name="base">
+                <option value="all">All bases</option>
+                {baseOptions.map((base) => (
+                  <option key={base} value={base}>
+                    {base}
+                  </option>
+                ))}
+              </SelectFilter>
+              <div className="flex flex-wrap items-end gap-2 lg:col-span-5">
+                <button className="rounded-md bg-zinc-950 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800" type="submit">
+                  Apply filters
+                </button>
+                <Link className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50" href="/crew">
+                  Reset
+                </Link>
+                <span className="text-xs font-medium text-zinc-500">{employmentFilterNote(filters.status)}</span>
+              </div>
+            </form>
+            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
               <Link
                 className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                 href={crewHref(filters, { panel: "create", selected: null })}
               >
                 Add crew member
-              </Link>
-              <Link
-                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-                href="/crew/scheduling"
-              >
-                Crew planner
               </Link>
               <Link
                 className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
@@ -1088,115 +1741,25 @@ export default async function CrewPage({ searchParams }: PageProps) {
                 className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
                 href="/crew/logistics"
               >
-                Logistics workbench
+                Logistics
               </Link>
-              <Link
-                className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-                href="/crew/scheduling?assignment=assigned"
-              >
-                Assigned crew
-              </Link>
-              <span className="text-sm text-zinc-500">
-                Upcoming coverage window: {UPCOMING_WINDOW_DAYS} days
+              <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-semibold text-zinc-600">
+                Non-active {leaveOrInactiveCount}
               </span>
             </div>
-          </div>
-        </header>
-
-        {error ? (
-          <section className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-            {decodeURIComponent(error)}
-          </section>
-        ) : null}
-
-        <section className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Crew</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">
-              {roster.crewMembers.length}
-            </p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Active</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">{activeCrew}</p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">On duty</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">{onDutyCrew}</p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Assigned / warn</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">
-              {assignedCrew} / {warningCount}
-            </p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">FlightLeg</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">{flightLegReads}</p>
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-500">Fallback</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums">{fallbackFlightReads}</p>
-          </article>
-        </section>
-
-        <section className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
-          <div className="flex flex-wrap items-end gap-3">
-            <CrewFilterGroup label="Employment">
-              <CrewFilterLink active={filters.status === "all"} href={crewHref(filters, { status: "all" })} label="All" />
-              {Object.values(EmploymentStatus).map((status) => (
-                <CrewFilterLink
-                  active={filters.status === status}
-                  href={crewHref(filters, { status })}
-                  key={status}
-                  label={statusLabel(status)}
-                />
-              ))}
-            </CrewFilterGroup>
-            <CrewFilterGroup label="Duty">
-              <CrewFilterLink active={filters.duty === "all"} href={crewHref(filters, { duty: "all" })} label="All" />
-              {[DutyStatus.ON_DUTY, DutyStatus.OFF_DUTY, DutyStatus.RESERVE, DutyStatus.TRAINING, DutyStatus.VACATION, DutyStatus.SICK].map((duty) => (
-                <CrewFilterLink
-                  active={filters.duty === duty}
-                  href={crewHref(filters, { duty })}
-                  key={duty}
-                  label={statusLabel(duty)}
-                />
-              ))}
-            </CrewFilterGroup>
-            <CrewFilterGroup label="Assignment">
-              <CrewFilterLink active={filters.assignment === "all"} href={crewHref(filters, { assignment: "all" })} label="All" />
-              <CrewFilterLink active={filters.assignment === "assigned"} href={crewHref(filters, { assignment: "assigned" })} label="Assigned" />
-              <CrewFilterLink active={filters.assignment === "unassigned"} href={crewHref(filters, { assignment: "unassigned" })} label="Unassigned" />
-            </CrewFilterGroup>
-            <CrewFilterGroup label="Issues">
-              <CrewFilterLink active={filters.issue === "all"} href={crewHref(filters, { issue: "all" })} label="All" />
-              <CrewFilterLink active={filters.issue === "warnings"} href={crewHref(filters, { issue: "warnings" })} label="Warnings" />
-            </CrewFilterGroup>
-            <CrewFilterGroup label="Base">
-              <CrewFilterLink active={filters.base === "all"} href={crewHref(filters, { base: "all" })} label="All" />
-              {baseOptions.map((base) => (
-                <CrewFilterLink
-                  active={filters.base === base}
-                  href={crewHref(filters, { base })}
-                  key={base}
-                  label={base}
-                />
-              ))}
-            </CrewFilterGroup>
           </div>
         </section>
 
         <section className="rounded-md border border-zinc-200 bg-white p-4 shadow-sm">
           {roster.crewMembers.length === 0 ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <div className="rounded-md border status-surface-info p-4 text-sm">
               <p className="font-medium">No crew members found.</p>
               <p className="mt-1">
                 The read-only crew page is ready, but the database has no roster rows to display.
               </p>
             </div>
           ) : filteredCrewMembers.length === 0 ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <div className="rounded-md border status-surface-info p-4 text-sm">
               <p className="font-medium">No crew match the selected filters.</p>
               <p className="mt-1">Clear filters to return to the full crew roster.</p>
               <Link className="mt-3 inline-flex rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white" href="/crew">
@@ -1244,10 +1807,10 @@ export default async function CrewPage({ searchParams }: PageProps) {
                             crewMember.dutyStatus,
                           )}`}
                         >
-                          {statusLabel(crewMember.dutyStatus)}
+                          {dutyStatusLabel(crewMember.dutyStatus)}
                         </span>
                         {warnings.length > 0 ? (
-                          <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+                          <span className="inline-flex rounded-full border status-badge-stop px-2 py-0.5 text-xs font-medium">
                             {warnings.length} warning{warnings.length === 1 ? "" : "s"}
                           </span>
                         ) : null}
