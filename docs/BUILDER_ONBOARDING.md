@@ -1,6 +1,10 @@
 # AeroOps Builder Onboarding
 
-Last updated: 2026-06-30
+Last updated: 2026-07-26
+
+Current canonical branch: `codex/aeroops-integration`
+
+Accepted product HEAD at handoff: `9f540a2`
 
 ## Current App State
 
@@ -23,7 +27,8 @@ Core surfaces:
   drawers.
 - `/aircraft?view=crew-coverage`: aircraft crew coverage planner.
 - `/aircraft/[aircraftId]`: aircraft operational context.
-- `/aircraft/[aircraftId]/logbook`: aircraft-tail logbook foundation.
+- `/aircraft/[aircraftId]/logbook`: compatible direct aircraft-tail logbook
+  route for deep links, exports, and aircraft-context access.
 - `/aircraft/[aircraftId]/crew`: aircraft-block crew assignment workflow.
 - `/aircraft/[aircraftId]/airworthiness`: aircraft airworthiness workflow.
 - `/aircraft/[aircraftId]/fuel`: aircraft fuel ledger.
@@ -82,10 +87,13 @@ Core surfaces:
   maintenance workbench. Keep the list compact and aircraft oriented; deeper
   maintenance concepts belong in drilldowns and the future Maintenance module.
 - Maintenance is a top-level module in the main navigation for `ADMIN` and
-  `MAINTENANCE` users, not a top-level Logbook tab. V1 is a triage workbench:
-  Queue first, Scheduled Maintenance second, compact review drawer, and links
-  to existing aircraft/logbook/airworthiness routes. Create/sign/template/admin
-  workflows remain deeper or later slices.
+  `MAINTENANCE` users, not a top-level Logbook tab. V1 is availability- and
+  logbook-centered: Queue triage, aircraft-grouped Scheduled Maintenance,
+  Program setup, and an aircraft-grouped Logbook overview. `View full logbook`
+  and entry `Review` open a wide URL-addressable aircraft-logbook drawer inside
+  Maintenance. Existing role rules allow Maintenance corrective drafts,
+  signatures, and uploads and Admin uploads; the direct aircraft logbook route
+  remains for compatibility, exports, and deep links.
 - Maintenance serviceability is computed in `lib/aircraft-serviceability.ts`.
   Do not use a routine current `AirworthinessRelease` as the normal
   serviceability gate. Open official discrepancies require approved deferral or
@@ -135,13 +143,17 @@ The concise backend-MVP state is in `docs/BACKEND_MVP_STATE.md`. The final
 smoke QA is in `docs/BACKEND_MVP_FINAL_SMOKE_QA.md`, and remaining post-MVP
 gaps are in `docs/BACKEND_MVP_GAP_REVIEW.md`.
 
-Recent frontend/product slices passed:
+The latest accepted maintenance/product slices (`MX-002R`, `MX-003`, and
+`MX-004`) passed:
 
 - `npm run typecheck`
 - `npm run lint`
 - `npm run build`
-- `npm run smoke:customer-passenger-manifest`
-- Browser checks for customer/manifest flows and latest aircraft filters.
+- `npm run smoke:maintenance-lifecycle`
+- `npm run smoke:aircraft-logbook`
+- `npm run smoke:maintenance-logbook-drawer`
+- `git diff --check`
+- Desktop and 390px rendered browser checks.
 
 Recent UI work also includes `/crew/me` crew-portal refinement, passenger ID
 photo capture, passenger check-in/boarding controls, compact `/aircraft` row
@@ -181,8 +193,9 @@ and preserve the backend contracts documented in `docs/BACKEND_MVP_STATE.md`.
   workflow, flight detail, requests, schedule, and profile.
 - Continue `/crew/scheduling` hardening while preserving the planning-vs-
   staffing boundary.
-- Polish `/maintenance` around queue filters, drawer detail, scheduled
-  maintenance rows, and demo data before adding create/sign/admin workflows.
+- Continue `/maintenance` only through a newly approved bounded slice. Preserve
+  the simplified availability/logbook lifecycle, aircraft-grouped Scheduled
+  and Logbook overviews, and the wide in-Maintenance logbook drawer.
 - Add the `/aircraft` create drawer after the current aircraft/status and
   maintenance module direction is accepted.
 - Continue UI polish for dashboard, flights, customers, aircraft, crew,

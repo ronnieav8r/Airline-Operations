@@ -1,6 +1,6 @@
 # Local Development
 
-Last updated: 2026-06-07
+Last updated: 2026-07-26
 
 This repo can run locally on this Windows PC with Docker Desktop and a local
 Postgres database. This avoids using the live Render database for day-to-day
@@ -73,6 +73,25 @@ Start the local app:
 ```powershell
 npm run dev:local
 ```
+
+If Next.js Turbopack reports a corrupt task database, loses known routes with
+404 responses, or references missing `.next\dev\cache\turbopack` files:
+
+1. Stop the local app process.
+2. Move the generated `.next` directory to a temporary backup outside the
+   repo. Do not delete or edit application source.
+3. Confirm `node_modules\@prisma\client` is populated; run
+   `npm run prisma:generate` after restoring dependencies when needed.
+4. Start the local webpack fallback:
+
+```powershell
+.\node_modules\.bin\next.cmd dev --webpack -H 127.0.0.1 -p 3200
+```
+
+Recheck the affected route plus one unrelated route. The 2026-07-26 handoff
+used this recovery to restore `/crew/scheduling`,
+`/crew/scheduling/periods`, and `/maintenance` to HTTP 200 without an
+application-source change.
 
 Open:
 

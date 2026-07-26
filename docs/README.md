@@ -151,9 +151,10 @@ Current highest-priority truth order:
 
 ## Current Next Work
 
-`BASELINE-001` is accepted on `codex/aeroops-integration`. `MX-002R` is the
-dispatched replacement Maintenance slice; it focuses on availability, logbook
-evidence, due work, deferrals, and MX Control decisions. See
-`docs/PROJECT_PIPELINE.md` and `docs/CURRENT_HANDOFF.md`. Aircraft crew
-coverage polish, crew portal polish, scheduling hardening, and the remaining UI
-backlog stay deferred until separately approved.
+`BASELINE-001`, `MX-002R`, `MX-003`, and `MX-004` are accepted locally on
+`codex/aeroops-integration`; accepted product HEAD is `9f540a2`. No next
+feature slice is approved or dispatched. Start with
+`docs/CURRENT_HANDOFF.md` and `docs/PROJECT_PIPELINE.md`, agree on one bounded
+slice, and dispatch it explicitly. Aircraft crew-coverage polish, crew-app
+polish, scheduling hardening, and the remaining UI backlog stay deferred until
+separately approved.

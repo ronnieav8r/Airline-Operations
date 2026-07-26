@@ -2,6 +2,22 @@
 
 Last updated: 2026-07-26
 
+## Current Handoff State
+
+The canonical local branch is `codex/aeroops-integration`. Accepted product
+HEAD is `9f540a2`, following accepted slices `MX-002R`, `MX-003`, and `MX-004`.
+All associated coder and lead-integration tasks are complete. No next feature
+slice is approved or dispatched, and no pipeline commit has been pushed,
+deployed, or opened as a pull request.
+
+The rejected work-package checkpoint `03242f9` remains outside canonical
+ancestry in its isolated MX-002 worktree and must not be merged. The local app
+is running at `http://127.0.0.1:3200` with the webpack development fallback
+after recovery from a corrupt Turbopack route cache and an incomplete installed
+Prisma client. Scheduling, Schedule Periods, and Maintenance were rechecked at
+HTTP 200; Scheduling was also rendered in Chrome. The Git tree was clean before
+this handoff documentation update.
+
 ## MX-004 Fleet logbook workspace drawer
 
 MX-004 is accepted locally on `codex/aeroops-integration`. The accepted
@@ -102,8 +118,8 @@ integrated-product checkpoint are
 immediately following `chore: accept AeroOps integration baseline` commit.
 The adopted workflow is tracked in `docs/PROJECT_PIPELINE.md`: document and
 validate a narrow slice, record blockers and both checkpoint/integration
-records, then explicitly dispatch the next approved slice. MX-002R is the
-replacement Maintenance slice delivered from this checkpoint.
+records, then explicitly dispatch the next approved slice. MX-002R, MX-003,
+and MX-004 have been delivered from this checkpoint.
 
 This document is the quick onboarding note for planner and builder chats. Read it
 before starting a new AeroOps slice.
@@ -115,8 +131,9 @@ changing production auth behavior.
 
 ## Current Next Steps
 
-`BASELINE-001` and MX-002R are accepted. The tracks below are current product
-context and backlog; they do not independently authorize another slice.
+`BASELINE-001`, MX-002R, MX-003, and MX-004 are accepted. The tracks below are
+current product context and backlog; they do not independently authorize
+another slice.
 
 The current active tracks are:
 
@@ -174,11 +191,14 @@ The current active tracks are:
   queue and also has `Scheduled Maintenance`, `Program`, and `Logbook` views.
   The queue is triage. Scheduled Maintenance is the aircraft-by-aircraft
   due/work board. Program is the setup side for reusable maintenance-program
-  tasks, recurrence, applicability, and tail overrides. Logbook is a
-  review-first aircraft-tail logbook browser with filters and a compact detail
-  drawer; create, upload, sign, lock, and export actions remain on the existing
-  aircraft logbook route. The module uses compact drawers for review plus links
-  to aircraft, airworthiness, logbook, and export routes.
+  tasks, recurrence, applicability, and tail overrides. Logbook is grouped once
+  per aircraft at the overview and opens a wide URL-addressable aircraft-logbook
+  drawer from `View full logbook` or entry `Review`. The drawer supports
+  independent tail-level filters, bounded/cursor-reachable history, responsive
+  timeline/detail review, Maintenance corrective drafts/signing/uploads, and
+  Admin uploads within existing authorization and immutable-record rules. The
+  direct aircraft logbook route remains for compatibility, exports, and deep
+  links.
   Scheduled Maintenance replaces the older generic Tails view and now uses a
   reusable maintenance-program task library, aircraft/type/tail applicability,
   per-tail overrides, per-aircraft compliance state, manual meter snapshots,

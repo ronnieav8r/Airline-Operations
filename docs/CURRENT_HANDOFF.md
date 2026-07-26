@@ -2,6 +2,32 @@
 
 Last updated: 2026-07-26
 
+## Handoff Snapshot
+
+- Canonical repo: `E:\Codex\Airline Operations\Airline Operations`
+- Canonical branch: `codex/aeroops-integration`
+- Accepted product HEAD: `9f540a2` (`chore: accept fleet logbook workspace drawer`)
+- Latest accepted slices: `MX-002R`, `MX-003`, and `MX-004`
+- Pipeline state: no next feature slice is approved or dispatched
+- Remote state: local commits only; nothing from this pipeline was pushed,
+  deployed, or opened as a pull request
+- Agent state: all MX-003/MX-004 coder and integration-lead tasks are complete
+- Worktree note: the rejected MX-002 work-package implementation remains
+  isolated at `E:\Codex\Airline Operations\.worktrees\aeroops-mx-002` on
+  `codex/slice-002-contextual-maintenance-work-packages`; do not merge
+  `03242f9`
+
+The local app is available at `http://127.0.0.1:3200`. On this handoff date,
+the entire `/crew/scheduling` subtree began returning 404 because the running
+Turbopack development cache was corrupt even though the route sources and
+production manifest were intact. The installed `@prisma/client` package
+directory was also incomplete. The generated caches were moved to
+`%TEMP%\codex-aeroops-runtime`, the declared Prisma client was restored and
+regenerated, and the app was restarted with the Next.js webpack development
+fallback. Scheduling, Schedule Periods, and Maintenance then returned 200 and
+Scheduling was rendered successfully in Chrome. No application source change
+was required. See `docs/LOCAL_DEVELOPMENT.md` for the recovery command.
+
 ## MX-004 Fleet logbook workspace drawer
 
 MX-004 is accepted locally on `codex/aeroops-integration`. The original coder
@@ -130,8 +156,8 @@ integrated-product checkpoint are both
 immediately following `chore: accept AeroOps integration baseline` commit.
 `docs/PROJECT_PIPELINE.md` is the durable project-management tracker: every
 future slice must have explicit scope, acceptance commands, blockers, and
-checkpoint/integration records before another feature is dispatched. MX-002R
-is the replacement Maintenance slice now being delivered from that baseline.
+checkpoint/integration records before another feature is dispatched. MX-002R,
+MX-003, and MX-004 have since been accepted from that baseline.
 
 ## Current State
 

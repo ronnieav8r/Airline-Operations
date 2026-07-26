@@ -89,3 +89,16 @@ slice is accepted.
 
 No adjacent feature slice is approved or dispatched. Select and explicitly
 dispatch the next bounded slice from the accepted canonical integration branch.
+
+## Current Handoff State
+
+- Accepted product HEAD: `9f540a2`
+- All MX-003 and MX-004 coder/integration-lead tasks are complete.
+- Canonical worktree was clean before the handoff documentation refresh.
+- No pipeline commit was pushed, deployed, or opened as a pull request.
+- The rejected `03242f9` work-package checkpoint remains isolated and outside
+  canonical ancestry.
+- Local runtime recovery on 2026-07-26 restored Scheduling, Schedule Periods,
+  and Maintenance to HTTP 200. The running app uses the documented webpack
+  development fallback after a corrupt Turbopack cache was moved aside and the
+  installed Prisma client was restored/regenerated.
