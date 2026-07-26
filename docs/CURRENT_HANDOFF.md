@@ -4,13 +4,18 @@ Last updated: 2026-07-26
 
 ## MX-003 Aircraft-grouped maintenance views
 
-MX-003 is a local coder checkpoint awaiting integration review on
-`codex/slice-003-aircraft-grouped-maintenance-views`, based on
-`e81e9763cb0f07adec4236233eeaca9465ceaafd`. It is UI-only: Scheduled
-Maintenance and the review-only top-level Logbook group their already-filtered
-child rows by aircraft, with collapsible accessible headers and retained row
-links/drawers. It does not change maintenance lifecycle rules, authorization,
-schema, migrations, server actions, or services.
+MX-003 is accepted locally on `codex/aeroops-integration`. The coder checkpoint
+is `27da5aa39f14b781c24b345d9237ec48a60f53dd`; its canonical cherry-pick is
+`07d2b47`. The accepted integrated product is `fea89fd`, which preserves the
+existing read-model child order and makes Logbook summary counts and unresolved
+write-up labels operationally truthful.
+
+This slice is UI-only: Scheduled Maintenance and the review-only top-level
+Logbook group their already-filtered child rows by aircraft, with collapsible
+accessible headers and retained filters, row links, and drawers. It does not
+change maintenance lifecycle rules, authorization, schema, migrations, server
+actions, or services. Static, standard production-build, focused smoke,
+`git diff --check`, and rendered desktop/~390px gates passed.
 
 ## MX-002R Simplified Maintenance Lifecycle
 

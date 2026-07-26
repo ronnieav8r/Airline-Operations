@@ -11,6 +11,13 @@ Logbook rows by aircraft for display only. It does not change any lifecycle
 state, serviceability computation, authorization rule, persistence behavior, or
 maintenance action.
 
+The grouped Logbook header counts `DRAFT`, `OPEN`, `CORRECTED`, and
+`READY_FOR_SIGNATURE` entries as actionable. Its unresolved-entry count covers
+`OPEN`, `DEFERRED`, `CORRECTED`, and `READY_FOR_SIGNATURE`. The separate
+`No unresolved write-ups` claim is tail-wide rather than filter-local and is
+shown only when no linked discrepancy is `OPEN`, `DEFERRED`, or
+`CORRECTED_PENDING_RTS`.
+
 ## Current Rule
 
 Aircraft serviceability is computed, not manually released for each flight.
