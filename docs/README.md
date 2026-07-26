@@ -48,7 +48,7 @@ http://localhost:3200/maintenance?view=program
 Current scheduling review target:
 
 ```text
-http://localhost:3200/crew/scheduling?date=2026-06-01&view=month&tab=planning&layer=schedule&aircraftType=all&role=all&base=all&sort=status&detail=names&focus=board
+http://localhost:3200/crew/scheduling?view=four-week&tab=coverage
 ```
 
 For aircraft, crew-app, scheduling, or maintenance UI work, start in
@@ -144,12 +144,10 @@ Current highest-priority truth order:
 
 ## Current Next Work
 
-Frontend/UI polish is active. Recent completed work includes compact dashboard
-passes, FlightLeg drawer/object-action refinement, fuel ledger/release fuel
-readiness, dashboard drawer summary cleanup, Crew Schedule Board hardening, the
-`/crew/me` crew-member mobile app foundation, passenger ID/check-in workflow
-work, the compact `/aircraft` fleet-status pass, the maintenance
-serviceability/Return-to-Service lifecycle, and the scheduled-maintenance
-program foundation. Current next work should focus on aircraft crew coverage
-polish, Maintenance tab polish, crew portal polish, and scheduling hardening.
-Start with `docs/CURRENT_HANDOFF.md` before selecting the next UI slice.
+`BASELINE-001` is accepted on `codex/aeroops-integration`. The accepted product
+checkpoint is `522ffb3fe4fbaaae643d428b9aa51771dc4d2799`; see
+`docs/PROJECT_PIPELINE.md` for the acceptance record. The only approved next
+feature is the contextual Maintenance work-package slice described in
+`docs/CURRENT_HANDOFF.md`, and it has not been dispatched. Aircraft crew
+coverage polish, crew portal polish, scheduling hardening, and the remaining UI
+backlog stay deferred until separately approved.

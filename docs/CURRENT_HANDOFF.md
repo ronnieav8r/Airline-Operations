@@ -4,14 +4,17 @@ Last updated: 2026-07-26
 
 ## 2026-07-26 Integration Baseline Stabilization
 
-The accumulated integration-tree product work is being checkpointed as
-`BASELINE-001` on `codex/aeroops-integration`, with parent commit
-`9e3522fa35baca3cc20db59cc31bea1f5d2a4713`. `docs/PROJECT_PIPELINE.md` is now
-the durable project-management tracker: every future slice must have explicit
-scope, acceptance commands, blockers, and checkpoint/integration records
-before another feature is dispatched. This baseline does not dispatch the next
-Maintenance feature; the next approved work remains the contextual
-work-package slice described below.
+The accumulated integration-tree product work is accepted as `BASELINE-001` on
+`codex/aeroops-integration`, from parent commit
+`9e3522fa35baca3cc20db59cc31bea1f5d2a4713`. The coder checkpoint and accepted
+integrated-product checkpoint are both
+`522ffb3fe4fbaaae643d428b9aa51771dc4d2799`; the local lead gate is the
+immediately following `chore: accept AeroOps integration baseline` commit.
+`docs/PROJECT_PIPELINE.md` is the durable project-management tracker: every
+future slice must have explicit scope, acceptance commands, blockers, and
+checkpoint/integration records before another feature is dispatched. This
+baseline did not dispatch the next Maintenance feature; the next approved work
+remains the contextual work-package slice described below.
 
 ## Current State
 
@@ -788,7 +791,35 @@ http://127.0.0.1:3200/crew/scheduling?date=2026-06-20&view=eight-week&tab=covera
 
 ## Validation Status
 
-Latest scheduling validation on 2026-06-17 passed:
+### BASELINE-001 acceptance — 2026-07-26
+
+Lead acceptance passed:
+
+- `npm run prisma:validate`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`, both for the clean working tree and the full
+  parent-to-coder-checkpoint diff
+- `npm run smoke:reusable-templates`
+- `npm run smoke:crew-scheduling-workbench`
+- `npm run smoke:crew-compliance-evaluator`
+- `npm run smoke:passenger-identity-documents`
+- `npm run smoke:aircraft-logbook`
+
+Docker Postgres was healthy at `127.0.0.1:5434`, and all 31 migrations were
+applied. No reseed was required. Rendered acceptance passed for `/`,
+`/maintenance`, `/crew/scheduling?view=four-week&tab=coverage`, and `/crew/me`;
+the Crew app also passed at `390x844` without horizontal overflow. The
+Chrome-only hydration message caused by the injected `perkspotbx` body class is
+known extension behavior; no other console warnings or errors were present.
+
+### Superseded scheduling validation history — 2026-06-17
+
+The following records the earlier scheduling validation pass. Its flight-gap
+failure is superseded by the green 2026-07-26 baseline smoke above.
+
+That scheduling validation passed:
 
 - `npm run typecheck`
 - `npm run lint`
@@ -816,8 +847,8 @@ Focused DB smoke status:
 - Local migrations were checked with `npm run db:local:migrate`; no pending
   migrations were reported.
 - Rerunning the smoke with `.env.local` loaded reached the local DB but failed
-  on: `Workbench did not surface existing CPT/FO flight-derived gaps.`
-  Treat this as the current open regression/check before commit.
+  at that time on:
+  `Workbench did not surface existing CPT/FO flight-derived gaps.`
 
 Previous browser checks for the earlier scheduling visualization slice covered
 four-week default, month/week/day switching, summary/names modes,
@@ -831,9 +862,9 @@ The local demo pilot seed was run successfully:
 - Result: 30 CL-65 captain demo pilots and 1,050 visible-calendar-week schedule
   rows for June 2026 local review.
 
-Formal DB-backed crew scheduling smoke is not currently green. Fix or
-intentionally update the flight-gap assertion before commit or deploy. Local
-page/browser checks are not a substitute for that focused smoke.
+Formal DB-backed crew scheduling smoke was not green in that historical run.
+The 2026-07-26 baseline rerun passed the flight-gap assertion and supersedes
+this older result.
 
 Latest handoff/planning verification on 2026-06-17:
 

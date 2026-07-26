@@ -6,11 +6,15 @@ Last updated: 2026-07-26
 
 `BASELINE-001` records the one-time stabilization checkpoint for the
 accumulated intentional work on `codex/aeroops-integration`, from parent
-`9e3522fa35baca3cc20db59cc31bea1f5d2a4713`. The adopted workflow is tracked
-in `docs/PROJECT_PIPELINE.md`: document and validate a narrow slice, record
-blockers and both checkpoint/integration commits, then explicitly dispatch the
-next approved slice. The contextual Maintenance work-package slice is approved
-but has not been dispatched by this checkpoint.
+`9e3522fa35baca3cc20db59cc31bea1f5d2a4713`. The coder checkpoint and accepted
+integrated-product checkpoint are
+`522ffb3fe4fbaaae643d428b9aa51771dc4d2799`; the local lead gate is the
+immediately following `chore: accept AeroOps integration baseline` commit.
+The adopted workflow is tracked in `docs/PROJECT_PIPELINE.md`: document and
+validate a narrow slice, record blockers and both checkpoint/integration
+records, then explicitly dispatch the next approved slice. The contextual
+Maintenance work-package slice is approved but was not dispatched by this
+checkpoint.
 
 This document is the quick onboarding note for planner and builder chats. Read it
 before starting a new AeroOps slice.
@@ -21,6 +25,11 @@ longer has a valid session cookie. This keeps local UI review moving without
 changing production auth behavior.
 
 ## Current Next Steps
+
+`BASELINE-001` is accepted. The contextual Maintenance work-package slice is
+the only approved next feature and remains undispatched. The tracks below are
+current product context and backlog; they do not independently authorize a new
+slice.
 
 The current active tracks are:
 
@@ -2078,8 +2087,9 @@ passed with `npm run typecheck`, `npm run lint`, and `npm run build`; browser
 checks covered `/aircraft`, `/aircraft?filter=aog`,
 `/aircraft?filter=open-mels`, and `/aircraft?filter=open-writeups`.
 
-Latest crew scheduling visualization and planning polish is in the local
-working tree. `/crew/scheduling` now defaults to a simplified Crew Schedule
+The following records the pre-baseline crew scheduling visualization and
+planning polish that was later integrated into `BASELINE-001`.
+`/crew/scheduling` now defaults to a simplified Crew Schedule
 Board in `4 week` view, the app shell Scheduling nav points there directly, and
 Crew no longer remains active on scheduling pages. The large page header and
 always-visible filter rows were removed in favor of a compact board toolbar
@@ -2101,10 +2111,12 @@ so the current scheduling workflow should not redirect to sign-in. Publishing
 schedule drafts writes schedule/availability rows only; it does not create
 aircraft crew assignments. Static validation passed with `npm run typecheck`,
 `npm run lint`, `npm run prisma:validate`, `npm run build`, and the focused
-`npm run smoke:reusable-templates`. `npm run smoke:crew-scheduling-workbench`
-still has an open flight-gap assertion documented in `docs/CURRENT_HANDOFF.md`.
+`npm run smoke:reusable-templates`. At that historical checkpoint,
+`npm run smoke:crew-scheduling-workbench` still had an open flight-gap
+assertion. The 2026-07-26 baseline acceptance reran that smoke successfully.
 
-Next recommended workstream:
+Historical next recommended workstream, superseded by the accepted pipeline
+direction at the top of this document:
 
 ```text
 Crew scheduling planning hardening
