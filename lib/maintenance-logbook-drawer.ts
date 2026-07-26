@@ -2,8 +2,10 @@ import {
   AircraftConfigurationStatus,
   AircraftLogbookEntryStatus,
   AircraftLogbookEntryType,
+  DeferralStatus,
   DiscrepancyStatus,
   MaintenanceComplianceStatus,
+  MaintenanceControlHoldStatus,
   MaintenanceEventStatus,
   type Prisma,
 } from "@prisma/client";
@@ -53,7 +55,7 @@ export function parseLogbookDrawerDate(
   return parsed;
 }
 
-const drawerEntrySelect = {
+const timelineEntrySelect = {
   aircraftId: true,
   airworthinessRelease: {
     select: {
@@ -61,6 +63,41 @@ const drawerEntrySelect = {
       status: true,
     },
   },
+  createdAt: true,
+  deferral: {
+    select: {
+      deferralMethod: true,
+      deferralNumber: true,
+    },
+  },
+  discrepancy: {
+    select: {
+      discrepancyNumber: true,
+      title: true,
+    },
+  },
+  entryNumber: true,
+  entryType: true,
+  id: true,
+  maintenanceEvent: {
+    select: {
+      eventType: true,
+      maintenanceNumber: true,
+    },
+  },
+  maintenanceProgramTask: {
+    select: {
+      taskKey: true,
+      title: true,
+    },
+  },
+  reportedAt: true,
+  status: true,
+  title: true,
+} satisfies Prisma.AircraftLogbookEntrySelect;
+
+const detailEntrySelect = {
+  ...timelineEntrySelect,
   attachments: {
     where: { deletedAt: null },
     orderBy: [{ createdAt: "desc" as const }],
@@ -83,7 +120,6 @@ const drawerEntrySelect = {
     take: 12,
   },
   category: true,
-  createdAt: true,
   deferral: {
     select: {
       deferralMethod: true,
@@ -102,9 +138,6 @@ const drawerEntrySelect = {
     },
   },
   dueAt: true,
-  entryNumber: true,
-  entryType: true,
-  id: true,
   lockedAt: true,
   maintenanceComplianceState: {
     select: {
@@ -138,7 +171,6 @@ const drawerEntrySelect = {
   operatingLimitations: true,
   performedByName: true,
   placardRequired: true,
-  reportedAt: true,
   requiredProcedures: true,
   requiresIndependentInspection: true,
   returnToServiceAt: true,
@@ -166,13 +198,15 @@ const drawerEntrySelect = {
   },
   signedContentHash: true,
   source: true,
-  status: true,
   taskReference: true,
-  title: true,
 } satisfies Prisma.AircraftLogbookEntrySelect;
 
-export type MaintenanceLogbookDrawerEntry = Prisma.AircraftLogbookEntryGetPayload<{
-  select: typeof drawerEntrySelect;
+export type MaintenanceLogbookTimelineEntry = Prisma.AircraftLogbookEntryGetPayload<{
+  select: typeof timelineEntrySelect;
+}>;
+
+export type MaintenanceLogbookDrawerEntryDetail = Prisma.AircraftLogbookEntryGetPayload<{
+  select: typeof detailEntrySelect;
 }>;
 
 function entryWhere(
@@ -271,6 +305,7 @@ export async function getMaintenanceLogbookDrawerData({
         take: 1,
       },
       deferrals: {
+        where: { status: DeferralStatus.ACTIVE },
         select: {
           dueAt: true,
           id: true,
@@ -281,6 +316,15 @@ export async function getMaintenanceLogbookDrawerData({
         },
       },
       discrepancies: {
+        where: {
+          status: {
+            in: [
+              DiscrepancyStatus.OPEN,
+              DiscrepancyStatus.DEFERRED,
+              DiscrepancyStatus.CORRECTED_PENDING_RTS,
+            ],
+          },
+        },
         orderBy: [{ reportedAt: "desc" }],
         select: {
           discrepancyNumber: true,
@@ -292,7 +336,10 @@ export async function getMaintenanceLogbookDrawerData({
       homeStation: { select: { code: true } },
       id: true,
       maintenanceComplianceStates: {
-        where: { status: MaintenanceComplianceStatus.OVERDUE },
+        where: {
+          status: MaintenanceComplianceStatus.OVERDUE,
+          task: { requiredForServiceability: true },
+        },
         select: {
           id: true,
           status: true,
@@ -300,13 +347,18 @@ export async function getMaintenanceLogbookDrawerData({
         },
       },
       maintenanceControlHolds: {
+        where: { status: MaintenanceControlHoldStatus.ACTIVE },
         select: { id: true, reason: true, status: true },
       },
       maintenanceEvents: {
         where: {
-          status: {
-            in: [MaintenanceEventStatus.IN_PROGRESS, MaintenanceEventStatus.COMPLETED],
-          },
+          OR: [
+            { status: MaintenanceEventStatus.IN_PROGRESS },
+            {
+              returnToServiceAt: null,
+              status: MaintenanceEventStatus.COMPLETED,
+            },
+          ],
         },
         select: {
           id: true,
@@ -356,22 +408,20 @@ export async function getMaintenanceLogbookDrawerData({
       : Promise.resolve(0),
     prisma.aircraftLogbookEntry.findMany({
       orderBy: [{ reportedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-      select: drawerEntrySelect,
+      select: timelineEntrySelect,
       take: boundedLimit + 1,
       where,
     }),
     selectedEntryId
       ? prisma.aircraftLogbookEntry.findFirst({
-          select: drawerEntrySelect,
+          select: detailEntrySelect,
           where: { aircraftId, id: selectedEntryId },
         })
       : Promise.resolve(null),
   ]);
   const hasMore = batch.length > boundedLimit;
   const entries = hasMore ? batch.slice(0, boundedLimit) : batch;
-  const selectedEntry = selectedEntryId
-    ? entries.find((entry) => entry.id === selectedEntryId) ?? separatelySelectedEntry
-    : null;
+  const selectedEntry = selectedEntryId ? separatelySelectedEntry : null;
 
   return {
     aircraft,

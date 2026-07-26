@@ -28,8 +28,16 @@ to `/aircraft/[aircraftId]/logbook`.
 The drawer queries each aircraft independently of the overview's fleet-wide
 500-entry cap. It uses bounded newest-first batches, exact filtered/tail counts,
 retained `Load older` growth, and seek-cursor continuation so every filtered
-record remains reachable. A selected record outside the visible batch is read
-separately and does not make the timeline claim it is loaded.
+record remains reachable. Timeline rows use a minimal bounded select. Every
+selected record is read through a separate full-detail query, including a
+selection that is already visible in the current batch.
+
+The drawer supplies the shared serviceability evaluator only current,
+evaluator-relevant relations: active deferrals; `OPEN`, `DEFERRED`, and
+`CORRECTED_PENDING_RTS` discrepancies; active Maintenance Control holds;
+`IN_PROGRESS` events and `COMPLETED` events without RTS; required `OVERDUE`
+compliance; and the active aircraft configuration. Historical relation arrays
+are not hydrated for the header evaluation.
 
 The drawer reuses the existing logbook domain actions. Maintenance authority,
 independent-inspector separation, signed-record immutability, locked attachment

@@ -21,16 +21,17 @@ slice is accepted.
 
 | Field | Value |
 | --- | --- |
-| Status | Coder implementation complete on 2026-07-26; ready for lead review. |
+| Status | Repaired coder implementation complete on 2026-07-26; ready for lead re-review. |
 | Baseline parent commit | `373a4e3b65aea01c727f9f4e21a52efd1ea174f7` |
+| Rejected checkpoint | `05d973e373d80750a7daef2058644ed13c9479c5` was rejected before integration and must not be cherry-picked alone. |
 | Working branch | `codex/slice-004-fleet-logbook-drawer` |
 | Scope | Replace the narrow review-only Logbook entry drawer with a wide URL-addressable per-aircraft workspace that keeps Maintenance Control in Maintenance. Preserve MX-003 overview grouping/toggle behavior; add explicit full-logbook and entry Review actions, aircraft switching, bounded/cursor-reachable tail history, independent filters, responsive split/detail presentation, existing Maintenance/Admin action parity, and safe same-app action returns. Keep the direct aircraft route for compatibility and file/deep-link endpoints. No schema, migration, lifecycle, or serviceability-state change. |
 | Acceptance commands | `npm run typecheck`; `npm run lint`; `npm run build` (documented webpack fallback only for isolated dependency junction); `npm run smoke:maintenance-lifecycle`; `npm run smoke:aircraft-logbook`; `npm run smoke:maintenance-logbook-drawer`; `git diff --check`; desktop and 390px rendered browser review. |
-| Runtime acceptance | Typecheck, lint, both existing maintenance/logbook smokes, focused drawer query/return-destination smoke, webpack production build, and diff check passed against healthy local Docker Postgres. Rendered desktop and 390px review passed summary-only toggle, full/entry drawer entry points, aircraft switching, independent filtering, URL retention, desktop split, mobile Back, role-visible actions, and zero horizontal overflow. No bounded browser fixture exceeded 50 records; deterministic DB coverage verifies retained pagination, seek-cursor continuation, exact visible ranges, and selected detail outside the visible batch. |
+| Runtime acceptance | Typecheck, lint, both existing maintenance/logbook smokes, focused drawer query/return-destination smoke, webpack production build, and diff check passed against healthy local Docker Postgres. The focused smoke proves summary-only timeline hydration, a separate full-detail query for both visible and out-of-batch selections, and current-state-only serviceability relations. Rendered desktop and 390px review passed URL-neutral native summary expansion followed by drawer navigation without a summary hydration mismatch, named modal semantics, focus entry/trap, Escape close, full/entry drawer entry points, aircraft switching, independent filtering, URL retention, desktop split, mobile Back, role-visible actions, and zero horizontal overflow. |
 | Build note | Standard Next.js 16.2.7 Turbopack build hit the known isolated-worktree `node_modules` junction panic because the junction points outside the worktree root. `npx next build --webpack` passed. |
-| Browser note | Chrome emitted only the known external `perkspotbx` body-class hydration warning. |
+| Browser note | The only hydration console entry was the known external `perkspotbx` body-class injection. Focus restoration is best-effort when the prior opener remains mounted after URL navigation. |
 | Blockers | None. |
-| Coder checkpoint | Local commit `feat: add fleet logbook workspace drawer`; hash is recorded in Git history and the coder handoff rather than self-referenced here. |
+| Coder checkpoint | Replacement local commit `fix: harden fleet logbook drawer`; hash is recorded in Git history and the coder handoff rather than self-referenced here. |
 | Integrated product checkpoint | Pending lead integration and acceptance. |
 | Lead acceptance gate | Pending. |
 

@@ -4,10 +4,13 @@ Last updated: 2026-07-26
 
 ## MX-004 Fleet logbook workspace drawer
 
-MX-004 is implemented on `codex/slice-004-fleet-logbook-drawer` from baseline
-`373a4e3b65aea01c727f9f4e21a52efd1ea174f7` and is ready for lead review.
-The implementation commit is named `feat: add fleet logbook workspace drawer`;
-its hash is recorded in Git history and the coder handoff.
+MX-004 has a repaired implementation on
+`codex/slice-004-fleet-logbook-drawer` from baseline
+`373a4e3b65aea01c727f9f4e21a52efd1ea174f7` and is ready for lead re-review.
+Checkpoint `05d973e373d80750a7daef2058644ed13c9479c5` was rejected before
+integration and must not be cherry-picked alone. The replacement checkpoint is
+named `fix: harden fleet logbook drawer`; its hash is recorded in Git history
+and the coder handoff.
 
 Maintenance Control now stays in `/maintenance?view=logbook` while reviewing
 and working across aircraft logbooks. The MX-003 aircraft summary remains a
@@ -20,12 +23,24 @@ filters. It loads the newest 50 by default, retains newer rows while `Load
 older` grows the bounded batch, and uses a stable seek cursor to continue
 through older batches after the retained-batch cap. It reports exact visible,
 filtered, and tail totals and resolves a selected entry separately when it is
-outside the visible batch.
+outside the visible batch. Timeline rows use a minimal bounded select, while
+every selected entry uses a separate full-detail query even when the entry is
+also visible in the timeline. Serviceability input relations are limited to
+current evaluator-relevant records: active deferrals; open, deferred, or
+corrected-pending-RTS discrepancies; active Maintenance Control holds;
+in-progress or completed-pending-RTS events; required overdue compliance; and
+the active configuration.
 
 Desktop uses a timeline/detail split at approximately 80vw with a `max-w-6xl`
 cap. Narrow screens use the full width and show selected detail with `Back to
 <tail> logbook`; no nested drawer is introduced. The header includes tail,
-type, computed serviceability, and an aircraft switcher.
+type, computed serviceability, and an aircraft switcher. The shell is a named
+modal dialog: focus enters on open, Tab and Shift+Tab remain inside, Escape
+returns to the close URL, background content is inert and hidden from assistive
+technology, and background page scrolling is locked. Focus restoration is
+best-effort to the prior element when it remains mounted after URL navigation.
+The native aircraft summary is truly uncontrolled and no URL state is bound to
+its `open` attribute.
 
 Authorized actions reuse the existing aircraft-logbook services and rules:
 
@@ -49,11 +64,13 @@ Coder validation passed `npm run typecheck`, `npm run lint`,
 `npm run smoke:maintenance-logbook-drawer`, webpack production build fallback,
 and `git diff --check`. The standard Turbopack build hit the known isolated
 worktree `node_modules` junction panic; `npx next build --webpack` passed.
-Rendered desktop and 390px checks covered summary-only toggle, drawer entry
-points, aircraft switching, independent filter, split/detail behavior, mobile
-Back, Maintenance URL retention, role-visible actions, and zero horizontal
-overflow. The Chrome `perkspotbx` body-class hydration warning is external
-extension injection.
+Rendered desktop and 390px checks covered summary-only toggle followed by
+drawer navigation without a summary hydration mismatch, named modal semantics,
+focus entry/trap, Escape close, drawer entry points, aircraft switching,
+independent filter, split/detail behavior, mobile Back, Maintenance URL
+retention, role-visible actions, and zero horizontal overflow. The only
+hydration console entry was the external Chrome `perkspotbx` body-class
+injection; it is not product markup.
 
 ## MX-003 Aircraft-grouped maintenance views
 

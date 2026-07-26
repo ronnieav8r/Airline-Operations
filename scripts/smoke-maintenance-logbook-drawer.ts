@@ -1,9 +1,18 @@
 import {
+  AircraftConfigurationStatus,
   AircraftLogbookEntrySource,
   AircraftLogbookEntryStatus,
   AircraftLogbookEntryType,
   AircraftStatus,
   AircraftType,
+  DeferralStatus,
+  DiscrepancyStatus,
+  MaintenanceComplianceStatus,
+  MaintenanceControlHoldStatus,
+  MaintenanceEventStatus,
+  MaintenanceEventType,
+  MaintenanceProgramTaskCategory,
+  UserRole,
 } from "@prisma/client";
 
 import {
@@ -65,6 +74,13 @@ async function main() {
       type: AircraftType.CL_65,
     },
   });
+  const actor = await prisma.user.create({
+    data: {
+      email: `mx4-${suffix.toLowerCase()}@example.test`,
+      role: UserRole.MAINTENANCE,
+    },
+  });
+  const taskIds: string[] = [];
 
   try {
     const base = Date.UTC(2026, 6, 1, 12);
@@ -94,6 +110,147 @@ async function main() {
       );
     }
 
+    const currentDiscrepancy = await prisma.discrepancy.create({
+      data: {
+        aircraftId: aircraft.id,
+        discrepancyNumber: "MX4-CURRENT",
+        status: DiscrepancyStatus.OPEN,
+        title: "Current serviceability write-up",
+      },
+    });
+    const historicalDiscrepancy = await prisma.discrepancy.create({
+      data: {
+        aircraftId: aircraft.id,
+        clearedAt: new Date(base),
+        discrepancyNumber: "MX4-HISTORICAL",
+        status: DiscrepancyStatus.CLEARED,
+        title: "Historical cleared write-up",
+      },
+    });
+    const activeDeferral = await prisma.deferral.create({
+      data: {
+        aircraftId: aircraft.id,
+        deferralNumber: "MX4-ACTIVE",
+        discrepancyId: currentDiscrepancy.id,
+        status: DeferralStatus.ACTIVE,
+      },
+    });
+    const clearedDeferral = await prisma.deferral.create({
+      data: {
+        aircraftId: aircraft.id,
+        clearedAt: new Date(base),
+        deferralNumber: "MX4-CLEARED",
+        discrepancyId: historicalDiscrepancy.id,
+        status: DeferralStatus.CLEARED,
+      },
+    });
+    const activeHold = await prisma.maintenanceControlHold.create({
+      data: {
+        aircraftId: aircraft.id,
+        placedById: actor.id,
+        reason: "Current test hold",
+        status: MaintenanceControlHoldStatus.ACTIVE,
+      },
+    });
+    const releasedHold = await prisma.maintenanceControlHold.create({
+      data: {
+        aircraftId: aircraft.id,
+        placedById: actor.id,
+        reason: "Historical test hold",
+        releasedAt: new Date(base),
+        status: MaintenanceControlHoldStatus.RELEASED,
+      },
+    });
+    const inProgressEvent = await prisma.maintenanceEvent.create({
+      data: {
+        aircraftId: aircraft.id,
+        eventType: MaintenanceEventType.UNSCHEDULED_MAINTENANCE,
+        maintenanceNumber: "MX4-IN-PROGRESS",
+        status: MaintenanceEventStatus.IN_PROGRESS,
+      },
+    });
+    const completedPendingRtsEvent = await prisma.maintenanceEvent.create({
+      data: {
+        aircraftId: aircraft.id,
+        completedAt: new Date(base),
+        eventType: MaintenanceEventType.REPAIR,
+        maintenanceNumber: "MX4-PENDING-RTS",
+        status: MaintenanceEventStatus.COMPLETED,
+      },
+    });
+    const historicalEvent = await prisma.maintenanceEvent.create({
+      data: {
+        aircraftId: aircraft.id,
+        completedAt: new Date(base),
+        eventType: MaintenanceEventType.REPAIR,
+        maintenanceNumber: "MX4-HISTORICAL",
+        returnToServiceAt: new Date(base),
+        status: MaintenanceEventStatus.COMPLETED,
+      },
+    });
+    const activeConfiguration = await prisma.aircraftConfiguration.create({
+      data: {
+        aircraftId: aircraft.id,
+        configurationLabel: "Current configuration",
+        status: AircraftConfigurationStatus.ACTIVE,
+      },
+    });
+    const historicalConfiguration = await prisma.aircraftConfiguration.create({
+      data: {
+        aircraftId: aircraft.id,
+        configurationLabel: "Historical configuration",
+        effectiveEnd: new Date(base),
+        status: AircraftConfigurationStatus.SUPERSEDED,
+      },
+    });
+
+    const requiredOverdueTask = await prisma.maintenanceProgramTask.create({
+      data: {
+        category: MaintenanceProgramTaskCategory.OTHER,
+        requiredForServiceability: true,
+        taskKey: `MX4-REQ-OVERDUE-${suffix}`,
+        title: "Required overdue task",
+      },
+    });
+    const requiredCurrentTask = await prisma.maintenanceProgramTask.create({
+      data: {
+        category: MaintenanceProgramTaskCategory.OTHER,
+        requiredForServiceability: true,
+        taskKey: `MX4-REQ-CURRENT-${suffix}`,
+        title: "Required current task",
+      },
+    });
+    const optionalOverdueTask = await prisma.maintenanceProgramTask.create({
+      data: {
+        category: MaintenanceProgramTaskCategory.OTHER,
+        requiredForServiceability: false,
+        taskKey: `MX4-OPT-OVERDUE-${suffix}`,
+        title: "Optional overdue task",
+      },
+    });
+    taskIds.push(requiredOverdueTask.id, requiredCurrentTask.id, optionalOverdueTask.id);
+    const requiredOverdueState = await prisma.maintenanceComplianceState.create({
+      data: {
+        aircraftId: aircraft.id,
+        status: MaintenanceComplianceStatus.OVERDUE,
+        taskId: requiredOverdueTask.id,
+      },
+    });
+    const requiredCurrentState = await prisma.maintenanceComplianceState.create({
+      data: {
+        aircraftId: aircraft.id,
+        status: MaintenanceComplianceStatus.CURRENT,
+        taskId: requiredCurrentTask.id,
+      },
+    });
+    const optionalOverdueState = await prisma.maintenanceComplianceState.create({
+      data: {
+        aircraftId: aircraft.id,
+        status: MaintenanceComplianceStatus.OVERDUE,
+        taskId: optionalOverdueTask.id,
+      },
+    });
+
     const first = await getMaintenanceLogbookDrawerData({
       aircraftId: aircraft.id,
       cursorEntryId: null,
@@ -107,7 +264,57 @@ async function main() {
     assert(first.entries[0].id === created[5].id && first.entries[1].id === created[4].id, "Timeline should be canonical newest-first.");
     assert(first.selectedEntry?.id === created[0].id, "Selected entry outside the batch should resolve separately.");
     assert(!first.selectedEntryInBatch, "Outside selected entry must not be marked as part of the visible batch.");
+    assert(!("attachments" in first.entries[0]), "Timeline entries must use the bounded summary select.");
+    assert(
+      Boolean(first.selectedEntry && "attachments" in first.selectedEntry),
+      "Selected entry must use the separate full-detail select.",
+    );
     assert(first.visibleFrom === 1 && first.visibleTo === 2, "First visible range should be exact.");
+    assert(
+      first.aircraft.discrepancies.some((item) => item.id === currentDiscrepancy.id) &&
+        !first.aircraft.discrepancies.some((item) => item.id === historicalDiscrepancy.id),
+      "Serviceability context should include current discrepancies and omit historical discrepancies.",
+    );
+    assert(
+      first.aircraft.deferrals.some((item) => item.id === activeDeferral.id) &&
+        !first.aircraft.deferrals.some((item) => item.id === clearedDeferral.id),
+      "Serviceability context should include only active deferrals.",
+    );
+    assert(
+      first.aircraft.maintenanceControlHolds.some((item) => item.id === activeHold.id) &&
+        !first.aircraft.maintenanceControlHolds.some((item) => item.id === releasedHold.id),
+      "Serviceability context should include only active Maintenance Control holds.",
+    );
+    assert(
+      first.aircraft.maintenanceEvents.some((item) => item.id === inProgressEvent.id) &&
+        first.aircraft.maintenanceEvents.some((item) => item.id === completedPendingRtsEvent.id) &&
+        !first.aircraft.maintenanceEvents.some((item) => item.id === historicalEvent.id),
+      "Serviceability context should include in-progress and pending-RTS events only.",
+    );
+    assert(
+      first.aircraft.configurations.some((item) => item.id === activeConfiguration.id) &&
+        !first.aircraft.configurations.some((item) => item.id === historicalConfiguration.id),
+      "Serviceability context should include only the active configuration.",
+    );
+    assert(
+      first.aircraft.maintenanceComplianceStates.some((item) => item.id === requiredOverdueState.id) &&
+        !first.aircraft.maintenanceComplianceStates.some((item) => item.id === requiredCurrentState.id) &&
+        !first.aircraft.maintenanceComplianceStates.some((item) => item.id === optionalOverdueState.id),
+      "Serviceability context should include only required overdue compliance states.",
+    );
+
+    const selectedInBatch = await getMaintenanceLogbookDrawerData({
+      aircraftId: aircraft.id,
+      cursorEntryId: null,
+      filters: noFilters,
+      limit: 2,
+      selectedEntryId: created[5].id,
+    });
+    assert(selectedInBatch?.selectedEntryInBatch, "Visible selected entry should be marked as part of the batch.");
+    assert(
+      Boolean(selectedInBatch?.selectedEntry && "attachments" in selectedInBatch.selectedEntry),
+      "Visible selected entry must still resolve through the separate full-detail query.",
+    );
 
     const second = await getMaintenanceLogbookDrawerData({
       aircraftId: aircraft.id,
@@ -148,6 +355,10 @@ async function main() {
     console.log("Maintenance logbook drawer smoke passed.");
   } finally {
     await prisma.aircraft.delete({ where: { id: aircraft.id } });
+    if (taskIds.length > 0) {
+      await prisma.maintenanceProgramTask.deleteMany({ where: { id: { in: taskIds } } });
+    }
+    await prisma.user.delete({ where: { id: actor.id } });
   }
 }
 

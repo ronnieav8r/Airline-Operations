@@ -4,9 +4,11 @@ Last updated: 2026-07-26
 
 ## MX-004 Fleet logbook workspace drawer
 
-MX-004 is implemented and ready for lead review on
+MX-004 is repaired and ready for lead re-review on
 `codex/slice-004-fleet-logbook-drawer`, baseline
 `373a4e3b65aea01c727f9f4e21a52efd1ea174f7`.
+The original checkpoint `05d973e373d80750a7daef2058644ed13c9479c5`
+was rejected before integration and must not be cherry-picked alone.
 
 The Maintenance Logbook overview remains grouped by aircraft and preserves its
 existing overview filters and summary-only expand/collapse behavior. Expanded
@@ -21,10 +23,15 @@ The replacement working surface includes:
 - canonical newest-first per-tail timeline, exact filtered/tail totals, default
   50-row retained loading, capped hostile limits, and seek-cursor access to
   every older filtered batch;
-- independent search/status/type/date filters and separately resolved selected
-  detail outside the visible batch;
+- independent search/status/type/date filters, minimal timeline hydration, and
+  a separate full-detail query for every selected entry even when visible;
+- current-state-only serviceability relations rather than historical relation
+  arrays;
 - desktop timeline/detail split and full-width narrow detail with a clear Back
   action;
+- a named modal shell with focus entry/trap, Escape close, background
+  inert/assistive-tech hiding, scroll lock, and best-effort opener focus
+  restoration;
 - narrative, references, limitations/procedures, compliance links, RTS
   evidence, attachments, signatures/hash, audit, and secondary
   aircraft/airworthiness/export links;
@@ -38,7 +45,11 @@ There is no schema, migration, serviceability-state, or lifecycle change. The
 direct aircraft logbook route remains compatible for deep links and export.
 Static, focused DB smoke, webpack build fallback, and rendered desktop/390px
 checks passed. The standard Turbopack build is blocked only by the isolated
-worktree dependency junction and its documented out-of-root symlink panic.
+worktree dependency junction and its documented out-of-root symlink panic. The
+native summary is uncontrolled and remains URL-neutral; summary expansion
+followed by drawer navigation no longer creates a product hydration mismatch.
+The only remaining hydration console entry is external `perkspotbx` body-class
+injection by the browser environment.
 
 ## MX-003 Aircraft-grouped maintenance views
 

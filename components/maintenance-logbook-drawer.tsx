@@ -13,11 +13,13 @@ import {
   signAircraftLogbookEntryAction,
   uploadAircraftLogbookAttachmentAction,
 } from "@/app/aircraft/[aircraftId]/logbook/actions";
+import { MaintenanceLogbookDialogShell } from "@/components/maintenance-logbook-dialog-shell";
 import { evaluateAircraftServiceability } from "@/lib/aircraft-serviceability";
 import {
   LOGBOOK_DRAWER_LIMIT_STEP,
   MAX_LOGBOOK_DRAWER_LIMIT,
-  type MaintenanceLogbookDrawerEntry,
+  type MaintenanceLogbookDrawerEntryDetail,
+  type MaintenanceLogbookTimelineEntry,
   type getMaintenanceLogbookDrawerData,
 } from "@/lib/maintenance-logbook-drawer";
 import type { MaintenanceAircraftOption } from "@/lib/maintenance-workbench-queries";
@@ -145,7 +147,9 @@ function HiddenBaseParams({
   ));
 }
 
-function relatedLabel(entry: MaintenanceLogbookDrawerEntry): string {
+function relatedLabel(
+  entry: MaintenanceLogbookTimelineEntry | MaintenanceLogbookDrawerEntryDetail,
+): string {
   if (entry.discrepancy) {
     return `${entry.discrepancy.discrepancyNumber} | ${entry.discrepancy.title}`;
   }
@@ -174,7 +178,7 @@ function TimelineRow({
   href,
   selected,
 }: {
-  entry: MaintenanceLogbookDrawerEntry;
+  entry: MaintenanceLogbookTimelineEntry;
   href: string;
   selected: boolean;
 }) {
@@ -275,7 +279,7 @@ function EntryActions({
 }: {
   canSign: boolean;
   canUpload: boolean;
-  entry: MaintenanceLogbookDrawerEntry;
+  entry: MaintenanceLogbookDrawerEntryDetail;
   returnTo: string;
 }) {
   const maintenanceSigned = entry.signatures.some(
@@ -378,7 +382,7 @@ function EntryDetail({
 }: {
   canSign: boolean;
   canUpload: boolean;
-  entry: MaintenanceLogbookDrawerEntry;
+  entry: MaintenanceLogbookDrawerEntryDetail;
   returnTo: string;
 }) {
   return (
@@ -566,9 +570,9 @@ export function MaintenanceLogbookDrawer({
   const canLoadOlder = data.hasMore && data.limit < MAX_LOGBOOK_DRAWER_LIMIT;
 
   return (
-    <aside
-      aria-label={`${data.aircraft.tailNumber} aircraft logbook`}
-      className="fixed inset-y-0 right-0 z-30 flex w-full flex-col border-l border-zinc-200 bg-white shadow-2xl md:w-[80vw] md:max-w-6xl"
+    <MaintenanceLogbookDialogShell
+      closeHref={closeHref}
+      labelledBy="maintenance-logbook-dialog-title"
     >
       <header className="grid gap-3 border-b border-zinc-200 p-3 sm:p-4">
         <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
@@ -577,8 +581,12 @@ export function MaintenanceLogbookDrawer({
               Aircraft logbook
             </p>
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
-              <h2 className="text-xl font-semibold text-zinc-950">
+              <h2
+                className="text-xl font-semibold text-zinc-950"
+                id="maintenance-logbook-dialog-title"
+              >
                 {data.aircraft.tailNumber}
+                <span className="sr-only"> aircraft logbook</span>
               </h2>
               <span className="text-sm text-zinc-500">
                 {aircraftTypeLabel(data.aircraft.type)}
@@ -597,6 +605,7 @@ export function MaintenanceLogbookDrawer({
           </div>
           <Link
             className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100"
+            data-logbook-dialog-close
             href={closeHref}
           >
             Close
@@ -784,6 +793,6 @@ export function MaintenanceLogbookDrawer({
           </section>
         ) : null}
       </div>
-    </aside>
+    </MaintenanceLogbookDialogShell>
   );
 }

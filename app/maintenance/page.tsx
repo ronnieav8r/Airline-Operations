@@ -1482,13 +1482,11 @@ function LogbookGroup({
   buildItemHref,
   fullLogbookHref,
   group,
-  selected,
 }: {
   aircraftItems: MaintenanceLogbookItem[];
   buildItemHref: (item: MaintenanceLogbookItem) => string;
   fullLogbookHref: string;
   group: LogbookItemGroup;
-  selected: string | null;
 }) {
   const unresolved = group.items.filter(isUnresolvedLogbookItem);
   const actionableCount = group.items.filter(isActionableLogbookItem).length;
@@ -1499,7 +1497,7 @@ function LogbookGroup({
   const mostRecent = group.items[0];
 
   return (
-    <details className="group border-b border-zinc-100 last:border-b-0" open={group.items.some((item) => item.id === selected)}>
+    <details className="group border-b border-zinc-100 last:border-b-0">
       <summary className="grid cursor-pointer list-none gap-2 px-3 py-3 transition hover:bg-zinc-50 md:grid-cols-[8rem_minmax(0,1fr)_minmax(12rem,16rem)_minmax(12rem,16rem)_5rem] md:items-center [&::-webkit-details-marker]:hidden">
         <div>
           <p className="text-sm font-semibold text-zinc-950">{group.tailNumber}</p>
@@ -1538,7 +1536,7 @@ function LogbookGroup({
       </div>
       <div className="divide-y divide-zinc-100 bg-white md:ml-9 md:border-l md:border-zinc-200">
         {group.items.map((item) => (
-          <LogbookRow href={buildItemHref(item)} item={item} key={item.id} selected={selected === item.id} />
+          <LogbookRow href={buildItemHref(item)} item={item} key={item.id} selected={false} />
         ))}
       </div>
     </details>
@@ -2813,7 +2811,6 @@ export default async function MaintenancePage({ searchParams }: PageProps) {
                     })}
                     group={group}
                     key={group.aircraftId}
-                    selected={selected}
                   />
                 ))}
               </div>
